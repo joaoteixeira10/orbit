@@ -1,0 +1,71 @@
+# Prometheus alerting rules for Orbit.
+# Load via prometheus.yml: rule_files: ["prometheus-alerts.yml"].
+# Assumes the scrape job is labelled job="orbit". Tune the thresholds.
+groups:
+  - name: orbit
+    rules:
+      - alert: LBAdminDown
+        expr: up{job="orbit"} == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Orbit is down"
+          description: "{{ $labels.instance }} has been unreachable for 5 minutes."
+
+      - alert: LBAgentUnreachable
+        expr: lb_proxy_reachable == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Agent of {{ $labels.proxy }} unreachable"
+          description: "Orbit can't poll the agent of {{ $labels.proxy }}; its servers can't be seen or changed."
+
+      - alert: LBServerDown
+        expr: lb_server_up == 0 and lb_server_maintenance == 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.label }} down on {{ $labels.proxy }}"
+          description: "{{ $labels.server }} ({{ $labels.backend }}) fails its health checks and is not in maintenance."
+
+      - alert: LBServiceWithoutServers
+        expr: sum by (service) (lb_server_in_rotation) == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Service {{ $labels.service }} has no server in rotation"
+          description: "No server of {{ $labels.service }} is up and ready on any proxy: its requests fail."
+
+      - alert: LBHighErrorRate
+        expr: |
+          sum by (proxy, backend) (rate(lb_server_errors_total[5m]))
+            / clamp_min(sum by (proxy, backend) (rate(lb_server_requests_total[5m])), 1e-9) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Errors over 5% on {{ $labels.backend }} @ {{ $labels.proxy }}"
+          description: "{{ $value | humanizePercentage }} of the requests failed (5xx or failed attempts) over 5 minutes."
+
+      - alert: LBSlowServer
+        expr: lb_server_latency_ms{quantile=~"0.95|avg"} > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.label }} slow on {{ $labels.proxy }}"
+          description: "Response time ({{ $labels.quantile }}) is {{ $value | printf \"%.0f\" }} ms."
+
+      - alert: LBLongMaintenance
+        expr: lb_server_maintenance == 1
+        for: 24h
+        labels: { severity: info }
+        annotations:
+          summary: "{{ $labels.label }} in maintenance for a day"
+          description: "{{ $labels.server }} on {{ $labels.proxy }} has been out of rotation for 24 hours."
+
+      - alert: LBCertificateExpiring
+        expr: (lb_cert_expiry_timestamp_seconds - time()) / 86400 < 14
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "Certificate {{ $labels.cn }} on {{ $labels.proxy }} expires soon"
+          description: "{{ $labels.path }} ({{ $labels.kind }}) expires in {{ $value | printf \"%.0f\" }} days. Replace it on the Certificates page."

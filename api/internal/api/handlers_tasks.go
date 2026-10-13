@@ -1,0 +1,728 @@
+package api
+
+import (
+	"net/http"
+	"strings"
+	"time"
+
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+// recentDoneDays is how long completed tasks stay in a list's normal view.
+const recentDoneDays = 14
+
+// ---- Lists ------------------------------------------------------------------
+
+type listResponse struct {
+	models.TaskList
+	Columns   []planner.Column `json:"columns"`
+	OpenCount int64            `json:"open_count"`
+}
+
+func (h *Handlers) toListResponse(l models.TaskList) listResponse {
+	var n int64
+	h.db.Model(&models.Task{}).Where("list_id = ? AND completed_at IS NULL AND parent_id IS NULL", l.ID).Count(&n)
+	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: n}
+}
+
+func (h *Handlers) listAccess(c *gin.Context, need string) (models.TaskList, bool) {
+	var l models.TaskList
+	if err := h.db.First(&l, "id = ?", c.Param("id")).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "list not found"})
+		return l, false
+	}
+	_, _, ok := h.wsAccess(c, l.WorkspaceID, need)
+	return l, ok
+}
+
+// listLists returns a workspace's task lists with their columns.
+//
+//	@Summary	Task lists of a workspace
+//	@Tags		tasks
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		ws	path	string	true	"Workspace id"
+//	@Success	200	{array}	listResponse
+//	@Router		/workspaces/{ws}/lists [get]
+func (h *Handlers) listLists(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSViewer)
+	if !ok {
+		return
+	}
+	var lists []models.TaskList
+	h.db.Where("workspace_id = ?", ws.ID).Order("rank").Find(&lists)
+	out := make([]listResponse, 0, len(lists))
+	for _, l := range lists {
+		out = append(out, h.toListResponse(l))
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+type listRequest struct {
+	Name    *string           `json:"name" binding:"omitempty,max=120"`
+	Color   *string           `json:"color"`
+	Icon    *string           `json:"icon" binding:"omitempty,max=64"`
+	Columns *[]planner.Column `json:"columns"`
+}
+
+// createList adds a task list (editors).
+//
+//	@Summary	Create a task list
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		ws		path		string		true	"Workspace id"
+//	@Param		body	body		listRequest	true	"List"
+//	@Success	201		{object}	listResponse
+//	@Router		/workspaces/{ws}/lists [post]
+func (h *Handlers) createList(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSEditor)
+	if !ok {
+		return
+	}
+	var req listRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if req.Name == nil || strings.TrimSpace(*req.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "give the list a name"})
+		return
+	}
+	l := models.TaskList{WorkspaceID: ws.ID, Name: strings.TrimSpace(*req.Name), Color: ws.Color}
+	if req.Color != nil {
+		if !planner.ValidColor(*req.Color) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "color must be #rrggbb"})
+			return
+		}
+		l.Color = *req.Color
+	}
+	if req.Icon != nil {
+		l.Icon = *req.Icon
+	}
+	cols := planner.DefaultColumns()
+	if req.Columns != nil {
+		cols = *req.Columns
+	}
+	cols, err := planner.CleanColumns(cols)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	l.Columns = planner.EncodeColumns(cols)
+	var last struct{ Max *float64 }
+	h.db.Model(&models.TaskList{}).Select("MAX(rank) AS max").Where("workspace_id = ?", ws.ID).Scan(&last)
+	l.Rank = planner.Rank(last.Max, nil)
+	if err := h.db.Create(&l).Error; err != nil {
+		h.internalError(c, err, "could not create the list")
+		return
+	}
+	h.publishWS(c, ws.ID, "lists")
+	c.JSON(http.StatusCreated, h.toListResponse(l))
+}
+
+// updateList renames, recolours or changes a list's columns (editors). Tasks
+// in a column that is removed move to the first open (or done) column.
+//
+//	@Summary	Update a task list
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string		true	"List id"
+//	@Param		body	body		listRequest	true	"Fields to change"
+//	@Success	200		{object}	listResponse
+//	@Router		/lists/{id} [put]
+func (h *Handlers) updateList(c *gin.Context) {
+	l, ok := h.listAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	var req listRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	up := map[string]any{}
+	if req.Name != nil {
+		n := strings.TrimSpace(*req.Name)
+		if n == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "give the list a name"})
+			return
+		}
+		up["name"] = n
+	}
+	if req.Color != nil {
+		if !planner.ValidColor(*req.Color) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "color must be #rrggbb"})
+			return
+		}
+		up["color"] = *req.Color
+	}
+	if req.Icon != nil {
+		up["icon"] = *req.Icon
+	}
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		if req.Columns != nil {
+			cols, err := planner.CleanColumns(*req.Columns)
+			if err != nil {
+				return badRequest(err.Error())
+			}
+			up["columns"] = planner.EncodeColumns(cols)
+			// Re-home tasks whose column is gone, and keep completion in step
+			// with a column that changed between open and done.
+			var tasks []models.Task
+			tx.Where("list_id = ?", l.ID).Find(&tasks)
+			now := time.Now()
+			for _, t := range tasks {
+				col, found := planner.FindColumn(cols, t.ColumnID)
+				if !found {
+					if t.CompletedAt != nil {
+						col = planner.FirstDone(cols)
+					} else {
+						col = planner.FirstOpen(cols)
+					}
+				}
+				tu := map[string]any{"column_id": col.ID}
+				if col.Done && t.CompletedAt == nil {
+					tu["completed_at"] = &now
+				} else if !col.Done && t.CompletedAt != nil {
+					tu["completed_at"] = nil
+				}
+				if err := tx.Model(&models.Task{}).Where("id = ?", t.ID).Updates(tu).Error; err != nil {
+					return err
+				}
+			}
+		}
+		if len(up) == 0 {
+			return nil
+		}
+		return tx.Model(&l).Updates(up).Error
+	})
+	if writeTxError(c, h, err, "could not update the list") {
+		return
+	}
+	l = reloadTaskList(h, l.ID)
+	h.publishWS(c, l.WorkspaceID, "lists")
+	c.JSON(http.StatusOK, h.toListResponse(l))
+}
+
+// deleteList deletes a list and its tasks (editors).
+//
+//	@Summary	Delete a task list
+//	@Tags		tasks
+//	@Security	BearerAuth
+//	@Param		id	path	string	true	"List id"
+//	@Success	204
+//	@Router		/lists/{id} [delete]
+func (h *Handlers) deleteList(c *gin.Context) {
+	l, ok := h.listAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	h.db.Transaction(func(tx *gorm.DB) error {
+		tx.Where("list_id = ?", l.ID).Delete(&models.Task{})
+		return tx.Delete(&l).Error
+	})
+	h.publishWS(c, l.WorkspaceID, "lists")
+	c.Status(http.StatusNoContent)
+}
+
+// orderLists sets the order of a workspace's lists (editors).
+//
+//	@Summary	Reorder task lists
+//	@Tags		tasks
+//	@Accept		json
+//	@Security	BearerAuth
+//	@Param		ws		path	string			true	"Workspace id"
+//	@Param		body	body	orderRequest	true	"List ids in order"
+//	@Success	204
+//	@Router		/workspaces/{ws}/lists/order [put]
+func (h *Handlers) orderLists(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSEditor)
+	if !ok {
+		return
+	}
+	var req orderRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	for i, id := range req.IDs {
+		h.db.Model(&models.TaskList{}).Where("id = ? AND workspace_id = ?", id, ws.ID).Update("rank", float64(i+1)*1024)
+	}
+	h.publishWS(c, ws.ID, "lists")
+	c.Status(http.StatusNoContent)
+}
+
+// ---- Tasks ----------------------------------------------------------------------
+
+type taskResponse struct {
+	models.Task
+	Tags []string `json:"tags"`
+	Done bool     `json:"done"`
+}
+
+func toTaskResponse(t models.Task) taskResponse {
+	return taskResponse{Task: t, Tags: decodeList(t.Tags), Done: t.CompletedAt != nil}
+}
+
+func toTaskResponses(ts []models.Task) []taskResponse {
+	out := make([]taskResponse, 0, len(ts))
+	for _, t := range ts {
+		out = append(out, toTaskResponse(t))
+	}
+	return out
+}
+
+func (h *Handlers) taskAccess(c *gin.Context, need string) (models.Task, bool) {
+	var t models.Task
+	if err := h.db.First(&t, "id = ?", c.Param("id")).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+		return t, false
+	}
+	_, _, ok := h.wsAccess(c, t.WorkspaceID, need)
+	return t, ok
+}
+
+// listTasks returns a workspace's tasks: by default the open ones and those
+// completed in the last two weeks (state=done: every completed one, newest
+// first; state=all: everything), optionally of one list.
+//
+//	@Summary	Tasks of a workspace
+//	@Tags		tasks
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		ws		path	string	true	"Workspace id"
+//	@Param		list	query	string	false	"Only this list"
+//	@Param		state	query	string	false	"active (default), done or all"
+//	@Success	200		{array}	taskResponse
+//	@Router		/workspaces/{ws}/tasks [get]
+func (h *Handlers) listTasks(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSViewer)
+	if !ok {
+		return
+	}
+	q := h.db.Where("workspace_id = ?", ws.ID)
+	if l := c.Query("list"); l != "" {
+		q = q.Where("list_id = ?", l)
+	}
+	switch c.Query("state") {
+	case "done":
+		q = q.Where("completed_at IS NOT NULL").Order("completed_at DESC").Limit(500)
+	case "all":
+		q = q.Order("rank")
+	default:
+		q = q.Where("completed_at IS NULL OR completed_at > ?", time.Now().AddDate(0, 0, -recentDoneDays)).Order("rank")
+	}
+	var tasks []models.Task
+	q.Find(&tasks)
+	c.JSON(http.StatusOK, toTaskResponses(tasks))
+}
+
+type taskRequest struct {
+	ListID     *string   `json:"list_id"`
+	ColumnID   *string   `json:"column_id"`
+	ParentID   *string   `json:"parent_id"`
+	Title      *string   `json:"title" binding:"omitempty,max=500"`
+	Notes      *string   `json:"notes" binding:"omitempty,max=20000"`
+	Priority   *int      `json:"priority" binding:"omitempty,min=0,max=3"`
+	Tags       *[]string `json:"tags"`
+	Due        *string   `json:"due"`      // YYYY-MM-DD, "" clears
+	DueTime    *string   `json:"due_time"` // HH:MM, "" clears
+	Repeat     *string   `json:"repeat"`   // RRULE, "" clears
+	AssigneeID *string   `json:"assignee_id"`
+	Completed  *bool     `json:"completed"`
+	AfterID    string    `json:"after_id"` // create: place after this task ("" = at the end)
+}
+
+// cleanTags trims, de-duplicates and bounds tags.
+func cleanTags(in []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, t := range in {
+		t = strings.TrimSpace(strings.TrimPrefix(t, "#"))
+		if t == "" || len(t) > 40 || seen[strings.ToLower(t)] {
+			continue
+		}
+		seen[strings.ToLower(t)] = true
+		out = append(out, t)
+		if len(out) == 20 {
+			break
+		}
+	}
+	return out
+}
+
+// applyTaskFields validates and copies the plain fields of a request onto t.
+func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
+	if req.Title != nil {
+		t.Title = strings.TrimSpace(*req.Title)
+		if t.Title == "" {
+			return "give the task a title"
+		}
+	}
+	if req.Notes != nil {
+		t.Notes = *req.Notes
+	}
+	if req.Priority != nil {
+		t.Priority = *req.Priority
+	}
+	if req.Tags != nil {
+		t.Tags = encodeList(cleanTags(*req.Tags))
+	}
+	if req.Due != nil {
+		if *req.Due == "" {
+			t.Due, t.DueTime = nil, nil
+		} else if !planner.ValidDate(*req.Due) {
+			return "due must be a date (YYYY-MM-DD)"
+		} else {
+			d := *req.Due
+			t.Due = &d
+		}
+	}
+	if req.DueTime != nil {
+		if *req.DueTime == "" {
+			t.DueTime = nil
+		} else if !planner.ValidClock(*req.DueTime) {
+			return "due_time must be HH:MM"
+		} else {
+			tm := *req.DueTime
+			t.DueTime = &tm
+		}
+	}
+	if t.Due == nil {
+		t.DueTime = nil
+	}
+	if req.Repeat != nil {
+		r, err := planner.CleanRRule(*req.Repeat)
+		if err != nil {
+			return err.Error()
+		}
+		t.Repeat = r
+	}
+	if req.AssigneeID != nil {
+		if *req.AssigneeID == "" {
+			t.AssigneeID = nil
+		} else {
+			var n int64
+			h.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ? AND user_id = ?", t.WorkspaceID, *req.AssigneeID).Count(&n)
+			if n == 0 {
+				return "tasks can only be assigned to members of the workspace"
+			}
+			a := *req.AssigneeID
+			t.AssigneeID = &a
+		}
+	}
+	return ""
+}
+
+// columnRank returns a rank at the end of a column, or right after afterID.
+func (h *Handlers) columnRank(listID, columnID, afterID, exclude string) float64 {
+	var sibs []struct {
+		ID   string
+		Rank float64
+	}
+	h.db.Model(&models.Task{}).Select("id", "rank").
+		Where("list_id = ? AND column_id = ? AND parent_id IS NULL AND id <> ?", listID, columnID, exclude).
+		Order("rank").Find(&sibs)
+	if len(sibs) == 0 {
+		return planner.Rank(nil, nil)
+	}
+	switch afterID {
+	case "":
+		return planner.Rank(&sibs[len(sibs)-1].Rank, nil)
+	case "^":
+		return planner.Rank(nil, &sibs[0].Rank)
+	}
+	for i := range sibs {
+		if sibs[i].ID == afterID {
+			if i+1 < len(sibs) {
+				return planner.Rank(&sibs[i].Rank, &sibs[i+1].Rank)
+			}
+			return planner.Rank(&sibs[i].Rank, nil)
+		}
+	}
+	return planner.Rank(&sibs[len(sibs)-1].Rank, nil)
+}
+
+// createTask adds a task (editors), at the end of its column (or after
+// after_id). Without a list it goes to the workspace's first list.
+//
+//	@Summary	Create a task
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		ws		path		string		true	"Workspace id"
+//	@Param		body	body		taskRequest	true	"Task"
+//	@Success	201		{object}	taskResponse
+//	@Router		/workspaces/{ws}/tasks [post]
+func (h *Handlers) createTask(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSEditor)
+	if !ok {
+		return
+	}
+	var req taskRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	var list models.TaskList
+	q := h.db.Where("workspace_id = ?", ws.ID)
+	if req.ListID != nil && *req.ListID != "" {
+		q = q.Where("id = ?", *req.ListID)
+	}
+	if q.Order("rank").First(&list).Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "create a list first"})
+		return
+	}
+	cols := planner.DecodeColumns(list.Columns)
+	col := planner.FirstOpen(cols)
+	if req.ColumnID != nil && *req.ColumnID != "" {
+		var found bool
+		if col, found = planner.FindColumn(cols, *req.ColumnID); !found {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "that column isn't in the list"})
+			return
+		}
+	}
+	t := models.Task{WorkspaceID: ws.ID, ListID: list.ID, ColumnID: col.ID, CreatedBy: auth.UserID(c), Tags: "[]"}
+	if req.Title == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "give the task a title"})
+		return
+	}
+	if msg := h.applyTaskFields(req, &t); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+	if req.ParentID != nil && *req.ParentID != "" {
+		var parent models.Task
+		if h.db.First(&parent, "id = ? AND workspace_id = ?", *req.ParentID, ws.ID).Error != nil || parent.ParentID != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "sub-tasks go one level deep, under a task of this workspace"})
+			return
+		}
+		t.ParentID, t.ListID, t.ColumnID = &parent.ID, parent.ListID, parent.ColumnID
+		var last struct{ Max *float64 }
+		h.db.Model(&models.Task{}).Select("MAX(rank) AS max").Where("parent_id = ?", parent.ID).Scan(&last)
+		t.Rank = planner.Rank(last.Max, nil)
+	} else {
+		t.Rank = h.columnRank(list.ID, col.ID, req.AfterID, "")
+	}
+	if col.Done || (req.Completed != nil && *req.Completed) {
+		now := time.Now()
+		t.CompletedAt = &now
+		if !col.Done {
+			t.ColumnID = planner.FirstDone(cols).ID
+		}
+	}
+	if err := h.db.Create(&t).Error; err != nil {
+		h.internalError(c, err, "could not create the task")
+		return
+	}
+	h.publishWS(c, ws.ID, "tasks")
+	c.JSON(http.StatusCreated, toTaskResponse(t))
+}
+
+// updateTask changes a task (editors). Completing a repeating task with a due
+// date moves it to its next date instead; moving it to another list puts it
+// in that list's first open (or done) column.
+//
+//	@Summary	Update a task
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string		true	"Task id"
+//	@Param		body	body		taskRequest	true	"Fields to change"
+//	@Success	200		{object}	taskResponse
+//	@Router		/tasks/{id} [put]
+func (h *Handlers) updateTask(c *gin.Context) {
+	t, ok := h.taskAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	var req taskRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if msg := h.applyTaskFields(req, &t); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+	var list models.TaskList
+	h.db.First(&list, "id = ?", t.ListID)
+	moved := false
+	if req.ListID != nil && *req.ListID != t.ListID && t.ParentID == nil {
+		if h.db.First(&list, "id = ? AND workspace_id = ?", *req.ListID, t.WorkspaceID).Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "that list isn't in this workspace"})
+			return
+		}
+		t.ListID, moved = list.ID, true
+	}
+	cols := planner.DecodeColumns(list.Columns)
+	col, found := planner.FindColumn(cols, t.ColumnID)
+	if req.ColumnID != nil && *req.ColumnID != "" {
+		if col, found = planner.FindColumn(cols, *req.ColumnID); !found {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "that column isn't in the list"})
+			return
+		}
+	} else if !found || moved {
+		if t.CompletedAt != nil {
+			col = planner.FirstDone(cols)
+		} else {
+			col = planner.FirstOpen(cols)
+		}
+	}
+	done := col.Done
+	if req.Completed != nil {
+		done = *req.Completed
+	}
+	repeated := false
+	switch {
+	case done && t.CompletedAt == nil && t.Repeat != "" && t.Due != nil:
+		// A repeating task moves on to its next date and stays open.
+		if next, ok := planner.NextDue(*t.Due, t.Repeat); ok {
+			t.Due, repeated = &next, true
+			col = planner.FirstOpen(cols)
+		} else {
+			now := time.Now()
+			t.CompletedAt, t.Repeat = &now, ""
+			col = planner.FirstDone(cols)
+		}
+	case done && t.CompletedAt == nil:
+		now := time.Now()
+		t.CompletedAt = &now
+		if !col.Done {
+			col = planner.FirstDone(cols)
+		}
+	case !done && t.CompletedAt != nil:
+		t.CompletedAt = nil
+		if col.Done {
+			col = planner.FirstOpen(cols)
+		}
+	}
+	if col.ID != t.ColumnID || moved {
+		t.ColumnID = col.ID
+		if t.ParentID == nil {
+			t.Rank = h.columnRank(t.ListID, col.ID, "", t.ID)
+		}
+	}
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&t).Error; err != nil {
+			return err
+		}
+		// Sub-tasks follow their parent to another list.
+		if moved {
+			return tx.Model(&models.Task{}).Where("parent_id = ?", t.ID).Updates(map[string]any{"list_id": t.ListID, "column_id": t.ColumnID}).Error
+		}
+		return nil
+	}); err != nil {
+		h.internalError(c, err, "could not update the task")
+		return
+	}
+	h.publishWS(c, t.WorkspaceID, "tasks")
+	resp := toTaskResponse(t)
+	c.JSON(http.StatusOK, gin.H{"task": resp, "repeated": repeated})
+}
+
+type moveTaskRequest struct {
+	ListID   string `json:"list_id"`
+	ColumnID string `json:"column_id" binding:"required"`
+	AfterID  string `json:"after_id"` // "^" = first, "" = last
+}
+
+// moveTask drops a task in a column of a board, at a position (editors).
+// Dropping it in a done column completes it; out of one reopens it.
+//
+//	@Summary	Move a task on a board
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string			true	"Task id"
+//	@Param		body	body		moveTaskRequest	true	"Where"
+//	@Success	200		{object}	taskResponse
+//	@Router		/tasks/{id}/move [post]
+func (h *Handlers) moveTask(c *gin.Context) {
+	t, ok := h.taskAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	var req moveTaskRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if t.ParentID != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "sub-tasks move with their task"})
+		return
+	}
+	listID := t.ListID
+	if req.ListID != "" {
+		listID = req.ListID
+	}
+	var list models.TaskList
+	if h.db.First(&list, "id = ? AND workspace_id = ?", listID, t.WorkspaceID).Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "that list isn't in this workspace"})
+		return
+	}
+	col, found := planner.FindColumn(planner.DecodeColumns(list.Columns), req.ColumnID)
+	if !found {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "that column isn't in the list"})
+		return
+	}
+	up := map[string]any{"list_id": list.ID, "column_id": col.ID, "rank": h.columnRank(list.ID, col.ID, req.AfterID, t.ID)}
+	if col.Done && t.CompletedAt == nil {
+		now := time.Now()
+		up["completed_at"] = &now
+	} else if !col.Done && t.CompletedAt != nil {
+		up["completed_at"] = nil
+	}
+	h.db.Transaction(func(tx *gorm.DB) error {
+		tx.Model(&models.Task{}).Where("id = ?", t.ID).Updates(up)
+		return tx.Model(&models.Task{}).Where("parent_id = ?", t.ID).Updates(map[string]any{"list_id": list.ID, "column_id": col.ID}).Error
+	})
+	t = reloadTask(h, t.ID)
+	h.publishWS(c, t.WorkspaceID, "tasks")
+	c.JSON(http.StatusOK, toTaskResponse(t))
+}
+
+// deleteTask deletes a task and its sub-tasks (editors).
+//
+//	@Summary	Delete a task
+//	@Tags		tasks
+//	@Security	BearerAuth
+//	@Param		id	path	string	true	"Task id"
+//	@Success	204
+//	@Router		/tasks/{id} [delete]
+func (h *Handlers) deleteTask(c *gin.Context) {
+	t, ok := h.taskAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	h.db.Where("id = ? OR parent_id = ?", t.ID, t.ID).Delete(&models.Task{})
+	h.publishWS(c, t.WorkspaceID, "tasks")
+	c.Status(http.StatusNoContent)
+}
+
+// ---- helpers ----------------------------------------------------------------------
+
+// badRequest is an error a transaction returns to answer 400 with its text.
+type badRequest string
+
+func (b badRequest) Error() string { return string(b) }
+
+// writeTxError answers a transaction's error (400 for a badRequest, 500
+// otherwise) and reports whether there was one.
+func writeTxError(c *gin.Context, h *Handlers, err error, msg string) bool {
+	if err == nil {
+		return false
+	}
+	if br, ok := err.(badRequest); ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": string(br)})
+		return true
+	}
+	h.internalError(c, err, msg)
+	return true
+}

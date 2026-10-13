@@ -1,0 +1,35 @@
+# Secrets: each machine's real tokens. Copy .env.example to .env.
+.env
+
+# Runtime data (activity log)
+lab/v0-data/
+
+# ---- v1 (Go + Vue), from the PKI Management layout ----
+*.db
+*.sqlite
+*.log
+.DS_Store
+# air live-reload build output (dev)
+api/tmp/
+# Frontend
+web/node_modules/
+web/dist/
+web/test-results/
+# Built SPA is copied into the Go embed dir only at image-build time; keep the placeholder
+api/internal/webui/dist/*
+!api/internal/webui/dist/index.html
+# Local Claude Code settings, dockerized Go cache
+.claude/
+/.gocache/
+# Local dev override with real secrets
+docker-compose.override.yml
+
+# Design source packs (only the files the app uses are copied into web/public)
+proxy-assets/
+wordmark-assets/
+
+# make lbctl
+/dist/
+
+# Vite dev-server dependency cache
+web/.vite/

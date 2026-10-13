@@ -1,0 +1,16 @@
+# Build context for the image: only api/ and web/ are needed (lb-agent is
+# built from api/ too). The lab and the docs stay out.
+.git
+.gitignore
+**/node_modules
+web/dist
+web/test-results
+api/tmp
+api/internal/webui/dist/*
+!api/internal/webui/dist/index.html
+*.db
+*.sqlite
+**/.env
+docs
+lab
+*.md

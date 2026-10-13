@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Home-screen / install fallbacks; the SPA repoints these at the resolved
+         branding logo (apple-touch-icon, manifest icon, theme-color) once loaded. -->
+    <link rel="apple-touch-icon" href="/favicon-180.png" />
+    <!-- Static manifest: valid before the SPA loads; branding replaces it. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0e131c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Orbit" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- viewport-fit=cover: installed on a phone, the page runs edge to edge and
+         the shell pads itself with env(safe-area-inset-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Orbit</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

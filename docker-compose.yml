@@ -1,0 +1,31 @@
+# Orbit v1 — production: one container (Go API + embedded SPA) and a volume.
+# Runs the published multi-arch image (built by the "Build & Push" workflow).
+# Pin a version in .env — e.g. ORBIT_VERSION=v1.0.0 — then:
+#   docker compose pull && docker compose up -d
+# TLS: terminate it upstream (reverse proxy), or set TLS_CERT_FILE / TLS_KEY_FILE.
+# First sign-in: see "First sign-in" in the README (the first admin's temporary
+# password is printed once in the log when ADMIN_PASSWORD is empty).
+
+services:
+  api:
+    image: ${ORBIT_IMAGE:-harbor.ubonito.org/proxy_manager/orbit}:${ORBIT_VERSION:-latest}
+    ports:
+      - "${ORBIT_PORT:-8080}:8080"
+    # Pass the whole .env so every documented setting takes effect; the
+    # environment: block still wins per key (release mode + required secrets).
+    env_file:
+      - .env
+    environment:
+      GIN_MODE: release
+      DB_DRIVER: sqlite
+      DB_URL: /data/orbit.db
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      ORBIT_MASTER_KEY: ${ORBIT_MASTER_KEY:?set ORBIT_MASTER_KEY in .env}
+    volumes:
+      - orbit-data:/data
+      # Automatic backups to a directory (Owner → Owner → Backups → /backups):
+      # - ./backups:/backups
+    restart: unless-stopped
+
+volumes:
+  orbit-data:

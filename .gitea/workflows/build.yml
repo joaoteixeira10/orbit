@@ -1,0 +1,77 @@
+# Build & Push — ONE multi-arch build, pushed to BOTH registries: Harbor and
+# this Gitea instance's container registry (shows up under the repo "Packages").
+# Manual trigger.
+#
+# Building once and pushing all tags avoids rebuilding the image per registry
+# (which previously ran the runner out of disk). Cross-compiles (pure-Go, CGO
+# off) so amd64 + arm64 build natively on the amd64 runner — no QEMU. Publishes
+# :v<version> and :latest to both. You type the BARE version (e.g. 1.3.0); the
+# image tag gets the "v", the build-arg/stamp stays bare (the SPA prepends "v").
+#
+# Harbor repo secrets: HARBOR_REGISTRY_HOST, HARBOR_IMAGE, HARBOR_USERNAME,
+# HARBOR_PASSWORD. The Gitea registry uses the built-in Actions token (needs
+# package write) — or set a PACKAGES_TOKEN secret to use a dedicated credential;
+# its image path is derived from the repo, nothing hard-coded.
+name: Build & Push
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, bare semver e.g. 1.3.0 (image → :v1.3.0 + :latest)"
+        required: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Derive the Gitea registry host + lowercased image path from the built-in
+      # context, so nothing is hard-coded to one instance.
+      - name: Resolve Gitea registry + image
+        run: |
+          REGISTRY="${GITHUB_SERVER_URL#http://}"; REGISTRY="${REGISTRY#https://}"
+          echo "GITEA_REGISTRY=${REGISTRY}" >> "$GITHUB_ENV"
+          echo "GITEA_IMAGE=${REGISTRY}/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.HARBOR_REGISTRY_HOST }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Log in to the Gitea registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITEA_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.PACKAGES_TOKEN != '' && secrets.PACKAGES_TOKEN || github.token }}
+
+      # Stamp the build time and the short commit (PKI passed neither / the full SHA).
+      - name: Build stamp
+        run: |
+          echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_ENV"
+
+      # One build, pushed to all four tags (both registries).
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ inputs.version }}
+            COMMIT=${{ env.SHORT_SHA }}
+            BUILD_TIME=${{ env.BUILD_TIME }}
+          tags: |
+            ${{ secrets.HARBOR_IMAGE }}:v${{ inputs.version }}
+            ${{ secrets.HARBOR_IMAGE }}:latest
+            ${{ env.GITEA_IMAGE }}:v${{ inputs.version }}
+            ${{ env.GITEA_IMAGE }}:latest

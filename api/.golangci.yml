@@ -1,0 +1,26 @@
+# golangci-lint config (v2). Runs in CI (.gitea/workflows/test.yml) and via
+# `make lint`. The standard set (errcheck, govet, ineffassign, staticcheck,
+# unused) plus a few high-value extras.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - unparam   # exported/return params never used
+    - misspell  # common spelling mistakes in comments/strings
+    - bodyclose # HTTP response bodies that are never closed
+    - gosec     # security anti-patterns (weak crypto, file perms, etc.)
+  settings:
+    gosec:
+      excludes:
+        # G704 (SSRF via taint analysis) is a heuristic with false positives on
+        # config/loopback-derived URLs. Outbound requests have explicit SSRF
+        # guards (internal/notify, internal/acme) with their own tests.
+        - G704
+  exclusions:
+    rules:
+      # Test helpers legitimately ignore many errors for brevity.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec

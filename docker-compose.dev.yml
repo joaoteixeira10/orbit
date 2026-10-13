@@ -1,0 +1,55 @@
+# Orbit v1 — development: Go API (air) + Vite SPA, both live-reloading.
+#   docker compose -f docker-compose.dev.yml up      → http://localhost:5173
+# Bind mounts on Docker Desktop don't deliver inotify events, so both watchers
+# poll (api/.air.toml, VITE_POLL). Caches and node_modules live in named volumes.
+# Insecure throwaway secrets on purpose: dev only. Sign in as admin / admin
+# (you're asked to choose a new password at first sign-in).
+# Ports 8080 / 5173 don't clash with the v0 lab (8404, 8200, 8081-8083).
+
+services:
+  api:
+    image: golang:1.26.9
+    working_dir: /src/api
+    command: sh -c "go install github.com/air-verse/air@v1.67.1 && exec air"
+    ports:
+      - "8080:8080"
+    environment:
+      GIN_MODE: debug
+      METRICS_ENABLED: "true"
+      DB_DRIVER: sqlite
+      DB_URL: /data/orbit.db
+      JWT_SECRET: dev-insecure-jwt-secret-change-me
+      ORBIT_MASTER_KEY: dev-insecure-master-key-change-me-32b
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin
+      CORS_ORIGINS: http://localhost:5173
+      GOFLAGS: -buildvcs=false
+    volumes:
+      - .:/src
+      - orbit-go-cache:/root/.cache/go-build
+      - orbit-go-modcache:/go/pkg/mod
+      - orbit-go-bin:/go/bin # keeps the installed `air` across restarts
+      - orbit-dev-data:/data
+
+  web:
+    image: node:22-alpine
+    working_dir: /src/web
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev"
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_PROXY_TARGET: http://api:8080 # proxy /api to the api service
+      VITE_POLL: "1"
+    depends_on:
+      - api
+    volumes:
+      - .:/src
+      # The container's node_modules (Linux/musl binaries) stay apart from the host's.
+      - orbit-web-node-modules:/src/web/node_modules
+
+volumes:
+  orbit-go-cache:
+  orbit-go-modcache:
+  orbit-go-bin:
+  orbit-dev-data:
+  orbit-web-node-modules:

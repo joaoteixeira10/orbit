@@ -1,0 +1,8 @@
+# Known findings (checked 2026-09-30): dummy lab agent tokens committed with
+# v0's .env files in the first commit. Not real secrets.
+f5c98d5a5506dc0f113bd60a372a81333b566cd5:admin-host/.env:generic-api-key:1
+f5c98d5a5506dc0f113bd60a372a81333b566cd5:admin-host/.env:generic-api-key:2
+f5c98d5a5506dc0f113bd60a372a81333b566cd5:admin-host/.env:generic-api-key:3
+f5c98d5a5506dc0f113bd60a372a81333b566cd5:proxy-hosts/gmr-hap/.env:generic-api-key:1
+f5c98d5a5506dc0f113bd60a372a81333b566cd5:proxy-hosts/gmr/.env:generic-api-key:1
+f5c98d5a5506dc0f113bd60a372a81333b566cd5:proxy-hosts/rda/.env:generic-api-key:1

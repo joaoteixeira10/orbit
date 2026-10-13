@@ -1,0 +1,42 @@
+# Turnkey monitoring for Orbit: Prometheus + Grafana, pre-wired with the
+# scrape config, alert rules, data source and dashboard.
+#
+#   1. On Orbit set METRICS_ENABLED=true and restart it.
+#   2. From this deploy/ directory:  docker compose -f docker-compose.monitoring.yml up -d
+#   3. Grafana: http://localhost:3000 (admin / admin) → Dashboards → "Orbit".
+#
+# Prometheus scrapes host.docker.internal:8080 (Orbit on the host). If LB
+# Admin runs in another compose project, put its service name in
+# prometheus.yml (e.g. "api:8080") and attach this stack to that network.
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
+      - prom-data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin # change me
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana-dashboard.json:/var/lib/grafana/dashboards/orbit.json:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+volumes:
+  prom-data:
+  grafana-data:

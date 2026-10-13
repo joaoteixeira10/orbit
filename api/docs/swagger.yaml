@@ -1,0 +1,3985 @@
+basePath: /api/v1
+definitions:
+  api.addMemberRequest:
+    properties:
+      role:
+        enum:
+        - owner
+        - editor
+        - viewer
+        type: string
+      user:
+        description: username or email
+        type: string
+    required:
+    - role
+    - user
+    type: object
+  api.backupExportRequest:
+    properties:
+      passphrase:
+        description: |-
+          Passphrase (12+ characters): a portable archive, opened with it instead
+          of ORBIT_MASTER_KEY. Empty = sealed with the master key.
+        type: string
+    type: object
+  api.backupScheduleView:
+    properties:
+      dest:
+        description: '"dir" (default) or "s3"'
+        type: string
+      dir:
+        type: string
+      enabled:
+        type: boolean
+      interval_hours:
+        type: integer
+      keep:
+        description: 0 = keep all
+        type: integer
+      last:
+        $ref: '#/definitions/backup.LastRun'
+      s3_bucket:
+        description: |-
+          S3: credentials come from the secrets backend (BACKUP_S3_ACCESS_KEY,
+          BACKUP_S3_SECRET_KEY), never from here.
+        type: string
+      s3_endpoint:
+        description: host[:port] (MinIO, …); empty = AWS
+        type: string
+      s3_prefix:
+        type: string
+      s3_region:
+        type: string
+    type: object
+  api.brandingResponse:
+    properties:
+      accent_color:
+        type: string
+      app_name:
+        type: string
+      asset_source_favicon:
+        description: theme | keep
+        type: string
+      asset_source_logo:
+        description: theme | keep
+        type: string
+      asset_source_wordmark:
+        description: theme | keep
+        type: string
+      auto_sso:
+        description: login page auto-starts SSO (unless ?local=1)
+        type: boolean
+      developer_theme:
+        description: blue | gold | red | ink
+        type: string
+      developer_themes_enabled:
+        type: boolean
+      favicon_data_url:
+        type: string
+      hide_local_login:
+        description: hide the password form on /login (when SSO is available)
+        type: boolean
+      login_message:
+        type: string
+      logo_data_url:
+        type: string
+      oidc_enabled:
+        description: SPA shows the "Sign in with SSO" button
+        type: boolean
+      passwordless_enabled:
+        description: SPA shows the "Sign in with a passkey" button
+        type: boolean
+      show_app_name:
+        type: boolean
+      show_logo:
+        description: show the sidebar/login logo mark
+        type: boolean
+    type: object
+  api.calendarResponse:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/api.occurrence'
+        type: array
+      tasks:
+        items:
+          $ref: '#/definitions/api.taskResponse'
+        type: array
+    type: object
+  api.changePasswordRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  api.createAPITokenRequest:
+    properties:
+      expires_in_days:
+        description: 0 = never expires
+        type: integer
+      name:
+        type: string
+      privileges:
+        description: |-
+          Optional narrowing (never widens the owner's rights): only these
+          instance privileges, and read-only access to workspace content.
+        items:
+          type: string
+        type: array
+      read_only:
+        type: boolean
+    required:
+    - name
+    type: object
+  api.createFeedRequest:
+    properties:
+      include_tasks:
+        type: boolean
+      name:
+        maxLength: 120
+        type: string
+      workspace_ids:
+        description: empty = all of mine
+        items:
+          type: string
+        type: array
+    type: object
+  api.createPageRequest:
+    properties:
+      after_id:
+        description: AfterID puts the page right after this sibling ("" = at the end).
+        type: string
+      content:
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      parent_id:
+        type: string
+      title:
+        maxLength: 300
+        type: string
+    type: object
+  api.createUserRequest:
+    properties:
+      display_name:
+        type: string
+      email:
+        type: string
+      generate_password:
+        type: boolean
+      must_change_password:
+        type: boolean
+      otp_required:
+        description: two-factor required for this user
+        type: boolean
+      password:
+        description: required unless GeneratePassword
+        type: string
+      role_ids:
+        items:
+          type: string
+        type: array
+      username:
+        type: string
+    required:
+    - username
+    type: object
+  api.createWorkspaceRequest:
+    properties:
+      color:
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      kind:
+        enum:
+        - school
+        - work
+        - personal
+        - shared
+        - custom
+        type: string
+      locale:
+        description: names the starter content (en, pt)
+        type: string
+      modules:
+        description: nil = the template's
+        items:
+          type: string
+        type: array
+      name:
+        maxLength: 120
+        type: string
+      starter:
+        description: Starter creates the template's lists and first pages (default
+          true).
+        type: boolean
+    required:
+    - name
+    type: object
+  api.eventRequest:
+    properties:
+      all_day:
+        type: boolean
+      color:
+        type: string
+      ends_at:
+        type: string
+      location:
+        maxLength: 300
+        type: string
+      notes:
+        maxLength: 20000
+        type: string
+      remind_minutes:
+        description: RemindMinutes before each occurrence; a negative value removes
+          the reminder.
+        maximum: 40320
+        type: integer
+      rrule:
+        type: string
+      starts_at:
+        type: string
+      title:
+        maxLength: 300
+        type: string
+      tz:
+        maxLength: 64
+        type: string
+    type: object
+  api.eventResponse:
+    properties:
+      all_day:
+        type: boolean
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      ends_at:
+        type: string
+      exdates:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      location:
+        type: string
+      notes:
+        type: string
+      remind_minutes:
+        description: |-
+          RemindMinutes reminds the workspace's members this many minutes before
+          each occurrence (nil = no reminder).
+        type: integer
+      rrule:
+        type: string
+      starts_at:
+        type: string
+      title:
+        type: string
+      tz:
+        type: string
+      until:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.feedResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      include_tasks:
+        type: boolean
+      last_used_at:
+        type: string
+      name:
+        type: string
+      prefix:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workspace_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  api.homeResponse:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/api.occurrence'
+        type: array
+      overdue:
+        items:
+          $ref: '#/definitions/api.taskResponse'
+        type: array
+      pages:
+        items:
+          $ref: '#/definitions/api.pageSummary'
+        type: array
+      today:
+        items:
+          $ref: '#/definitions/api.taskResponse'
+        type: array
+      upcoming:
+        items:
+          $ref: '#/definitions/api.taskResponse'
+        type: array
+    type: object
+  api.listRequest:
+    properties:
+      color:
+        type: string
+      columns:
+        items:
+          $ref: '#/definitions/planner.Column'
+        type: array
+      icon:
+        maxLength: 64
+        type: string
+      name:
+        maxLength: 120
+        type: string
+    type: object
+  api.listResponse:
+    properties:
+      archived_at:
+        type: string
+      color:
+        type: string
+      columns:
+        items:
+          $ref: '#/definitions/planner.Column'
+        type: array
+      created_at:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      open_count:
+        type: integer
+      rank:
+        type: number
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.loginRequest:
+    properties:
+      otp:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  api.memberResponse:
+    properties:
+      avatar_url:
+        type: string
+      display_name:
+        type: string
+      joined_at:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
+  api.memberRoleRequest:
+    properties:
+      role:
+        enum:
+        - owner
+        - editor
+        - viewer
+        type: string
+    required:
+    - role
+    type: object
+  api.movePageRequest:
+    properties:
+      after_id:
+        description: sibling to follow; "^" = first; "" = last
+        type: string
+      parent_id:
+        description: null = top level
+        type: string
+    type: object
+  api.moveTaskRequest:
+    properties:
+      after_id:
+        description: '"^" = first, "" = last'
+        type: string
+      column_id:
+        type: string
+      list_id:
+        type: string
+    required:
+    - column_id
+    type: object
+  api.occurrence:
+    properties:
+      all_day:
+        type: boolean
+      color:
+        type: string
+      end:
+        type: string
+      id:
+        type: string
+      kind:
+        description: event | external
+        type: string
+      location:
+        type: string
+      notes:
+        type: string
+      recurring:
+        type: boolean
+      start:
+        type: string
+      subscription_id:
+        type: string
+      title:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.oidcConfigDTO:
+    properties:
+      allow_admin:
+        description: the IdP may grant admin (superuser) roles
+        type: boolean
+      client_id:
+        type: string
+      client_secret:
+        description: write-only; placeholder/empty = unchanged
+        type: string
+      default_role:
+        type: string
+      enabled:
+        type: boolean
+      has_secret:
+        description: response only
+        type: boolean
+      issuer:
+        type: string
+      redirect_url:
+        type: string
+      role_claim:
+        type: string
+      scopes:
+        type: string
+    type: object
+  api.oidcExchangeRequest:
+    properties:
+      code:
+        type: string
+    required:
+    - code
+    type: object
+  api.oidcTestRequest:
+    properties:
+      issuer:
+        type: string
+    required:
+    - issuer
+    type: object
+  api.orderRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
+    required:
+    - ids
+    type: object
+  api.otpVerifyRequest:
+    properties:
+      code:
+        type: string
+    required:
+    - code
+    type: object
+  api.pageResponse:
+    properties:
+      can_edit:
+        type: boolean
+      content:
+        description: |-
+          Content is the editor's JSON document; ContentText its plain text, kept
+          for search and previews.
+        type: string
+      cover:
+        description: 'a gradient key or #rrggbb; empty = none'
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      favorite:
+        type: boolean
+      icon:
+        type: string
+      id:
+        type: string
+      parent_id:
+        type: string
+      rank:
+        type: number
+      title:
+        type: string
+      trashed_at:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
+      workspace_id:
+        type: string
+    type: object
+  api.pageSummary:
+    properties:
+      favorite:
+        type: boolean
+      icon:
+        type: string
+      id:
+        type: string
+      parent_id:
+        type: string
+      rank:
+        type: number
+      title:
+        type: string
+      trashed_at:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.prefsResponse:
+    properties:
+      accent_color:
+        type: string
+      notify_channels:
+        items:
+          type: string
+        type: array
+      notify_events:
+        type: boolean
+      theme:
+        $ref: '#/definitions/models.Theme'
+      time_format:
+        type: string
+      timezone:
+        type: string
+      week_start:
+        type: integer
+    type: object
+  api.refreshRequest:
+    properties:
+      refresh_token:
+        description: 'Optional: browsers send the refresh token via the HttpOnly cookie
+          instead.'
+        type: string
+    type: object
+  api.resetPasswordRequest:
+    properties:
+      generate:
+        type: boolean
+      must_change_password:
+        description: |-
+          MustChangePassword forces the user to replace the password on next
+          sign-in. Defaults to true when omitted (an admin-set password is temporary).
+        type: boolean
+      new_password:
+        description: |-
+          NewPassword (>= 8 characters), or Generate for a one-time temporary
+          password that is returned once.
+        type: string
+    type: object
+  api.roleRequest:
+    properties:
+      description:
+        type: string
+      global_privileges:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  api.roleResponse:
+    properties:
+      builtin:
+        type: boolean
+      description:
+        type: string
+      global_privileges:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      superuser:
+        type: boolean
+    type: object
+  api.searchHit:
+    properties:
+      done:
+        type: boolean
+      due:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      kind:
+        description: page | task | event
+        type: string
+      list_id:
+        type: string
+      snippet:
+        type: string
+      start:
+        type: string
+      title:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.securityConfigRequest:
+    properties:
+      auto_sso:
+        type: boolean
+      hide_local_login:
+        type: boolean
+      otp_enforced:
+        type: boolean
+      passwordless_enabled:
+        type: boolean
+    type: object
+  api.subscriptionRequest:
+    properties:
+      color:
+        type: string
+      name:
+        maxLength: 120
+        type: string
+      refresh_minutes:
+        maximum: 10080
+        minimum: 15
+        type: integer
+      url:
+        maxLength: 2000
+        type: string
+    type: object
+  api.taskRequest:
+    properties:
+      after_id:
+        description: 'create: place after this task ("" = at the end)'
+        type: string
+      assignee_id:
+        type: string
+      column_id:
+        type: string
+      completed:
+        type: boolean
+      due:
+        description: YYYY-MM-DD, "" clears
+        type: string
+      due_time:
+        description: HH:MM, "" clears
+        type: string
+      list_id:
+        type: string
+      notes:
+        maxLength: 20000
+        type: string
+      parent_id:
+        type: string
+      priority:
+        maximum: 3
+        minimum: 0
+        type: integer
+      repeat:
+        description: RRULE, "" clears
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        maxLength: 500
+        type: string
+    type: object
+  api.taskResponse:
+    properties:
+      assignee_id:
+        description: |-
+          AssigneeID is who it's for in a shared workspace (reminders go to them;
+          nil = to whoever created it).
+        type: string
+      column_id:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      done:
+        type: boolean
+      due:
+        description: YYYY-MM-DD
+        type: string
+      due_time:
+        description: HH:MM
+        type: string
+      id:
+        type: string
+      list_id:
+        type: string
+      notes:
+        type: string
+      parent_id:
+        type: string
+      priority:
+        description: 0 none, 1 low, 2 medium, 3 high
+        type: integer
+      rank:
+        type: number
+      repeat:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.testNotifRequest:
+    properties:
+      channel:
+        type: string
+    required:
+    - channel
+    type: object
+  api.tokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        description: The refresh token is delivered as an HttpOnly cookie, never in
+          the body.
+        type: integer
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  api.transferOwnerRequest:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  api.updatePageRequest:
+    properties:
+      content:
+        type: string
+      cover:
+        maxLength: 64
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      title:
+        maxLength: 300
+        type: string
+      version:
+        description: |-
+          Version is the version the editor started from; required with content.
+          A newer save by someone else makes this a 409 with the current page.
+        type: integer
+    type: object
+  api.updatePrefsRequest:
+    properties:
+      accent_color:
+        description: '#rrggbb or "" (validated in the handler)'
+        type: string
+      device_tz:
+        maxLength: 64
+        type: string
+      notify_channels:
+        items:
+          type: string
+        type: array
+      notify_events:
+        type: boolean
+      theme:
+        allOf:
+        - $ref: '#/definitions/models.Theme'
+        enum:
+        - light
+        - dark
+        - system
+      time_format:
+        enum:
+        - 24h
+        - 12h
+        type: string
+      timezone:
+        type: string
+      week_start:
+        enum:
+        - 0
+        - 1
+        type: integer
+    type: object
+  api.updateProfileRequest:
+    properties:
+      avatar_url:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+    type: object
+  api.updateSettingsRequest:
+    properties:
+      accent_color:
+        type: string
+      app_name:
+        type: string
+      asset_source_favicon:
+        type: string
+      asset_source_logo:
+        type: string
+      asset_source_wordmark:
+        type: string
+      developer_theme:
+        type: string
+      developer_themes_enabled:
+        type: boolean
+      favicon_data_url:
+        type: string
+      login_message:
+        type: string
+      logo_data_url:
+        type: string
+      show_app_name:
+        type: boolean
+      show_logo:
+        type: boolean
+    type: object
+  api.updateUserRequest:
+    properties:
+      disabled:
+        type: boolean
+      display_name:
+        type: string
+      email:
+        type: string
+      otp_required:
+        type: boolean
+      role_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  api.updateWorkspaceRequest:
+    properties:
+      archived:
+        type: boolean
+      color:
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      modules:
+        items:
+          type: string
+        type: array
+      name:
+        maxLength: 120
+        type: string
+    type: object
+  api.webauthnRenameRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  api.workspaceResponse:
+    properties:
+      archived_at:
+        type: string
+      color:
+        description: '#rrggbb; tints the workspace'
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      icon:
+        description: an icon key (lucide name) or an emoji
+        type: string
+      id:
+        type: string
+      kind:
+        description: school | work | personal | shared | custom
+        type: string
+      member_count:
+        type: integer
+      modules:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      position:
+        type: number
+      role:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  audit.VerifyResult:
+    properties:
+      broken_at:
+        description: id of the first bad entry ("" if OK)
+        type: string
+      checked:
+        type: integer
+      ok:
+        type: boolean
+      reason:
+        type: string
+    type: object
+  backup.LastRun:
+    properties:
+      at:
+        type: string
+      error:
+        type: string
+      ok:
+        type: boolean
+      where:
+        description: the file or s3:// location
+        type: string
+    type: object
+  backup.Schedule:
+    properties:
+      dest:
+        description: '"dir" (default) or "s3"'
+        type: string
+      dir:
+        type: string
+      enabled:
+        type: boolean
+      interval_hours:
+        type: integer
+      keep:
+        description: 0 = keep all
+        type: integer
+      s3_bucket:
+        description: |-
+          S3: credentials come from the secrets backend (BACKUP_S3_ACCESS_KEY,
+          BACKUP_S3_SECRET_KEY), never from here.
+        type: string
+      s3_endpoint:
+        description: host[:port] (MinIO, …); empty = AWS
+        type: string
+      s3_prefix:
+        type: string
+      s3_region:
+        type: string
+    type: object
+  models.APIToken:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      prefix:
+        type: string
+      privileges:
+        description: Decoded scope for API responses (set in AfterFind / by the handler).
+        items:
+          type: string
+        type: array
+      read_only:
+        type: boolean
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      username:
+        description: Username of the token's owner (admin list only).
+        type: string
+    type: object
+  models.CalendarSubscription:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      event_count:
+        type: integer
+      fetched_at:
+        type: string
+      id:
+        type: string
+      last_error:
+        type: string
+      name:
+        type: string
+      refresh_minutes:
+        type: integer
+      updated_at:
+        type: string
+      url_host:
+        description: shown instead of the URL
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  models.Role:
+    properties:
+      builtin:
+        type: boolean
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      superuser:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  models.Theme:
+    enum:
+    - light
+    - dark
+    - system
+    type: string
+    x-enum-varnames:
+    - ThemeLight
+    - ThemeDark
+    - ThemeSystem
+  models.User:
+    properties:
+      avatar_url:
+        description: data URL
+        type: string
+      created_at:
+        type: string
+      disabled:
+        type: boolean
+      display_name:
+        type: string
+      email:
+        type: string
+      has_passkey:
+        description: |-
+          HasPasskey (set by the user list) reports a registered passkey, which
+          counts as the second factor.
+        type: boolean
+      id:
+        type: string
+      last_login_at:
+        description: LastLoginAt is the last completed sign-in (password, SSO or passkey).
+        type: string
+      locked_until:
+        description: |-
+          LockedUntilView (derived) is LockedUntil while a lockout is active, for
+          the admin's user list; nil otherwise.
+        type: string
+      must_change_password:
+        description: MustChangePassword forces a password change before any other
+          action.
+        type: boolean
+      needs_otp_setup:
+        description: |-
+          NeedsOTPSetup (set by the user list): two-factor is required for this
+          user (by the policy or per user) but not set up yet.
+        type: boolean
+      oidc:
+        description: |-
+          OIDC is a derived flag (set by AfterFind): true for SSO-provisioned
+          accounts, whose identity fields are managed by the identity provider.
+        type: boolean
+      otp_enabled:
+        type: boolean
+      otp_required:
+        description: |-
+          OTPRequired makes a second factor mandatory for this one user, on top of
+          the instance-wide otp_enforced policy (an LB Admin addition to the PKI model).
+        type: boolean
+      prefs:
+        $ref: '#/definitions/models.UserPrefs'
+      roles:
+        description: Roles are the assigned RBAC roles; effective access is their
+          union.
+        items:
+          $ref: '#/definitions/models.Role'
+        type: array
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  models.UserPrefs:
+    properties:
+      accent_color:
+        description: |-
+          AccentColor is a personal #rrggbb accent that overrides the org accent for
+          this user only (empty = follow the org/developer-theme accent).
+        type: string
+      created_at:
+        type: string
+      device_tz:
+        description: |-
+          DeviceTZ is the zone the browser last reported, used for reminders
+          while Timezone is "local".
+        type: string
+      id:
+        type: string
+      notify_events:
+        description: |-
+          Notifications: master toggle for reminders (tasks due, events starting)
+          + chosen channel keys (JSON []string), restricted to the channels the
+          admin has enabled.
+        type: boolean
+      theme:
+        $ref: '#/definitions/models.Theme'
+      time_format:
+        description: TimeFormat is "24h" or "12h".
+        type: string
+      timezone:
+        description: '"local" = device/browser zone'
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      week_start:
+        description: 'WeekStart is the first day of the week in calendars: 1 = Monday,
+          0 = Sunday.'
+        type: integer
+    type: object
+  models.WebAuthnCredential:
+    properties:
+      backed_up:
+        type: boolean
+      backup_eligible:
+        type: boolean
+      created_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        description: user-given label
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  notify.Config:
+    properties:
+      discord:
+        $ref: '#/definitions/notify.DiscordConfig'
+      email:
+        $ref: '#/definitions/notify.EmailConfig'
+      gotify:
+        $ref: '#/definitions/notify.GotifyConfig'
+      ntfy:
+        $ref: '#/definitions/notify.NtfyConfig'
+      slack:
+        $ref: '#/definitions/notify.SlackConfig'
+      teams:
+        $ref: '#/definitions/notify.TeamsConfig'
+      telegram:
+        $ref: '#/definitions/notify.TelegramConfig'
+      webhook:
+        $ref: '#/definitions/notify.WebhookConfig'
+    type: object
+  notify.DiscordConfig:
+    properties:
+      enabled:
+        type: boolean
+      webhook_url:
+        type: string
+    type: object
+  notify.EmailConfig:
+    properties:
+      enabled:
+        type: boolean
+      from:
+        type: string
+      host:
+        type: string
+      password:
+        type: string
+      port:
+        type: integer
+      start_tls:
+        type: boolean
+      username:
+        type: string
+    type: object
+  notify.GotifyConfig:
+    properties:
+      enabled:
+        type: boolean
+      server_url:
+        type: string
+      token:
+        type: string
+    type: object
+  notify.NtfyConfig:
+    properties:
+      enabled:
+        type: boolean
+      server_url:
+        type: string
+      token:
+        type: string
+      topic:
+        type: string
+    type: object
+  notify.SlackConfig:
+    properties:
+      enabled:
+        type: boolean
+      webhook_url:
+        type: string
+    type: object
+  notify.TeamsConfig:
+    properties:
+      enabled:
+        type: boolean
+      webhook_url:
+        type: string
+    type: object
+  notify.TelegramConfig:
+    properties:
+      bot_token:
+        type: string
+      chat_id:
+        type: string
+      enabled:
+        type: boolean
+    type: object
+  notify.WebhookConfig:
+    properties:
+      enabled:
+        type: boolean
+      secret:
+        description: HMAC-SHA256 key; payload signed in X-Orbit-Signature
+        type: string
+      url:
+        type: string
+    type: object
+  planner.Column:
+    properties:
+      color:
+        type: string
+      done:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 'Workspaces for school, work and life: pages, tasks, boards and calendars.'
+  title: Orbit API
+  version: 0.1.0
+paths:
+  /about:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: About / version info
+      tags:
+      - system
+  /api-tokens:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.APIToken'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all API tokens (admin)
+      tags:
+      - users
+  /api-tokens/{id}:
+    delete:
+      parameters:
+      - description: Token id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Revoke any API token (admin)
+      tags:
+      - users
+  /audit:
+    get:
+      parameters:
+      - description: Page number (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 50, max 500)
+        in: query
+        name: per_page
+        type: integer
+      - description: Search action, detail, IP or user name
+        in: query
+        name: q
+        type: string
+      - description: Only these actions (comma-separated)
+        in: query
+        name: actions
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List audit log (paginated)
+      tags:
+      - audit
+  /audit/export:
+    get:
+      parameters:
+      - description: Search action, detail, IP or user name
+        in: query
+        name: q
+        type: string
+      - description: Only these actions (comma-separated)
+        in: query
+        name: actions
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Export the audit log (CSV)
+      tags:
+      - audit
+  /audit/verify:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/audit.VerifyResult'
+      security:
+      - BearerAuth: []
+      summary: Verify audit-log integrity
+      tags:
+      - audit
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.refreshRequest'
+      responses:
+        "204":
+          description: No Content
+      summary: Log out
+      tags:
+      - auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: Current user
+      tags:
+      - auth
+  /auth/oidc/callback:
+    get:
+      responses: {}
+      summary: OIDC callback
+      tags:
+      - auth
+  /auth/oidc/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.oidcConfigDTO'
+      security:
+      - BearerAuth: []
+      summary: Get OIDC config
+      tags:
+      - auth
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: OIDC settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.oidcConfigDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.oidcConfigDTO'
+      security:
+      - BearerAuth: []
+      summary: Update OIDC config
+      tags:
+      - auth
+  /auth/oidc/exchange:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: One-time code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.oidcExchangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Exchange an SSO code for tokens
+      tags:
+      - auth
+  /auth/oidc/login:
+    get:
+      responses: {}
+      summary: Begin OIDC login
+      tags:
+      - auth
+  /auth/oidc/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Issuer URL
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.oidcTestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Test OIDC discovery
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/step-up:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+      security:
+      - BearerAuth: []
+      summary: Step-up re-authentication (password)
+      tags:
+      - auth
+  /auth/step-up/webauthn/begin:
+    post:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Step-up re-authentication (passkey, begin)
+      tags:
+      - auth
+  /auth/step-up/webauthn/finish:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+      security:
+      - BearerAuth: []
+      summary: Step-up re-authentication (passkey, finish)
+      tags:
+      - auth
+  /auth/webauthn/login/begin:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Begin passwordless passkey login
+      tags:
+      - auth
+  /auth/webauthn/login/finish:
+    post:
+      parameters:
+      - description: Session id from begin
+        in: query
+        name: sid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Finish passkey login
+      tags:
+      - auth
+  /backup/export:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Optional passphrase
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/api.backupExportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export an encrypted backup
+      tags:
+      - backup
+  /backup/run:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/backup.LastRun'
+      security:
+      - BearerAuth: []
+      summary: Run the scheduled backup now
+      tags:
+      - backup
+  /backup/schedule:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.backupScheduleView'
+      security:
+      - BearerAuth: []
+      summary: Scheduled backups
+      tags:
+      - backup
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Schedule
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/backup.Schedule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.backupScheduleView'
+      security:
+      - BearerAuth: []
+      summary: Set scheduled backups
+      tags:
+      - backup
+  /branding:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.brandingResponse'
+      summary: Get branding
+      tags:
+      - settings
+  /calendar:
+    get:
+      parameters:
+      - description: RFC 3339 start
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: RFC 3339 end
+        in: query
+        name: to
+        required: true
+        type: string
+      - description: First date for tasks
+        in: query
+        name: from_date
+        type: string
+      - description: Last date for tasks
+        in: query
+        name: to_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.calendarResponse'
+      security:
+      - BearerAuth: []
+      summary: My calendar, all workspaces
+      tags:
+      - calendar
+  /catalog:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Modules and workspace templates
+      tags:
+      - workspaces
+  /events/{id}:
+    delete:
+      parameters:
+      - description: Event id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: RFC 3339 start of the one occurrence to remove
+        in: query
+        name: occurrence
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an event or one occurrence
+      tags:
+      - calendar
+    get:
+      parameters:
+      - description: Event id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.eventResponse'
+      security:
+      - BearerAuth: []
+      summary: Get an event
+      tags:
+      - calendar
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Event id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.eventRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.eventResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an event
+      tags:
+      - calendar
+  /features:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List feature flags
+      tags:
+      - owner
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: flag -> enabled
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update feature flags
+      tags:
+      - owner
+  /healthz:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Liveness probe
+      tags:
+      - system
+  /home:
+    get:
+      parameters:
+      - description: Local date (YYYY-MM-DD)
+        in: query
+        name: today
+        required: true
+        type: string
+      - description: 'RFC 3339: start of the local day'
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: 'RFC 3339: end of the window (a week later)'
+        in: query
+        name: to
+        required: true
+        type: string
+      - description: Only this workspace
+        in: query
+        name: ws
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.homeResponse'
+      security:
+      - BearerAuth: []
+      summary: Overview (Home)
+      tags:
+      - home
+  /lists/{id}:
+    delete:
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a task list
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.listRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.listResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a task list
+      tags:
+      - tasks
+  /me/api-tokens:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.APIToken'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List my API tokens
+      tags:
+      - auth
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Token name + optional expiry
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.createAPITokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an API token
+      tags:
+      - auth
+  /me/api-tokens/{id}:
+    delete:
+      parameters:
+      - description: Token id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Revoke an API token
+      tags:
+      - auth
+  /me/favorites:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.pageSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My favourite pages
+      tags:
+      - pages
+  /me/feeds:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.feedResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My calendar feeds
+      tags:
+      - calendar
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: What it shows
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.createFeedRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a calendar feed
+      tags:
+      - calendar
+  /me/feeds/{id}:
+    delete:
+      parameters:
+      - description: Feed id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Revoke a calendar feed
+      tags:
+      - calendar
+  /me/otp/backup-codes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Current TOTP code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.otpVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Regenerate recovery codes
+      tags:
+      - auth
+  /me/otp/disable:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Current TOTP code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.otpVerifyRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Disable TOTP
+      tags:
+      - auth
+  /me/otp/setup:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Begin TOTP enrollment
+      tags:
+      - auth
+  /me/otp/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: TOTP code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.otpVerifyRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Verify and enable TOTP
+      tags:
+      - auth
+  /me/password:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Old and new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.changePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change own password
+      tags:
+      - auth
+  /me/prefs:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.prefsResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my preferences
+      tags:
+      - prefs
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Preferences to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updatePrefsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.prefsResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my preferences
+      tags:
+      - prefs
+  /me/profile:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Profile fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: Update my profile
+      tags:
+      - auth
+  /me/rotate-token:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate access token
+      tags:
+      - auth
+  /me/sessions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my active sessions
+      tags:
+      - sessions
+  /me/sessions/{sid}:
+    delete:
+      parameters:
+      - description: Session id
+        in: path
+        name: sid
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Revoke one of my sessions
+      tags:
+      - sessions
+  /me/sessions/revoke-others:
+    post:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Sign out all other sessions
+      tags:
+      - sessions
+  /me/webauthn:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.WebAuthnCredential'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List my passkeys
+      tags:
+      - auth
+  /me/webauthn/{id}:
+    delete:
+      parameters:
+      - description: Credential id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a passkey
+      tags:
+      - auth
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credential id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.webauthnRenameRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Rename a passkey
+      tags:
+      - auth
+  /me/webauthn/register/begin:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Begin passkey registration
+      tags:
+      - auth
+  /me/webauthn/register/finish:
+    post:
+      parameters:
+      - description: Session id from begin
+        in: query
+        name: sid
+        required: true
+        type: string
+      - description: Friendly label
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.WebAuthnCredential'
+      security:
+      - BearerAuth: []
+      summary: Finish passkey registration
+      tags:
+      - auth
+  /me/workspace-order:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ids in order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.orderRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reorder my workspaces
+      tags:
+      - workspaces
+  /notifications/channels:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List enabled notification channels
+      tags:
+      - notifications
+  /notifications/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/notify.Config'
+      security:
+      - BearerAuth: []
+      summary: Get notification config
+      tags:
+      - notifications
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/notify.Config'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/notify.Config'
+      security:
+      - BearerAuth: []
+      summary: Update notification config
+      tags:
+      - notifications
+  /notifications/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel to test
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.testNotifRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Send a test notification
+      tags:
+      - notifications
+  /owner/transfer:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: New owner user id
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.transferOwnerRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Transfer instance ownership
+      tags:
+      - owner
+  /pages/{id}:
+    delete:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Delete a trashed page for good
+        in: query
+        name: permanent
+        type: boolean
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Trash (or delete) a page
+      tags:
+      - pages
+    get:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a page
+      tags:
+      - pages
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updatePageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageResponse'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Save a page
+      tags:
+      - pages
+  /pages/{id}/duplicate:
+    post:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.pageResponse'
+      security:
+      - BearerAuth: []
+      summary: Duplicate a page
+      tags:
+      - pages
+  /pages/{id}/favorite:
+    post:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Favourite a page
+      tags:
+      - pages
+  /pages/{id}/move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New place
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.movePageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageSummary'
+      security:
+      - BearerAuth: []
+      summary: Move a page
+      tags:
+      - pages
+  /pages/{id}/restore:
+    post:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageSummary'
+      security:
+      - BearerAuth: []
+      summary: Restore a page
+      tags:
+      - pages
+  /privileges:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List available privileges
+      tags:
+      - roles
+  /readyz:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Readiness probe
+      tags:
+      - system
+  /roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.roleResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List roles
+      tags:
+      - roles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.roleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.roleResponse'
+      security:
+      - BearerAuth: []
+      summary: Create role
+      tags:
+      - roles
+  /roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete role
+      tags:
+      - roles
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.roleResponse'
+      security:
+      - BearerAuth: []
+      summary: Get role
+      tags:
+      - roles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.roleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.roleResponse'
+      security:
+      - BearerAuth: []
+      summary: Update role
+      tags:
+      - roles
+  /search:
+    get:
+      parameters:
+      - description: Text to find (2 characters or more)
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Only this workspace
+        in: query
+        name: ws
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.searchHit'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Search
+      tags:
+      - home
+  /security-alerts:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get security-alert configuration
+      tags:
+      - owner
+    put:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update security-alert configuration
+      tags:
+      - owner
+  /security/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get security policy
+      tags:
+      - security
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Policy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.securityConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update security policy
+      tags:
+      - security
+  /settings:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Branding
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.brandingResponse'
+      security:
+      - BearerAuth: []
+      summary: Update settings/branding
+      tags:
+      - settings
+  /subscriptions/{id}:
+    delete:
+      parameters:
+      - description: Subscription id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Unsubscribe
+      tags:
+      - calendar
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Subscription id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.subscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CalendarSubscription'
+      security:
+      - BearerAuth: []
+      summary: Update a subscription
+      tags:
+      - calendar
+  /subscriptions/{id}/refresh:
+    post:
+      parameters:
+      - description: Subscription id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CalendarSubscription'
+      security:
+      - BearerAuth: []
+      summary: Refresh a subscription now
+      tags:
+      - calendar
+  /tasks/{id}:
+    delete:
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a task
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.taskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.taskResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a task
+      tags:
+      - tasks
+  /tasks/{id}/move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Where
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.moveTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.taskResponse'
+      security:
+      - BearerAuth: []
+      summary: Move a task on a board
+      tags:
+      - tasks
+  /users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: New user
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - users
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - users
+  /users/{id}/impersonate:
+    post:
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.tokenResponse'
+      security:
+      - BearerAuth: []
+      summary: Impersonate a user
+      tags:
+      - users
+  /users/{id}/logout:
+    post:
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Force a user to sign out everywhere
+      tags:
+      - users
+  /users/{id}/password:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'New password, or generate: true'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.resetPasswordRequest'
+      responses:
+        "200":
+          description: 'generated_password (only with generate: true)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reset user password
+      tags:
+      - users
+  /users/{id}/reset-otp:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reset a user's two-factor
+      tags:
+      - users
+  /users/{id}/reset-webauthn:
+    post:
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reset a user's passkeys (admin)
+      tags:
+      - users
+  /users/{id}/unlock:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Unlock user
+      tags:
+      - users
+  /users/lookup:
+    get:
+      parameters:
+      - description: Exact username or email
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Find an account to invite
+      tags:
+      - workspaces
+  /version:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: API version
+      tags:
+      - system
+  /workspaces:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.workspaceResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My workspaces
+      tags:
+      - workspaces
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.createWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.workspaceResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a workspace
+      tags:
+      - workspaces
+  /workspaces/{ws}:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a workspace
+      tags:
+      - workspaces
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a workspace
+      tags:
+      - workspaces
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.workspaceResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a workspace
+      tags:
+      - workspaces
+  /workspaces/{ws}/calendar:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: RFC 3339 start
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: RFC 3339 end (at most 120 days later)
+        in: query
+        name: to
+        required: true
+        type: string
+      - description: First date for tasks (YYYY-MM-DD)
+        in: query
+        name: from_date
+        type: string
+      - description: Last date for tasks (YYYY-MM-DD)
+        in: query
+        name: to_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.calendarResponse'
+      security:
+      - BearerAuth: []
+      summary: A workspace's calendar
+      tags:
+      - calendar
+  /workspaces/{ws}/events:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Event
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.eventRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.eventResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an event
+      tags:
+      - calendar
+  /workspaces/{ws}/lists:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.listResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Task lists of a workspace
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: List
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.listRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.listResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a task list
+      tags:
+      - tasks
+  /workspaces/{ws}/lists/order:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: List ids in order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.orderRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reorder task lists
+      tags:
+      - tasks
+  /workspaces/{ws}/members:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.memberResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Workspace members
+      tags:
+      - workspaces
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Who and with which role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.addMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/api.memberResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Add a member
+      tags:
+      - workspaces
+  /workspaces/{ws}/members/{uid}:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: User id (your own to leave)
+        in: path
+        name: uid
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove a member, or leave
+      tags:
+      - workspaces
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: User id
+        in: path
+        name: uid
+        required: true
+        type: string
+      - description: New role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.memberRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.memberResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Change a member's role
+      tags:
+      - workspaces
+  /workspaces/{ws}/pages:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.pageSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Pages of a workspace
+      tags:
+      - pages
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Page
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.createPageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.pageResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a page
+      tags:
+      - pages
+  /workspaces/{ws}/subscriptions:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.CalendarSubscription'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Subscribed calendars
+      tags:
+      - calendar
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Name, address, colour
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.subscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.CalendarSubscription'
+      security:
+      - BearerAuth: []
+      summary: Subscribe to a calendar
+      tags:
+      - calendar
+  /workspaces/{ws}/tasks:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Only this list
+        in: query
+        name: list
+        type: string
+      - description: active (default), done or all
+        in: query
+        name: state
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.taskResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Tasks of a workspace
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Task
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.taskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.taskResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a task
+      tags:
+      - tasks
+  /workspaces/{ws}/trash:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.pageSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Trashed pages
+      tags:
+      - pages
+securityDefinitions:
+  BearerAuth:
+    description: '"Bearer <access_token>"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -26,7 +26,7 @@ DOCKER_NODE = docker run --rm \
 	-w /src/web \
 	$(NODE_IMAGE)
 
-.PHONY: help go tidy build test vet lint fmt vuln swag web-install web-lint web-typecheck web-test web-build check dev image release-image pull up up-build down set-version
+.PHONY: help go tidy build test vet lint fmt vuln swag crests web-install web-lint web-typecheck web-test web-build check dev image release-image pull up up-build down set-version
 
 help:            ## list the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed 's/:.*## /\t/'
@@ -50,6 +50,10 @@ vuln:            ## govulncheck (pinned)
 	$(DOCKER_GO) sh -c 'go install golang.org/x/vuln/cmd/govulncheck@$(VULN_VERSION) && govulncheck ./...'
 swag:            ## regenerate the OpenAPI spec (api/docs, committed)
 	$(DOCKER_GO) sh -c 'go install github.com/swaggo/swag/cmd/swag@$(SWAG_VERSION) && swag init -g cmd/server/main.go -o docs'
+
+CRESTS ?= ../assets/orbit/ubonito-orbit
+crests:          ## bake the developer-theme crests from the owner's pack (../assets)
+	docker run --rm -v "$(CURDIR)/..":/w -w /w/$(notdir $(CURDIR)) python:3.12-slim sh -c 'pip -q install fonttools brotli && python scripts/bake-crests.py $(CRESTS)'
 
 ## --- Frontend ---
 web-install:     ## npm ci

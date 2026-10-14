@@ -267,7 +267,7 @@ test('the owner turns on a developer theme; the Konami code shows who built it',
   await expect(page.getByText('Branding saved')).toBeVisible()
 
   // The sidebar shows the theme's crest and the "UBonito" wordmark; the tab its favicon.
-  await expect(page.locator('#sidebar .brand img')).toHaveAttribute('src', /\/dev-themes\/ubonito-orbit-(dark|bone)\.svg/)
+  await expect(page.locator('#sidebar .brand img')).toHaveAttribute('src', /\/dev-themes\/crest-(dark|bone)\.svg/)
   await expect(page.locator('#sidebar .brand-word')).toHaveText('UBonito')
   await expect(page.locator('link[rel=icon]')).toHaveAttribute('href', /\/dev-themes\//)
 

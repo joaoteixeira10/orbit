@@ -1,14 +1,17 @@
-// The four curated "developer themes" (from PKI Management, as in LB Admin): a closed set, no
-// free colour picker while the flag is on. Each locks the accent and brings a
-// UBonito Orbit crest (the blackletter "U" on Orbit's ring — baked,
-// font-independent SVGs under /dev-themes/, used for the in-app mark and the
-// favicon) and the "UBonito" wordmark (self-hosted UnifrakturCook 700).
+// SHARED — from ../blueprint/shared/dev-themes (copied by blueprint/sync-themes.sh).
+// Change it there, not here: the same file is in every project.
+//
+// The four curated "developer themes": a closed set, no free colour picker
+// while the flag is on. Each locks the accent and brings the project's UBonito
+// crest (the owner's design, baked to font-independent SVGs under /dev-themes/
+// by scripts/bake-crests.py; used for the in-app mark and the favicon) and the
+// "UBonito" wordmark (self-hosted UnifrakturCook 700). Every project names its
+// crests the same way: crest-<ink>.svg and crest-<ink>-512.png.
 
 export type DevThemeId = 'blue' | 'gold' | 'red' | 'ink'
 
 export interface DevTheme {
   id: DevThemeId
-  name: string
   accent: string // dark-UI accent (Ink: bone)
   onAccent: string // foreground on the accent (button label etc.)
   accentStrong: string // 2nd gradient stop / hover
@@ -29,33 +32,33 @@ export interface DevTheme {
   crestPngLight?: string
 }
 
-const crest = (v: string) => `/dev-themes/ubonito-orbit-${v}.svg`
-const crestPng = (v: string) => `/dev-themes/ubonito-orbit-${v}-512.png`
+const crest = (ink: string) => `/dev-themes/crest-${ink}.svg`
+const crestPng = (ink: string) => `/dev-themes/crest-${ink}-512.png`
 
 export const DEV_THEMES: Record<DevThemeId, DevTheme> = {
   blue: {
-    id: 'blue', name: 'Steel Blue',
+    id: 'blue',
     accent: '#2f6fe0', onAccent: '#ffffff', accentStrong: '#2257c4',
     mark: '#2f6fe0', halo: '#e6edfa', badge: '#0e1320',
     ground: 'radial-gradient(120% 120% at 50% 0%, #101a2e, #060a14)',
     crest: crest('blue'), crestPng: crestPng('blue'),
   },
   gold: {
-    id: 'gold', name: 'Gold Leaf',
+    id: 'gold',
     accent: '#c79a3f', onAccent: '#1c1608', accentStrong: '#a87f2c',
     mark: '#cda44e', halo: '#f3e9cf', badge: '#13100b',
     ground: 'radial-gradient(120% 120% at 50% 0%, #1d1809, #0a0804)',
     crest: crest('gold'), crestPng: crestPng('gold'),
   },
   red: {
-    id: 'red', name: 'Blood Red',
+    id: 'red',
     accent: '#b4151c', onAccent: '#ffffff', accentStrong: '#8c0f14',
     mark: '#b01217', halo: '#f4f1ea', badge: '#13100f',
     ground: 'radial-gradient(120% 120% at 50% 0%, #1c0c0c, #0c0606)',
     crest: crest('red'), crestPng: crestPng('red'),
   },
   ink: {
-    id: 'ink', name: 'Ink',
+    id: 'ink',
     // dark UI: bone button, ink text. light UI: ink button, bone text.
     accent: '#e7e2d8', onAccent: '#14130e', accentStrong: '#d3ccbd',
     accentLight: '#1b1a18', onAccentLight: '#f4f1ea', accentStrongLight: '#000000',
@@ -67,6 +70,13 @@ export const DEV_THEMES: Record<DevThemeId, DevTheme> = {
 }
 
 export const DEV_THEME_LIST: DevTheme[] = [DEV_THEMES.blue, DEV_THEMES.gold, DEV_THEMES.red, DEV_THEMES.ink]
+
+// The themes' names, in every locale the projects have (the card and the
+// settings use them; a project without one of these locales gets English).
+export const DEV_THEME_NAMES: Record<string, Record<DevThemeId, string>> = {
+  en: { blue: 'Steel Blue', gold: 'Gold Leaf', red: 'Blood Red', ink: 'Ink' },
+  pt: { blue: 'Azul Aço', gold: 'Folha de Ouro', red: 'Vermelho Sangue', ink: 'Tinta' },
+}
 
 export interface ResolvedThemeAccent {
   accent: string

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// SHARED — from ../blueprint/shared/dev-themes (copied by blueprint/sync-themes.sh).
+// Change it there, not here: the same file is in every project.
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Github } from 'lucide-vue-next'
 

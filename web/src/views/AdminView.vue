@@ -21,10 +21,11 @@ import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
-  Code2, Sparkles, Type, Info,
+  Info,
 } from 'lucide-vue-next'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
+import DevThemesCard from '@/components/admin/DevThemesCard.vue'
 
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -470,7 +471,6 @@ const loginMessage = ref('')
 
 // The curated themes (the grid) and the one selected.
 const prefs = usePrefsStore()
-const devThemeList = DEV_THEME_LIST
 const activeTheme = computed(() => DEV_THEME_LIST.find((x) => x.id === brandForm.developer_theme) ?? DEV_THEME_LIST[0])
 // Accent for the preview: the theme's when the flag is on (Ink flips with
 // light/dark), else the owner's chosen accent, or none = default.
@@ -1003,83 +1003,16 @@ function switchTab(t: Tab) {
         </div>
       </div>
 
-      <!-- Developer themes -->
-      <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
-          <Code2 class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.devThemes') }}</h3>
-          <span class="ml-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="brandForm.developer_themes_enabled ? 'bg-accent-bg text-accent-text' : 'bg-surface-3 text-text-3'">{{ brandForm.developer_themes_enabled ? t('adm.branding.on') : t('adm.branding.off') }}</span>
-        </div>
-        <div class="p-5">
-          <div class="dev-master">
-            <div class="flex items-center gap-[13px]">
-              <div class="dm-ico"><Sparkles class="h-[19px] w-[19px]" /></div>
-              <div>
-                <div class="text-[15px] font-semibold">{{ t('adm.branding.enableThemes') }}</div>
-                <p class="mt-[3px] max-w-[420px] text-[12.5px] leading-snug text-text-3">{{ t('adm.branding.enableThemesHint') }}</p>
-              </div>
-            </div>
-            <Toggle v-model="brandForm.developer_themes_enabled" />
-          </div>
-
-          <div v-if="brandForm.developer_themes_enabled" class="mt-[22px]">
-            <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">{{ t('adm.branding.themePick') }}</div>
-            <div class="theme-grid">
-              <button
-                v-for="th in devThemeList"
-                :key="th.id"
-                type="button"
-                class="theme-card"
-                :class="{ on: brandForm.developer_theme === th.id }"
-                :aria-pressed="brandForm.developer_theme === th.id"
-                :style="{ '--tc': th.accent, '--tc-ground': th.ground, '--tc-badge': th.badge, '--tc-mark': th.mark, '--tc-halo': th.halo }"
-                @click="brandForm.developer_theme = th.id"
-              >
-                <span class="tc-check"><Check class="h-[13px] w-[13px]" /></span>
-                <div class="theme-prev">
-                  <img :src="th.crest" alt="" class="h-[50px] w-[50px]" />
-                  <div class="tp-word blackletter">UBonito</div>
-                </div>
-                <div class="theme-foot">
-                  <span class="tf-dot" /><b class="text-[13.5px] font-semibold">{{ t(`adm.branding.theme.${th.id}`) }}</b><span class="tf-hex">{{ th.accent }}</span>
-                </div>
-              </button>
-            </div>
-
-            <div class="mt-6">
-              <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">{{ t('adm.branding.assetsPick') }}</div>
-              <div class="src-row">
-                <div class="src-ico"><ImageIcon class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.markRow') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ brandForm.logo_data_url ? t('adm.branding.hasLogo') : t('adm.branding.noCustomLogo') }}</span></div>
-                <div class="seg">
-                  <button type="button" :class="{ on: brandForm.asset_source_logo === 'theme' }" @click="brandForm.asset_source_logo = 'theme'">{{ t('adm.branding.themeCrest') }}</button>
-                  <button type="button" :class="{ on: brandForm.asset_source_logo === 'keep' }" @click="brandForm.asset_source_logo = 'keep'">{{ brandForm.logo_data_url ? t('adm.branding.myLogo') : t('adm.branding.default') }}</button>
-                </div>
-              </div>
-              <div class="src-row">
-                <div class="src-ico"><Type class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.wordmarkRow') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ t('adm.branding.wordmarkHint') }}</span></div>
-                <div class="seg">
-                  <button type="button" :class="{ on: brandForm.asset_source_wordmark === 'theme' }" @click="brandForm.asset_source_wordmark = 'theme'">{{ t('adm.branding.themeWordmark') }}</button>
-                  <button type="button" :class="{ on: brandForm.asset_source_wordmark === 'keep' }" @click="brandForm.asset_source_wordmark = 'keep'">{{ t('adm.branding.appNameChoice') }}</button>
-                </div>
-              </div>
-              <div class="src-row">
-                <div class="src-ico"><ShieldCheck class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.favicon') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ brandForm.favicon_data_url ? t('adm.branding.hasFavicon') : t('adm.branding.noCustomFavicon') }}</span></div>
-                <div class="seg">
-                  <button type="button" :class="{ on: brandForm.asset_source_favicon === 'theme' }" @click="brandForm.asset_source_favicon = 'theme'">{{ t('adm.branding.themeFavicon') }}</button>
-                  <button type="button" :class="{ on: brandForm.asset_source_favicon === 'keep' }" @click="brandForm.asset_source_favicon = 'keep'">{{ brandForm.favicon_data_url ? t('adm.branding.myFavicon') : t('adm.branding.default') }}</button>
-                </div>
-              </div>
-              <div class="src-row forced">
-                <div class="src-ico"><SlidersHorizontal class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.accent') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ t('adm.branding.accentRowHint') }}</span></div>
-                <span class="src-badge">{{ t('adm.branding.alwaysTheme') }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Developer themes (the shared card) -->
+      <DevThemesCard
+        v-model:enabled="brandForm.developer_themes_enabled"
+        v-model:theme="brandForm.developer_theme"
+        v-model:logo="brandForm.asset_source_logo"
+        v-model:wordmark="brandForm.asset_source_wordmark"
+        v-model:favicon="brandForm.asset_source_favicon"
+        :has-logo="!!brandForm.logo_data_url"
+        :has-favicon="!!brandForm.favicon_data_url"
+      />
 
       </div><!-- /left column -->
 

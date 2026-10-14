@@ -85,7 +85,9 @@ merge, not at release time.
   Blood Red, Ink) lock the accent and bring the UBonito Orbit crest, the
   "UBonito" wordmark and the favicon, each of which can be kept as your own;
   Ink follows light / dark. ↑↑↓↓←→←→BA shows who built it. Text on the accent
-  now follows the theme (dark on Ink's bone, not white).
+  now follows the theme (dark on Ink's bone, not white). The themes' code is
+  the shared kit in `../blueprint/shared/dev-themes`, the same as in LB Admin
+  and PKI Management; `make crests` bakes the crests from `../assets`.
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,

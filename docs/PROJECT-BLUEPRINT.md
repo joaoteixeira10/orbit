@@ -497,7 +497,11 @@ pointer-field partial patch, audited.
 
 ### 9.2 Developer themes (curated presets)
 **Every project has them**, with the same four themes (Steel Blue, Gold Leaf, Blood Red, Ink), the
-same settings and the same Branding UI; only the crest changes per project.
+same settings and the same Branding UI; only the crest changes per project. **The code is one shared
+kit** — `devThemes.ts`, the Branding card (`DevThemesCard.vue`), `dev-themes.css`, the wordmark font,
+the Konami egg and `bake-crests.py` — kept in the blueprint folder (`shared/dev-themes/`, see its
+README) and copied into each project with `sync-themes.sh`; never edit a project's copy. Crests are
+named the same everywhere: `web/public/dev-themes/crest-<ink>.svg` + `crest-<ink>-512.png`.
 
 **The icons are the project owner's, never the implementer's.** Crests, favicons, marks and app
 icons are designed and delivered by the owner as a design pack; whoever builds the project (a
@@ -512,7 +516,7 @@ and its PNGs, §9.3) follows the same rule.
   or a gitignored folder inside it (LB Admin: `proxy-assets/`). Only the files the app uses go in
   `web/public/dev-themes/`.
 - **Baking**: text in a design file (the blackletter "U") must be **baked into a path**
-  (`scripts/bake-crests.py`: fontTools in a Python container, reading the self-hosted font; it
+  (`make crests` → `scripts/bake-crests.py <pack>`: fontTools in a Python container, reading the self-hosted font; it
   also drops the C2PA manifest, no longer valid once the file changes), so the favicon and `<img>`
   show the real glyph without the font. The PNGs are copied as delivered. A new pack from the
   owner = run the script again and commit the output.

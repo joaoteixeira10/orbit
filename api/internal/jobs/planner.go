@@ -2,13 +2,13 @@ package jobs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
@@ -20,7 +20,7 @@ import (
 const TrashDays = 30
 
 // UsePlanner turns on the planner's background work: refreshing subscribed
-// calendars, reminders and emptying old trash.
+// calendars, reminders, the daily summary and emptying old trash.
 func (s *Scheduler) UsePlanner(sealer *keystore.Sealer, hub *events.Hub) *Scheduler {
 	s.calsync = calsync.New(s.db, sealer, s.log)
 	s.hub = hub
@@ -38,7 +38,9 @@ func (s *Scheduler) startPlanner() {
 	}{
 		{"@every 5m", s.syncCalendars, "calendar subscriptions"},
 		{"* * * * *", s.reminders, "reminders"}, // on each minute boundary
+		{"* * * * *", s.digests, "daily summaries"},
 		{"@daily", s.emptyTrash, "trash"},
+		{"@daily", s.inbox.Cleanup, "old notifications"},
 	}
 	for _, j := range jobs {
 		if _, err := s.cron.AddFunc(j.spec, j.fn); err != nil {
@@ -84,11 +86,6 @@ func userZone(p models.UserPrefs) *time.Location {
 	return time.UTC
 }
 
-// reminder is one message for one user.
-type reminder struct {
-	userID, title, body, ws, kind, id string
-}
-
 // reminders runs every minute and sends what falls due in this minute: tasks
 // with a due time (to their assignee, else their creator) and event
 // occurrences with a reminder (to every member of the workspace).
@@ -98,7 +95,6 @@ func (s *Scheduler) reminders() {
 
 func (s *Scheduler) remindAt(minute time.Time) {
 	end := minute.Add(time.Minute)
-	var out []reminder
 	prefsCache := map[string]models.UserPrefs{}
 	prefs := func(uid string) models.UserPrefs {
 		if p, ok := prefsCache[uid]; ok {
@@ -108,6 +104,16 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		s.db.Where("user_id = ?", uid).First(&p)
 		prefsCache[uid] = p
 		return p
+	}
+	wsNames := map[string]string{}
+	wsName := func(id string) string {
+		if n, ok := wsNames[id]; ok {
+			return n
+		}
+		var ws models.Workspace
+		s.db.Select("id", "name").First(&ws, "id = ?", id)
+		wsNames[id] = ws.Name
+		return ws.Name
 	}
 
 	// Tasks: due dates are floating, so look at the dates around today
@@ -128,7 +134,11 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		if err != nil || at.Before(minute) || !at.Before(end) {
 			continue
 		}
-		out = append(out, reminder{userID: uid, title: t.Title, body: "Due now", ws: t.WorkspaceID, kind: "task", id: t.ID})
+		s.inbox.Notify(inbox.Message{
+			UserID: uid, Kind: inbox.Reminder, Verb: "task_due", WorkspaceID: t.WorkspaceID,
+			Params: map[string]any{"title": t.Title, "ws": wsName(t.WorkspaceID), "task": t.ID},
+			Link:   fmt.Sprintf("/w/%s/tasks/%s?task=%s", t.WorkspaceID, t.ListID, t.ID),
+		})
 	}
 
 	// Events: an occurrence starting RemindMinutes after this minute.
@@ -140,20 +150,20 @@ func (s *Scheduler) remindAt(minute time.Time) {
 			if at := o.Add(-lead); at.Before(minute) || !at.Before(end) {
 				continue
 			}
-			body := "Starting now"
+			verb, params := "event_now", map[string]any{"title": ev.Title, "ws": wsName(ev.WorkspaceID), "start": o.UTC().Format(time.RFC3339)}
 			if lead > 0 {
-				body = fmt.Sprintf("In %s", humanLead(lead))
+				verb, params["lead"] = "event_soon", humanLead(lead)
 			}
 			var members []string
 			s.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ?", ev.WorkspaceID).Pluck("user_id", &members)
 			for _, uid := range members {
-				out = append(out, reminder{userID: uid, title: ev.Title, body: body, ws: ev.WorkspaceID, kind: "event", id: ev.ID})
+				day := o.In(userZone(prefs(uid))).Format(planner.DateLayout)
+				s.inbox.Notify(inbox.Message{
+					UserID: uid, Kind: inbox.Reminder, Verb: verb, WorkspaceID: ev.WorkspaceID, Params: params,
+					Link: fmt.Sprintf("/w/%s/calendar?date=%s", ev.WorkspaceID, day),
+				})
 			}
 		}
-	}
-
-	for _, r := range out {
-		s.deliver(r, prefs(r.userID))
 	}
 }
 
@@ -166,26 +176,4 @@ func humanLead(d time.Duration) string {
 	default:
 		return fmt.Sprintf("%d min", int(d.Minutes()))
 	}
-}
-
-// deliver shows a reminder in the user's open sessions and, if they turned
-// notifications on, sends it through their chosen channels.
-func (s *Scheduler) deliver(r reminder, p models.UserPrefs) {
-	if s.hub != nil {
-		b, _ := json.Marshal(map[string]string{"type": "reminder", "title": r.title, "body": r.body, "ws": r.ws, "kind": r.kind, "id": r.id})
-		s.hub.Publish(r.userID, string(b))
-	}
-	if !p.NotifyEvents || s.notifier == nil {
-		return
-	}
-	var channels []string
-	_ = json.Unmarshal([]byte(p.NotifyChannels), &channels)
-	if len(channels) == 0 {
-		return
-	}
-	var u models.User
-	if s.db.Select("id", "email", "disabled").First(&u, "id = ?", r.userID).Error != nil || u.Disabled {
-		return
-	}
-	go s.notifier.Send(channels, u.Email, "Orbit: "+r.title, r.title+" — "+r.body)
 }

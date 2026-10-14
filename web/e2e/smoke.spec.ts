@@ -132,6 +132,37 @@ test('timeline and charts show the tasks, and the filter narrows them', async ({
   await page.getByRole('button', { name: 'Clear filter' }).last().click()
 })
 
+test('notifications: a task someone gives you rings the bell and opens', async ({ page, request }) => {
+  // Another member (made through the API) gives the admin a task.
+  const json = async (r: { json: () => Promise<any> }) => r.json()
+  const login = async (username: string, password: string) =>
+    (await json(await request.post('/api/v1/auth/login', { data: { username, password } }))).access_token as string
+  const admin = await login(ADMIN_USER, NEW_PASSWORD)
+  const auth = (tok: string) => ({ Authorization: `Bearer ${tok}` })
+  await request.post('/api/v1/users', { headers: auth(admin), data: { username: 'ana', display_name: 'Ana', password: 'ana-e2e-password-42' } })
+  const me = await json(await request.get('/api/v1/auth/me', { headers: auth(admin) }))
+  const ws = (await json(await request.get('/api/v1/workspaces', { headers: auth(admin) })))[0]
+  await request.post(`/api/v1/workspaces/${ws.id}/members`, { headers: auth(admin), data: { user: 'ana', role: 'editor' } })
+  const ana = await login('ana', 'ana-e2e-password-42')
+  const r = await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: auth(ana), data: { title: 'Water the plants', assignee_id: (me.user ?? me).id } })
+  expect(r.ok()).toBeTruthy()
+
+  await signIn(page, NEW_PASSWORD)
+  const bell = page.locator('#sidebar').getByRole('button', { name: /^Notifications/ })
+  await expect(bell).toContainText('1')
+  await bell.click()
+  await page.getByRole('button', { name: /Ana assigned you a task/ }).click()
+  await expect(page.locator('#task-title')).toHaveValue('Water the plants')
+  await expect(bell).not.toContainText('1')
+
+  // The daily summary is a setting that sticks.
+  await page.goto('/settings')
+  await page.getByRole('switch', { name: 'Daily summary', exact: true }).click()
+  await expect(page.locator('#notifications input[type="time"]')).toHaveValue('08:00')
+  await page.reload()
+  await expect(page.locator('#notifications input[type="time"]')).toBeVisible()
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

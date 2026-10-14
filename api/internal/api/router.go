@@ -15,6 +15,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
@@ -41,6 +42,7 @@ type Deps struct {
 	WebAuthn *auth.WebAuthn
 	Events   *events.Hub
 	CalSync  *calsync.Syncer // nil: built here
+	Inbox    *inbox.Service  // nil: built here
 }
 
 // Handlers holds the wired dependencies and implements the route handlers.
@@ -60,14 +62,18 @@ type Handlers struct {
 	// in the shared DB so any replica can redeem it.
 	ephemeral *ephemeral.Store
 	calsync   *calsync.Syncer
+	inbox     *inbox.Service
 }
 
 // New builds the configured *gin.Engine.
 func New(d Deps) *gin.Engine {
 	gin.SetMode(d.Cfg.GinMode)
-	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync}
+	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox}
 	if h.calsync == nil {
 		h.calsync = calsync.New(d.DB, d.Sealer, d.Log)
+	}
+	if h.inbox == nil {
+		h.inbox = inbox.New(d.DB, d.Events, d.Notify, d.Sealer, d.Log, d.Cfg.PublicURL)
 	}
 	exportDomainMetrics(d.DB)
 	// Calendar apps poll feeds; they get their own, looser per-IP limit.
@@ -178,6 +184,12 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/me/webauthn", h.listWebAuthnCredentials)
 			authed.PATCH("/me/webauthn/:id", h.renameWebAuthnCredential)
 			authed.DELETE("/me/webauthn/:id", h.deleteWebAuthnCredential)
+			authed.GET("/me/notifications", h.listNotifications)
+			authed.POST("/me/notifications/read", h.readNotifications)
+			authed.GET("/me/push", h.pushInfo)
+			authed.POST("/me/push", h.subscribePush)
+			authed.POST("/me/push/remove", h.unsubscribePush)
+			authed.POST("/me/push/test", h.testPush)
 			authed.GET("/me/prefs", h.getPrefs)
 			authed.PUT("/me/prefs", h.updatePrefs)
 			// Notification channels the admin has enabled (for the user's picker).
@@ -228,6 +240,7 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/members", h.addMember)
 			authed.PUT("/workspaces/:ws/members/:uid", h.setMemberRole)
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)
+			authed.PUT("/workspaces/:ws/mute", h.muteWorkspace)
 
 			authed.GET("/workspaces/:ws/pages", h.listPages)
 			authed.POST("/workspaces/:ws/pages", h.createPage)
@@ -366,6 +379,10 @@ func registerSPA(r *gin.Engine) {
 		}
 		if p != "/" {
 			if _, err := fs.Stat(dist, strings.TrimPrefix(p, "/")); err == nil {
+				// The service worker is checked for updates on every load.
+				if p == "/sw.js" {
+					c.Header("Cache-Control", "no-cache")
+				}
 				fileServer.ServeHTTP(c.Writer, c.Request)
 				return
 			}

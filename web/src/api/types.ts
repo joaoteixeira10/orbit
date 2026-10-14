@@ -122,11 +122,20 @@ export interface NotifConfig {
   webhook: { enabled: boolean; url: string; secret: string }
 }
 
+export type NotifyKind = 'reminder' | 'assigned' | 'workspace' | 'activity' | 'digest'
+export interface Delivery {
+  push: boolean // this user's devices (Web Push)
+  channels: boolean // their chosen channels (email, ntfy, …)
+}
 export interface NotifyPrefs {
   timezone: string
   theme: 'light' | 'dark' | 'system'
   notify_events: boolean
   notify_channels: string[]
+  notify_prefs: Record<NotifyKind, Delivery>
+  digest_enabled: boolean
+  digest_time: string // HH:MM
+  locale: string
 }
 
 export interface About {

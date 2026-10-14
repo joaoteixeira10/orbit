@@ -37,6 +37,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/db"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/jobs"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
@@ -215,6 +216,8 @@ func main() {
 	recordVersionHistory(gdb, log)
 
 	hub := events.New().UseTicketStore(ephemeral.New(gdb))
+	// Notifications: the inbox, Web Push and the user's channels.
+	notes := inbox.New(gdb, hub, notifier, sealer, log, cfg.PublicURL)
 	router := api.New(api.Deps{
 		Cfg:      cfg,
 		DB:       gdb,
@@ -227,11 +230,12 @@ func main() {
 		OIDC:     oidcSvc,
 		WebAuthn: waMgr,
 		Events:   hub,
+		Inbox:    notes,
 	})
 
 	// Background scheduler: update checks, token sweeps, backups, calendar
 	// subscriptions and reminders.
-	scheduler := jobs.NewScheduler(gdb, notifier, updates, log).UseBackups(sealer).UsePlanner(sealer, hub)
+	scheduler := jobs.NewScheduler(gdb, notifier, updates, log).UseBackups(sealer).UsePlanner(sealer, hub).UseInbox(notes)
 	scheduler.Start()
 	defer scheduler.Stop()
 

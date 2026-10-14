@@ -239,6 +239,7 @@ func (h *Handlers) createNote(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "notes")
+	h.notifyActivity(c, ws, "note_added", noteTitle(n), "/w/"+ws.ID+"/notes?note="+n.ID)
 	c.JSON(http.StatusCreated, toNoteResponse(n))
 }
 
@@ -325,4 +326,16 @@ func (h *Handlers) orderNotes(c *gin.Context) {
 	}
 	h.publishWS(c, ws.ID, "notes")
 	c.Status(http.StatusNoContent)
+}
+
+// noteTitle names a note in a notification: its title, else its first line.
+func noteTitle(n models.Note) string {
+	if n.Title != "" {
+		return n.Title
+	}
+	line, _, _ := strings.Cut(strings.TrimSpace(n.PlainText), "\n")
+	if r := []rune(line); len(r) > 80 {
+		line = string(r[:80]) + "…"
+	}
+	return line
 }

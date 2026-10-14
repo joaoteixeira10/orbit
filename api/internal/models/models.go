@@ -162,6 +162,19 @@ type UserPrefs struct {
 	// admin has enabled.
 	NotifyEvents   bool   `gorm:"not null;default:false" json:"notify_events"`
 	NotifyChannels string `gorm:"type:text" json:"-"` // JSON []string; exposed via DTO
+	// NotifyPrefs is, per kind of notification (reminder, assigned,
+	// workspace, activity, digest), where it goes besides the inbox: JSON
+	// {"<kind>": {"push": bool, "channels": bool}}; missing kinds take the
+	// defaults (package inbox).
+	NotifyPrefs string `gorm:"type:text" json:"-"`
+	// The daily summary: on or off, at "HH:MM" in the user's zone; DigestSent
+	// is the local date it was last sent.
+	DigestEnabled bool   `gorm:"not null;default:false" json:"digest_enabled"`
+	DigestTime    string `gorm:"size:5;not null;default:08:00" json:"digest_time"`
+	DigestSent    string `gorm:"size:10" json:"-"`
+	// Locale is the interface language (en, pt), for text sent from the
+	// server: push notifications, channels, the summary.
+	Locale string `gorm:"size:8" json:"locale"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.
@@ -302,6 +315,8 @@ func AllModels() []any {
 		&TaskList{},
 		&Task{},
 		&Note{},
+		&Notification{},
+		&PushSubscription{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -327,6 +328,7 @@ func (h *Handlers) createEvent(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "events")
+	h.notifyActivity(c, ws, "event_added", ev.Title, fmt.Sprintf("/w/%s/calendar?date=%s", ws.ID, ev.StartsAt.UTC().Format(planner.DateLayout)))
 	c.JSON(http.StatusCreated, toEventResponse(ev))
 }
 

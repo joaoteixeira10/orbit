@@ -107,6 +107,7 @@ type workspaceResponse struct {
 	Role        string   `json:"role"`
 	Position    float64  `json:"position"`
 	MemberCount int64    `json:"member_count"`
+	Muted       bool     `json:"muted"` // the caller muted its activity
 }
 
 type memberResponse struct {
@@ -137,7 +138,7 @@ func encodeList(v []string) string {
 func (h *Handlers) toWorkspaceResponse(ws models.Workspace, m models.WorkspaceMember) workspaceResponse {
 	var n int64
 	h.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ?", ws.ID).Count(&n)
-	return workspaceResponse{Workspace: ws, Modules: decodeList(ws.Modules), Role: m.Role, Position: m.Position, MemberCount: n}
+	return workspaceResponse{Workspace: ws, Modules: decodeList(ws.Modules), Role: m.Role, Position: m.Position, MemberCount: n, Muted: m.Muted}
 }
 
 func (h *Handlers) membersOf(wsID string) []memberResponse {
@@ -465,6 +466,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskList{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Page{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Note{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Notification{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceMember{}).Error },
 		func() error { return tx.Where("id = ?", wsID).Delete(&models.Workspace{}).Error },
 	}
@@ -600,6 +602,8 @@ func (h *Handlers) addMember(c *gin.Context) {
 	h.recordCtx(c, "workspace.member_add", "workspace", ws.ID, gin.H{"user": u.Username, "role": req.Role})
 	h.events.Publish(u.ID, liveEvent("workspaces"))
 	h.publishWS(c, ws.ID, "members")
+	h.notifyMembership(c, ws, u.ID, "added", req.Role)
+	h.notifyJoined(c, ws, u, req.Role)
 	c.JSON(http.StatusCreated, h.membersOf(ws.ID))
 }
 
@@ -640,8 +644,12 @@ func (h *Handlers) setMemberRole(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "a workspace needs at least one owner; make someone else an owner first"})
 		return
 	}
+	changed := m.Role != req.Role
 	h.db.Model(&m).Update("role", req.Role)
 	h.recordCtx(c, "workspace.member_role", "workspace", ws.ID, gin.H{"user_id": m.UserID, "role": req.Role})
+	if changed {
+		h.notifyMembership(c, ws, m.UserID, "role_changed", req.Role)
+	}
 	h.publishWS(c, ws.ID, "members")
 	c.JSON(http.StatusOK, h.membersOf(ws.ID))
 }
@@ -679,6 +687,7 @@ func (h *Handlers) removeMember(c *gin.Context) {
 	h.recordCtx(c, "workspace.member_remove", "workspace", ws.ID, gin.H{"user_id": target})
 	h.publishWS(c, ws.ID, "members", target)
 	h.events.Publish(target, liveEvent("workspaces"))
+	h.notifyMembership(c, ws, target, "removed", "")
 	c.Status(http.StatusNoContent)
 }
 

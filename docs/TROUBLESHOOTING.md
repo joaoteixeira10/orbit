@@ -155,14 +155,21 @@ docker compose -f docker-compose.dev.yml logs --tail=200 api   # dev
   wherever you are") and placed in your time zone: **Settings → Language &
   time → Time zone**. With "This device", Orbit uses the zone your browser
   last reported — open Orbit once on the device you use.
-- **Only in-app, nothing by email / ntfy / Telegram.** Turn on **Settings →
-  Reminders → Also send reminders** and tick a channel. Channels exist only if
-  the owner set them up (Owner → Notifications); email goes to the address in
-  **Settings → Account**.
-- **No system notification.** **Settings → Reminders → Notifications on this
-  device → Allow**, and allow the site in the browser. They show while Orbit
-  is open in a tab; with Orbit closed nothing arrives (Web Push is on the
-  [roadmap](ROADMAP.md)).
+- **Only in the bell, nothing by email / ntfy / Telegram.** In **Settings →
+  Notifications**, turn on **Channels** for that kind and tick a channel under
+  **Your channels**. Channels exist only if the owner set them up (Owner →
+  Notifications); email goes to the address in **Settings → Account**.
+- **No notification on this device.** **Settings → Notifications → This
+  device → Turn on**, and allow the site when the browser asks. If it says
+  *Blocked*, allow notifications for the site in the browser's settings. On
+  iPhone and iPad it works only in the app added to the Home Screen. **Send a
+  test** checks the whole path. Push needs HTTPS (or `localhost`); behind a
+  firewall, the server must reach the browsers' push services (Google,
+  Apple, Mozilla) on 443.
+- **Too many notifications from a shared workspace.** `⋯` next to its name →
+  **Mute activity**, or turn **Shared workspace activity** off for devices.
+- **No daily summary.** It's sent at the chosen time in your time zone, and
+  not on a day with nothing due and no events.
 
 ## Data
 

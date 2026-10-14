@@ -214,8 +214,16 @@ func (h *Handlers) createPage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "pages")
+	// A page made with a title (a copy, a note turned into a page) is news
+	// now; a blank one when it gets its title (updatePage).
+	if p.Title != "" {
+		h.notifyActivity(c, ws, "page_added", p.Title, pageLink(p))
+	}
 	c.JSON(http.StatusCreated, pageResponse{Page: p, CanEdit: true})
 }
+
+// pageLink opens a page in the app.
+func pageLink(p models.Page) string { return "/w/" + p.WorkspaceID + "/p/" + p.ID }
 
 // getPage returns a page with its document.
 //
@@ -275,6 +283,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	wasUntitled := p.Title == ""
 	up := map[string]any{"updated_by": auth.UserID(c)}
 	if req.Title != nil {
 		up["title"] = strings.TrimSpace(*req.Title)
@@ -309,6 +318,10 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
+	// A new page's first title: tell the others it exists.
+	if wasUntitled && p.Title != "" && p.CreatedBy == auth.UserID(c) && time.Since(p.CreatedAt) < 24*time.Hour {
+		h.notifyActivity(c, h.workspaceOf(p.WorkspaceID), "page_added", p.Title, pageLink(p))
+	}
 	c.JSON(http.StatusOK, pageResponse{Page: p, CanEdit: true})
 }
 

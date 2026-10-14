@@ -1,16 +1,16 @@
 <script setup lang="ts">
+import NotificationSettings from '@/components/settings/NotificationSettings.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n, I18nT } from 'vue-i18n'
 import { setLocale, currentLocale, SUPPORTED_LOCALES, type LocaleCode } from '@/i18n'
 import { usePrefsStore, type Theme } from '@/stores/prefs'
 import { api, setAccessToken } from '@/lib/api'
-import { meApi, prefsApi, notifyApi, sessionsApi, type SessionInfo } from '@/api'
+import { meApi, sessionsApi, type SessionInfo } from '@/api'
 import { passkeysApi, webauthnSupported } from '@/api/webauthn'
 import type { WebAuthnCredential } from '@/api/types'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { fmtDate, parseUA, relTime } from '@/lib/format'
-import Toggle from '@/components/ui/Toggle.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import Overlay from '@/components/ui/Overlay.vue'
@@ -33,6 +33,7 @@ const locale = ref<LocaleCode>(currentLocale())
 function changeLocale(code: LocaleCode) {
   locale.value = code
   setLocale(code)
+  void prefs.persist({ locale: code })
 }
 const toast = useToastStore()
 
@@ -104,41 +105,6 @@ const explicitZones = [
   'UTC', deviceTZ, 'Europe/Lisbon', 'Europe/London', 'Europe/Madrid',
   'Europe/Berlin', 'America/New_York', 'America/Sao_Paulo', 'Asia/Tokyo',
 ].filter((v, i, a) => a.indexOf(v) === i)
-
-// ---- Notifications ----
-// Reminders (tasks with a due time, events with a reminder) always show in
-// open Orbit tabs; the browser can also show them as system notifications,
-// and they can go out through the channels the owner enabled.
-const enabledChannels = ref<string[]>([])
-const notifyEvents = ref(false)
-const notifyChannels = ref<string[]>([])
-const browserPerm = ref<NotificationPermission | 'unsupported'>('Notification' in window ? Notification.permission : 'unsupported')
-async function askBrowser() {
-  if (!('Notification' in window)) return
-  browserPerm.value = await Notification.requestPermission()
-}
-function toggleChannel(ch: string, on: boolean) {
-  notifyChannels.value = on ? [...notifyChannels.value, ch] : notifyChannels.value.filter((c) => c !== ch)
-}
-async function saveNotifications() {
-  try {
-    await prefsApi.update({ notify_events: notifyEvents.value, notify_channels: notifyEvents.value ? notifyChannels.value : [] })
-    toast.success(t('settings.saved'))
-  } catch (e: any) {
-    toast.error(e.message)
-  }
-}
-
-onMounted(async () => {
-  try {
-    const [chans, p] = await Promise.all([notifyApi.channels(), prefsApi.get()])
-    enabledChannels.value = chans.enabled ?? []
-    notifyEvents.value = p.notify_events
-    notifyChannels.value = (p.notify_channels || []).filter((c) => enabledChannels.value.includes(c))
-  } catch {
-    /* ignore */
-  }
-})
 
 // ---- Calendar feeds ----
 const feeds = ref<Feed[]>([])
@@ -578,35 +544,7 @@ onMounted(loadSessions)
         <!-- Notifications -->
         <section id="notifications" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Bell class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.notifications') }}</h2></div>
-          <div class="flex flex-col gap-5 p-5">
-            <p class="text-[13px] text-text-2">{{ t('settings.remindersHint') }}</p>
-            <div class="flex items-center justify-between gap-4">
-              <div>
-                <div class="text-[13px] font-semibold">{{ t('settings.browserNotif') }}</div>
-                <div class="text-[12px] text-text-3">{{ t('settings.browserNotifHint') }}</div>
-              </div>
-              <span v-if="browserPerm === 'granted'" class="pill !bg-ok-bg !text-ok-text">{{ t('settings.on') }}</span>
-              <span v-else-if="browserPerm === 'denied'" class="pill">{{ t('settings.blocked') }}</span>
-              <span v-else-if="browserPerm === 'unsupported'" class="pill">{{ t('settings.unsupported') }}</span>
-              <button v-else class="btn-tinted btn-sm" @click="askBrowser">{{ t('settings.allow') }}</button>
-            </div>
-            <div class="border-t border-border pt-5">
-              <div class="flex items-center justify-between gap-4">
-                <div>
-                  <div class="text-[13px] font-semibold">{{ t('settings.sendReminders') }}</div>
-                  <div class="text-[12px] text-text-3">{{ t('settings.sendRemindersHint') }}</div>
-                </div>
-                <Toggle v-model="notifyEvents" :disabled="!enabledChannels.length" />
-              </div>
-              <div v-if="notifyEvents && enabledChannels.length" class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                <Checkbox v-for="ch in enabledChannels" :key="ch" :model-value="notifyChannels.includes(ch)" @update:model-value="(v) => toggleChannel(ch, v)">
-                  {{ ch === 'email' ? t('settings.chEmail', { email: auth.user?.email || '—' }) : ch.charAt(0).toUpperCase() + ch.slice(1) }}
-                </Checkbox>
-              </div>
-              <p v-if="!enabledChannels.length" class="mt-3 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('settings.noChannels') }}</p>
-            </div>
-            <div class="flex justify-end"><button class="btn-primary" @click="saveNotifications">{{ t('common.save') }}</button></div>
-          </div>
+          <div class="p-5"><NotificationSettings /></div>
         </section>
 
         <!-- Calendar feeds -->

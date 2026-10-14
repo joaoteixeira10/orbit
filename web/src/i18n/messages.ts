@@ -12,6 +12,7 @@ import { notesEn, notesPt } from './notes'
 import { tlEn, tlPt } from './timeline'
 import { chEn, chPt } from './charts'
 import { sysEn, sysPt } from './system'
+import { inboxEn, inboxPt } from './inbox'
 import { accountUiEn, accountUiPt } from './accountui'
 import { adminUiEn, adminUiPt } from './adminui'
 
@@ -31,6 +32,7 @@ const en = {
   ...tlEn,
   ...chEn,
   ...sysEn,
+  ...inboxEn,
   ...accountUiEn,
   ...adminUiEn,
   common: {
@@ -141,7 +143,7 @@ const en = {
     account: 'Account',
     appearance: 'Appearance',
     languageTime: 'Language & time',
-    notifications: 'Reminders',
+    notifications: 'Notifications',
     password: 'Password',
     twofa: 'Two-factor',
     twofaFull: 'Two-factor authentication',
@@ -298,6 +300,7 @@ const pt: typeof en = {
   ...tlPt,
   ...chPt,
   ...sysPt,
+  ...inboxPt,
   ...accountUiPt,
   ...adminUiPt,
   common: {
@@ -408,7 +411,7 @@ const pt: typeof en = {
     account: 'Conta',
     appearance: 'Aspeto',
     languageTime: 'Idioma e hora',
-    notifications: 'Lembretes',
+    notifications: 'Notificações',
     password: 'Palavra-passe',
     twofa: 'Dois fatores',
     twofaFull: 'Autenticação de dois fatores',

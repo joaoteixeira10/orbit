@@ -35,9 +35,14 @@ merge, not at release time.
   SSRF-guarded. Handles Outlook time zones, edited and cancelled occurrences.
 - **Calendar feeds** — a private ICS address of your events and due tasks for
   Apple Calendar, Google Calendar or Outlook; revocable.
-- **Reminders** — tasks with a time and events with a reminder notify open
-  tabs (and system notifications when allowed) and, if chosen, the
-  instance's channels (email, ntfy, Telegram, …).
+- **Notifications** — a bell with everything that concerns you: reminders,
+  tasks given to you, being added to a workspace (or your role changed,
+  removed), other members' activity in shared workspaces (a burst folded into
+  one, mutable per workspace) and an optional **daily summary** at your time.
+  **Web Push** brings them to your devices even with Orbit closed (iPhone and
+  iPad: from the Home Screen app); per kind you choose devices and/or the
+  owner's channels (email, ntfy, Telegram, …). Push and channel messages are
+  written in your language.
 - **Today** and per-workspace **Overview**; **search** and a **⌘K command
   palette** across workspaces.
 - **Quick notes** — a Notes module of sticky notes: jot a text or a

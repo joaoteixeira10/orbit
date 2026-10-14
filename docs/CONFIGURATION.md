@@ -87,7 +87,7 @@ Used once, when the database has no users. Later changes have no effect.
 | `TRUSTED_PROXIES` | – | trust none | Comma list of IPs or CIDRs of your reverse proxies. Only these may set `X-Forwarded-For`. **Set it behind a proxy**, or every request seems to come from the proxy (one shared rate limit, one IP in the audit log). An invalid list is logged and ignored (trust none). See [reverse-proxies.md](reverse-proxies.md). |
 | `MAX_BODY_BYTES` | – | `4194304` (4 MiB) | Largest request body. Branding logos are sent inline, so they count too. |
 | `CORS_ORIGINS` | – | | Comma list of origins allowed to call the API from a browser. **Dev only** (the Vite server, `:5180` on the host). In production the page is served from the same origin and needs no CORS. |
-| `PUBLIC_URL` | – | from the request | The address people use to reach Orbit (scheme and host, no trailing slash), e.g. `https://orbit.example.org`. Calendar-feed addresses (Settings → Calendar feeds) are built from it; unset, they use the request's host and `X-Forwarded-Proto`. |
+| `PUBLIC_URL` | – | from the request | The address people use to reach Orbit (scheme and host, no trailing slash), e.g. `https://orbit.example.org`. Calendar-feed addresses (Settings → Calendar feeds) are built from it; unset, they use the request's host and `X-Forwarded-Proto`. An `https://` address also identifies the instance to the Web Push services (Google, Apple, Mozilla). |
 
 ## Database
 
@@ -221,8 +221,9 @@ the `step_up_auth` feature flag is on.
 | **Notification channels**: email, Discord, Telegram, ntfy, Gotify, Microsoft Teams, Slack, signed webhook (stored sealed) | Owner → Notifications | Owner, or a role with `settings.notifications` | none |
 | **Automatic backups**: on / off, every N hours, keep N, a directory or an S3 bucket (prefix, endpoint, region) | Owner → Owner → Backups | Owner (step-up) | off |
 | Per user: **require two-factor**, unlock, reset password or two-factor | Admin → Users | `users.manage` | off |
-| Per user: theme, personal accent, time zone (for reminders), week start, time format (the language is kept in the browser) | Settings | the user | automatic; device zone; by language |
-| Per user: **reminders through channels** (which of the enabled channels) | Settings → Reminders | the user | off |
+| Per user: theme, personal accent, time zone (for reminders), week start, time format, language (kept in the browser; the server keeps the last one for push and channel messages) | Settings | the user | automatic; device zone; by language |
+| Per user: **notifications** — per kind (reminders, assigned, workspaces, activity, summary) to devices (Web Push) and/or channels; which channels; the daily summary and its time; push devices | Settings → Notifications | the user | about you → devices; activity → bell only; summary off |
+| Per user and workspace: **mute activity** | the workspace's `⋯` | the user | off |
 | Per user: **calendar feeds** | Settings → Calendar feeds | the user | none |
 | Per workspace: name, icon, colour, modules and their order, members and their roles, archived | the workspace's settings (`⋯`) | the workspace's owners | from the template |
 

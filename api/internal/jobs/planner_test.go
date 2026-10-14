@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 
 	"github.com/glebarez/sqlite"
@@ -47,7 +48,7 @@ func drain(ch <-chan string) []string {
 func TestReminders(t *testing.T) {
 	db := plannerDB(t)
 	hub := events.New()
-	s := &Scheduler{db: db, log: zap.NewNop(), hub: hub}
+	s := &Scheduler{db: db, log: zap.NewNop(), hub: hub, inbox: inbox.New(db, hub, nil, nil, zap.NewNop(), "")}
 
 	db.Create(&models.UserPrefs{UserID: "u1", Timezone: "local", DeviceTZ: "Europe/Lisbon"})
 	db.Create(&models.WorkspaceMember{WorkspaceID: "w", UserID: "u1", Role: models.WSOwner})
@@ -78,6 +79,64 @@ func TestReminders(t *testing.T) {
 		if got := drain(ch); len(got) != 1 || !strings.Contains(got[0], "Class") || !strings.Contains(got[0], "10 min") {
 			t.Errorf("%s event reminder: %v", name, got)
 		}
+	}
+	// Each reminder is also in the inbox.
+	var n int64
+	db.Model(&models.Notification{}).Where("kind = ?", inbox.Reminder).Count(&n)
+	if n != 3 {
+		t.Errorf("reminders in the inbox: %d, want 3", n)
+	}
+}
+
+// TestDigest: the summary goes out at the chosen local time, once a day,
+// with the day's events and the tasks due (overdue ones first marked), and
+// not at all when the day is empty.
+func TestDigest(t *testing.T) {
+	db := plannerDB(t)
+	s := &Scheduler{db: db, log: zap.NewNop(), inbox: inbox.New(db, nil, nil, nil, zap.NewNop(), "")}
+	db.Create(&models.Workspace{Base: models.Base{ID: "w"}, Name: "Escola"})
+	db.Create(&models.WorkspaceMember{WorkspaceID: "w", UserID: "u1", Role: models.WSOwner})
+	db.Create(&models.WorkspaceMember{WorkspaceID: "w", UserID: "u2", Role: models.WSEditor})
+	db.Create(&models.UserPrefs{UserID: "u1", Timezone: "Europe/Lisbon", DigestEnabled: true, DigestTime: "08:00"})
+	db.Create(&models.UserPrefs{UserID: "u2", Timezone: "Europe/Lisbon", DigestEnabled: true, DigestTime: "08:00"})
+	late, today, at := "2026-10-12", "2026-10-13", "14:00"
+	other := "u2"
+	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Essay", Due: &late, CreatedBy: "u1"})
+	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Lab report", Due: &today, DueTime: &at, CreatedBy: "u1"})
+	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Bob's", Due: &today, AssigneeID: &other, CreatedBy: "u1"})
+	start := time.Date(2026, 10, 13, 9, 30, 0, 0, time.UTC)
+	db.Create(&models.Event{WorkspaceID: "w", Title: "Class", StartsAt: start, EndsAt: start.Add(time.Hour)})
+
+	// 07:59 in Lisbon (06:59Z): nothing yet; 08:00 (07:00Z): sent; again: not.
+	s.digestAt(time.Date(2026, 10, 13, 6, 59, 0, 0, time.UTC))
+	s.digestAt(time.Date(2026, 10, 13, 7, 0, 0, 0, time.UTC))
+	s.digestAt(time.Date(2026, 10, 13, 7, 0, 0, 0, time.UTC))
+	var got []models.Notification
+	db.Where("kind = ?", inbox.Digest).Find(&got)
+	if len(got) != 2 {
+		t.Fatalf("summaries: %d, want 2 (one each)", len(got))
+	}
+	for _, n := range got {
+		title, body := inbox.Render("en", inbox.ToView(n))
+		switch n.UserID {
+		case "u1":
+			if title != "Your day: 2 tasks, 1 event" || !strings.Contains(body, "◷ 10:30 Class") || !strings.Contains(body, "⚠ Essay") || !strings.Contains(body, "○ Lab report (14:00)") || strings.Contains(body, "Bob's") {
+				t.Errorf("u1: %q / %q", title, body)
+			}
+		case "u2":
+			if !strings.Contains(body, "Bob's") {
+				t.Errorf("u2: %q / %q", title, body)
+			}
+		}
+	}
+	// An empty day sends nothing (but counts as done).
+	db.Where("1 = 1").Delete(&models.Task{})
+	db.Where("1 = 1").Delete(&models.Event{})
+	s.digestAt(time.Date(2026, 10, 14, 7, 0, 0, 0, time.UTC))
+	var n int64
+	db.Model(&models.Notification{}).Where("kind = ?", inbox.Digest).Count(&n)
+	if n != 2 {
+		t.Errorf("an empty day sent a summary")
 	}
 }
 

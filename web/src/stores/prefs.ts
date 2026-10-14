@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { currentLocale } from '@/i18n'
 import { api } from '@/lib/api'
 
 export type Theme = 'light' | 'dark' | 'system'
@@ -11,6 +12,7 @@ interface ServerPrefs {
   week_start?: 0 | 1
   time_format?: TimeFormat
   device_tz?: string
+  locale?: string
 }
 
 function browserTZ(): string {
@@ -84,6 +86,9 @@ export const usePrefsStore = defineStore('prefs', {
       // Reminders need the zone this browser is in (while the setting is "local").
       const tz = browserTZ()
       if (tz && tz !== p.device_tz) void this.persist({ device_tz: tz })
+      // The server words push notifications in the language last used here.
+      const lang = currentLocale()
+      if (lang !== p.locale) void this.persist({ locale: lang })
     },
 
     async setTheme(t: Theme) {

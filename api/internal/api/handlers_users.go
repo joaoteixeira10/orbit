@@ -421,6 +421,8 @@ func (h *Handlers) deleteUser(c *gin.Context) {
 	}
 	h.db.Where("user_id = ?", user.ID).Delete(&models.RefreshToken{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.APIToken{})
+	h.db.Where("user_id = ?", user.ID).Delete(&models.Notification{})
+	h.db.Where("user_id = ?", user.ID).Delete(&models.PushSubscription{})
 	h.recordCtx(c, "user.delete", "user", user.ID,
 		gin.H{"username": user.Username})
 	h.notifyUsersChanged()

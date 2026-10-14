@@ -7,11 +7,10 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Next
 
-- **Offline and Web Push.** A service worker caching the app shell and the
-  workspaces you opened, a queue of changes made offline (synced in order,
-  conflicts shown like a page's 409), and Web Push so reminders arrive with
-  Orbit closed. The blueprint says "installable, not offline" for admin
-  consoles; a planner is different.
+- **Offline.** The service worker (today only for Web Push) caching the app
+  shell and the workspaces you opened, and a queue of changes made offline
+  (synced in order, conflicts shown like a page's 409). The blueprint says
+  "installable, not offline" for admin consoles; a planner is different.
 - **Real-time co-editing of pages.** Today two people editing one page get a
   "someone else changed this page" banner. Yjs (with TipTap's collaboration
   extension) over the existing SSE stream plus a small update endpoint would
@@ -33,6 +32,12 @@ What Orbit could do next, roughly in the order it would pay off. The
   "what do I need in the exam".
 - **Bookmarks** — links with a preview, tags and a read-later state.
 - **Focus timer** — Pomodoro tied to a task, with time logged on it.
+
+## Notifications
+
+- Comments and @-mentions (with a notification to who's mentioned).
+- Snooze ("remind me again in an hour") from the notification itself.
+- Quiet hours: nothing reaches devices or channels at night.
 
 ## Notes
 

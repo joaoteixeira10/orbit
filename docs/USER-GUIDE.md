@@ -20,7 +20,7 @@ the [API](API.md).
 9. [Timeline](#9-timeline)
 10. [Charts](#10-charts)
 11. [Calendar](#11-calendar)
-12. [Reminders](#12-reminders)
+12. [Notifications](#12-notifications)
 13. [Your settings](#13-your-settings)
 14. [Administration](#14-administration)
 15. [Owner controls](#15-owner-controls)
@@ -402,18 +402,44 @@ events.
 **See Orbit in your phone's calendar**: Settings → [Calendar
 feeds](#calendar-feeds).
 
-## 12. Reminders
+## 12. Notifications
 
-- A **task with a due time** reminds whoever it's for (else whoever created it)
-  at that time. A date alone doesn't remind.
-- An **event with an Alert** reminds every member of its workspace before each
-  occurrence.
+Everything lands in the **bell** (top of the sidebar; top bar on a phone),
+with a red count of what's unread. Click one to open what it's about; **Mark
+all as read** clears the count. What you get:
 
-Reminders appear in every open Orbit tab, as a system notification if you
-allowed it (**Settings → Reminders → Notifications on this device**), and
-through the channels you chose there (email, ntfy, Telegram, … — whatever the
-owner set up). Task times are read in your **time zone** (Settings → Language &
-time).
+- **Reminders** — a **task with a due time** reminds whoever it's for (else
+  whoever created it) at that time, in your time zone (a date alone doesn't
+  remind); an **event with an Alert** reminds every member of its workspace
+  before each occurrence.
+- **Assigned to you** — someone gives you a task (when they create it, or
+  later).
+- **Workspaces** — someone adds you to a workspace, changes your role or
+  removes you.
+- **Shared workspace activity** — the other members adding tasks, pages,
+  notes and events, completing tasks, joining. A burst of the same thing by
+  the same person is one notification (*Ana added 4 tasks*). To quiet a
+  workspace, `⋯` next to its name → **Mute activity**.
+- **Daily summary** — when turned on, every morning at the time you choose:
+  today's events, the tasks due today and the overdue ones. Nothing is sent on
+  an empty day.
+
+**Settings → Notifications** chooses where each kind goes besides the bell:
+
+- **This device** — **Turn on** makes notifications appear as system
+  notifications, even with Orbit closed (Web Push). **Send a test** checks it.
+  Each browser or installed app is its own device; your devices are listed
+  with **Remove**. On iPhone and iPad, add Orbit to the Home Screen first and
+  turn it on from there.
+- **What reaches you** — per kind, a switch for **Devices** and, when the
+  owner set up channels, one for **Channels**. By default, what's about you
+  reaches your devices and others' activity stays in the bell.
+- **Daily summary** — on or off, and the time.
+- **Your channels** — which of the owner's channels (email, ntfy, Telegram,
+  Discord, Slack, Teams, Gotify) to use.
+
+Notifications sent outside the app (devices, channels) are written in the
+language you last used Orbit in. The bell keeps 90 days.
 
 ## 13. Your settings
 

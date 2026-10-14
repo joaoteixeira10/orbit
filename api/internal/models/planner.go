@@ -37,6 +37,8 @@ type WorkspaceMember struct {
 	UserID      string  `gorm:"size:36;not null;uniqueIndex:idx_ws_member;index" json:"user_id"`
 	Role        string  `gorm:"size:10;not null" json:"role"`
 	Position    float64 `gorm:"not null;default:0" json:"position"`
+	// Muted stops notifications about other members' activity in it.
+	Muted bool `gorm:"not null;default:false" json:"muted"`
 }
 
 // ---- Pages ------------------------------------------------------------------
@@ -207,4 +209,36 @@ type CalendarFeed struct {
 	WorkspaceIDs string     `gorm:"type:text" json:"-"` // JSON []string; empty = all of the user's
 	IncludeTasks bool       `gorm:"not null;default:true" json:"include_tasks"`
 	LastUsedAt   *time.Time `json:"last_used_at,omitempty"`
+}
+
+// ---- Notifications ----------------------------------------------------------
+
+// Notification is one entry of a user's inbox. It stores what happened, not
+// the sentence (Kind, Verb and Params: who, which task, which workspace…), so
+// the app and the server each word it in the reader's language. GroupKey lets
+// a burst of the same activity (Ana added 5 tasks) update one entry.
+type Notification struct {
+	Base
+	UserID      string     `gorm:"size:36;not null;index:idx_notif_user,priority:1" json:"-"`
+	Kind        string     `gorm:"size:16;not null" json:"kind"` // reminder | assigned | workspace | activity | digest
+	Verb        string     `gorm:"size:32;not null" json:"verb"` // e.g. task_assigned, added, task_done
+	WorkspaceID string     `gorm:"size:36;index" json:"workspace_id"`
+	ActorID     string     `gorm:"size:36" json:"actor_id"`
+	Params      string     `gorm:"type:text" json:"-"`   // JSON object
+	Link        string     `gorm:"size:300" json:"link"` // a path in the app
+	GroupKey    string     `gorm:"size:120;index" json:"-"`
+	Count       int        `gorm:"not null;default:1" json:"count"`
+	ReadAt      *time.Time `gorm:"index:idx_notif_user,priority:2" json:"read_at"`
+}
+
+// PushSubscription is one browser (or installed app) that receives Web Push
+// notifications for a user. Endpoint is the push service's address for it.
+type PushSubscription struct {
+	Base
+	UserID     string     `gorm:"size:36;not null;index" json:"-"`
+	Endpoint   string     `gorm:"size:1000;not null;uniqueIndex" json:"-"`
+	P256dh     string     `gorm:"size:200;not null" json:"-"`
+	Auth       string     `gorm:"size:100;not null" json:"-"`
+	UserAgent  string     `gorm:"size:300" json:"user_agent"`
+	LastUsedAt *time.Time `json:"last_used_at"`
 }

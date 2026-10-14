@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
-  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft,
+  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
@@ -14,8 +14,10 @@ import { useWorkspacesStore, wireWorkspaceLive } from '@/stores/workspaces'
 import { usePagesStore, wirePagesLive } from '@/stores/pages'
 import { wireTasksLive } from '@/stores/tasks'
 import { wireNotesLive } from '@/stores/notes'
-import { pagesApi, type Workspace } from '@/api/planner'
-import { onLiveEvent } from '@/lib/live'
+import { wireInboxLive } from '@/stores/inbox'
+import { refreshPush } from '@/lib/push'
+import InboxButton from '@/components/InboxButton.vue'
+import { pagesApi, workspacesApi, type Workspace } from '@/api/planner'
 import { ICONS, MODULE_ROUTES } from '@/lib/icons'
 import { P } from '@/lib/privileges'
 import ServerStatus from '@/components/ServerStatus.vue'
@@ -49,6 +51,8 @@ watch(
     wirePagesLive()
     wireTasksLive()
     wireNotesLive()
+    wireInboxLive()
+    void refreshPush().catch(() => {})
     try {
       await Promise.all([wss.load(), wss.loadFavorites(), wss.loadCatalog()])
     } catch (e: any) {
@@ -156,6 +160,21 @@ function openSettings(id: string, tab: 'general' | 'modules' | 'members' = 'gene
   wsMenu.value = ''
 }
 const wsMenu = ref('')
+// Muting a shared workspace stops notifications about others' activity in it.
+async function toggleMute(id: string) {
+  wsMenu.value = ''
+  const w = wss.byId(id)
+  if (!w) return
+  const muted = !w.muted
+  w.muted = muted
+  try {
+    await workspacesApi.mute(id, muted)
+    toast.success(t(muted ? 'notif.muted' : 'notif.unmuted', { ws: w.name }))
+  } catch (e: any) {
+    w.muted = !muted
+    toast.error(e.message)
+  }
+}
 const wsMenuAnchor = ref<HTMLElement | null>(null)
 function openWsMenu(id: string, e: MouseEvent) {
   wsMenu.value = id
@@ -244,23 +263,12 @@ const tabs = computed(() => {
   }))
 })
 
-// Reminders pushed by the server: a toast, and a system notification when
-// the user allowed them and the tab isn't in front.
-let offReminder: (() => void) | null = null
 onMounted(() => {
   narrowMq.addEventListener('change', onNarrow)
   phoneMq.addEventListener('change', onPhone)
   window.addEventListener('keydown', onKey)
   window.addEventListener('orbit:settings', onOpenSettings)
   window.addEventListener('orbit:new-workspace', onNewWorkspace)
-  offReminder = onLiveEvent('reminder', (e) => {
-    const title = String(e.title ?? '')
-    const body = String(e.body ?? '')
-    toast.info(`⏰ ${title} — ${body}`)
-    if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-      new Notification(title, { body, tag: String(e.id ?? ''), icon: '/favicon-192.png' })
-    }
-  })
 })
 onUnmounted(() => {
   narrowMq.removeEventListener('change', onNarrow)
@@ -268,7 +276,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('orbit:settings', onOpenSettings)
   window.removeEventListener('orbit:new-workspace', onNewWorkspace)
-  offReminder?.()
   document.documentElement.style.overflow = ''
 })
 
@@ -287,7 +294,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
             <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
           </template>
           <b v-if="branding.showName" class="truncate">{{ branding.appName }}</b>
-          <button v-if="!narrow" class="icon-btn ml-auto h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></button>
+          <span class="ml-auto" />
+          <InboxButton v-if="!narrow" />
+          <button v-if="!narrow" class="icon-btn h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></button>
         </div>
         <button class="search-btn" @click="paletteOpen = true">
           <Search class="h-4 w-4" />
@@ -423,6 +432,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <button class="menu-item" @click="openSettings(wsMenu)"><Settings class="h-4 w-4 text-text-2" />{{ t('ws.settings') }}</button>
       <button class="menu-item" @click="openSettings(wsMenu, 'modules')"><FileText class="h-4 w-4 text-text-2" />{{ t('ws.modules') }}</button>
       <button class="menu-item" @click="openSettings(wsMenu, 'members')"><Plus class="h-4 w-4 text-text-2" />{{ t('ws.members') }}</button>
+      <button v-if="(wss.byId(wsMenu)?.member_count ?? 1) > 1" class="menu-item" @click="toggleMute(wsMenu)">
+        <component :is="wss.byId(wsMenu)?.muted ? Bell : BellOff" class="h-4 w-4 text-text-2" />{{ wss.byId(wsMenu)?.muted ? t('notif.unmute') : t('notif.mute') }}
+      </button>
       <div class="menu-sep" />
       <button class="menu-item" @click="router.push({ name: 'ws-trash', params: { ws: wsMenu } }); wsMenu = ''"><Trash2 class="h-4 w-4 text-text-2" />{{ t('pages.trash') }}</button>
     </Popover>
@@ -444,6 +456,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           <WsIcon v-if="currentWs" :icon="currentWs.icon" :color="currentWs.color" :size="20" :name="currentWs.name" />
           <span class="truncate">{{ currentWs?.name ?? branding.appName }}</span>
         </div>
+        <InboxButton placement="bottom-end" />
         <button class="icon-btn" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></button>
       </header>
 

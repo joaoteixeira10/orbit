@@ -38,6 +38,7 @@ export interface Workspace {
   role: WSRole
   position: number
   member_count: number
+  muted: boolean // I muted others' activity in it
   created_by: string
   archived_at?: string | null
   created_at: string
@@ -153,6 +154,28 @@ export interface NoteInput {
   pinned?: boolean
 }
 
+// One entry of the notification inbox. It says what happened (kind, verb,
+// params), not the sentence: lib/inbox.ts words it in the reader's language.
+export interface InboxItem {
+  id: string
+  kind: 'reminder' | 'assigned' | 'workspace' | 'activity' | 'digest'
+  verb: string
+  workspace_id: string
+  actor_id: string
+  params: Record<string, any>
+  link: string
+  count: number
+  read: boolean
+  created_at: string
+  updated_at: string
+}
+export interface PushDevice {
+  id: string
+  user_agent: string
+  last_used_at?: string | null
+  created_at: string
+}
+
 export interface Occurrence {
   kind: 'event' | 'external'
   id: string
@@ -260,6 +283,7 @@ export const workspacesApi = {
     api<Workspace>(`/workspaces/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/workspaces/${id}`, { method: 'DELETE' }),
   order: (ids: string[]) => api<void>('/me/workspace-order', { method: 'PUT', body: j({ ids }) }),
+  mute: (id: string, muted: boolean) => api<void>(`/workspaces/${id}/mute`, { method: 'PUT', body: j({ muted }) }),
   members: (id: string) => api<Member[]>(`/workspaces/${id}/members`),
   addMember: (id: string, user: string, role: WSRole) => api<Member[]>(`/workspaces/${id}/members`, { method: 'POST', body: j({ user, role }) }),
   setRole: (id: string, uid: string, role: WSRole) => api<Member[]>(`/workspaces/${id}/members/${uid}`, { method: 'PUT', body: j({ role }) }),
@@ -304,6 +328,18 @@ export const notesApi = {
   update: (id: string, b: NoteInput) => api<Note>(`/notes/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/notes/${id}`, { method: 'DELETE' }),
   order: (ws: string, ids: string[]) => api<void>(`/workspaces/${ws}/notes/order`, { method: 'PUT', body: j({ ids }) }),
+}
+
+export const inboxApi = {
+  list: (before?: string) => api<{ items: InboxItem[]; unread: number; more: boolean }>(`/me/notifications?${qs({ before })}`),
+  read: (b: { ids?: string[]; all?: boolean }) => api<void>('/me/notifications/read', { method: 'POST', body: j(b) }),
+}
+
+export const pushApi = {
+  info: () => api<{ available: boolean; public_key: string; devices: PushDevice[] }>('/me/push'),
+  subscribe: (sub: PushSubscriptionJSON) => api<void>('/me/push', { method: 'POST', body: j(sub) }),
+  remove: (b: { endpoint?: string; id?: string }) => api<void>('/me/push/remove', { method: 'POST', body: j(b) }),
+  test: () => api<{ devices: number }>('/me/push/test', { method: 'POST' }),
 }
 
 export const calendarApi = {

@@ -336,6 +336,17 @@ definitions:
           $ref: '#/definitions/api.taskResponse'
         type: array
     type: object
+  api.inboxResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/inbox.View'
+        type: array
+      more:
+        type: boolean
+      unread:
+        type: integer
+    type: object
   api.listRequest:
     properties:
       color:
@@ -436,6 +447,11 @@ definitions:
         type: string
     required:
     - column_id
+    type: object
+  api.muteRequest:
+    properties:
+      muted:
+        type: boolean
     type: object
   api.noteItem:
     properties:
@@ -645,12 +661,24 @@ definitions:
     properties:
       accent_color:
         type: string
+      digest_enabled:
+        type: boolean
+      digest_time:
+        type: string
+      locale:
+        type: string
       notify_channels:
         items:
           type: string
         type: array
       notify_events:
         type: boolean
+      notify_prefs:
+        additionalProperties:
+          $ref: '#/definitions/inbox.Delivery'
+        description: NotifyPrefs is where each kind of notification goes besides the
+          inbox.
+        type: object
       theme:
         $ref: '#/definitions/models.Theme'
       time_format:
@@ -659,6 +687,52 @@ definitions:
         type: string
       week_start:
         type: integer
+    type: object
+  api.pushInfoResponse:
+    properties:
+      available:
+        type: boolean
+      devices:
+        items:
+          $ref: '#/definitions/models.PushSubscription'
+        type: array
+      public_key:
+        type: string
+    type: object
+  api.pushSubscribeRequest:
+    properties:
+      endpoint:
+        type: string
+      keys:
+        properties:
+          auth:
+            maxLength: 100
+            type: string
+          p256dh:
+            maxLength: 200
+            type: string
+        required:
+        - auth
+        - p256dh
+        type: object
+    required:
+    - endpoint
+    type: object
+  api.pushUnsubscribeRequest:
+    properties:
+      endpoint:
+        type: string
+      id:
+        type: string
+    type: object
+  api.readRequest:
+    properties:
+      all:
+        type: boolean
+      ids:
+        items:
+          type: string
+        type: array
     type: object
   api.refreshRequest:
     properties:
@@ -908,12 +982,27 @@ definitions:
       device_tz:
         maxLength: 64
         type: string
+      digest_enabled:
+        type: boolean
+      digest_time:
+        description: HH:MM
+        type: string
+      locale:
+        maxLength: 8
+        type: string
       notify_channels:
         items:
           type: string
         type: array
       notify_events:
         type: boolean
+      notify_prefs:
+        additionalProperties:
+          $ref: '#/definitions/inbox.Delivery'
+        description: |-
+          Per kind (reminder, assigned, workspace, activity, digest): also to my
+          devices (push) and/or my channels.
+        type: object
       theme:
         allOf:
         - $ref: '#/definitions/models.Theme'
@@ -1029,6 +1118,9 @@ definitions:
         items:
           type: string
         type: array
+      muted:
+        description: the caller muted its activity
+        type: boolean
       name:
         type: string
       position:
@@ -1089,6 +1181,41 @@ definitions:
       s3_region:
         type: string
     type: object
+  inbox.Delivery:
+    properties:
+      channels:
+        description: the channels they picked (email, ntfy, …)
+        type: boolean
+      push:
+        description: this user's devices (Web Push)
+        type: boolean
+    type: object
+  inbox.View:
+    properties:
+      actor_id:
+        type: string
+      count:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      link:
+        type: string
+      params:
+        additionalProperties: {}
+        type: object
+      read:
+        type: boolean
+      updated_at:
+        type: string
+      verb:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   models.APIToken:
     properties:
       created_at:
@@ -1144,6 +1271,19 @@ definitions:
         description: shown instead of the URL
         type: string
       workspace_id:
+        type: string
+    type: object
+  models.PushSubscription:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      updated_at:
+        type: string
+      user_agent:
         type: string
     type: object
   models.Role:
@@ -1249,7 +1389,19 @@ definitions:
           DeviceTZ is the zone the browser last reported, used for reminders
           while Timezone is "local".
         type: string
+      digest_enabled:
+        description: |-
+          The daily summary: on or off, at "HH:MM" in the user's zone; DigestSent
+          is the local date it was last sent.
+        type: boolean
+      digest_time:
+        type: string
       id:
+        type: string
+      locale:
+        description: |-
+          Locale is the interface language (en, pt), for text sent from the
+          server: push notifications, channels, the summary.
         type: string
       notify_events:
         description: |-
@@ -2238,6 +2390,48 @@ paths:
       summary: Revoke a calendar feed
       tags:
       - calendar
+  /me/notifications:
+    get:
+      parameters:
+      - description: Only older than this (RFC 3339)
+        in: query
+        name: before
+        type: string
+      - description: At most (default 30, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.inboxResponse'
+      security:
+      - BearerAuth: []
+      summary: My notifications
+      tags:
+      - notifications
+  /me/notifications/read:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Which
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.readRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Mark notifications read
+      tags:
+      - notifications
   /me/otp/backup-codes:
     post:
       consumes:
@@ -2419,6 +2613,73 @@ paths:
       summary: Update my profile
       tags:
       - auth
+  /me/push:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pushInfoResponse'
+      security:
+      - BearerAuth: []
+      summary: 'Web Push: key and my devices'
+      tags:
+      - notifications
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The browser's PushSubscription
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.pushSubscribeRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: 'Web Push: add this device'
+      tags:
+      - notifications
+  /me/push/remove:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Which
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.pushUnsubscribeRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: 'Web Push: remove a device'
+      tags:
+      - notifications
+  /me/push/test:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 'Web Push: send a test'
+      tags:
+      - notifications
   /me/rotate-token:
     post:
       produces:
@@ -3889,6 +4150,30 @@ paths:
       summary: Change a member's role
       tags:
       - workspaces
+  /workspaces/{ws}/mute:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Muted or not
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.muteRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Mute a workspace's activity
+      tags:
+      - notifications
   /workspaces/{ws}/notes:
     get:
       parameters:

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,11 @@ type prefsResponse struct {
 	NotifyChannels []string     `json:"notify_channels"`
 	WeekStart      int          `json:"week_start"`
 	TimeFormat     string       `json:"time_format"`
+	// NotifyPrefs is where each kind of notification goes besides the inbox.
+	NotifyPrefs   map[string]inbox.Delivery `json:"notify_prefs"`
+	DigestEnabled bool                      `json:"digest_enabled"`
+	DigestTime    string                    `json:"digest_time"`
+	Locale        string                    `json:"locale"`
 }
 
 func toPrefsResponse(p models.UserPrefs) prefsResponse {
@@ -35,6 +41,10 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		NotifyChannels: chans,
 		WeekStart:      p.WeekStart,
 		TimeFormat:     orDefault(p.TimeFormat, "24h"),
+		NotifyPrefs:    inbox.PrefsOf(p),
+		DigestEnabled:  p.DigestEnabled,
+		DigestTime:     orDefault(p.DigestTime, "08:00"),
+		Locale:         p.Locale,
 	}
 }
 
@@ -104,6 +114,30 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	if req.NotifyChannels != nil {
 		b, _ := json.Marshal(*req.NotifyChannels)
 		updates["notify_channels"] = string(b)
+	}
+	if req.NotifyPrefs != nil {
+		merged := inbox.PrefsOf(prefs)
+		for k, d := range *req.NotifyPrefs {
+			merged[k] = d
+		}
+		updates["notify_prefs"] = inbox.EncodePrefs(merged)
+		// The older switch is "reminders also go to my channels".
+		updates["notify_events"] = merged[inbox.Reminder].Channels
+	}
+	if req.DigestEnabled != nil {
+		updates["digest_enabled"] = *req.DigestEnabled
+	}
+	if req.DigestTime != nil {
+		if _, err := time.Parse("15:04", *req.DigestTime); err != nil || len(*req.DigestTime) != 5 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "digest_time must be HH:MM"})
+			return
+		}
+		updates["digest_time"] = *req.DigestTime
+		// A new time today may still send today's summary.
+		updates["digest_sent"] = ""
+	}
+	if req.Locale != nil {
+		updates["locale"] = *req.Locale
 	}
 	if len(updates) > 0 {
 		if err := h.db.Model(&prefs).Updates(updates).Error; err != nil {

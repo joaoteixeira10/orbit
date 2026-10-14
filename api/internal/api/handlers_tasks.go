@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -552,6 +553,14 @@ func (h *Handlers) createTask(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "tasks")
+	h.notifyAssigned(c, t, nil)
+	if t.ParentID == nil {
+		var assignee []string
+		if t.AssigneeID != nil {
+			assignee = append(assignee, *t.AssigneeID)
+		}
+		h.notifyActivity(c, ws, "task_added", t.Title, taskLink(t), assignee...)
+	}
 	c.JSON(http.StatusCreated, toTaskResponse(t))
 }
 
@@ -577,6 +586,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	wasDone, prevAssignee := t.CompletedAt != nil, t.AssigneeID
 	if msg := h.applyTaskFields(req, &t); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -659,6 +669,10 @@ func (h *Handlers) updateTask(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, t.WorkspaceID, "tasks")
+	h.notifyAssigned(c, t, prevAssignee)
+	if !wasDone && (t.CompletedAt != nil || repeated) && t.ParentID == nil {
+		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
+	}
 	resp := toTaskResponse(t)
 	c.JSON(http.StatusOK, gin.H{"task": resp, "repeated": repeated})
 }
@@ -709,7 +723,8 @@ func (h *Handlers) moveTask(c *gin.Context) {
 		return
 	}
 	up := map[string]any{"list_id": list.ID, "column_id": col.ID, "rank": h.columnRank(list.ID, col.ID, req.AfterID, t.ID)}
-	if col.Done && t.CompletedAt == nil {
+	completing := col.Done && t.CompletedAt == nil
+	if completing {
 		now := time.Now()
 		up["completed_at"] = &now
 	} else if !col.Done && t.CompletedAt != nil {
@@ -726,6 +741,9 @@ func (h *Handlers) moveTask(c *gin.Context) {
 	}
 	t = reloadTask(h, t.ID)
 	h.publishWS(c, t.WorkspaceID, "tasks")
+	if completing && t.ParentID == nil {
+		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
+	}
 	c.JSON(http.StatusOK, toTaskResponse(t))
 }
 
@@ -766,4 +784,9 @@ func writeTxError(c *gin.Context, h *Handlers, err error, msg string) bool {
 	}
 	h.internalError(c, err, msg)
 	return true
+}
+
+// taskLink opens a task in the app.
+func taskLink(t models.Task) string {
+	return fmt.Sprintf("/w/%s/tasks/%s?task=%s", t.WorkspaceID, t.ListID, t.ID)
 }

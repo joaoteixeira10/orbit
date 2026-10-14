@@ -1,6 +1,9 @@
 package api
 
-import "gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+import (
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+)
 
 // ---- Auth ----
 
@@ -79,4 +82,10 @@ type updatePrefsRequest struct {
 	DeviceTZ       *string       `json:"device_tz" binding:"omitempty,max=64"`
 	WeekStart      *int          `json:"week_start" binding:"omitempty,oneof=0 1"`
 	TimeFormat     *string       `json:"time_format" binding:"omitempty,oneof=24h 12h"`
+	// Per kind (reminder, assigned, workspace, activity, digest): also to my
+	// devices (push) and/or my channels.
+	NotifyPrefs   *map[string]inbox.Delivery `json:"notify_prefs"`
+	DigestEnabled *bool                      `json:"digest_enabled"`
+	DigestTime    *string                    `json:"digest_time"` // HH:MM
+	Locale        *string                    `json:"locale" binding:"omitempty,max=8"`
 }

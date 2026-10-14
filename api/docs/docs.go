@@ -1369,6 +1369,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "My notifications",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Only older than this (RFC 3339)",
+                        "name": "before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "At most (default 30, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.inboxResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/notifications/read": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark notifications read",
+                "parameters": [
+                    {
+                        "description": "Which",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.readRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/me/otp/backup-codes": {
             "post": {
                 "security": [
@@ -1662,6 +1732,119 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.User"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/push": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Web Push: key and my devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pushInfoResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Web Push: add this device",
+                "parameters": [
+                    {
+                        "description": "The browser's PushSubscription",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.pushSubscribeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/me/push/remove": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Web Push: remove a device",
+                "parameters": [
+                    {
+                        "description": "Which",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.pushUnsubscribeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/me/push/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Web Push: send a test",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
                         }
                     }
                 }
@@ -4067,6 +4250,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/mute": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mute a workspace's activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Muted or not",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.muteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/notes": {
             "get": {
                 "security": [
@@ -4947,6 +5169,23 @@ const docTemplate = `{
                 }
             }
         },
+        "api.inboxResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/inbox.View"
+                    }
+                },
+                "more": {
+                    "type": "boolean"
+                },
+                "unread": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.listRequest": {
             "type": "object",
             "properties": {
@@ -5095,6 +5334,14 @@ const docTemplate = `{
                 },
                 "list_id": {
                     "type": "string"
+                }
+            }
+        },
+        "api.muteRequest": {
+            "type": "object",
+            "properties": {
+                "muted": {
+                    "type": "boolean"
                 }
             }
         },
@@ -5408,6 +5655,15 @@ const docTemplate = `{
                 "accent_color": {
                     "type": "string"
                 },
+                "digest_enabled": {
+                    "type": "boolean"
+                },
+                "digest_time": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
                 "notify_channels": {
                     "type": "array",
                     "items": {
@@ -5416,6 +5672,13 @@ const docTemplate = `{
                 },
                 "notify_events": {
                     "type": "boolean"
+                },
+                "notify_prefs": {
+                    "description": "NotifyPrefs is where each kind of notification goes besides the inbox.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/inbox.Delivery"
+                    }
                 },
                 "theme": {
                     "$ref": "#/definitions/models.Theme"
@@ -5428,6 +5691,76 @@ const docTemplate = `{
                 },
                 "week_start": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.pushInfoResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean"
+                },
+                "devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PushSubscription"
+                    }
+                },
+                "public_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.pushSubscribeRequest": {
+            "type": "object",
+            "required": [
+                "endpoint"
+            ],
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "keys": {
+                    "type": "object",
+                    "required": [
+                        "auth",
+                        "p256dh"
+                    ],
+                    "properties": {
+                        "auth": {
+                            "type": "string",
+                            "maxLength": 100
+                        },
+                        "p256dh": {
+                            "type": "string",
+                            "maxLength": 200
+                        }
+                    }
+                }
+            }
+        },
+        "api.pushUnsubscribeRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.readRequest": {
+            "type": "object",
+            "properties": {
+                "all": {
+                    "type": "boolean"
+                },
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -5780,6 +6113,17 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 64
                 },
+                "digest_enabled": {
+                    "type": "boolean"
+                },
+                "digest_time": {
+                    "description": "HH:MM",
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string",
+                    "maxLength": 8
+                },
                 "notify_channels": {
                     "type": "array",
                     "items": {
@@ -5788,6 +6132,13 @@ const docTemplate = `{
                 },
                 "notify_events": {
                     "type": "boolean"
+                },
+                "notify_prefs": {
+                    "description": "Per kind (reminder, assigned, workspace, activity, digest): also to my\ndevices (push) and/or my channels.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/inbox.Delivery"
+                    }
                 },
                 "theme": {
                     "enum": [
@@ -5962,6 +6313,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "muted": {
+                    "description": "the caller muted its activity",
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -6048,6 +6403,58 @@ const docTemplate = `{
                 }
             }
         },
+        "inbox.Delivery": {
+            "type": "object",
+            "properties": {
+                "channels": {
+                    "description": "the channels they picked (email, ntfy, …)",
+                    "type": "boolean"
+                },
+                "push": {
+                    "description": "this user's devices (Web Push)",
+                    "type": "boolean"
+                }
+            }
+        },
+        "inbox.View": {
+            "type": "object",
+            "properties": {
+                "actor_id": {
+                    "type": "string"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "read": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "verb": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.APIToken": {
             "type": "object",
             "properties": {
@@ -6129,6 +6536,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PushSubscription": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_used_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_agent": {
                     "type": "string"
                 }
             }
@@ -6257,7 +6684,18 @@ const docTemplate = `{
                     "description": "DeviceTZ is the zone the browser last reported, used for reminders\nwhile Timezone is \"local\".",
                     "type": "string"
                 },
+                "digest_enabled": {
+                    "description": "The daily summary: on or off, at \"HH:MM\" in the user's zone; DigestSent\nis the local date it was last sent.",
+                    "type": "boolean"
+                },
+                "digest_time": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "locale": {
+                    "description": "Locale is the interface language (en, pt), for text sent from the\nserver: push notifications, channels, the summary.",
                     "type": "string"
                 },
                 "notify_events": {

@@ -6,6 +6,7 @@ import Toasts from '@/components/ui/Toasts.vue'
 import ForcePasswordChange from '@/components/ForcePasswordChange.vue'
 import ForceOtpSetup from '@/components/ForceOtpSetup.vue'
 import StepUpModal from '@/components/ui/StepUpModal.vue'
+import KonamiEgg from '@/components/KonamiEgg.vue'
 
 const prefs = usePrefsStore()
 const auth = useAuthStore()
@@ -23,4 +24,5 @@ onMounted(() => {
   <ForcePasswordChange v-if="auth.isAuthenticated && auth.user?.must_change_password" />
   <ForceOtpSetup v-else-if="auth.isAuthenticated && auth.mustSetupOtp" />
   <StepUpModal />
+  <KonamiEgg />
 </template>

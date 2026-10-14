@@ -224,7 +224,7 @@ async function remove() {
           <Toggle :model-value="hasDate" :disabled="!editable" @update:model-value="setDate" />
         </div>
         <div v-if="hasDate && editable" class="flex gap-1.5 px-3.5 py-2">
-          <button v-for="q in quick" :key="q.v" class="pill hover:bg-fill-strong" :class="{ '!bg-accent !text-white': task.due === q.v }" @click="save({ due: q.v })">{{ q.label }}</button>
+          <button v-for="q in quick" :key="q.v" class="pill hover:bg-fill-strong" :class="{ '!bg-accent !text-accent-fg': task.due === q.v }" @click="save({ due: q.v })">{{ q.label }}</button>
         </div>
         <div v-if="hasDate" class="group-row">
           <span class="tile h-7 w-7" style="--tile: #007aff"><Clock class="h-4 w-4" /></span>

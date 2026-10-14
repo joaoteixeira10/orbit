@@ -496,11 +496,27 @@ SPA themes itself before login and also learns the login-page capabilities. `PUT
 pointer-field partial patch, audited.
 
 ### 9.2 Developer themes (curated presets)
-Each project brings its own crest in five inks (`web/public/dev-themes/<name>-{blue,gold,red,dark,bone}.svg`
-+ `-512.png`). Text in a design file (a blackletter initial, say) must be **baked into a path**
-(`scripts/bake-crests.py`: fontTools in a Python container; it also drops C2PA manifests), so the
-favicon and `<img>` show the real glyph without the font. Design packs stay out of git; only the
-files the app uses go in `web/public`. Ink: the `dark` crest in the dark UI, `bone` in the light UI.
+**Every project has them**, with the same four themes (Steel Blue, Gold Leaf, Blood Red, Ink), the
+same settings and the same Branding UI; only the crest changes per project.
+
+**The icons are the project owner's, never the implementer's.** Crests, favicons, marks and app
+icons are designed and delivered by the owner as a design pack; whoever builds the project (a
+person or an AI agent) must not draw, generate, redraw, recolour, crop or "improve" an icon, nor
+invent one when it's missing — ask the owner. The only changes allowed are mechanical: bake text
+into a path, strip metadata, copy the files into `web/public`. The default app icon (`favicon.svg`
+and its PNGs, §9.3) follows the same rule.
+
+- **The design pack**: one SVG per ink, `<…>-{blue,gold,red,dark,bone}.svg`, each with a
+  `-512.png` (more sizes may come with it), plus the designer's preview page. It stays **out of
+  git**: a sibling folder next to the repo (`../<project>_assets/`, e.g. `../orbit_assets/orbit/`)
+  or a gitignored folder inside it (LB Admin: `proxy-assets/`). Only the files the app uses go in
+  `web/public/dev-themes/`.
+- **Baking**: text in a design file (the blackletter "U") must be **baked into a path**
+  (`scripts/bake-crests.py`: fontTools in a Python container, reading the self-hosted font; it
+  also drops the C2PA manifest, no longer valid once the file changes), so the favicon and `<img>`
+  show the real glyph without the font. The PNGs are copied as delivered. A new pack from the
+  owner = run the script again and commit the output.
+- Ink: the `dark` crest in the dark UI, `bone` in the light UI.
 
 - `developer_themes_enabled` + `developer_theme ∈ {blue, gold, red, ink}` (clamped server-side)
   + `asset_source_{logo,wordmark,favicon} ∈ {theme, keep}`.
@@ -513,6 +529,11 @@ files the app uses go in `web/public`. Ink: the `dark` crest in the dark UI, `bo
 - Assets in `web/public/dev-themes/` are **font-independent** SVGs, with the glyph baked as a path,
   because a favicon paints before `@font-face` loads. The wordmark font is self-hosted
   (`web/public/fonts/`).
+- **Text on the accent** always uses `--accent-fg` (a Tailwind `text-accent-fg`), never a hard-coded
+  white: Ink's accent in the dark UI is bone, and white on it is unreadable (Orbit found this in its
+  selected sidebar tile, menus, chips and checkboxes).
+- The **Konami egg** (`KonamiEgg.vue`, ↑↑↓↓←→←→BA) comes with the themes: the "Engineered by"
+  card, the same in every project.
 - Admin UI: theme cards, a master toggle, per-asset segmented controls, the accent picker locked with a note
   while a theme is on, and a **live preview** that scopes the CSS variables onto real components
   (browser-tab strip, sidebar brand, `.btn-primary`), so it renders exactly like the saved result.

@@ -29,6 +29,7 @@ export default {
         'accent-soft': 'var(--accent-soft)',
         'accent-bg': 'var(--accent-bg)',
         'accent-text': 'var(--accent-text)',
+        'accent-fg': 'var(--accent-fg)', // text on the accent (dark on Ink's bone)
         ws: 'var(--ws)',
         side: 'var(--side)',
         'line-soft': 'var(--line-soft)',

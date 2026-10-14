@@ -187,11 +187,13 @@ function backToCredentials() {
     <main class="wrap">
       <div class="brand">
         <template v-if="branding.showMark">
-          <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
+          <img v-if="branding.logoMode === 'theme'" :src="branding.crestUrl" :alt="t('acct.logo')" class="logo" />
+          <img v-else-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
           <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
         </template>
         <template v-if="branding.showName">
-          <b>{{ branding.appName }}</b>
+          <b v-if="branding.wordmarkIsTheme && branding.theme" class="brand-word blackletter" :style="{ color: branding.theme.mark, '-webkit-text-stroke': `1.8px ${branding.theme.halo}` }">UBonito</b>
+          <b v-else>{{ branding.appName }}</b>
         </template>
       </div>
 
@@ -304,6 +306,11 @@ function backToCredentials() {
   flex: none;
   border-radius: 15px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.brand b.brand-word {
+  font: 700 34px "UnifrakturCook", serif;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 .brand-logo {
   height: 56px;

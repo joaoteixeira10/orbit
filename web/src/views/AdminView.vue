@@ -21,7 +21,10 @@ import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
+  Code2, Sparkles, Type, Info,
 } from 'lucide-vue-next'
+import { usePrefsStore } from '@/stores/prefs'
+import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -455,15 +458,36 @@ const brandForm = reactive({
   favicon_data_url: '',
   show_app_name: true,
   show_logo: true,
+  // Developer themes (a closed curated set; the accent is locked to the theme while on).
+  developer_themes_enabled: false,
+  developer_theme: 'blue' as DevThemeId,
+  asset_source_logo: 'theme' as 'theme' | 'keep',
+  asset_source_wordmark: 'theme' as 'theme' | 'keep',
+  asset_source_favicon: 'theme' as 'theme' | 'keep',
 })
 const customLoginMessage = ref(false)
 const loginMessage = ref('')
 
-// Accent for the preview: the owner's chosen accent, or none = default.
+// The curated themes (the grid) and the one selected.
+const prefs = usePrefsStore()
+const devThemeList = DEV_THEME_LIST
+const activeTheme = computed(() => DEV_THEME_LIST.find((x) => x.id === brandForm.developer_theme) ?? DEV_THEME_LIST[0])
+// Accent for the preview: the theme's when the flag is on (Ink flips with
+// light/dark), else the owner's chosen accent, or none = default.
 const previewAccent = computed(() => {
+  if (brandForm.developer_themes_enabled) {
+    const r = resolveThemeAccent(activeTheme.value, prefs.isDark())
+    return { accent: r.accent, strong: r.accentStrong, fg: r.onAccent }
+  }
   const a = brandForm.accent_color
   return a ? { accent: a, strong: `color-mix(in srgb, ${a} 78%, #000)`, fg: '#fff' } : null
 })
+
+// The selected theme's crest, and which mark / wordmark / favicon the preview shows.
+const previewCrest = computed(() => resolveCrest(activeTheme.value, prefs.isDark()))
+const previewLogoTheme = computed(() => brandForm.developer_themes_enabled && brandForm.asset_source_logo === 'theme')
+const previewWordTheme = computed(() => brandForm.developer_themes_enabled && brandForm.asset_source_wordmark === 'theme')
+const previewFavTheme = computed(() => brandForm.developer_themes_enabled && brandForm.asset_source_favicon === 'theme')
 
 // The Live preview button reuses the real .btn-primary, but with the *previewed*
 // accent vars scoped to it (same derivation the branding store applies on save),
@@ -486,6 +510,11 @@ function loadBrandForm() {
   brandForm.favicon_data_url = branding.faviconDataURL
   brandForm.show_app_name = branding.showAppName
   brandForm.show_logo = branding.showLogo
+  brandForm.developer_themes_enabled = branding.devThemesEnabled
+  brandForm.developer_theme = branding.devTheme
+  brandForm.asset_source_logo = branding.assetSourceLogo
+  brandForm.asset_source_wordmark = branding.assetSourceWordmark
+  brandForm.asset_source_favicon = branding.assetSourceFavicon
   loginMessage.value = branding.loginMessage
   customLoginMessage.value = !!branding.loginMessage
 }
@@ -948,7 +977,7 @@ function switchTab(t: Tab) {
         <div class="flex flex-col gap-4 p-5">
           <div><label class="label">{{ t('adm.branding.appName') }}</label><input v-model="brandForm.app_name" class="input" placeholder="Orbit" /></div>
           <div>
-            <div>
+            <div class="lockable" :class="{ locked: brandForm.developer_themes_enabled }">
               <label class="label">{{ t('adm.branding.accent') }}</label>
               <div class="flex items-center gap-2">
                 <input :value="brandForm.accent_color || '#007AFF'" type="color" class="h-10 w-12 shrink-0 rounded-lg border border-border bg-surface-2" @input="brandForm.accent_color = ($event.target as HTMLInputElement).value" />
@@ -966,6 +995,88 @@ function switchTab(t: Tab) {
                 />
               </div>
             </div>
+            <div class="lock-note" :class="{ show: brandForm.developer_themes_enabled }">
+              <Info class="h-4 w-4 shrink-0" />
+              <span>{{ t('adm.branding.accentLocked') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Developer themes -->
+      <div class="card overflow-hidden">
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
+          <Code2 class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.devThemes') }}</h3>
+          <span class="ml-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="brandForm.developer_themes_enabled ? 'bg-accent-bg text-accent-text' : 'bg-surface-3 text-text-3'">{{ brandForm.developer_themes_enabled ? t('adm.branding.on') : t('adm.branding.off') }}</span>
+        </div>
+        <div class="p-5">
+          <div class="dev-master">
+            <div class="flex items-center gap-[13px]">
+              <div class="dm-ico"><Sparkles class="h-[19px] w-[19px]" /></div>
+              <div>
+                <div class="text-[15px] font-semibold">{{ t('adm.branding.enableThemes') }}</div>
+                <p class="mt-[3px] max-w-[420px] text-[12.5px] leading-snug text-text-3">{{ t('adm.branding.enableThemesHint') }}</p>
+              </div>
+            </div>
+            <Toggle v-model="brandForm.developer_themes_enabled" />
+          </div>
+
+          <div v-if="brandForm.developer_themes_enabled" class="mt-[22px]">
+            <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">{{ t('adm.branding.themePick') }}</div>
+            <div class="theme-grid">
+              <button
+                v-for="th in devThemeList"
+                :key="th.id"
+                type="button"
+                class="theme-card"
+                :class="{ on: brandForm.developer_theme === th.id }"
+                :aria-pressed="brandForm.developer_theme === th.id"
+                :style="{ '--tc': th.accent, '--tc-ground': th.ground, '--tc-badge': th.badge, '--tc-mark': th.mark, '--tc-halo': th.halo }"
+                @click="brandForm.developer_theme = th.id"
+              >
+                <span class="tc-check"><Check class="h-[13px] w-[13px]" /></span>
+                <div class="theme-prev">
+                  <img :src="th.crest" alt="" class="h-[50px] w-[50px]" />
+                  <div class="tp-word blackletter">UBonito</div>
+                </div>
+                <div class="theme-foot">
+                  <span class="tf-dot" /><b class="text-[13.5px] font-semibold">{{ t(`adm.branding.theme.${th.id}`) }}</b><span class="tf-hex">{{ th.accent }}</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="mt-6">
+              <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">{{ t('adm.branding.assetsPick') }}</div>
+              <div class="src-row">
+                <div class="src-ico"><ImageIcon class="h-4 w-4" /></div>
+                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.markRow') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ brandForm.logo_data_url ? t('adm.branding.hasLogo') : t('adm.branding.noCustomLogo') }}</span></div>
+                <div class="seg">
+                  <button type="button" :class="{ on: brandForm.asset_source_logo === 'theme' }" @click="brandForm.asset_source_logo = 'theme'">{{ t('adm.branding.themeCrest') }}</button>
+                  <button type="button" :class="{ on: brandForm.asset_source_logo === 'keep' }" @click="brandForm.asset_source_logo = 'keep'">{{ brandForm.logo_data_url ? t('adm.branding.myLogo') : t('adm.branding.default') }}</button>
+                </div>
+              </div>
+              <div class="src-row">
+                <div class="src-ico"><Type class="h-4 w-4" /></div>
+                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.wordmarkRow') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ t('adm.branding.wordmarkHint') }}</span></div>
+                <div class="seg">
+                  <button type="button" :class="{ on: brandForm.asset_source_wordmark === 'theme' }" @click="brandForm.asset_source_wordmark = 'theme'">{{ t('adm.branding.themeWordmark') }}</button>
+                  <button type="button" :class="{ on: brandForm.asset_source_wordmark === 'keep' }" @click="brandForm.asset_source_wordmark = 'keep'">{{ t('adm.branding.appNameChoice') }}</button>
+                </div>
+              </div>
+              <div class="src-row">
+                <div class="src-ico"><ShieldCheck class="h-4 w-4" /></div>
+                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.favicon') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ brandForm.favicon_data_url ? t('adm.branding.hasFavicon') : t('adm.branding.noCustomFavicon') }}</span></div>
+                <div class="seg">
+                  <button type="button" :class="{ on: brandForm.asset_source_favicon === 'theme' }" @click="brandForm.asset_source_favicon = 'theme'">{{ t('adm.branding.themeFavicon') }}</button>
+                  <button type="button" :class="{ on: brandForm.asset_source_favicon === 'keep' }" @click="brandForm.asset_source_favicon = 'keep'">{{ brandForm.favicon_data_url ? t('adm.branding.myFavicon') : t('adm.branding.default') }}</button>
+                </div>
+              </div>
+              <div class="src-row forced">
+                <div class="src-ico"><SlidersHorizontal class="h-4 w-4" /></div>
+                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ t('adm.branding.accent') }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ t('adm.branding.accentRowHint') }}</span></div>
+                <span class="src-badge">{{ t('adm.branding.alwaysTheme') }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -978,14 +1089,15 @@ function switchTab(t: Tab) {
       <div class="card overflow-hidden">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.display') }}</h3></div>
         <div class="flex flex-col gap-4 p-5">
-          <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center justify-between gap-4" :class="{ 'opacity-50': brandForm.developer_themes_enabled }">
             <div><div class="text-[13px] font-semibold">{{ t('adm.branding.showLogo') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.showLogoHint') }}</div></div>
-            <Toggle v-model="brandForm.show_logo" />
+            <Toggle v-model="brandForm.show_logo" :disabled="brandForm.developer_themes_enabled" />
           </div>
-          <div class="flex items-center justify-between gap-4 border-t border-border pt-4">
+          <div class="flex items-center justify-between gap-4 border-t border-border pt-4" :class="{ 'opacity-50': brandForm.developer_themes_enabled }">
             <div><div class="text-[13px] font-semibold">{{ t('adm.branding.showName') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.showNameHint') }}</div></div>
-            <Toggle v-model="brandForm.show_app_name" />
+            <Toggle v-model="brandForm.show_app_name" :disabled="brandForm.developer_themes_enabled" />
           </div>
+          <p v-if="brandForm.developer_themes_enabled" class="-mt-1 flex items-start gap-1.5 text-[11px] text-text-3"><Info class="h-3.5 w-3.5 shrink-0" />{{ t('adm.branding.byTheme') }}</p>
           <div class="border-t border-border pt-4">
             <div class="flex items-center justify-between gap-4">
               <div><div class="text-[13px] font-semibold">{{ t('adm.branding.loginMessage') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.loginMessageHint') }}</div></div>
@@ -1000,7 +1112,7 @@ function switchTab(t: Tab) {
         <div class="flex items-center gap-2 border-b border-border px-5 py-3"><ImageIcon class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.assets') }}</h3></div>
         <div class="flex flex-col gap-4 p-5">
           <div>
-            <div>
+            <div class="lockable" :class="{ locked: previewLogoTheme }">
               <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">{{ t('adm.branding.logo') }}</span> {{ t('adm.branding.logoHint') }}</div>
               <div class="mb-2 flex h-20 items-center justify-center rounded-xl border border-border bg-surface-2">
                 <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="max-h-14 rounded" />
@@ -1014,9 +1126,13 @@ function switchTab(t: Tab) {
                 </div>
               </div>
             </div>
+            <div class="lock-note" :class="{ show: previewLogoTheme }">
+              <Info class="h-4 w-4 shrink-0" />
+              <span>{{ t('adm.branding.logoLocked', { choice: brandForm.logo_data_url ? t('adm.branding.myLogo') : t('adm.branding.default') }) }}</span>
+            </div>
           </div>
           <div class="border-t border-border pt-4">
-            <div>
+            <div class="lockable" :class="{ locked: previewFavTheme }">
               <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">{{ t('adm.branding.favicon') }}</span> {{ t('adm.branding.faviconHint') }}</div>
               <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border-2 px-3 py-3">
                 <span class="flex items-center gap-3 text-[13px]">
@@ -1029,6 +1145,10 @@ function switchTab(t: Tab) {
                 </div>
               </div>
             </div>
+            <div class="lock-note" :class="{ show: previewFavTheme }">
+              <Info class="h-4 w-4 shrink-0" />
+              <span>{{ t('adm.branding.faviconLocked', { choice: brandForm.favicon_data_url ? t('adm.branding.myFavicon') : t('adm.branding.default') }) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1040,18 +1160,21 @@ function switchTab(t: Tab) {
           <div class="overflow-hidden rounded-xl border border-border">
             <!-- browser-tab strip (favicon) -->
             <div class="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-2.5">
-              <img v-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-6 w-6 rounded" />
+              <img v-if="previewFavTheme" :src="previewCrest" alt="" class="h-6 w-6" />
+              <img v-else-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-6 w-6 rounded" />
               <img v-else :src="DEFAULT_MARK" alt="" class="h-6 w-6 rounded" />
               <span class="text-[13px] font-semibold">{{ brandForm.app_name || 'Orbit' }}</span>
             </div>
             <!-- sidebar brand (mark + wordmark), honouring the show-logo/name toggles -->
             <div class="flex items-center gap-3 px-3 pt-3">
-              <template v-if="brandForm.show_logo">
-                <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="h-[38px] w-auto max-w-[150px] rounded-md object-contain" />
+              <template v-if="previewLogoTheme || brandForm.show_logo">
+                <img v-if="previewLogoTheme" :src="previewCrest" alt="" class="h-[42px] w-[42px]" />
+                <img v-else-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="h-[38px] w-auto max-w-[150px] rounded-md object-contain" />
                 <img v-else :src="DEFAULT_MARK" alt="" class="h-[42px] w-[42px]" />
               </template>
-              <div v-if="brandForm.show_app_name">
-                <div class="text-[18px] font-semibold leading-tight">{{ brandForm.app_name || 'Orbit' }}</div>
+              <div v-if="previewWordTheme || brandForm.show_app_name">
+                <div v-if="previewWordTheme" class="blackletter text-[22px] leading-none" :style="{ color: activeTheme.mark, '-webkit-text-stroke': `2.2px ${activeTheme.halo}` }">UBonito</div>
+                <div v-else class="text-[18px] font-semibold leading-tight">{{ brandForm.app_name || 'Orbit' }}</div>
               </div>
             </div>
             <div class="flex items-center gap-3 p-3">
@@ -1520,7 +1643,7 @@ function switchTab(t: Tab) {
                 <div class="flex items-center gap-1.5 text-[13px] font-medium">{{ gp.label }}<Lock v-if="gp.ownerOnly && !auth.isOwner" class="h-3 w-3 text-text-3" /></div>
                 <div class="text-[11px] text-text-3">{{ gp.desc }}</div>
               </div>
-              <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border" :class="roleForm.global_privileges.includes(gp.id) ? 'border-accent bg-accent text-white' : 'border-border-2'">
+              <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border" :class="roleForm.global_privileges.includes(gp.id) ? 'border-accent bg-accent text-accent-fg' : 'border-border-2'">
                 <Check v-if="roleForm.global_privileges.includes(gp.id)" class="h-3 w-3" />
               </span>
             </button>

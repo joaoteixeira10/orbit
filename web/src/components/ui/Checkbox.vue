@@ -22,7 +22,7 @@ function toggle() {
   >
     <span
       class="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] transition-colors"
-      :class="modelValue ? 'bg-accent text-white' : 'bg-surface shadow-[inset_0_0_0_1px_var(--border-2)]'"
+      :class="modelValue ? 'bg-accent text-accent-fg' : 'bg-surface shadow-[inset_0_0_0_1px_var(--border-2)]'"
     >
       <Check v-if="modelValue" class="h-3 w-3" :stroke-width="3.2" />
     </span>

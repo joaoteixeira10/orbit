@@ -301,11 +301,17 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
     <aside id="sidebar" class="side material" :class="{ open: drawerOpen }" :inert="(narrow && !drawerOpen) || undefined">
       <div class="side-top">
         <div class="brand">
+          <!-- Mark: a developer theme's crest, an uploaded logo, else Orbit's icon.
+               Hidden by the "Show logo" toggle (not a theme's). -->
           <template v-if="branding.showMark">
-            <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
+            <img v-if="branding.logoMode === 'theme'" :src="branding.crestUrl" :alt="t('acct.logo')" class="logo" />
+            <img v-else-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
             <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
           </template>
-          <b v-if="branding.showName" class="truncate">{{ branding.appName }}</b>
+          <template v-if="branding.showName">
+            <b v-if="branding.wordmarkIsTheme && branding.theme" class="brand-word blackletter" :style="{ color: branding.theme.mark, '-webkit-text-stroke': `1.6px ${branding.theme.halo}` }">UBonito</b>
+            <b v-else class="truncate">{{ branding.appName }}</b>
+          </template>
           <span class="ml-auto" />
           <InboxButton v-if="!narrow" />
           <button v-if="!narrow" class="icon-btn h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></button>
@@ -542,6 +548,11 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   flex: none;
   border-radius: 6px;
 }
+.brand-word {
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
 .brand-logo {
   height: 24px;
   max-width: 150px;
@@ -615,7 +626,7 @@ html.dark .smart-tile {
   color: var(--text);
 }
 .smart-tile.on .jot {
-  color: #fff;
+  color: var(--accent-fg, #fff);
 }
 .smart-tile.on .jot:hover {
   background: rgba(255, 255, 255, 0.2);
@@ -626,10 +637,10 @@ html.dark .smart-tile {
 .smart-tile.on,
 html.dark .smart-tile.on {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-fg, #fff);
 }
 .smart-tile.on .tile {
-  --tile: #fff !important;
+  --tile: var(--accent-fg, #fff) !important;
   color: var(--accent);
 }
 .sec-title {

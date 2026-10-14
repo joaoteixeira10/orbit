@@ -91,6 +91,12 @@ export interface Branding {
   hide_local_login: boolean
   passwordless_enabled: boolean
   auto_sso: boolean
+  // Developer themes (owner): a curated accent + UBonito crest / wordmark / favicon.
+  developer_themes_enabled?: boolean
+  developer_theme?: 'blue' | 'gold' | 'red' | 'ink'
+  asset_source_logo?: 'theme' | 'keep'
+  asset_source_wordmark?: 'theme' | 'keep'
+  asset_source_favicon?: 'theme' | 'keep'
 }
 
 export interface OIDCConfig {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { settingsApi } from '@/api'
 import type { Branding } from '@/api/types'
+import { DEV_THEMES, resolveCrest, resolveCrestPng, resolveThemeAccent, type DevTheme, type DevThemeId } from '@/lib/devThemes'
 
 // upsertLink returns the (created-if-missing) <link rel=...> in <head>.
 function upsertLink(rel: string): HTMLLinkElement {
@@ -32,8 +33,10 @@ export const DEFAULT_MARK = '/favicon.svg'
 let manifestBlobURL: string | null = null
 
 // Branding store: loads global branding and applies the resolved values to the
-// document (accent CSS vars, favicon + home-screen icons + manifest, title).
-// The rest of the app reads the resolved getters here, not raw fields.
+// document (accent CSS vars, favicon + home-screen icons + manifest, title). When
+// developer themes are on, the accent is locked to a curated theme and the
+// mark / wordmark / favicon come from the theme (each unless kept as the org's
+// own). The rest of the app reads the resolved getters here, not raw fields.
 export const useBrandingStore = defineStore('branding', {
   state: () => ({
     appName: 'Orbit',
@@ -49,20 +52,42 @@ export const useBrandingStore = defineStore('branding', {
     hideLocalLogin: false,
     passwordlessEnabled: true,
     autoSso: false,
-    // Bumped when light/dark changes, so getters that read it recompute.
+    // Developer themes
+    devThemesEnabled: false,
+    devTheme: 'blue' as DevThemeId,
+    assetSourceLogo: 'theme' as 'theme' | 'keep',
+    assetSourceWordmark: 'theme' as 'theme' | 'keep',
+    assetSourceFavicon: 'theme' as 'theme' | 'keep',
+    // Bumped when light/dark changes, so getters that read it (Ink's crest) recompute.
     dark: document.documentElement.classList.contains('dark'),
     loaded: false,
   }),
   getters: {
+    // The active developer theme, or null when the flag is off.
+    theme(): DevTheme | null {
+      return this.devThemesEnabled ? DEV_THEMES[this.devTheme] : null
+    },
     // What the sidebar/login mark should render.
-    logoMode(): 'upload' | 'default' {
+    logoMode(): 'theme' | 'upload' | 'default' {
+      if (this.devThemesEnabled && this.assetSourceLogo === 'theme') return 'theme'
       return this.logoDataURL ? 'upload' : 'default'
     },
+    // The blackletter "UBonito" or the app name.
+    wordmarkIsTheme(): boolean {
+      return this.devThemesEnabled && this.assetSourceWordmark === 'theme'
+    },
+    // A developer theme is a block: its crest and wordmark always show,
+    // overriding the per-element toggles (greyed out in Branding while on).
     showMark(): boolean {
-      return this.showLogo
+      return this.logoMode === 'theme' || this.showLogo
     },
     showName(): boolean {
-      return this.showAppName
+      return this.wordmarkIsTheme || this.showAppName
+    },
+    // The theme crest for the sidebar / sign-in mark (Ink flips with light/dark).
+    crestUrl(): string {
+      if (this.logoMode !== 'theme' || !this.theme) return ''
+      return resolveCrest(this.theme, this.dark)
     },
   },
   actions: {
@@ -88,6 +113,11 @@ export const useBrandingStore = defineStore('branding', {
       this.hideLocalLogin = b.hide_local_login
       this.passwordlessEnabled = b.passwordless_enabled
       this.autoSso = b.auto_sso
+      this.devThemesEnabled = !!b.developer_themes_enabled
+      this.devTheme = b.developer_theme || 'blue'
+      this.assetSourceLogo = b.asset_source_logo || 'theme'
+      this.assetSourceWordmark = b.asset_source_wordmark || 'theme'
+      this.assetSourceFavicon = b.asset_source_favicon || 'theme'
 
       document.title = this.appName
       this.applyAccent()
@@ -95,7 +125,8 @@ export const useBrandingStore = defineStore('branding', {
     },
 
     // applyAccent sets the accent CSS variables from the resolved accent: a
-    // personal accent, else the org accent, else the stylesheet defaults.
+    // personal accent, else a developer theme's, else the org accent, else the
+    // stylesheet defaults.
     applyAccent() {
       const root = document.documentElement
       this.dark = root.classList.contains('dark')
@@ -110,8 +141,12 @@ export const useBrandingStore = defineStore('branding', {
         root.style.setProperty('--ring', `color-mix(in srgb, ${accent} 38%, transparent)`)
       }
       if (this.userAccentColor) {
-        // Personal accent wins over the org accent.
+        // Personal accent wins over the org accent and any developer theme (the
+        // theme still owns the mark / wordmark / favicon — only the colour changes).
         setRamp(this.userAccentColor, `color-mix(in srgb, ${this.userAccentColor} 78%, #000)`, '#fff')
+      } else if (this.theme) {
+        const r = resolveThemeAccent(this.theme, this.dark)
+        setRamp(r.accent, r.accentStrong, r.onAccent)
       } else if (this.accentColor) {
         setRamp(this.accentColor, `color-mix(in srgb, ${this.accentColor} 78%, #000)`, '#fff')
       } else {
@@ -134,7 +169,11 @@ export const useBrandingStore = defineStore('branding', {
       let href = ''
       let appleHref = ''
       let manifestHref = ''
-      if (this.faviconDataURL) {
+      if (this.theme && this.assetSourceFavicon === 'theme') {
+        href = resolveCrest(this.theme, isDark)
+        appleHref = resolveCrestPng(this.theme, isDark)
+        manifestHref = appleHref
+      } else if (this.faviconDataURL) {
         href = this.faviconDataURL
         appleHref = this.faviconDataURL // an uploaded favicon is used as-is
         manifestHref = this.faviconDataURL

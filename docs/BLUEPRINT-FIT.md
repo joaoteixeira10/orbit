@@ -26,7 +26,8 @@ domain), **skips**, and what it **adds**.
 - **English and European Portuguese**, with the parity test.
 - **An Apple look**: the system font, Apple's system colours, translucent
   sidebar material, sheets, segmented controls, round checkboxes. The
-  developer themes (blackletter crests) don't fit it and are not carried over.
+  developer themes are kept (added back 2026-10-14) as an owner's choice on
+  top of it, with Orbit's own crests.
 
 ## PROJECT-BLUEPRINT
 
@@ -51,7 +52,7 @@ domain), **skips**, and what it **adds**.
 | 7 | Owner, feature flags | **Adopt** | Flags: sessions, impersonation, step-up (off); calendar subscriptions, calendar feeds (on) |
 | 8 | Version, update check, About | **Adopt** | |
 | 9.1 | Org branding | **Adopt** | |
-| 9.2 | Developer themes | **Skip** | Doesn't fit the Apple look; the backend keys are unused |
+| 9.2 | Developer themes | **Adopt** | Ported from LB Admin with the UBonito Orbit crests (from `../orbit_assets`, baked by `scripts/bake-crests.py`); Orbit's own `.seg`; text on the accent uses `--accent-fg` |
 | 10 | Vue shell, tokens, dark mode, prefs, i18n | **Adapt** | New shell (sidebar with workspaces, ⌘K palette, phone tab bar). Prefs add week start, time format, the device's time zone (for reminders) |
 | 10.1 | Mobile + installable | **Adopt** | Plus an iOS-style bottom tab bar on phones |
 | 11 | Tests | **Adopt** | Planner unit tests (recurrence across DST, ICS import/export), full-router tests of the planner API, Vitest |

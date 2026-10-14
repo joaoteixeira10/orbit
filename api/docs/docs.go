@@ -5302,8 +5302,27 @@ const docTemplate = `{
                 "app_name": {
                     "type": "string"
                 },
+                "asset_source_favicon": {
+                    "description": "theme | keep",
+                    "type": "string"
+                },
+                "asset_source_logo": {
+                    "description": "theme | keep",
+                    "type": "string"
+                },
+                "asset_source_wordmark": {
+                    "description": "theme | keep",
+                    "type": "string"
+                },
                 "auto_sso": {
                     "description": "login page auto-starts SSO (unless ?local=1)",
+                    "type": "boolean"
+                },
+                "developer_theme": {
+                    "description": "blue | gold | red | ink",
+                    "type": "string"
+                },
+                "developer_themes_enabled": {
                     "type": "boolean"
                 },
                 "favicon_data_url": {
@@ -6950,6 +6969,21 @@ const docTemplate = `{
                 },
                 "app_name": {
                     "type": "string"
+                },
+                "asset_source_favicon": {
+                    "type": "string"
+                },
+                "asset_source_logo": {
+                    "type": "string"
+                },
+                "asset_source_wordmark": {
+                    "type": "string"
+                },
+                "developer_theme": {
+                    "type": "string"
+                },
+                "developer_themes_enabled": {
+                    "type": "boolean"
                 },
                 "favicon_data_url": {
                     "type": "string"

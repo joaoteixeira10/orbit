@@ -707,8 +707,26 @@ first). With email, **Alert email recipient** defaults to the owner's email.
 
 **Application name**, **Accent colour**, **Show logo / application name in
 sidebar**, a **Custom login page message**, and your own **logo** and
-**favicon** (without them Orbit shows its planet icon). **Live preview** shows
-the result; **Save branding**.
+**favicon** (without them Orbit shows its planet icon).
+
+**Developer themes** (off by default): turn on **Enable developer themes** and
+pick one of four — **Steel Blue**, **Gold Leaf**, **Blood Red**, **Ink**. A
+theme sets the accent colour for everyone (the accent picker is locked, with a
+note) and brings the UBonito Orbit crest (the blackletter "U" on Orbit's ring)
+and the blackletter **UBonito** wordmark. Under **Apply the theme's assets — or
+keep your own**, choose per asset: **Logo / mark** (theme crest, or your logo /
+the default), **Wordmark** (UBonito or the app name), **Favicon** (the theme's,
+or yours / the default). **Ink** follows light and dark mode (a bone crest in
+light mode, a dark one in dark mode); the others look the same in both. While a
+theme is on, **Show logo** and **Show application name** are greyed out: the
+theme always shows its crest and wordmark. A personal accent (Settings →
+Appearance) still wins over the theme's colour for that person, never over its
+crest or wordmark. Turning the themes off puts everything back.
+
+**Live preview** shows the result before you save — the tab, the sidebar brand
+and a button; **Save branding**.
+
+> Try ↑ ↑ ↓ ↓ ← → ← → B A anywhere in Orbit.
 
 ### Notifications
 

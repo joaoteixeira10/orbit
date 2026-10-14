@@ -256,6 +256,33 @@ test('notifications: a task someone gives you rings the bell and opens', async (
   await expect(page.locator('#notifications input[type="time"]')).toBeVisible()
 })
 
+test('the owner turns on a developer theme; the Konami code shows who built it', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/owner')
+  await page.locator('.subtab', { hasText: 'Branding' }).click()
+  await page.locator('.dev-master').getByRole('switch').click()
+  await page.locator('.theme-card', { hasText: 'Ink' }).click()
+  await expect(page.locator('.lock-note.show').first()).toContainText('active developer theme')
+  await page.getByRole('button', { name: 'Save branding' }).click()
+  await expect(page.getByText('Branding saved')).toBeVisible()
+
+  // The sidebar shows the theme's crest and the "UBonito" wordmark; the tab its favicon.
+  await expect(page.locator('#sidebar .brand img')).toHaveAttribute('src', /\/dev-themes\/ubonito-orbit-(dark|bone)\.svg/)
+  await expect(page.locator('#sidebar .brand-word')).toHaveText('UBonito')
+  await expect(page.locator('link[rel=icon]')).toHaveAttribute('href', /\/dev-themes\//)
+
+  // Off again: back to Orbit's icon and name.
+  await page.locator('.dev-master').getByRole('switch').click()
+  await page.getByRole('button', { name: 'Save branding' }).click()
+  await expect(page.locator('#sidebar .brand img')).toHaveAttribute('src', '/favicon.svg')
+  await expect(page.locator('#sidebar .brand b')).toHaveText('Orbit')
+
+  for (const k of ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']) await page.keyboard.press(k)
+  await expect(page.getByText('Engineered by')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('Engineered by')).toBeHidden()
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

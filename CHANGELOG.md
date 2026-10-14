@@ -80,6 +80,12 @@ merge, not at release time.
   issue. A change git refuses is kept and sent again. The `git_integration`
   feature flag turns it off; `GIT_SERVERS` allows servers on your own
   network. GitHub is planned.
+- **Developer themes and the Konami egg** (as in PKI Management and LB
+  Admin) — Owner → Branding: four curated themes (Steel Blue, Gold Leaf,
+  Blood Red, Ink) lock the accent and bring the UBonito Orbit crest, the
+  "UBonito" wordmark and the favicon, each of which can be kept as your own;
+  Ink follows light / dark. ↑↑↓↓←→←→BA shows who built it. Text on the accent
+  now follows the theme (dark on Ink's bone, not white).
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,

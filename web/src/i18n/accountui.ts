@@ -5,6 +5,7 @@
 
 export const accountUiEn = {
   acct: {
+    pageEditor: { label: 'Edit pages in', hint: 'Pages are Markdown either way; you can switch on any page.', visual: 'Visual', markdown: 'Markdown' },
     ua: { unknownOS: 'Unknown system', browser: 'Browser', activeNow: 'Active now' },
     saveChanges: 'Save changes',
     copyToClipboard: 'Copy to clipboard',
@@ -177,6 +178,7 @@ export const accountUiEn = {
 
 export const accountUiPt: typeof accountUiEn = {
   acct: {
+    pageEditor: { label: 'Editar páginas em', hint: 'As páginas são Markdown de qualquer forma; pode mudar em qualquer página.', visual: 'Visual', markdown: 'Markdown' },
     ua: { unknownOS: 'Sistema desconhecido', browser: 'Browser', activeNow: 'Ativa agora' },
     saveChanges: 'Guardar alterações',
     copyToClipboard: 'Copiar para a área de transferência',

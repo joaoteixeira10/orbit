@@ -61,8 +61,9 @@ func securityHeaders(extraConnectSrc func() string) gin.HandlerFunc {
 				connect += " " + o
 			}
 		}
+		// img-src allows https images: pages are Markdown and may show them.
 		return "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-			"img-src 'self' data:; font-src 'self' data:; connect-src " + connect + "; " +
+			"img-src 'self' data: https:; font-src 'self' data:; connect-src " + connect + "; " +
 			// The SPA builds its branded web manifest as a blob: URL.
 			"manifest-src 'self' blob:; " +
 			"object-src 'none'; base-uri 'self'; frame-ancestors 'none'"

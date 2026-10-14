@@ -2,17 +2,20 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star } from 'lucide-vue-next'
+import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download } from 'lucide-vue-next'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { pagesApi, type PageSummary } from '@/api/planner'
 import { relDay } from '@/lib/dates'
+import { fromFile, fileName } from '@/lib/markdown'
+import { downloadAuthed } from '@/lib/api'
 
 // A workspace's pages at a glance: a grid (or list) of every page, newest
 // edits first or by title, with a filter. The sidebar tree is for browsing
-// the hierarchy; this is for finding.
+// the hierarchy; this is for finding. Pages come in from .md files and go
+// out as a zip of them.
 const route = useRoute()
 const router = useRouter()
 const pages = usePagesStore()
@@ -40,6 +43,32 @@ const list = computed<PageSummary[]>(() => {
   return shown.sort((a, b) => (sort.value === 'title' ? (a.title || '').localeCompare(b.title || '') : b.updated_at.localeCompare(a.updated_at)))
 })
 const parentTitle = (p: PageSummary) => (p.parent_id ? pages.find(p.parent_id)?.title : '')
+
+// Import: each .md file becomes a page (a first "# Heading" is its title).
+const fileInput = ref<HTMLInputElement | null>(null)
+async function importFiles(e: Event) {
+  const files = [...((e.target as HTMLInputElement).files ?? [])]
+  ;(e.target as HTMLInputElement).value = ''
+  let n = 0
+  for (const f of files) {
+    try {
+      const { title, content } = fromFile(await f.text(), f.name)
+      await pagesApi.create(ws.value, { title, content })
+      n++
+    } catch (err: any) {
+      toast.error(`${f.name}: ${err.message}`)
+    }
+  }
+  await pages.load(ws.value)
+  if (n) toast.success(t('pages.imported', { n }, n))
+}
+async function exportAll() {
+  try {
+    await downloadAuthed(`/workspaces/${ws.value}/export`, `${fileName(workspace.value?.name ?? 'pages')}.zip`)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 
 async function create() {
   try {
@@ -75,7 +104,13 @@ async function create() {
         <button :class="{ on: layout === 'grid' }" :aria-label="'grid'" @click="layout = 'grid'"><LayoutGrid class="h-4 w-4" /></button>
         <button :class="{ on: layout === 'list' }" :aria-label="'list'" @click="layout = 'list'"><List class="h-4 w-4" /></button>
       </div>
-      <RouterLink :to="{ name: 'ws-trash', params: { ws } }" class="btn btn-ghost ml-auto"><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink>
+      <span class="ml-auto" />
+      <template v-if="editable">
+        <input ref="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple class="hidden" @change="importFiles" />
+        <button class="btn btn-ghost" :title="t('pages.importHint')" @click="fileInput?.click()"><Upload class="h-4 w-4" />{{ t('pages.importMd') }}</button>
+      </template>
+      <button class="btn btn-ghost" @click="exportAll"><Download class="h-4 w-4" />{{ t('pages.exportAll') }}</button>
+      <RouterLink :to="{ name: 'ws-trash', params: { ws } }" class="btn btn-ghost"><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink>
     </div>
 
     <div v-if="list.length && layout === 'grid'" class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">

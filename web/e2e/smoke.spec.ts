@@ -73,6 +73,29 @@ test('a page: write in the editor, and it is saved', async ({ page }) => {
   await expect(page.locator('.side-item', { hasText: 'Biology notes' })).toBeVisible()
 })
 
+test('a page in Markdown: write the source, read it rendered, tick a box', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.locator('.ws-row').first().click()
+  await page.getByRole('link', { name: /^Pages/ }).first().click()
+  await page.getByRole('button', { name: 'New page' }).first().click()
+  await page.getByPlaceholder('Untitled').fill('Packing list')
+  await page.getByRole('tab', { name: 'Markdown' }).click()
+  const src = page.getByRole('textbox', { name: 'Page (Markdown)' })
+  await src.click()
+  await page.keyboard.type('## Clothes\n- [ ] Coat')
+  await page.keyboard.press('Enter') // continues the task list
+  await page.keyboard.type('Boots\n\n> [!TIP]\n> Pack light.')
+  await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 })
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByRole('heading', { name: 'Clothes' })).toBeVisible()
+  await expect(page.locator('.md-alert-tip')).toContainText('Pack light.')
+  await page.locator('.md-view input[data-task="1"]').click()
+  await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 })
+  await page.reload()
+  await expect(page.locator('.md-view input[data-task="1"]')).toBeChecked()
+  await expect(page.locator('.md-view input[data-task="0"]')).not.toBeChecked()
+})
+
 test('a calendar event is added and shown', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.locator('.ws-row').first().click()

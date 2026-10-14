@@ -2,15 +2,16 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode } from 'lucide-vue-next'
 import Popover from './ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
+import { pageFile, download, fileName } from '@/lib/markdown'
 
-// A page's actions: favourite, duplicate, copy link, move to another parent,
-// move to the trash.
+// A page's actions: favourite, duplicate, copy link, download or copy it as
+// Markdown, move to another parent, move to the trash.
 const props = defineProps<{ pageId: string; ws: string; anchor: HTMLElement | null }>()
 const emit = defineEmits<{ close: [] }>()
 const pages = usePagesStore()
@@ -65,6 +66,19 @@ const copyLink = () =>
     await navigator.clipboard.writeText(`${location.origin}/w/${props.ws}/p/${props.pageId}`)
     toast.success(t('pages.linkCopied'))
   })
+// As a .md file (or on the clipboard): the title as a heading, then the page.
+const asMarkdown = async () => {
+  const p = await pagesApi.get(props.pageId)
+  return { name: fileName(p.title || t('pages.untitled')) + '.md', text: pageFile(p.title || t('pages.untitled'), p.content) }
+}
+const downloadMd = () => run(async () => {
+  const f = await asMarkdown()
+  download(f.name, f.text)
+})
+const copyMd = () => run(async () => {
+  await navigator.clipboard.writeText((await asMarkdown()).text)
+  toast.success(t('editor.copied'))
+})
 const moveTo = (parent: string | null) =>
   run(async () => {
     await pagesApi.move(props.pageId, parent, '')
@@ -90,6 +104,8 @@ const trash = () =>
       </button>
       <button class="menu-item" @click="duplicate"><Copy class="h-4 w-4 text-text-2" />{{ t('pages.duplicate') }}</button>
       <button class="menu-item" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('pages.copyLink') }}</button>
+      <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
+      <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
       <div class="menu-sep" />
       <button class="menu-item danger" @click="trash"><Trash2 class="h-4 w-4" />{{ t('pages.toTrash') }}</button>

@@ -75,13 +75,20 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/calendar?from=2026-10-01T00:00:00Z&to=2026-1
   | jq -r '.events[] | "\(.start)\t\(.title)"'
 ```
 
-**Create a page** with content (a ProseMirror / TipTap JSON document):
+**Create a page** with content — pages are GitHub-flavoured Markdown:
 
 ```sh
 curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
   "title": "Reading list",
-  "content": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Os Maias\"}]}]}"
+  "content": "- [ ] Os Maias\n- [x] Sapiens"
 }'
+```
+
+(Content sent in the editor's old JSON format is converted to Markdown.)
+**Export** a workspace's pages as Markdown files in a zip:
+
+```sh
+curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
 Saving a page's content needs the `version` you read (`PUT /pages/<id>` with

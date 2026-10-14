@@ -74,6 +74,10 @@ export const plEn = {
   },
   roles: { owner: 'Owner', editor: 'Editor', viewer: 'Viewer' },
   pages: {
+    importMd: 'Import Markdown',
+    importHint: '.md files: a first ‘# Heading’ becomes the title',
+    imported: 'No pages imported | 1 page imported | {n} pages imported',
+    exportAll: 'Export as Markdown (.zip)',
     expand: 'Expand',
     untitled: 'Untitled',
     addSub: 'Add a page inside',
@@ -277,6 +281,10 @@ export const plPt: typeof plEn = {
   },
   roles: { owner: 'Proprietário', editor: 'Editor', viewer: 'Leitor' },
   pages: {
+    importMd: 'Importar Markdown',
+    importHint: 'Ficheiros .md: um primeiro ‘# Título’ passa a ser o título',
+    imported: 'Nenhuma página importada | 1 página importada | {n} páginas importadas',
+    exportAll: 'Exportar em Markdown (.zip)',
     expand: 'Expandir',
     untitled: 'Sem título',
     addSub: 'Adicionar uma página dentro',

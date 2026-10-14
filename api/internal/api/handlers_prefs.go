@@ -26,6 +26,7 @@ type prefsResponse struct {
 	DigestEnabled bool                      `json:"digest_enabled"`
 	DigestTime    string                    `json:"digest_time"`
 	Locale        string                    `json:"locale"`
+	PageEditor    string                    `json:"page_editor"` // visual | markdown
 }
 
 func toPrefsResponse(p models.UserPrefs) prefsResponse {
@@ -45,6 +46,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		DigestEnabled:  p.DigestEnabled,
 		DigestTime:     orDefault(p.DigestTime, "08:00"),
 		Locale:         p.Locale,
+		PageEditor:     orDefault(p.PageEditor, "visual"),
 	}
 }
 
@@ -138,6 +140,9 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.Locale != nil {
 		updates["locale"] = *req.Locale
+	}
+	if req.PageEditor != nil {
+		updates["page_editor"] = *req.PageEditor
 	}
 	if len(updates) > 0 {
 		if err := h.db.Model(&prefs).Updates(updates).Error; err != nil {

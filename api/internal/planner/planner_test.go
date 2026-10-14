@@ -214,7 +214,7 @@ func TestDocText(t *testing.T) {
 	if got := DocText(doc); got != "Title\nHello world\nBuy milk" {
 		t.Errorf("got %q", got)
 	}
-	if CheckDoc(`{"type":"paragraph"}`) == nil || CheckDoc("not json") == nil || CheckDoc("") != nil || CheckDoc(doc) != nil {
+	if CheckDoc("") != nil || CheckDoc("# Hi") != nil || CheckDoc(doc) != nil || CheckDoc("\xff") == nil || CheckDoc(strings.Repeat("a", MaxPageBytes+1)) == nil {
 		t.Error("CheckDoc")
 	}
 	if Snippet("aaaa bbbb cccc dddd", "cccc", 9) == "" {

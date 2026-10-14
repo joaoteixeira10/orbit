@@ -11,9 +11,8 @@ declare module '@tiptap/core' {
   }
 }
 
-// A callout: an emoji next to a tinted, rounded box of blocks. Stored as
-// {"type":"callout","attrs":{"emoji":"💡"},"content":[…blocks]}; the server
-// only needs it to be part of a "doc" and walks its text for search.
+// A callout: an alert's icon next to a tinted, rounded box of blocks — in
+// Markdown a GitHub alert (> [!TIP]); see extensions.ts and alerts.ts.
 export const Callout = Node.create({
   name: 'callout',
   group: 'block',

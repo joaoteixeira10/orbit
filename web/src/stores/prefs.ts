@@ -4,6 +4,8 @@ import { api } from '@/lib/api'
 
 export type Theme = 'light' | 'dark' | 'system'
 export type TimeFormat = '24h' | '12h'
+// How pages are edited: visually (blocks) or as Markdown source.
+export type PageEditorMode = 'visual' | 'markdown'
 
 interface ServerPrefs {
   timezone: string
@@ -13,6 +15,7 @@ interface ServerPrefs {
   time_format?: TimeFormat
   device_tz?: string
   locale?: string
+  page_editor?: PageEditorMode
 }
 
 function browserTZ(): string {
@@ -51,6 +54,7 @@ export const usePrefsStore = defineStore('prefs', {
     accentColor: localStorage.getItem('orbit_accent') || '',
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
+    pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
   }),
   actions: {
     isDark(): boolean {
@@ -76,6 +80,8 @@ export const usePrefsStore = defineStore('prefs', {
       this.accentColor = p.accent_color || ''
       this.weekStart = p.week_start === 0 ? 0 : 1
       this.timeFormat = p.time_format === '12h' ? '12h' : '24h'
+      this.pageEditor = p.page_editor === 'markdown' ? 'markdown' : 'visual'
+      localStorage.setItem('orbit_page_editor', this.pageEditor)
       localStorage.setItem('orbit_week_start', String(this.weekStart))
       localStorage.setItem('orbit_time_format', this.timeFormat)
       localStorage.setItem('orbit_theme', p.theme)
@@ -106,6 +112,11 @@ export const usePrefsStore = defineStore('prefs', {
       this.weekStart = v
       localStorage.setItem('orbit_week_start', String(v))
       await this.persist({ week_start: v })
+    },
+    async setPageEditor(v: PageEditorMode) {
+      this.pageEditor = v
+      localStorage.setItem('orbit_page_editor', v)
+      await this.persist({ page_editor: v })
     },
     async setTimeFormat(v: TimeFormat) {
       this.timeFormat = v

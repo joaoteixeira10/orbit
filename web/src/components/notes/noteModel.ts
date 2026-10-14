@@ -2,6 +2,7 @@
 // converting text ↔ checklist, search, copy text, and turning a note into a
 // page document or tasks.
 import type { Note, NoteColor, NoteInput } from '@/api/planner'
+import { textToMarkdown } from '@/lib/markdown'
 
 export const MAX_TITLE = 300
 export const MAX_BODY = 20000
@@ -123,16 +124,15 @@ export function matches(n: Note, q: string): boolean {
   return n.title.toLowerCase().includes(ql) || n.body.toLowerCase().includes(ql) || n.items.some((i) => i.text.toLowerCase().includes(ql))
 }
 
-// pageDoc is the page document (TipTap/ProseMirror JSON) for a note: a
-// paragraph per line, or a task list for a checklist.
+// pageDoc is the page (Markdown) for a note: its text, line for line, or a
+// task list for a checklist — escaped so it reads back as the same text.
 export function pageDoc(n: Pick<Note, 'body' | 'checklist' | 'items'>): string {
-  const para = (s: string) => (s ? { type: 'paragraph', content: [{ type: 'text', text: s }] } : { type: 'paragraph' })
-  const content = n.checklist
-    ? n.items.length
-      ? [{ type: 'taskList', content: n.items.map((i) => ({ type: 'taskItem', attrs: { checked: i.done }, content: [para(i.text)] })) }]
-      : [para('')]
-    : n.body.split('\n').map((l) => para(l.trimEnd()))
-  return JSON.stringify({ type: 'doc', content: content.length ? content : [para('')] })
+  if (n.checklist) return n.items.map((i) => `- [${i.done ? 'x' : ' '}] ${textToMarkdown(i.text)}`).join('\n')
+  return n.body
+    .split(/\n{2,}/)
+    .map((para) => textToMarkdown(para.trimEnd()))
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 // taskTitles are the tasks a note turns into: its unchecked items, or its

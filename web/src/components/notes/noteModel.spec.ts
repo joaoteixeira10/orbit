@@ -79,14 +79,9 @@ describe('note text', () => {
     expect(taskTitles(note({ body: Array.from({ length: 80 }, (_, i) => `t${i}`).join('\n') }))).toHaveLength(50)
   })
 
-  it('makes a page document', () => {
-    expect(JSON.parse(pageDoc(note({ body: 'a\n\nb' })))).toEqual({
-      type: 'doc',
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a' }] }, { type: 'paragraph' }, { type: 'paragraph', content: [{ type: 'text', text: 'b' }] }],
-    })
-    const doc = JSON.parse(pageDoc(list))
-    expect(doc.content[0].type).toBe('taskList')
-    expect(doc.content[0].content[0]).toEqual({ type: 'taskItem', attrs: { checked: true }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bread' }] }] })
+  it('makes a page (Markdown)', () => {
+    expect(pageDoc(note({ body: 'a\nb\n\n*c*' }))).toBe('a  \nb\n\n\\*c\\*')
+    expect(pageDoc(list).split('\n')[0]).toBe('- [x] Bread')
   })
 
   it('says how long ago', () => {

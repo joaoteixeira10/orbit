@@ -175,6 +175,9 @@ type UserPrefs struct {
 	// Locale is the interface language (en, pt), for text sent from the
 	// server: push notifications, channels, the summary.
 	Locale string `gorm:"size:8" json:"locale"`
+	// PageEditor is how this user edits pages: "visual" (blocks, the default)
+	// or "markdown" (the source). Pages are Markdown either way.
+	PageEditor string `gorm:"size:10;not null;default:visual" json:"page_editor"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.

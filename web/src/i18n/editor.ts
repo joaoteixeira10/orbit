@@ -6,6 +6,19 @@
 
 export const edEn = {
   editor: {
+    edit: 'Edit',
+    doneEditing: 'Done',
+    modeVisual: 'Visual',
+    modeMarkdown: 'Markdown',
+    modeHint: 'Edit visually, or as Markdown — the page is Markdown either way',
+    mdPlaceholder: 'Write in Markdown…',
+    mdLabel: 'Page (Markdown)',
+    emptyRead: 'Nothing here yet.',
+    download: 'Download as Markdown',
+    copyMd: 'Copy as Markdown',
+    copied: 'Copied as Markdown',
+    alert: { NOTE: 'Note', TIP: 'Tip', IMPORTANT: 'Important', WARNING: 'Warning', CAUTION: 'Caution' },
+    alertPick: 'Kind of callout',
     placeholder: 'Type ‘/’ for commands',
     placeholderEmpty: 'Start writing, or type ‘/’ for blocks',
     placeholderHeading: 'Heading {level}',
@@ -39,7 +52,6 @@ export const edEn = {
     subpages: 'Pages inside',
     noResults: 'No matching blocks',
     blocks: 'Blocks',
-    calloutEmoji: 'Change the emoji',
     linkHint: '⌘-click or Ctrl-click to open',
     block: {
       text: { title: 'Text', desc: 'Plain paragraph text' },
@@ -74,6 +86,19 @@ export const edEn = {
 
 export const edPt: typeof edEn = {
   editor: {
+    edit: 'Editar',
+    doneEditing: 'Concluído',
+    modeVisual: 'Visual',
+    modeMarkdown: 'Markdown',
+    modeHint: 'Edite visualmente ou em Markdown — a página é Markdown de qualquer forma',
+    mdPlaceholder: 'Escreva em Markdown…',
+    mdLabel: 'Página (Markdown)',
+    emptyRead: 'Ainda não há nada aqui.',
+    download: 'Transferir em Markdown',
+    copyMd: 'Copiar como Markdown',
+    copied: 'Copiado como Markdown',
+    alert: { NOTE: 'Nota', TIP: 'Dica', IMPORTANT: 'Importante', WARNING: 'Aviso', CAUTION: 'Cuidado' },
+    alertPick: 'Tipo de destaque',
     placeholder: 'Escreva ‘/’ para comandos',
     placeholderEmpty: 'Comece a escrever, ou escreva ‘/’ para blocos',
     placeholderHeading: 'Título {level}',
@@ -107,7 +132,6 @@ export const edPt: typeof edEn = {
     subpages: 'Páginas dentro desta',
     noResults: 'Nenhum bloco corresponde',
     blocks: 'Blocos',
-    calloutEmoji: 'Mudar o emoji',
     linkHint: '⌘-clique ou Ctrl-clique para abrir',
     block: {
       text: { title: 'Texto', desc: 'Um parágrafo de texto simples' },

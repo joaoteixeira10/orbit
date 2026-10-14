@@ -538,6 +538,13 @@ onMounted(loadSessions)
                 <button :class="{ on: prefs.timeFormat === '12h' }" @click="prefs.setTimeFormat('12h')">1:00 PM</button>
               </div>
             </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+              <div><div class="text-[13px] font-semibold">{{ t('acct.pageEditor.label') }}</div><div class="text-[12px] text-text-3">{{ t('acct.pageEditor.hint') }}</div></div>
+              <div class="seg">
+                <button :class="{ on: prefs.pageEditor === 'visual' }" @click="prefs.setPageEditor('visual')">{{ t('acct.pageEditor.visual') }}</button>
+                <button :class="{ on: prefs.pageEditor === 'markdown' }" @click="prefs.setPageEditor('markdown')">{{ t('acct.pageEditor.markdown') }}</button>
+              </div>
+            </div>
           </div>
         </section>
 

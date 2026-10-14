@@ -221,13 +221,41 @@ the Pages screen, or ⌘K → *New page here*. Hover a page in the tree for **+*
 (a page inside it) and `⋯` (Add to Favorites, Duplicate, Copy link, Move to…,
 Move to Trash). Drag pages in the tree to reorder them.
 
-**Write.** Give it a title, press Enter, and write. Type **/** on an empty
-line for the block menu: text, headings 1–3, to-do list, bulleted and
-numbered lists, quote, code block, divider, table, callout. Markdown
-shortcuts work too (`# `, `- `, `[] `, `> `, ``` ``` ```). Select text for the
-formatting bar: bold, italic, underline, strikethrough, code, highlight,
-link (⌘K inside the editor), and turn into text or a heading. Add an
-**icon** (emoji) and a **cover** (gradient or colour) from the header.
+**Pages are Markdown** (GitHub-flavoured). A page opens as it **reads** —
+rendered like a README on GitHub — and you can tick its checkboxes right
+there. **Edit** (or the **E** key, or a double click) opens it for writing;
+**Done** goes back to reading. A new page opens ready to write.
+
+You write in one of two editors, and switch any time with **Visual |
+Markdown** at the top while editing. Your default is in **Settings →
+Language & time → Edit pages in**. Others can use the other editor on the
+same page: it's the same Markdown.
+
+- **Visual** — like Notion. Type **/** on an empty line for the block menu:
+  text, headings 1–3, to-do list, bulleted and numbered lists, quote, code
+  block, divider, table, callout. Markdown shortcuts work too (`# `, `- `,
+  `[] `, `> `, ``` ``` ```). Select text for the formatting bar: bold, italic,
+  underline, strikethrough, code, highlight, link (⌘K), and turn into text or
+  a heading. A **callout** is one of GitHub's five alerts — note, tip,
+  important, warning, caution (click its icon to choose).
+- **Markdown** — the page's source. Enter continues a list, task or quote (an
+  empty item ends it), Tab / ⇧Tab indent, ⌘B ⌘I ⌘E ⌘K make bold, italic,
+  code and a link of the selection.
+
+What Markdown has no syntax for is written the way GitHub shows it:
+highlight as `<mark>…</mark>`, underline as `<u>…</u>`, callouts as
+`> [!TIP]`. Markdown the visual editor can't edit — HTML blocks like
+`<details>`, `<kbd>`, footnotes — is kept exactly as written and shown in it
+as grey source. When the visual editor saves, the Markdown is tidied into one
+style (`-` bullets, `**bold**`, one blank line between blocks).
+
+Add an **icon** (emoji) and a **cover** (gradient or colour) from the header.
+
+**As files.** A page's `⋯` → **Download as Markdown** (a `.md` with the title
+as its first heading) or **Copy as Markdown**. On the Pages screen, **Import
+Markdown** turns `.md` files into pages (a first `# Heading` becomes the
+title) and **Export as Markdown (.zip)** downloads every page as `.md` files
+in folders that follow the page tree — ready to keep in git.
 
 **Saving** is automatic; the header says *Saving…* / *Saved* / *Edited … by
 …*. ⌘S saves at once. If someone else saved the page while you were editing,

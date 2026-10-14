@@ -335,17 +335,59 @@ html.dark .page-editor {
 }
 
 /* ---- Callouts ---- */
+/* A callout is a GitHub alert; each kind has its colour (as when reading). */
 .page-editor .ProseMirror .callout {
+  --c: #007aff;
   display: flex;
   gap: 0.6em;
   margin: 0.4em 0;
   padding: 12px 16px 12px 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--ws) 9%, var(--bg));
-  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--ws) 22%, transparent);
+  background: color-mix(in srgb, var(--c) 9%, var(--bg));
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--c) 22%, transparent);
 }
 html.dark .page-editor .ProseMirror .callout {
-  background: color-mix(in srgb, var(--ws) 16%, var(--bg));
+  background: color-mix(in srgb, var(--c) 16%, var(--bg));
+}
+.page-editor .ProseMirror .callout-tip {
+  --c: #34c759;
+}
+.page-editor .ProseMirror .callout-important {
+  --c: #af52de;
+}
+.page-editor .ProseMirror .callout-warning {
+  --c: #ff9500;
+}
+.page-editor .ProseMirror .callout-caution {
+  --c: #ff3b30;
+}
+
+/* Markdown the visual editor keeps but doesn't edit: shown as its source. */
+.page-editor .ProseMirror pre.raw-block {
+  margin: 0.4em 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 0.5px dashed var(--border-2);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font: 12.5px/1.5 var(--font-mono);
+  white-space: pre-wrap;
+}
+.page-editor .ProseMirror code.raw-inline {
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  border: 0.5px dashed var(--border-2);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font: 0.85em var(--font-mono);
+}
+.page-editor .ProseMirror .ProseMirror-selectednode.raw-block,
+.page-editor .ProseMirror .ProseMirror-selectednode.raw-inline {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.page-editor .ProseMirror img {
+  max-width: 100%;
+  border-radius: 10px;
 }
 .page-editor .callout-emoji {
   flex: none;

@@ -88,4 +88,5 @@ type updatePrefsRequest struct {
 	DigestEnabled *bool                      `json:"digest_enabled"`
 	DigestTime    *string                    `json:"digest_time"` // HH:MM
 	Locale        *string                    `json:"locale" binding:"omitempty,max=8"`
+	PageEditor    *string                    `json:"page_editor" binding:"omitempty,oneof=visual markdown"`
 }

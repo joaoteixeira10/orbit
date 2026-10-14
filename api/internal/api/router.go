@@ -75,6 +75,7 @@ func New(d Deps) *gin.Engine {
 	if h.inbox == nil {
 		h.inbox = inbox.New(d.DB, d.Events, d.Notify, d.Sealer, d.Log, d.Cfg.PublicURL)
 	}
+	migratePagesToMarkdown(d.DB, d.Log)
 	exportDomainMetrics(d.DB)
 	// Calendar apps poll feeds; they get their own, looser per-IP limit.
 	feedLimit := newIPRateLimiter(60, 1).middleware()
@@ -245,6 +246,7 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/workspaces/:ws/pages", h.listPages)
 			authed.POST("/workspaces/:ws/pages", h.createPage)
 			authed.GET("/workspaces/:ws/trash", h.listTrash)
+			authed.GET("/workspaces/:ws/export", h.exportPages)
 			authed.GET("/pages/:id", h.getPage)
 			authed.PUT("/pages/:id", h.updatePage)
 			authed.DELETE("/pages/:id", h.trashPage)

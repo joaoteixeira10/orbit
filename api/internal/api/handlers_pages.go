@@ -1,6 +1,9 @@
 package api
 
 import (
+	"archive/zip"
+	"bytes"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +13,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -199,6 +203,8 @@ func (h *Handlers) createPage(c *gin.Context) {
 	if !h.checkParent(c, ws.ID, req.ParentID) {
 		return
 	}
+	// Pages are Markdown; an old client's editor JSON is converted.
+	req.Content = planner.PageMarkdown(req.Content)
 	if err := planner.CheckDoc(req.Content); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -295,6 +301,8 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		up["cover"] = *req.Cover
 	}
 	if req.Content != nil {
+		md := planner.PageMarkdown(*req.Content)
+		req.Content = &md
 		if err := planner.CheckDoc(*req.Content); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -532,4 +540,110 @@ func (h *Handlers) listFavorites(c *gin.Context) {
 		out = append(out, s)
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// migratePagesToMarkdown converts pages still in the editor's old JSON
+// format to Markdown (once: converted pages no longer match).
+func migratePagesToMarkdown(db *gorm.DB, log *zap.Logger) {
+	var pages []models.Page
+	db.Select("id", "content").Where("content LIKE ?", `{"type":"doc"%`).Find(&pages)
+	n := 0
+	for _, p := range pages {
+		if !planner.IsDocJSON(p.Content) {
+			continue
+		}
+		md := planner.DocToMarkdown(p.Content)
+		if db.Model(&models.Page{}).Where("id = ?", p.ID).
+			UpdateColumns(map[string]any{"content": md, "content_text": planner.DocText(md)}).Error == nil {
+			n++
+		}
+	}
+	if n > 0 {
+		log.Info("pages converted to Markdown", zap.Int("pages", n))
+	}
+}
+
+// exportPages downloads a workspace's pages as Markdown files in a zip, in
+// their tree: "Page.md", and a page's sub-pages in a "Page/" folder next to
+// it. Each file starts with the page's title as a heading. Trashed pages
+// are left out.
+//
+//	@Summary	Export pages as Markdown (zip)
+//	@Tags		pages
+//	@Produce	application/zip
+//	@Security	BearerAuth
+//	@Param		ws	path	string	true	"Workspace id"
+//	@Success	200	{file}	file
+//	@Router		/workspaces/{ws}/export [get]
+func (h *Handlers) exportPages(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSViewer)
+	if !ok {
+		return
+	}
+	var pages []models.Page
+	h.db.Where("workspace_id = ? AND trashed_at IS NULL", ws.ID).Order("rank").Find(&pages)
+	children := map[string][]models.Page{}
+	for _, p := range pages {
+		parent := ""
+		if p.ParentID != nil {
+			parent = *p.ParentID
+		}
+		children[parent] = append(children[parent], p)
+	}
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	var walk func(parent, dir string) error
+	walk = func(parent, dir string) error {
+		used := map[string]bool{}
+		for _, p := range children[parent] {
+			name := fileName(p.Title)
+			for i := 2; used[strings.ToLower(name)]; i++ {
+				name = fmt.Sprintf("%s (%d)", fileName(p.Title), i)
+			}
+			used[strings.ToLower(name)] = true
+			title := p.Title
+			if title == "" {
+				title = "Untitled"
+			}
+			body := "# " + planner.Escape(title) + "\n"
+			if md := strings.TrimSpace(planner.PageMarkdown(p.Content)); md != "" {
+				body += "\n" + md + "\n"
+			}
+			f, err := zw.CreateHeader(&zip.FileHeader{Name: dir + name + ".md", Method: zip.Deflate, Modified: p.UpdatedAt})
+			if err != nil {
+				return err
+			}
+			if _, err := f.Write([]byte(body)); err != nil {
+				return err
+			}
+			if err := walk(p.ID, dir+name+"/"); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := walk("", ""); err != nil || zw.Close() != nil {
+		h.internalError(c, err, "could not export the pages")
+		return
+	}
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.zip"`, fileName(ws.Name)))
+	c.Data(http.StatusOK, "application/zip", buf.Bytes())
+}
+
+// fileName makes a page title safe as a file name on every system.
+func fileName(title string) string {
+	name := strings.Map(func(r rune) rune {
+		if strings.ContainsRune(`/\:*?"<>|`, r) || r < 32 {
+			return '-'
+		}
+		return r
+	}, strings.TrimSpace(title))
+	name = strings.Trim(name, ". ")
+	if r := []rune(name); len(r) > 100 {
+		name = string(r[:100])
+	}
+	if name == "" {
+		return "Untitled"
+	}
+	return name
 }

@@ -17,9 +17,13 @@ merge, not at release time.
   or viewer. Content is private to members (others, admins included, get
   404). The last owner can't leave; deleting an account hands shared
   workspaces to another member.
-- **Pages** — a block editor (TipTap): `/` commands, checklists, tables,
-  quotes, code, a selection toolbar; nested pages, favourites, duplicate,
-  move, trash (emptied after 30 days). Saves carry a version, so a stale
+- **Pages** — stored as GitHub-flavoured Markdown, read like a README
+  (tick checkboxes while reading), edited in a Notion-like visual editor
+  (`/` commands, checklists, tables, quotes, code, callouts as GitHub alerts,
+  a selection toolbar) or as Markdown source — each person's choice, on the
+  same page. Download or copy a page as `.md`, import `.md` files, export a
+  workspace as a zip of `.md` files in its page tree. Nested pages,
+  favourites, duplicate, move, trash (emptied after 30 days). Saves carry a version, so a stale
   editor gets a 409 with the newer page instead of overwriting it.
 - **Tasks** — lists with due date and time (floating, like Reminders),
   repeats (completing one moves it to its next date), priority, tags,

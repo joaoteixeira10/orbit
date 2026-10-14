@@ -292,14 +292,17 @@ export const workspacesApi = {
   removeMember: (id: string, uid: string) => api<void>(`/workspaces/${id}/members/${uid}`, { method: 'DELETE' }),
 }
 
+export const withContent = (p: Page): Page => ({ ...p, content: p.content ?? '' })
+
 export const pagesApi = {
   list: (ws: string) => api<PageSummary[]>(`/workspaces/${ws}/pages`),
   trash: (ws: string) => api<PageSummary[]>(`/workspaces/${ws}/trash`),
   create: (ws: string, b: { parent_id?: string | null; title?: string; icon?: string; content?: string; after_id?: string }) =>
     api<Page>(`/workspaces/${ws}/pages`, { method: 'POST', body: j(b) }),
-  get: (id: string) => api<Page>(`/pages/${id}`),
+  // An empty page comes without "content"; the app always has a string.
+  get: (id: string) => api<Page>(`/pages/${id}`).then(withContent),
   update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number }) =>
-    api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b) }),
+    api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b) }).then(withContent),
   move: (id: string, parent_id: string | null, after_id: string) => api<PageSummary>(`/pages/${id}/move`, { method: 'POST', body: j({ parent_id, after_id }) }),
   trashPage: (id: string) => api<void>(`/pages/${id}`, { method: 'DELETE' }),
   destroy: (id: string) => api<void>(`/pages/${id}?permanent=1`, { method: 'DELETE' }),

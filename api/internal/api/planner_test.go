@@ -187,7 +187,8 @@ func TestPageVersionsAndTree(t *testing.T) {
 	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/pages", `{"title":"Parent"}`, alice), &parent)
 	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/pages", `{"title":"Child","parent_id":"`+parent.ID+`"}`, alice), &child)
 
-	doc := `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hello orbit"}]}]}`
+	// Pages are Markdown.
+	doc := "Hello **orbit**"
 	body := func(v int) string {
 		b, _ := json.Marshal(map[string]any{"content": doc, "version": v})
 		return string(b)
@@ -202,8 +203,13 @@ func TestPageVersionsAndTree(t *testing.T) {
 	if w := authdo(r, "PUT", "/api/v1/pages/"+parent.ID, body(1), alice); w.Code != http.StatusConflict {
 		t.Errorf("stale save: %d", w.Code)
 	}
-	if w := authdo(r, "PUT", "/api/v1/pages/"+parent.ID, `{"content":"{\"type\":\"nope\"}","version":2}`, alice); w.Code != http.StatusBadRequest {
-		t.Errorf("not a document: %d", w.Code)
+	// An older client's editor JSON is stored as the same Markdown.
+	old, _ := json.Marshal(map[string]any{"version": 2, "content": `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hello "},{"type":"text","marks":[{"type":"bold"}],"text":"orbit"}]}]}`})
+	w = authdo(r, "PUT", "/api/v1/pages/"+parent.ID, string(old), alice)
+	expect(t, w, 200, "JSON save")
+	decode(t, w, &saved)
+	if saved.Content != "Hello **orbit**" {
+		t.Errorf("JSON stored as %q", saved.Content)
 	}
 	var hits []searchHit
 	decode(t, authdo(r, "GET", "/api/v1/search?q=ORBIT", "", alice), &hits)

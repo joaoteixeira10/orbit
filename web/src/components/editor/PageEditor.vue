@@ -2,23 +2,20 @@
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
-import type { Editor, JSONContent } from '@tiptap/core'
+import type { Editor } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import type { Node as PMNode } from '@tiptap/pm/model'
-import StarterKit from '@tiptap/starter-kit'
-import { TaskList, TaskItem } from '@tiptap/extension-list'
 import { Placeholder } from '@tiptap/extensions'
-import { TableKit } from '@tiptap/extension-table'
-import { Highlight } from '@tiptap/extension-highlight'
-import { Callout } from './callout'
+import { pageExtensions } from './extensions'
+import { normalizeMarkdown } from '@/lib/markdown'
 import { SlashCommand, slashItems, filterItems, type SlashState } from './slash'
 import SlashMenu from './SlashMenu.vue'
 import BubbleToolbar from './BubbleToolbar.vue'
 import './editor.css'
 
-// The page body: a TipTap editor over ProseMirror JSON. The parent owns
-// saving; this reports changes and hands out the document on request.
-// Content is a JSON string ("" = empty document).
+// The page body, edited visually: a TipTap editor that reads and writes the
+// page's Markdown (extensions.ts). The parent owns saving; this reports
+// changes and hands out the Markdown on request ("" = empty page).
 const props = defineProps<{ content: string; editable: boolean }>()
 const emit = defineEmits<{ change: []; invalid: [] }>()
 const { t } = useI18n()
@@ -28,23 +25,11 @@ const bubble = ref<InstanceType<typeof BubbleToolbar> | null>(null)
 const invalid = ref(false)
 const slash = reactive<SlashState>({ open: false, items: [], index: 0, rect: null, pick: () => {} })
 
-function parse(content: string): JSONContent | null {
-  if (!content) return null
+// valid reports whether the document the Markdown became fits the schema;
+// one that doesn't must never be saved over.
+function valid(ed: Editor): boolean {
   try {
-    const doc = JSON.parse(content) as JSONContent
-    return doc?.type === 'doc' ? doc : null
-  } catch {
-    return null
-  }
-}
-
-// valid reports whether this editor's schema can represent the document; one
-// it can't (say, a block from a newer version) must never be saved over.
-function valid(ed: Editor, doc: JSONContent | null, raw: string): boolean {
-  if (!raw) return true
-  if (!doc) return false
-  try {
-    ed.schema.nodeFromJSON(doc).check()
+    ed.state.doc.check()
     return true
   } catch {
     return false
@@ -68,31 +53,18 @@ function placeholder({ editor, node, pos }: { editor: Editor; node: PMNode; pos:
   return t('editor.placeholder')
 }
 
-const initial = parse(props.content)
-
 const editor = useEditor({
-  content: initial,
+  content: props.content,
+  contentType: 'markdown',
   editable: props.editable,
-  extensions: [
-    StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
-      dropcursor: { color: 'var(--ws)', width: 2 },
-      link: {
-        openOnClick: false, // ⌘/Ctrl-click opens (handleClick below); a plain click edits
-        autolink: true,
-        linkOnPaste: true,
-        defaultProtocol: 'https',
-        HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' },
-      },
-    }),
-    TaskList,
-    TaskItem.configure({ nested: true }),
-    TableKit.configure({ table: { resizable: false, renderWrapper: true } }),
-    Highlight,
-    Callout,
-    Placeholder.configure({ placeholder, includeChildren: true }),
-    SlashCommand.configure({ state: slash, items: (q: string) => filterItems(slashItems(t), q) }),
-  ],
+  extensions: pageExtensions(
+    [
+      Placeholder.configure({ placeholder, includeChildren: true }),
+      SlashCommand.configure({ state: slash, items: (q: string) => filterItems(slashItems(t), q) }),
+    ],
+    // ⌘/Ctrl-click opens a link (handleClick below); a plain click edits.
+    { HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } },
+  ),
   editorProps: {
     attributes: { class: 'orbit-prose', spellcheck: 'true' },
     handleClick: (_view, _pos, event) => {
@@ -113,7 +85,7 @@ const editor = useEditor({
     },
   },
   onCreate: ({ editor: ed }) => {
-    if (!valid(ed, initial, props.content)) markInvalid(ed)
+    if (!valid(ed)) markInvalid(ed)
   },
   onUpdate: () => {
     if (!invalid.value) emit('change')
@@ -133,11 +105,11 @@ function blank(ed: Editor): boolean {
   return doc.childCount === 1 && !!first && first.type.name === 'paragraph' && first.content.size === 0
 }
 
-// getContent serialises the document ("" when it's blank).
+// getContent is the page's Markdown ("" when it's blank).
 function getContent(): string {
   const ed = editor.value
   if (!ed) return props.content
-  return blank(ed) ? '' : JSON.stringify(ed.getJSON())
+  return blank(ed) ? '' : normalizeMarkdown(ed.getMarkdown())
 }
 
 // setContent replaces the document (someone else's save) without an update
@@ -145,18 +117,17 @@ function getContent(): string {
 function setContent(content: string) {
   const ed = editor.value
   if (!ed) return
-  const doc = parse(content)
-  if (!valid(ed, doc, content)) return markInvalid(ed)
   const { from, to } = ed.state.selection
   ed.chain()
     .setMeta('addToHistory', false)
-    .setContent(doc ?? '', { emitUpdate: false })
+    .setContent(content, { emitUpdate: false, contentType: 'markdown' })
     .command(({ tr }) => {
       const max = tr.doc.content.size
       tr.setSelection(TextSelection.between(tr.doc.resolve(Math.min(from, max)), tr.doc.resolve(Math.min(to, max))))
       return true
     })
     .run()
+  if (!valid(ed)) markInvalid(ed)
 }
 
 function focusStart() {

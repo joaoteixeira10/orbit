@@ -37,7 +37,7 @@ TipTap 3 (ProseMirror) · SortableJS · `emersion/go-ical` + `teambition/rrule-g
 
 ```
 Workspace ─┬─ WorkspaceMember (user, role: owner|editor|viewer, sidebar position)
-           ├─ Page (parent → Page, ProseMirror JSON, plain text, rank, version, trashed_at)
+           ├─ Page (parent → Page, Markdown, plain text, rank, version, trashed_at)
            │    └─ PageFavorite (per user)
            ├─ TaskList (columns JSON: [{id, name, color, done}])
            │    └─ Task (column, parent → Task, due date + time, repeat, rank, completed_at, assignee)
@@ -108,9 +108,13 @@ The stores refetch what changed. Reminders arrive the same way
 - **Shell**: a translucent sidebar (Today, Calendar, Favorites, each
   workspace with its modules and page tree), a drawer below 1024 px, a bottom
   tab bar below 640 px, ⌘K palette, ⌘\ to hide the sidebar.
-- **Editor**: TipTap with StarterKit, task lists, tables, highlight, a slash
-  menu built on `@tiptap/suggestion`, a bubble toolbar; autosave with
-  versions.
+- **Pages**: stored as GitHub-flavoured Markdown. A reading view (marked +
+  DOMPurify, GitHub alerts, footnotes, tickable task boxes), and two editors
+  over the same Markdown: visual (TipTap with StarterKit, task lists, tables,
+  highlight, callouts, `@tiptap/markdown` to read and write Markdown,
+  pass-through nodes for what it can't edit, a slash menu, a bubble toolbar)
+  and source (a text area with list helpers). Every save is normalised, so
+  switching editors doesn't reformat a page; autosave with versions.
 - **Drag and drop**: SortableJS through `lib/sortable.ts`, which puts the
   dragged element back and reports the move, so Vue stays the only owner of
   the DOM.
@@ -119,7 +123,7 @@ The stores refetch what changed. Reminders arrive the same way
 
 | Decision | Why |
 |---|---|
-| ProseMirror JSON for pages, not Markdown | Lossless round trip for the block editor; plain text is extracted for search |
+| Markdown for pages, edited visually or as source | Portable (download, zip export, git), readable anywhere; one stored format so people with different editors share pages. Highlight, underline and callouts use GitHub's forms (`<mark>`, `<u>`, `> [!TIP]`); what the visual editor can't edit passes through untouched |
 | `LIKE` search | Enough at personal / family scale; FTS5 is on the roadmap |
 | No content in the audit log | Thousands of edits would drown the security events the chain is for |
 | SSE + refetch, not CRDTs | Simple and correct for planners; real-time co-editing is a roadmap item |

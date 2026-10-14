@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"unicode/utf8"
 )
 
-// MaxPageBytes bounds one page document (the editor's JSON).
+// MaxPageBytes bounds one page (its Markdown).
 const MaxPageBytes = 2 << 20
 
 // docNode is the part of a ProseMirror / TipTap node that matters here.
@@ -24,26 +25,26 @@ var blockTypes = map[string]bool{
 	"horizontalRule": true, "hardBreak": true, "toggle": true,
 }
 
-// CheckDoc validates that content is a ProseMirror document ("" = empty page).
+// CheckDoc validates page content: Markdown (or, from older clients, an
+// editor JSON document), within MaxPageBytes, valid UTF-8.
 func CheckDoc(content string) error {
-	if content == "" {
-		return nil
-	}
 	if len(content) > MaxPageBytes {
 		return errors.New("the page is too large (2 MiB at most)")
 	}
-	var root docNode
-	if err := json.Unmarshal([]byte(content), &root); err != nil || root.Type != "doc" {
-		return errors.New("content must be an editor document")
+	if !utf8.ValidString(content) {
+		return errors.New("the page isn't valid UTF-8 text")
 	}
 	return nil
 }
 
-// DocText extracts the plain text of a document: one line per block, for
-// search and previews. Invalid documents give "".
+// DocText extracts the plain text of a page, one line per block, for search
+// and previews: of its Markdown, or of an old editor JSON document.
 func DocText(content string) string {
 	if content == "" {
 		return ""
+	}
+	if !IsDocJSON(content) {
+		return MarkdownText(content)
 	}
 	var root docNode
 	if json.Unmarshal([]byte(content), &root) != nil {

@@ -2,8 +2,8 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users } from 'lucide-vue-next'
-import { pagesApi, type Page } from '@/api/planner'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check } from 'lucide-vue-next'
+import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
 import { locale } from '@/lib/dates'
@@ -14,6 +14,10 @@ import { useToastStore } from '@/stores/toast'
 import PageMenu from '@/components/PageMenu.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import PageEditor from '@/components/editor/PageEditor.vue'
+import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
+import MarkdownView from '@/components/editor/MarkdownView.vue'
+import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
+import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
 import CoverPicker from '@/components/editor/CoverPicker.vue'
 import { coverBackground, randomCover } from '@/components/editor/covers'
@@ -37,7 +41,53 @@ const missing = ref(false)
 const invalid = ref(false)
 const title = ref('')
 const titleEl = ref<HTMLTextAreaElement | null>(null)
-const editorRef = ref<InstanceType<typeof PageEditor> | null>(null)
+// Either editor (visual or Markdown); both hand out the page's Markdown.
+const editorRef = ref<{ getContent(): string; setContent(c: string): void; focusStart(): void } | null>(null)
+
+// ---- Reading and editing ----
+// A page opens as it reads (MarkdownView); Edit opens it in the user's
+// editor, visual or Markdown, switchable on the page. `draft` is the page's
+// Markdown as it stands here: what the reader shows, what an editor opens
+// with, what a ticked task box changes.
+const prefs = usePrefsStore()
+const editing = ref(false)
+const mode = ref<PageEditorMode>(prefs.pageEditor)
+const draft = ref('')
+const currentContent = () => (editing.value && editorRef.value ? editorRef.value.getContent() : draft.value)
+function syncDraft() {
+  if (editing.value && editorRef.value) draft.value = editorRef.value.getContent()
+}
+async function startEdit(focus = true) {
+  if (!editable.value) return
+  editing.value = true
+  await nextTick()
+  if (focus) editorRef.value?.focusStart()
+}
+function stopEdit() {
+  syncDraft()
+  editing.value = false
+  if (editGen !== savedGen) schedule(0)
+}
+function switchMode(m: PageEditorMode) {
+  if (m === mode.value) return
+  syncDraft()
+  mode.value = m
+  void prefs.setPageEditor(m)
+}
+// The visual editor can't show this page: edit its Markdown instead.
+function onInvalid() {
+  if (mode.value === 'visual') {
+    syncDraft()
+    mode.value = 'markdown'
+    toast.info(t('editor.invalid'))
+  } else invalid.value = true
+}
+// A task box ticked in the reading view.
+function onToggle(index: number) {
+  draft.value = toggleTask(draft.value, index)
+  onEditorChange()
+  schedule(0)
+}
 
 const canEditWs = computed(() => !!ws.value && ws.value.role !== 'viewer' && !ws.value.archived_at && !auth.privileges.read_only)
 const editable = computed(() => !!page.value && page.value.can_edit && !page.value.trashed_at && canEditWs.value && !invalid.value)
@@ -94,6 +144,10 @@ async function load(id: string) {
     page.value = p
     version.value = p.version
     title.value = p.title
+    draft.value = p.content
+    mode.value = prefs.pageEditor
+    // An empty page opens ready to write; others open as they read.
+    editing.value = editable.value && !p.content.trim()
     await nextTick()
     autosize()
     // A brand-new page: start with its title.
@@ -126,12 +180,18 @@ function saveContent(over?: number): Promise<void> {
   clearTimeout(contentTimer)
   if (inflight) return inflight
   const p = page.value
-  const ed = editorRef.value
-  if (!p || !ed || !editable.value) return Promise.resolve()
+  if (!p || !editable.value) return Promise.resolve()
   if (editGen === savedGen || (conflict.value && over === undefined)) return Promise.resolve()
   const s = session
   const gen = editGen
-  const content = ed.getContent()
+  const content = currentContent()
+  // Nothing actually changed (an editor settling in, a box ticked twice):
+  // no save, no new version.
+  if (content === p.content && over === undefined) {
+    savedGen = gen
+    dirty.value = false
+    return Promise.resolve()
+  }
   saving.value = true
   const run = (async () => {
     try {
@@ -148,7 +208,7 @@ function saveContent(over?: number): Promise<void> {
     } catch (e: any) {
       if (s !== session) return
       if (e instanceof ApiError && e.status === 409 && e.body?.page) {
-        conflict.value = e.body.page as Page
+        conflict.value = withContent(e.body.page as Page)
       } else if (e instanceof ApiError && e.status === 409) {
         // Moved to the trash meanwhile: the reload shows the banner.
         void refresh()
@@ -220,6 +280,7 @@ function loadTheirs() {
   const p = conflict.value
   if (!p || !page.value) return
   editorRef.value?.setContent(p.content)
+  draft.value = p.content
   version.value = p.version
   savedGen = editGen
   dirty.value = false
@@ -265,6 +326,7 @@ async function refresh() {
   const next: Page = { ...page.value, title: editingTitle ? page.value.title : p.title, icon: p.icon, cover: p.cover, can_edit: p.can_edit, trashed_at: p.trashed_at, favorite: p.favorite }
   if (p.version > version.value && editGen === savedGen && !inflight && !conflict.value) {
     editorRef.value?.setContent(p.content)
+    draft.value = p.content
     version.value = p.version
     Object.assign(next, { content: p.content, version: p.version, updated_at: p.updated_at, updated_by: p.updated_by })
   } else if (p.version === version.value) {
@@ -296,14 +358,16 @@ function onTitleEnter(e: KeyboardEvent) {
   if (e.isComposing) return
   e.preventDefault()
   void saveTitle()
-  editorRef.value?.focusStart()
+  if (editing.value) editorRef.value?.focusStart()
+  else void startEdit()
 }
 function onTitleDown(e: KeyboardEvent) {
   // ↓ at the end of the title continues into the document.
   const el = titleEl.value
   if (el && el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
     e.preventDefault()
-    editorRef.value?.focusStart()
+    if (editing.value) editorRef.value?.focusStart()
+    else void startEdit()
   }
 }
 
@@ -438,6 +502,14 @@ function onKey(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
     e.preventDefault()
     void flush()
+    return
+  }
+  // E while reading opens the editor (when no field has the keyboard).
+  const target = e.target as HTMLElement
+  const typing = target.closest('input, textarea, [contenteditable="true"]')
+  if (!editing.value && !typing && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'e' && editable.value) {
+    e.preventDefault()
+    void startEdit()
   }
 }
 function onBeforeUnload(e: BeforeUnloadEvent) {
@@ -500,6 +572,16 @@ onUnmounted(() => {
       <div v-if="page && ready" class="flex shrink-0 items-center gap-0.5">
         <span class="status" :class="{ 'text-warn-text': failed }" aria-live="polite">{{ status }}</span>
         <span v-if="viewOnly" class="pill ml-1.5"><Users class="h-3 w-3" />{{ t('editor.viewOnly') }}</span>
+        <template v-if="editable">
+          <template v-if="editing">
+            <div class="seg ml-2 hidden sm:inline-flex" role="tablist" :title="t('editor.modeHint')">
+              <button role="tab" :aria-selected="mode === 'visual'" :class="{ on: mode === 'visual' }" @click="switchMode('visual')">{{ t('editor.modeVisual') }}</button>
+              <button role="tab" :aria-selected="mode === 'markdown'" :class="{ on: mode === 'markdown' }" @click="switchMode('markdown')">{{ t('editor.modeMarkdown') }}</button>
+            </div>
+            <button class="btn-primary btn-sm ml-1.5" @click="stopEdit"><Check class="h-3.5 w-3.5" />{{ t('editor.doneEditing') }}</button>
+          </template>
+          <button v-else class="btn btn-sm ml-2" :title="t('editor.edit') + ' (E)'" @click="startEdit()"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</button>
+        </template>
         <button
           v-if="!page.trashed_at"
           class="icon-btn ml-1"
@@ -603,7 +685,21 @@ onUnmounted(() => {
             />
           </header>
 
-          <PageEditor :key="page.id" ref="editorRef" :content="page.content" :editable="editable" @change="onEditorChange" @invalid="invalid = true" />
+          <component
+            :is="mode === 'markdown' ? MarkdownEditor : PageEditor"
+            v-if="editing"
+            :key="page.id + mode"
+            ref="editorRef"
+            :content="draft"
+            :editable="editable"
+            @change="onEditorChange"
+            @invalid="onInvalid"
+          />
+          <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" @toggle="onToggle" @edit="startEdit()" />
+          <p v-else class="empty-read">
+            {{ t('editor.emptyRead') }}
+            <button v-if="editable" class="btn-plain" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</button>
+          </p>
 
           <!-- Pages inside -->
           <section v-if="children.length || editable" class="subpages">
@@ -636,6 +732,14 @@ onUnmounted(() => {
 .page-col {
   max-width: 740px;
   margin: 0 auto;
+}
+.empty-read {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 24px;
+  color: var(--text-3);
+  font-size: 15px;
 }
 
 /* ---- Bar ---- */

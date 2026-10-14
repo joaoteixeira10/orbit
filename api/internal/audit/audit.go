@@ -26,6 +26,14 @@ type Recorder struct {
 	// forward, when set (ForwardTo), carries committed entries to an external
 	// sink such as syslog.
 	forward chan models.AuditLog
+	// onRecord are called with each committed entry (the integration webhook).
+	onRecord []func(models.AuditLog)
+}
+
+// OnRecord registers a function called with every committed entry. It runs
+// on the request's goroutine, so it must return quickly (hand work off).
+func (r *Recorder) OnRecord(fn func(models.AuditLog)) {
+	r.onRecord = append(r.onRecord, fn)
 }
 
 // New constructs a Recorder.
@@ -94,23 +102,9 @@ func (r *Recorder) RecordImpersonated(userID string, impersonatorID *string, act
 		return
 	}
 	r.enqueueForward(entry)
-}
-
-// Import appends an entry that happened elsewhere (Orbit v0's history) at
-// the end of the chain, keeping its original time. It isn't forwarded to
-// syslog again (v0 already did).
-func (r *Recorder) Import(entry models.AuditLog) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	entry.ID = ""
-	var prev models.AuditLog
-	prevHash := ""
-	if err := r.db.Order("id DESC").First(&prev).Error; err == nil {
-		prevHash = prev.Hash
+	for _, fn := range r.onRecord {
+		fn(entry)
 	}
-	entry.PrevHash = prevHash
-	entry.Hash = chainHash(prevHash, &entry)
-	return r.db.Create(&entry).Error
 }
 
 // VerifyResult reports the outcome of an audit-chain integrity check.

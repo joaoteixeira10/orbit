@@ -11,7 +11,7 @@ Replace these throughout:
 | Placeholder | Meaning |
 |---|---|
 | `authentik.example.com` | your Authentik host |
-| `lb.example.org` | Orbit's public host name, as the browser sees it |
+| `orbit.example.org` | Orbit's public host name, as the browser sees it |
 | `orbit` | the application **slug** you pick in step 3 |
 
 > **The Orbit server calls Authentik itself.** Discovery, the code-for-token
@@ -39,34 +39,34 @@ Orbit matches the values of one ID-token claim to its **role names**. The
 match is exact and case-sensitive. With Authentik, that claim is `groups`: a
 list of group names.
 
-Authentik's default `profile` scope mapping already sends `groups`, and LB
-Admin always asks for `profile`. So often you need nothing more than groups
+Authentik's default `profile` scope mapping already sends `groups`, and Orbit
+always asks for `profile`. So often you need nothing more than groups
 named after Orbit roles.
 
 > **Every group name that equals an Orbit role name grants that role.** A
 > group called `admin` makes its members Orbit superusers. If your group
 > names are shared with other apps, use a prefix and a custom mapping (below),
-> so only `lb-…` groups count.
+> so only `orbit-…` groups count.
 
 To send only prefixed groups, with the prefix removed, create a custom scope
 mapping. **Customization → Property Mappings → Create → Scope Mapping**:
 
 - **Name**: `Orbit groups`
-- **Scope name**: `lb_groups`
+- **Scope name**: `orbit_groups`
 - **Expression**:
 
   ```python
   return {
-      "lb_groups": [
-          g.name.removeprefix("lb-")
+      "orbit_groups": [
+          g.name.removeprefix("orbit-")
           for g in request.user.all_groups()
-          if g.name.startswith("lb-")
+          if g.name.startswith("orbit-")
       ]
   }
   ```
 
-A member of Authentik group `lb-operator` then gets `"lb_groups":
-["operator"]`. You'll set **Extra scopes** and **Role claim** to `lb_groups` in
+A member of Authentik group `orbit-member` then gets `"orbit_groups":
+["member"]`. You'll set **Extra scopes** and **Role claim** to `orbit_groups` in
 step 5.
 
 ## 2. Create the OAuth2/OpenID provider
@@ -80,7 +80,7 @@ step 5.
 - **Redirect URIs/Origins**: add exactly (strict match)
 
   ```
-  https://lb.example.org/api/v1/auth/oidc/callback
+  https://orbit.example.org/api/v1/auth/oidc/callback
   ```
 
 - **Signing Key**: an RSA key, for example the default
@@ -126,10 +126,10 @@ Sign in as the owner and open **Owner → SSO** (**Single sign-on (OIDC)**).
 | **Issuer URL** | `https://authentik.example.com/application/o/orbit/` |
 | **Client ID** | from step 2 |
 | **Client secret** | from step 2 |
-| **Redirect URL** | `https://lb.example.org/api/v1/auth/oidc/callback` |
-| **Extra scopes** | `lb_groups` with the custom mapping; else empty |
-| **Role claim** | `lb_groups` with the custom mapping, `groups` with plain group names, or empty |
-| **Default role** | the role for new or unmatched users; empty means `none` |
+| **Redirect URL** | `https://orbit.example.org/api/v1/auth/oidc/callback` |
+| **Extra scopes** | `orbit_groups` with the custom mapping; else empty |
+| **Role claim** | `orbit_groups` with the custom mapping, `groups` with plain group names, or empty |
+| **Default role** | the role for new or unmatched users; empty means `none`. Use `member` if everyone should be able to create workspaces |
 
 1. Click **Test** next to **Issuer URL**. "Discovery succeeded — issuer looks
    good" means Orbit reached Authentik and found a valid OIDC provider.
@@ -142,9 +142,10 @@ field shows `•••••••• (unchanged)`. Type into it only to replace
 ## 6. Create the matching roles
 
 A claim value only grants access if an Orbit role has exactly that name.
-The built-in roles are `admin`, `operator`, `viewer` and `none`. For anything
-else, create the role in **Admin → Roles** and give it privileges and scope
-rules (for example `env=gmr` for a staging team). See
+The built-in roles are `admin`, `member` (creates workspaces) and `none`
+(only workspaces they're invited to). For anything else, create the role in
+**Admin → Roles** and give it instance privileges (for example `audit.read`
+for an auditor). Roles never open workspaces: those come from being invited. See
 [USER-GUIDE.md](USER-GUIDE.md).
 
 How the claim is read:
@@ -245,6 +246,6 @@ sign-in is logged as `auth.oidc_login`.
   roles come from Authentik on every sign-in. Change the groups in Authentik,
   or clear **Role claim**.
 - **Locked out after Hide password login / Auto-start** → Open
-  `https://lb.example.org/login?local=1` and sign in with a local account.
+  `https://orbit.example.org/login?local=1` and sign in with a local account.
 
 More in [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and [SECURITY.md](SECURITY.md).

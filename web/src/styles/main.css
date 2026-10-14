@@ -243,6 +243,8 @@ code,
   html.dark .card {
     box-shadow: 0 0 0 0.5px var(--border);
   }
+  /* Note: this takes Tailwind's bare `group` class name; use named groups
+     (`group/row` + `group-hover/row:`) for hover effects instead. */
   .group {
     border-radius: var(--r-lg);
     background: var(--surface);

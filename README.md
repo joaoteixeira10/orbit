@@ -73,7 +73,7 @@ TLS (or set `TLS_CERT_FILE` / `TLS_KEY_FILE`), and set:
   see real client addresses.
 
 `docker-compose-build.yml` builds from source instead of pulling. Backups:
-Owner → Backups (download now, or automatic to a directory or S3). Every
+Owner → Owner → Backups (download now, or automatic to a directory or S3). Every
 variable: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Development

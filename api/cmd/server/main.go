@@ -181,6 +181,15 @@ func main() {
 	}
 	updates := version.NewChecker(cfg.RepoURL, cfg.UpdateCheck)
 	notifier := notify.New(gdb, log).UseSealer(sealer)
+	// The integration webhook carries the audit events (accounts, roles,
+	// workspaces and their members, settings) — never workspace content,
+	// which is private to its members.
+	auditRec.OnRecord(func(e models.AuditLog) {
+		notifier.FireWebhook("audit."+e.Action, map[string]any{
+			"id": e.ID, "action": e.Action, "user_id": e.UserID, "impersonator_id": e.ImpersonatorID,
+			"target_type": e.TargetType, "target_id": e.TargetID, "ip": e.IP, "detail": json.RawMessage(orJSON(e.Detail)),
+		})
+	})
 	if err := notifier.SealStored(); err != nil {
 		log.Warn("sealing the stored notification configuration failed", zap.Error(err))
 	}
@@ -299,6 +308,14 @@ func recordVersionHistory(gdb *gorm.DB, log *zap.Logger) {
 	if err := gdb.Save(&models.Setting{Key: key, Value: string(b), UpdatedAt: time.Now()}).Error; err != nil {
 		log.Warn("could not record version history", zap.Error(err))
 	}
+}
+
+// orJSON returns s, or "null" when empty (for embedding as raw JSON).
+func orJSON(s string) string {
+	if s == "" {
+		return "null"
+	}
+	return s
 }
 
 func newLogger(mode string) *zap.Logger {

@@ -218,7 +218,8 @@ function onPhone(e: MediaQueryListEvent) {
 }
 function onKey(e: KeyboardEvent) {
   const mod = e.metaKey || e.ctrlKey
-  if (mod && e.key.toLowerCase() === 'k') {
+  // A ⌘K the page already handled (the editor links the selected text) isn't ours.
+  if (mod && e.key.toLowerCase() === 'k' && !e.defaultPrevented) {
     e.preventDefault()
     paletteOpen.value = !paletteOpen.value
   } else if (mod && e.key === '\\') {

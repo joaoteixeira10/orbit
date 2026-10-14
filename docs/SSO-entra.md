@@ -10,7 +10,7 @@ Replace these throughout:
 
 | Placeholder | Meaning |
 |---|---|
-| `lb.example.org` | Orbit's public host name, as the browser sees it |
+| `orbit.example.org` | Orbit's public host name, as the browser sees it |
 | `<tenant-id>` | your Entra **Directory (tenant) ID** (a GUID) |
 
 > **The Orbit server calls Entra itself.** Discovery, the code-for-token
@@ -39,7 +39,7 @@ registrations → New registration**.
 - **Redirect URI**: platform **Web**, value exactly:
 
   ```
-  https://lb.example.org/api/v1/auth/oidc/callback
+  https://orbit.example.org/api/v1/auth/oidc/callback
   ```
 
 Click **Register**. On the **Overview** page, copy:
@@ -107,16 +107,16 @@ App roles belong to this app only, and their values are strings you choose. So
 you can name them after Orbit roles.
 
 1. **App roles → Create app role**:
-   - **Display name**: `LB operator`
+   - **Display name**: `Orbit member`
    - **Allowed member types**: **Users/Groups**
-   - **Value**: `operator` (must be an Orbit role name: a built-in
-     `admin`, `operator`, `viewer`, or a role you created in **Admin → Roles**)
+   - **Value**: `member` (must be an Orbit role name: a built-in
+     `admin`, `member`, `none`, or a role you created in **Admin → Roles**)
    - Enable it. Repeat for each role you want to hand out.
 2. **Enterprise applications → Orbit → Users and groups → Add user/group**:
    assign users or groups to each app role.
 3. In Orbit, set **Role claim** to `roles`. Leave **Extra scopes** empty.
 
-Entra then sends `"roles": ["operator"]` in the ID token for assigned users.
+Entra then sends `"roles": ["member"]` in the ID token for assigned users.
 
 ### Option B: the groups claim
 
@@ -146,10 +146,10 @@ Sign in as the owner and open **Owner → SSO** (**Single sign-on (OIDC)**).
 | **Issuer URL** | `https://login.microsoftonline.com/<tenant-id>/v2.0` |
 | **Client ID** | the **Application (client) ID** from step 1 |
 | **Client secret** | the secret **Value** from step 2 |
-| **Redirect URL** | `https://lb.example.org/api/v1/auth/oidc/callback` |
+| **Redirect URL** | `https://orbit.example.org/api/v1/auth/oidc/callback` |
 | **Extra scopes** | empty |
 | **Role claim** | `roles` (option A), `groups` (option B), or empty |
-| **Default role** | the role for new or unmatched users; empty means `none` |
+| **Default role** | the role for new or unmatched users; empty means `none`. Use `member` if everyone should be able to create workspaces |
 
 1. Click **Test** next to **Issuer URL**. "Discovery succeeded — issuer looks
    good" means Orbit reached Entra and found a valid OIDC provider.
@@ -248,6 +248,6 @@ sign-in is logged as `auth.oidc_login`.
   roles come from Entra on every sign-in. Change them in Entra, or clear
   **Role claim**.
 - **Locked out after Hide password login / Auto-start** → Open
-  `https://lb.example.org/login?local=1` and sign in with a local account.
+  `https://orbit.example.org/login?local=1` and sign in with a local account.
 
 More in [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and [SECURITY.md](SECURITY.md).

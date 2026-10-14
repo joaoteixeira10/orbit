@@ -677,9 +677,8 @@ onUnmounted(() => offUsersLive())
 const featureMeta: { key: string; label: string; hint: string }[] = [
   { key: 'sessions', label: 'Active sessions', hint: 'Let users see and revoke their signed-in devices/sessions.' },
   { key: 'impersonation', label: 'User impersonation', hint: 'Let admins with the “Impersonate users” privilege sign in as another user to diagnose issues.' },
-  { key: 'rolling', label: 'Rolling actions', hint: 'Roll… on an Operations card: one server at a time — out of rotation (draining first on HAProxy), wait for Next (or N minutes, or lbctl next from a deploy), back, healthy, next. Stops if a server doesn\'t come back.' },
-  { key: 'certificates', label: 'Certificates (on by default)', hint: 'The Certificates page: what every proxy and agent serves, replacing it through the agents (upload or PKI Management), automatic renewal and expiry alerts. Off: the page, its API and the background checks are gone.' },
-  { key: 'weights', label: 'Weights (canary releases)', hint: 'Holders of servers.weight change server weights from a backend\'s Weights… (HAProxy live, nginx through its upstream files), for example to send 10% of new traffic to a new version.' },
+  { key: 'calendar_subscriptions', label: 'Calendar subscriptions (on by default)', hint: 'Editors can subscribe a workspace to an outside calendar by its ICS address (a timetable, Google, iCloud, Outlook). Orbit fetches it on a timer, through the guarded client, and stores the address encrypted. Off: the Calendars button, the API and the refreshes are gone.' },
+  { key: 'calendar_feeds', label: 'Calendar feeds (on by default)', hint: 'Users can publish a private ICS address of their events and due tasks for Apple Calendar, Google or Outlook (Settings → Calendar feeds). Off: existing feed addresses stop answering.' },
   { key: 'step_up_auth', label: 'Step-up re-authentication', hint: 'Require a fresh password/passkey confirmation before dangerous actions (security policy and SSO changes, owner transfer, impersonation).' },
 ]
 const featureFlags = ref<Record<string, boolean>>({ ...auth.features })
@@ -1166,7 +1165,7 @@ function switchTab(t: Tab) {
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Integration webhook</h3><Toggle v-model="notifCfg.webhook.enabled" /></div>
           <div v-if="notifCfg.webhook.enabled" class="flex flex-col gap-3">
-            <p class="text-[12px] text-text-3">Signed JSON POST on Orbit events (HMAC-SHA256 in <code>X-Orbit-Signature</code>).</p>
+            <p class="text-[12px] text-text-3">A signed JSON POST for every audit-log event (<code>X-Orbit-Event: audit.user.create</code>, …; HMAC-SHA256 in <code>X-Orbit-Signature</code>): accounts, roles, workspaces and their members, settings. Never workspace content.</p>
             <div><label class="label">URL</label><input v-model="notifCfg.webhook.url" class="input" placeholder="https://hooks.example.org/orbit" /></div>
             <div><label class="label">Signing secret</label><input v-model="notifCfg.webhook.secret" type="password" class="input" placeholder="HMAC key" /></div>
           </div>

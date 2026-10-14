@@ -1,7 +1,7 @@
 package planner
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"sort"
 	"strings"
@@ -93,7 +93,9 @@ func text(comp *ical.Component, name string) string {
 func ParseFeed(r io.Reader, from, to time.Time, loc *time.Location) ([]ExternalOccurrence, error) {
 	cal, err := ical.NewDecoder(r).Decode()
 	if err != nil {
-		return nil, fmt.Errorf("not an iCalendar (.ics) file: %w", err)
+		// Not the decoder's message: it can quote the answer, and a
+		// subscription may point at a private address.
+		return nil, errors.New("the address didn't return an iCalendar (.ics) file")
 	}
 	fixZones(cal.Component)
 

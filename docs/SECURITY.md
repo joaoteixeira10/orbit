@@ -1,42 +1,43 @@
 # Security
 
-This page describes how Orbit v1 protects itself and the load balancers
-behind it: who can sign in, what each person may change, how secrets are
-stored, what the audit log proves, and what is still your job as operator.
-Read it before you put Orbit in production, before you give someone a
-role, and when a security review asks how it works. The sign-in design is
-ported from PKI Management and written up in [AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md);
-this page is the short, current version for Orbit (no client-certificate
-login, no backups, no certificate authorities). Every setting named here is in
-[CONFIGURATION.md](CONFIGURATION.md).
+This page describes how Orbit protects the planners people keep in it: who
+can sign in, who can see and change which workspace, how secrets are stored,
+what leaves the server, what the audit log proves, and what is still your job
+as operator. Read it before you put Orbit in production, before you invite
+people, and when a security review asks how it works. The sign-in design is
+ported from PKI Management via LB Admin and written up in
+[AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md); this page is the current version for
+Orbit. Every setting named here is in [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Threat model
 
 **What Orbit protects.**
 
-1. **The ability to take servers out of rotation.** Whoever can disable or
-   drain servers can take a service down. This is the main asset: every rule
-   below exists so that only the right people can change only the right
-   servers.
-2. **The agent tokens.** Each lb-agent accepts any change that carries its
-   token. A leaked token bypasses Orbit entirely, so the tokens are sealed in
-   the database and never sent to the browser.
-3. **The record of who did what.** Every change, and every refused change, is
-   in a tamper-evident audit log.
+1. **Workspace content** — pages, tasks, events: diaries, school work,
+   household plans. It must be visible only to the workspace's members.
+2. **Accounts** — passwords, second factors, sessions, API tokens.
+3. **Secrets entrusted to it** — the secret addresses of subscribed calendars
+   (a Google / iCloud address gives read access to that calendar), the SSO
+   client secret, notification credentials.
+4. **The record of who did what** with accounts, roles, workspaces and their
+   memberships, in a tamper-evident audit log.
 
 **Trust boundaries.**
 
 | Boundary | What crosses it | How it is protected |
 |---|---|---|
-| Browser → Orbit | Sign-in, page, API | TLS (at your proxy or in the app), short access tokens in memory, `HttpOnly` refresh cookie, CSRF check, CSP, rate limits |
-| Script / pipeline → Orbit | API calls | Personal API tokens (`orb_…`), hashed, optionally limited |
-| Orbit → lb-agent | Server state and changes | One bearer token per proxy, over plain HTTP, HTTPS or mutual TLS — chosen per agent (see [The agents](#the-agents)) |
-| Orbit → the internet | SSO discovery, notifications, update check | An SSRF-guarded HTTP client |
+| Browser → Orbit | Sign-in, the app, the API | TLS (at your proxy or in the app), short access tokens in memory, `HttpOnly` refresh cookie, CSRF check, CSP, rate limits |
+| Script → Orbit | API calls | Personal API tokens (`orb_…`), hashed, optionally limited or read-only |
+| Calendar app → Orbit | `GET /ical/<token>.ics` | A long random token per feed, stored hashed, revocable; its own rate limit |
+| Orbit → the internet | Subscribed calendars, SSO discovery, notifications, update check | An SSRF-guarded HTTP client, size and time limits |
 | Anyone with the host | Database file, environment | `ORBIT_MASTER_KEY` seals secrets at rest; the rest is your host's security |
 
-**Who is trusted.** The **owner** and holders of `users.manage`,
-`roles.manage` and `proxies.manage` are trusted administrators. The identity
-provider behind SSO is trusted to say who a user is and which roles they have.
+**Who is trusted.** The **owner** and holders of `users.manage` and
+`roles.manage` are trusted administrators **of accounts** — not readers of
+content (see [Workspace privacy](#workspace-privacy)). The identity provider
+behind SSO is trusted to say who a user is and which instance roles they have.
+The members of a workspace trust each other with its content, in the measure
+of their role.
 
 ## Authentication
 
@@ -113,8 +114,10 @@ expire (expired ones are deleted daily) and can be revoked by their owner or by
 anyone with `users.manage` (Admin → API tokens). A token acts as its user, with
 two limits:
 
-- It can be **limited** to some privileges and/or scope rules. The limit only
-  ever narrows: a token never has more than its user has today.
+- It can be **limited** to some instance privileges and/or made
+  **read-only** (it can read the user's workspaces but not change anything in
+  them, nor create workspaces). The limit only ever narrows: a token never has
+  more than its user has today.
 - It **never carries owner status**, so owner-only routes refuse it, even for
   the owner's own tokens.
 
@@ -135,79 +138,58 @@ target **and** the real admin (`impersonator_id`).
 
 ## Authorization
 
-**Privileges.** Two kinds:
+There are two independent layers.
 
-| Global (not tied to servers) | Server (tied to servers) |
+**Instance privileges** (roles) run the instance:
+
+| Privilege | Allows |
 |---|---|
-| `users.manage`, `roles.manage`, `audit.read`, `proxies.manage` | `servers.read`, `servers.enable`, `servers.disable`, `servers.drain`, `servers.weight` (not used yet), `stats.reset`, `traffic.test` |
-| Owner-gated: `settings.branding`, `settings.notifications`, `users.impersonate` | |
+| `workspaces.create` | creating workspaces (the creator becomes its owner) |
+| `users.manage` | creating, disabling, resetting and signing out accounts; seeing every API token |
+| `roles.manage` | creating and editing roles |
+| `audit.read` | reading and exporting the audit log |
+| Owner-gated: `settings.branding`, `settings.notifications`, `users.impersonate` | branding, notification channels, impersonation — held by the owner, grantable only by the owner |
 
-A **role** holds global privileges plus **grants**: server privileges on
-**every server**, or only on servers matching **scope rules**. A user's rights
-are the union of their roles.
+**Built-in roles** (they can't be edited): `admin` (superuser: every
+privilege except the owner-gated ones), `member` (`workspaces.create`; the
+default for accounts an admin creates without choosing roles), `none`
+(nothing; the default for new SSO users — they can still be invited to
+workspaces).
 
-**Requests and approvals** keep four eyes: nobody approves their own request;
-approving needs `maint.approve` on every server of it, and the change is made
-and logged as the approver ("requested by …"). A pre-approved extension is
-for one user and one maintenance, used up as it is taken.
+**Workspace roles** (on the membership, set by the workspace's owners):
 
-**Backups** are owner-only (step-up when on): the archive holds every
-user's password hash, the sealed secrets and the audit log. It is sealed with
-AES-256-GCM — with a key derived (Argon2id) from `ORBIT_MASTER_KEY`, or from a
-passphrase of 12+ characters — and the secrets inside stay sealed with
-`ORBIT_MASTER_KEY`, so a leaked passphrase archive alone doesn't expose them.
-Restore is a command run with Orbit stopped, never an upload. Keep the
-archives and `ORBIT_MASTER_KEY` apart.
-
-**Scheduled changes** run as their author with the author's rights **when they
-run** (roles, scope, a disabled account stops them), never the rights at the
-time they were planned; a change planned with a narrowed API token is checked
-against the token when planned and against the user when it runs (it never
-gets wider than the user). **Change freezes** refuse changes (423) except by
-superusers; Orbit's own timers still run.
-
-**Scope rules.** One rule per line. A rule is `key=glob` parts separated by
-spaces; all parts must match. A server is in scope when any rule matches. Keys
-are the parts of the server name `<env>_<machine>_<service>` plus where it
-lives: `env`, `machine`, `service`, `proxy`, `backend`. Globs use `*`, `?` and
-`[…]`, case-insensitive. Examples: `env=gmr`, `service=facebook`,
-`env=rda machine=web0*`. Rules are validated on save; a rule that can't be
-parsed never widens access.
-
-**Built-in roles** (they can't be edited):
-
-| Role | Rights |
+| Role | Can |
 |---|---|
-| `admin` | **Superuser**: every global and server privilege, except the owner-gated ones |
-| `operator` | `audit.read`; read, enable, disable, drain, reset counters and traffic test on every server |
-| `viewer` | `audit.read`; read every server |
-| `none` | Nothing (default for new SSO users) |
+| `owner` | everything below, plus settings, modules, members and their roles, archive, delete |
+| `editor` | create, change and delete pages, tasks, lists, events and subscriptions |
+| `viewer` | read |
 
-**Enforcement on every change.** The server, not the page, decides:
+### Workspace privacy
 
-- Global privileges are checked on the route before the handler runs.
-- Server changes (`/operations/<ready|drain|maint>`) check the matching
-  privilege (`servers.enable`, `servers.disable`, `servers.drain`) **per target
-  server**, every time. If any target is out of scope, **nothing** is changed,
-  the answer is `403` naming the servers, and the refusal is audited.
-- An **unknown server** counts as out of scope. For a superuser it is passed on
-  and the agent refuses it, so the change fails. An unknown proxy is rejected
-  with `400`.
-- Servers outside your `servers.read` scope are hidden from the state you
-  receive. Resetting a proxy's counters needs `stats.reset` on **every** server
-  of that proxy; the traffic test needs `traffic.test` on at least one.
+- Every planner request loads the resource, then checks the caller's
+  **membership** of its workspace. **Not a member → `404`**, whatever the
+  instance role: admins and the owner can't open other people's workspaces,
+  and an id reveals nothing about whether it exists.
+- Role checks follow: a viewer writing gets `403`; a write through a
+  **read-only API token** gets `403`; a write in an **archived** workspace gets
+  `409`.
+- Search, Today, the merged calendar and favourites only ever query the
+  caller's own workspaces.
+- Live updates about a workspace go only to its members' streams.
+- **The last owner** can't leave or be demoted. **Deleting an account**
+  deletes the workspaces it was alone in and hands the others to a remaining
+  member (an editor first) — content is never orphaned or exposed.
+- **Assignees** must be members of the workspace.
+- **Impersonation** (flag `impersonation`, off by default) does show the
+  impersonated user's workspaces — that is what it is for. Leave it off unless
+  you need it; every impersonation is audited and can raise a security alert.
 
 **The owner.** Exactly one user is the **instance owner**: first the bootstrap
 admin, later whoever the owner transfers it to. Ownership is an identity, not a
-privilege, so no role can grant it. Owner-only:
-
-- the security policy, SSO settings and feature flags;
-- the refresh interval and security alerts;
-- owner transfer;
-- creating an admin, and granting or removing the `admin` role;
-- granting the owner-gated privileges (`settings.branding`,
-  `settings.notifications`, `users.impersonate`) through a custom role. The
-  superuser flag does not include them.
+privilege, so no role can grant it. Owner-only: the security policy, SSO
+settings and feature flags; security alerts; backups; owner transfer; creating
+an admin, and granting or removing the `admin` role; granting the owner-gated
+privileges through a custom role.
 
 **Escalation guards.**
 
@@ -216,15 +198,13 @@ privilege, so no role can grant it. Owner-only:
   remove owner-gated privileges on a role.
 - The last active admin can't be disabled, demoted or deleted. You can't
   disable or delete yourself.
-- API tokens and impersonation can't exceed or reach the owner (above).
+- API tokens and impersonation can't exceed or reach the owner.
 - **Nobody acts on the owner's account** (edit, roles, disable, reset password /
   two-factor / passkeys, unlock, sign out, delete, revoke its tokens) — the owner
-  manages it in Settings. **Only the owner acts on an admin's account**: admins
-  can't act on each other, and `users.manage` alone can't reach a stronger account.
+  manages it in Settings. **Only the owner acts on an admin's account.**
 - The identity provider can't grant the admin role (by claim or default role)
   unless the owner turned on **Let the identity provider grant admin** in SSO.
-- An API token can't create API tokens (a limited token would otherwise
-  get around its own limit); tokens are made in Settings.
+- An API token can't create API tokens or calendar feeds.
 
 **Sessions and sign-in records.** Signing out, ending a session (Active
 sessions) or a detected refresh-token reuse stops that session's access token
@@ -232,17 +212,25 @@ at once (each request checks its session). Every failed sign-in is audited as
 `auth.login_failed` with the name tried (never the password), and lockouts as
 `auth.lockout`.
 
+**Backups** are owner-only (step-up when on): the archive holds every
+workspace, every user's password hash, the sealed secrets and the audit log.
+It is sealed with AES-256-GCM — with a key derived (Argon2id) from
+`ORBIT_MASTER_KEY`, or from a passphrase of 12+ characters — and the secrets
+inside stay sealed with `ORBIT_MASTER_KEY`. Restore is a command run with Orbit
+stopped, never an upload. Keep the archives and `ORBIT_MASTER_KEY` apart.
+
 ## Crypto and secrets at rest
 
 | Secret | At rest | Notes |
 |---|---|---|
 | Passwords | bcrypt, cost 12 | |
-| Refresh tokens, API tokens, recovery codes | SHA-256 hash | Plain value shown once or kept only in the cookie |
+| Refresh tokens, API tokens, recovery codes, calendar-feed tokens | SHA-256 hash | Plain value shown once or kept only in the cookie |
 | TOTP secrets | Sealed, AES-256-GCM | |
 | SSO client secret | Sealed, AES-256-GCM | Never returned to the page |
-| Agent tokens | Sealed, AES-256-GCM | Never returned to the page (`has_token` only); "Test connection" uses the stored one server side |
-| Notification channel secrets (SMTP password, webhook URLs, bot tokens, the webhook signing secret) | **AES-GCM**, the whole configuration sealed in the `settings` table | Masked when read back (write-only on the page); a configuration saved by an older build is sealed at start-up |
+| Subscribed calendar addresses | Sealed, AES-256-GCM | Only the host is ever shown; errors never echo the address |
+| Notification channel secrets (SMTP password, webhook URLs, bot tokens, the webhook signing secret) | The whole configuration sealed in the `settings` table | Masked when read back (write-only on the page) |
 | Short-lived login state (SSO state, passkey challenges, SSO codes, live-update tickets) | In the database, keyed by a SHA-256 of a random id | Single-use, expire in minutes, swept every 15 minutes |
+| Workspace content | Plain, in the database | Protected by access control and your host; encrypt the disk / volume if the host is shared |
 
 **Sealing.** `ORBIT_MASTER_KEY` goes through **Argon2id** (1 pass, 64 MiB, 4
 lanes) with a random 16-byte salt kept in the `settings` table (`kek_salt`,
@@ -259,25 +247,25 @@ user. Release mode refuses either secret under 32 characters.
 
 ## Audit
 
-- **Everything is recorded:** sign-ins, lockouts, refresh-token reuse, user,
-  role, token and proxy changes, settings, and **every server change and every
-  refusal**. A server change records the targets, whether it worked, the error
-  if not, and the optional **reason** the user typed. A refusal records
-  `refused, outside your scope: …`. Each entry has the user, the real admin when
-  impersonating, the client IP and the time.
+- **Recorded:** sign-ins and failures, lockouts, refresh-token reuse; user,
+  role, token and settings changes; owner actions and backups; workspace
+  **creation, archiving, deletion**, **members** added, removed and re-roled;
+  calendar **subscriptions** created; calendar **feeds** created and revoked.
+  Each entry has the user, the real admin when impersonating, the client IP
+  and the time.
+- **Not recorded:** edits to content (pages, tasks, events). There are too
+  many and they'd drown the security record; the pages keep who edited them
+  last (`updated_by`).
 - **Hash chain:** each entry stores `sha256(previous hash ‖ entry)`. Writes are
-  serialised so the chain is well-defined. **`GET /api/v1/audit/verify`** (Admin →
-  Audit) walks the whole chain and reports the first entry that was changed,
-  inserted or removed.
+  serialised so the chain is well-defined. **`GET /api/v1/audit/verify`** (Audit
+  log → Verify) walks the whole chain and reports the first entry that was
+  changed, inserted or removed.
 - **Syslog:** with `SYSLOG_ADDR`, every entry also goes out as JSON, with its
-  chain hash, to syslog or your SIEM. Forwarding never blocks a change; if the
-  queue is full an entry is kept only in the database and a warning is logged.
-- v0's history can be appended once with `orbit import-v0-audit`.
+  chain hash, to syslog or your SIEM.
 
 > The chain makes after-the-fact edits **detectable**, not impossible. The hash
 > has no secret key, so someone who can write the database can rewrite the
-> whole chain consistently. The syslog copy is your independent record: keep it
-> somewhere Orbit's host can't edit.
+> whole chain consistently. The syslog copy is your independent record.
 
 ## Transport
 
@@ -298,67 +286,26 @@ user. Release mode refuses either secret under 32 characters.
 - **API reference** (`/api/docs`): Scalar's script is bundled and served from
   Orbit's own origin, so the CSP stays `script-src 'self'`; its hosted
   extras are turned off.
-- **Limits:** request bodies up to `MAX_BODY_BYTES` (4 MiB); header read
-  timeout 10 s, read timeout 30 s, idle timeout 120 s.
+- **Limits:** request bodies up to `MAX_BODY_BYTES` (4 MiB), a page document
+  up to 2 MiB (and it must be an editor document — `{"type":"doc",…}`),
+  calendar ranges up to 120 days; header read timeout 10 s, read timeout 30 s,
+  idle timeout 120 s.
+- **Calendar feeds** (`/ical/<token>.ics`) are public by design — the token is
+  the credential, as with Google's "secret address". 32 random bytes, stored
+  as a SHA-256, shown once, revocable in Settings; a separate per-IP rate
+  limit; the feed only includes workspaces its owner **still** belongs to, and
+  stops when the owner is disabled.
 - **Outbound requests** for SSO, notifications and the update check use an
   SSRF-guarded client: it won't connect to loopback, link-local (including the
   cloud metadata address) or unspecified addresses, checks the IP it actually
   dials, and never follows redirects. Private LAN addresses stay reachable.
+- **Subscribed calendars** are fetched through the same guarded dialer, with
+  three differences: up to **three redirects** (calendar hosts use them), each
+  hop dialed through the guard and limited to `http`/`https`; at most
+  **8 MiB**; a **30 s** timeout. A failure is shown to the editors without the
+  address. The scheduler refreshes each subscription at its interval (at least
+  every 15 minutes, by default hourly).
 - **CORS** is off unless `CORS_ORIGINS` is set (dev only).
-
-## The agents
-
-- Each proxy has **its own token** (`AGENT_TOKEN`). The agent refuses to start
-  without one and compares it in constant time. Orbit stores it sealed and
-  never sends it to the browser: the page only ever talks to Orbit.
-- Orbit never follows a redirect from an agent, so the token isn't sent
-  anywhere else.
-- **Each agent serves plain HTTP, HTTPS, or HTTPS with a client certificate**,
-  chosen per agent ([AGENTS.md, step 7](AGENTS.md#7-keep-the-agent-port-private-and-use-tls)).
-  Over plain HTTP the token travels in clear on every request. Over HTTPS LB
-  Admin checks the agent's certificate (system CAs plus `AGENT_CA_FILE`; TLS
-  1.2+). With mutual TLS (`TLS_CLIENT_CA_FILE` on the agent) only a caller
-  with a certificate from that CA — Orbit's `AGENT_CLIENT_CERT_FILE` — gets
-  as far as the token check, so a leaked token alone is not enough. The token
-  is required in every mode.
-- **Admin → Proxies → Agents must use HTTPS** (off by default) makes Orbit
-  refuse `http://` agent URLs; it can't be turned on while one remains. Turn
-  it on once every agent has moved.
-- **Keep agent ports private** in every mode: firewall `AGENT_PORT` (9000) so
-  only Orbit's host can reach it (`AGENT_BIND` limits the agent to one
-  address).
-- The agent's token and TLS key can come from a file or HashiCorp Vault
-  (`SECRETS_BACKEND`) instead of its env file; Orbit's client key too
-  (`AGENT_CLIENT_KEY`). Certificate files are reloaded when they change.
-- Use a different token per proxy, and change it (on the agent, then in Admin
-  → Proxies) when someone who knew it leaves.
-
-Install and token steps are in [AGENTS.md](AGENTS.md).
-
-## Certificates and private keys
-
-- **Who**: seeing the certificates needs `certs.read`; replacing them,
-  connecting PKI Management and renewals need `certs.manage` (a global
-  privilege — it can change what every proxy serves). The owner can turn the
-  whole feature off (`certificates` flag).
-- **Private keys are never stored by Orbit.** An uploaded key passes through
-  Orbit's memory to the agents (over the agent link — use HTTPS or mutual
-  TLS for agents across untrusted networks) and is written only on the proxy,
-  with the file's mode and owner kept (the previous one kept as a hidden
-  `.<file>.prev` with the same mode). From PKI Management, Orbit makes the
-  key and sends PKI Management only a CSR; a renewal makes a new key.
-- **The audit log** records the certificate's name, names, issuer, serial,
-  fingerprint and expiry and where it went — never the key.
-- **PKI Management's API token** is sealed with `ORBIT_MASTER_KEY` like the agent
-  tokens and never returned. Give it the least: an API token of a PKI user
-  with `cert.issue` (and `ca.read`) on the CAs Orbit should use — limited
-  if PKI Management allows. Its calls go through the SSRF-guarded client; a
-  private CA in front of it: `PKI_CA_FILE`.
-- **Agent certificates**: replacing an agent's own certificate with one Orbit
-  wouldn't trust for that agent's URL is refused unless forced, so Orbit
-  doesn't cut itself off.
-- Every check that matters runs on the agent too (key matches, valid,
-  names), so a direct API call can't install a broken certificate.
 
 ## Operator checklist
 
@@ -366,61 +313,62 @@ Install and token steps are in [AGENTS.md](AGENTS.md).
 - [ ] `JWT_SECRET` and `ORBIT_MASTER_KEY`: 32+ random characters each
       (`openssl rand -hex 32`), kept out of git.
 - [ ] **Back up `ORBIT_MASTER_KEY`**, and back up the database (`/data/orbit.db`)
-      separately. Test a restore.
-- [ ] HTTPS in front of Orbit, with HSTS at the proxy.
+      separately (Owner → Owner → Backups). Test a restore.
+- [ ] HTTPS in front of Orbit, with HSTS at the proxy; `PUBLIC_URL` set.
 - [ ] `TRUSTED_PROXIES` set to your proxy's address.
 - [ ] `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_ORIGINS` set to the public host name
       if you want passkeys.
-- [ ] Agent ports reachable only from Orbit; one token per proxy.
 - [ ] `/metrics` (if enabled) blocked at the proxy.
 - [ ] `SYSLOG_ADDR` pointing at a log store Orbit's host can't edit.
 - [ ] First sign-in done, password changed, two-factor set up for the owner.
 - [ ] Consider `otp_enforced`, and step-up (`step_up_auth`).
 - [ ] Owner security alerts on, with a notification channel.
-- [ ] `PROXIES` removed from the environment after the first start.
-- [ ] Give `users.manage` and `admin` only to people you would trust as owner
-      (see accepted risks).
-- [ ] Run `/audit/verify` now and then.
+- [ ] Leave `impersonation` off unless you need it.
+- [ ] Give `users.manage` and `admin` only to people you would trust as owner.
+- [ ] Run Audit log → Verify now and then.
 
 ## OWASP Top 10
 
 | Area | Status |
 |---|---|
-| A01 Broken access control | Every route gated; server privileges checked per target on every change; unknown servers refused; owner-only controls outside RBAC; escalation guards (the owner's and admins' accounts are protected from `users.manage`; API tokens can't mint tokens). See accepted risks. |
-| A02 Cryptographic failures | AES-256-GCM sealing under an Argon2id key, bcrypt 12, HS256 with algorithm check, CSPRNG tokens stored as hashes. The agent link is HTTP, HTTPS or mutual TLS per agent; "agents must use HTTPS" can enforce TLS. |
-| A03 Injection | GORM with bound parameters; request bodies validated (names, URLs, `oneof` lists, scope-rule syntax); the page is served from an embedded file system (no path traversal); agent URLs must be `http(s)://`. |
-| A04 Insecure design | All-or-nothing changes per proxy, preview before apply, typed confirmation for group actions, audit with reasons. |
+| A01 Broken access control | Every planner request checks membership (404 to non-members, admins included) and the workspace role; read-only tokens and archived workspaces refuse writes; owner-only controls outside RBAC; escalation guards. Covered by full-router tests (`api/internal/api/planner_test.go`). |
+| A02 Cryptographic failures | AES-256-GCM sealing under an Argon2id key, bcrypt 12, HS256 with algorithm check, CSPRNG tokens stored as hashes. |
+| A03 Injection | GORM with bound parameters (search escapes `LIKE` wildcards); request bodies validated (`oneof`, colours, dates, RRULEs, editor documents); the app is served from an embedded file system. |
+| A04 Insecure design | Membership-based privacy by construction; optimistic page versions (no silent overwrites); typed-name confirmation to delete a workspace. |
 | A05 Misconfiguration | Release mode refuses weak secrets; secure cookies by default; CSP and hardening headers; CORS off; generic `500` messages; distroless, non-root image. |
 | A06 Vulnerable components | CI runs `govulncheck`, `npm audit` and gitleaks on every PR. |
 | A07 Authentication failures | Memory access token + rotating `HttpOnly` refresh cookie with reuse detection; CSRF double submit; lockout + per-IP limit; constant-cost unknown-user check; TOTP and passkeys; OIDC with PKCE, state and nonce. |
 | A08 Integrity failures | Hash-chained audit log with a verify endpoint and an external syslog copy. |
-| A09 Logging and monitoring | Every change and refusal audited; secrets never logged (`json:"-"` on sensitive fields); optional syslog, Prometheus and owner security alerts. |
-| A10 SSRF | SSO, notification and update-check requests go through the guarded client. Agent and load-balancer requests refuse link-local and metadata addresses (private ones are allowed; see accepted risks). |
+| A09 Logging and monitoring | Security-relevant actions audited; secrets never logged (`json:"-"` on sensitive fields); optional syslog, Prometheus and owner security alerts. |
+| A10 SSRF | Calendar subscriptions, SSO, notifications and the update check go through the guarded dialer (loopback, link-local and metadata refused, the dialed IP checked, redirects re-checked hop by hop for calendars only). |
 
 ## Accepted risks and known gaps
 
-- **Plain-HTTP agents are allowed by default**, so existing proxies keep working. Move them to HTTPS or mutual TLS and turn on "Agents must use HTTPS" (above).
-- **Agent and load-balancer URLs may be private or loopback** (that's where
-  agents live), so `proxies.manage` can make Orbit call internal addresses
-  and see the error text; link-local ones (cloud metadata, `169.254.0.0/16`,
-  `fe80::/10`) are refused. It is a trusted privilege.
+- **Private LAN addresses are reachable** from calendar subscriptions (a
+  self-hosted Nextcloud is a legitimate source), so an editor can make Orbit
+  fetch an internal URL. They only learn whether it answered with a calendar
+  (the error says "couldn't reach" / "answered 404" / "not an iCalendar"),
+  never the content of a non-calendar answer.
+- **A feed address is a bearer secret.** Anyone who has it sees those events
+  until it is revoked. Calendar apps cache what they fetched.
+- **Content is not end-to-end encrypted.** The server (and whoever runs it)
+  can read every workspace. Orbit's privacy is against other users and
+  admins-through-the-app, not against the host.
 - **The audit chain has no secret key** (see Audit). Rely on the syslog copy.
-- **Rate limits are per process.** Orbit runs as a single instance; add a
-  limit at your proxy too.
+- **Rate limits and live updates are per process.** Orbit runs as a single
+  instance; add a limit at your proxy too.
 - **The lockout is temporary** by design (limits lockout as a denial of
-  service). It holds for every way in, passkeys included.
+  service).
 - **SSO trusts the identity provider** for the roles it names (except admin,
-  which needs the owner's opt-in). Control group membership at the provider.
+  which needs the owner's opt-in).
 - **Public endpoints** (no sign-in): `/api/v1/healthz`, `/readyz`, `/version`,
-  `/branding`, the sign-in routes, the API reference `/api/docs` and
-  `/api/v1/openapi.json`, and `/metrics` when enabled.
-- **The API reference is public** (`/api/docs`, `/api/v1/openapi.json`): it
-  lists the endpoints, not data; every call still needs a token.
-- **No built-in backups** yet (backlog, Phase F).
+  `/branding`, the sign-in routes, `/ical/<token>.ics`, the API reference
+  (`/api/docs`, `/api/v1/openapi.json` — it lists endpoints, not data), and
+  `/metrics` when enabled.
 
 ## Reporting a problem
 
 Please don't open a public issue with exploit details. Contact the maintainer
 privately through the repository, or open a private issue. Include the version
-(About page, or `GET /api/v1/version`), what an attacker could do, and the
-steps to reproduce. For general trouble, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+(About, or `GET /api/v1/version`), what an attacker could do, and the steps to
+reproduce. For general trouble, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

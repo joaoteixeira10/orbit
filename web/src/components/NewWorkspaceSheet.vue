@@ -89,7 +89,7 @@ async function create() {
         <button
           v-for="tp in wss.templates"
           :key="tp.kind"
-          class="card group flex items-start gap-3 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-soft"
+          class="card flex items-start gap-3 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-soft"
           :class="{ 'sm:col-span-2': tp.kind === 'custom' }"
           @click="choose(tp)"
         >

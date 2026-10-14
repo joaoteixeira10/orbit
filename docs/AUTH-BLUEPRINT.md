@@ -17,10 +17,11 @@ Checked against the running app, not only the code. Everything below must work
 as in PKI Management. Client-certificate login (§5.4) is optional: a project
 may leave it out (LB Admin does).
 
-**Features from PKI, design from the project.** Copy what PKI does, not how it
-looks: pages keep the project's own look (LB Admin: v0's neutral greys, blue
-accent, system font with mono labels, compact controls, sidebar and sign-in card). The one PKI design
-kept is **how the code is asked for** — see "The two-factor code prompt" below.
+**Features from PKI, design from the blueprint.** Copy what PKI does, not how it
+looks: pages take the Apple-like look of PROJECT-BLUEPRINT §10.2 (Orbit is the
+reference; LB Admin keeps v0's neutral greys and PKI its own until they move
+over). The one PKI design every project keeps is **how the code is asked for**
+— see "The two-factor code prompt" below.
 
 ### The two-factor code prompt (the design to keep)
 
@@ -65,7 +66,8 @@ How the app asks for an authenticator code, taken from PKI Management
   the sign-in second step, confirming a new authenticator (under the QR code,
   then the 10 recovery codes), **Regenerate** recovery codes, and **Disable**
   two-factor (a small dialog, confirmed with a code).
-- Everything else around it (colours, fonts, the card) is v0's design.
+- Everything else around it (colours, fonts, the card) is the project's look
+  (PROJECT-BLUEPRINT §10.2).
 
 - **`/login?local=1` shows every way in that is enabled**: the password form
   (even with "Hide password login" on), the passkey button (when passwordless is

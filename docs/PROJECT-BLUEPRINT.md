@@ -31,7 +31,7 @@ Pinia + Tailwind 3 · Docker · Gitea Actions. Snapshot 2026-09 (v2.1.x); consol
 7. **Owner + feature flags** (§7) and **update check / About** (§8).
 8. **Frontend shell** (§10): design tokens as CSS variables, dark mode, i18n with a parity
    test, an API client, a router guard, stores, branding/theming (§9), and the phone drawer +
-   installable manifest (§10.1).
+   installable manifest (§10.1), and the Apple-like look copied from Orbit (§10.2).
 9. **Tests** (§11): unit + full-router integration on an in-memory DB, frontend unit, one
    Playwright smoke, DB smoke, security scans.
 10. **CI** (§12): Test, E2E and Security run on every PR. Build & Push and Release are manual.
@@ -560,7 +560,7 @@ and its PNGs, §9.3) follows the same rule.
 ## 10. Frontend architecture
 
 - **Stack**: Vue 3 (Composition API) + TypeScript strict + Vite + Pinia + vue-router + vue-i18n +
-  Tailwind 3 + lucide icons + self-hosted Geist fonts.
+  Tailwind 3 + lucide icons + the system font stack (no web fonts; the look is §10.2).
   Lint: ESLint flat config (correctness only). **No Prettier on purpose**, to avoid reformatting churn.
   Typecheck: `vue-tsc --noEmit`.
 - **Folders**: `api/` (typed endpoint groups + `types.ts`), `lib/` (`api.ts` fetch wrapper, `live.ts`
@@ -598,15 +598,15 @@ and its PNGs, §9.3) follows the same rule.
   - **Refresh interval** (Owner → Live updates) when the app polls something outside: the
     owner sets it at runtime (no restart) over an env default; pages also refresh at once when
     a change is pushed (SSE).
-  - Pages sit **left-aligned at full width** (as v0), not in a centered column; forms
+  - Pages sit **left-aligned at full width**, not in a centered column; forms
     that read badly when wide (Security, SSO) keep a max width, still left-aligned.
   - Details and the auth rules behind them: AUTH-BLUEPRINT "Required behaviour".
 
 ### 10.1 Mobile and installable (PWA)
 
 Every project works on a phone and can be installed to the home screen (iOS "Add to Home
-Screen", Android / desktop Chrome "Install"). Features as in PKI Management; each project keeps
-its own look.
+Screen", Android / desktop Chrome "Install"). Features as in PKI Management, with the look of
+§10.2.
 
 - **Installable, not offline.** No service worker: an admin console shows live state, and a
   cached page would show stale state as if it were current. Chrome no longer needs one to install.
@@ -639,6 +639,80 @@ its own look.
   `Page.getAppManifest` (no errors, absolute `start_url` and icons) and
   `Page.getInstallabilityErrors` (empty) over CDP, plus an E2E at a phone viewport that opens
   the drawer, navigates and sees it close.
+
+
+### 10.2 The look: Apple-like (every project)
+
+Every project looks and feels like an Apple app — macOS on a laptop, iOS on a phone — in light
+and dark. **Reference implementation: Orbit** (`../orbit`: `web/src/styles/main.css`,
+`components/AppShell.vue`, `components/ui/`). Copy its stylesheet and UI components rather than
+redrawing them; a project changes the accent, not the language. (PKI Management and LB Admin
+predate this rule and keep their own look until they are moved over; see `fit/`.)
+
+**Principles**
+- Content first, chrome quiet: hairline separators instead of borders, soft layered shadows,
+  translucent materials, generous white space, one accent colour.
+- Apple's system components, not lookalikes of other design systems: grouped lists, sheets,
+  segmented controls, switches, round checkboxes, icon tiles, large titles, popover menus.
+- Native behaviour: the system font, system colours that adapt to light / dark, 44 px touch
+  targets, `Esc` closes, `⌘K` / `Ctrl K` searches, reduced motion respected.
+
+**Tokens** (CSS variables, light in `:root`, dark in `html.dark`; Tailwind maps to them, §10)
+- **Type**: the system stack — `-apple-system, BlinkMacSystemFont, "SF Pro Text"…` (`--font-sans`),
+  `"SF Pro Display"` for titles (`--font-display`), `ui-monospace, "SF Mono"…` (`--font-mono`). No
+  web fonts (the one exception: a developer theme's wordmark, §9.2). Scale: large title 30/700,
+  title 2 22/700, title 3 17/600, body 14–15, subhead 13, footnote 12, caps label 11/600; titles
+  get a slight negative letter-spacing.
+- **Colour**: Apple's system colours with their light and dark values — blue `#007AFF` /
+  `#0A84FF` (default accent), green `#34C759` / `#30D158` (ok, switches on), orange `#FF9500`
+  (warn), red `#FF3B30` (danger), indigo, purple, pink, teal, yellow. Text `#1D1D1F` / `#F5F5F7`
+  with secondary `#6E6E73`, tertiary `#8E8E93` and faint `#AEAEB2`. Fills are translucent greys
+  (`rgba(120,120,128,.12)` …), separators `rgba(60,60,67,.13)`. Backgrounds: content white /
+  `#1C1C1E`, grouped `#F2F2F7` / black, surfaces `#FFF` / `#2C2C2E`.
+- **Accent ramp**: `--accent`, `--accent-strong`, `--accent-soft`, `--accent-bg`, `--accent-text`,
+  `--accent-fg` (text **on** the accent: never hard-code white, §9.2), `--ring` (focus) — derived
+  from one colour by the branding store (§9.3). `--ws` can carry a per-item colour (Orbit: the
+  workspace's).
+- **Shape**: radii 7 / 9 / 12 / 16 px (`--r-sm…--r-xl`); controls 9, cards and groups 12, sheets 16+;
+  separators 0.5 px.
+- **Depth**: `--shadow-sm` for cards in light mode only (dark relies on the hairline), `--shadow`
+  for raised things, `--shadow-lg` for popovers and sheets.
+- **Motion**: `--ease: cubic-bezier(.25,.1,.25,1)`, `--spring: cubic-bezier(.32,.72,0,1)`, 0.2 s;
+  sheets rise 14 px with a spring, popovers scale from 0.97, buttons press to 0.97; everything off
+  under `prefers-reduced-motion`.
+
+**Components** (`@layer components` classes, plus `components/ui/`)
+- **Shell**: a translucent sidebar (`.material`: `backdrop-filter: saturate(180%) blur(24px)`) with
+  the brand, search (⌘K palette), big tiles for the main places (as Reminders' smart lists; Orbit: Today, Calendar) and sections with
+  caps labels; the content area is white / `#1C1C1E`, **left-aligned at full width** (§10). Below
+  1024 px the sidebar is a drawer; below 640 px a **bottom tab bar** (`.tabbar.material`) takes over.
+- **Lists**: `.group` + `.group-row` — iOS inset grouped lists (rounded 12, hairlines between rows,
+  44 px rows, an icon `.tile` on the left, a value or chevron on the right). `.card` for boxed
+  sections with a title row.
+- **Controls**: `.btn` (grey fill), `.btn-primary` (accent), `.btn-tinted` (accent at 10–16 %),
+  `.btn-plain` (accent text, for in-row actions), `.btn-ghost`, `.btn-danger`, `.icon-btn` (30 px
+  square); `.input` / `.field` (filled, no border, focus ring); `.seg` segmented control (a fill
+  track, the selected segment a raised white pill); `Toggle.vue` is the iOS switch (green when on);
+  `.check` the round Reminders checkbox; `.chip` filter pills that turn accent when on.
+- **Overlays**: `Overlay.vue` is the sheet — a centred panel on wide screens, a bottom sheet on
+  phones, or an inspector from the right (`mode="side"`); title row, body, footer (Cancel left of
+  the primary action; a destructive action on the far left). `Confirm.vue` for alerts, `.popover` +
+  `.menu-item` for menus (the hovered item fills with the accent), `Toasts.vue` top right
+  (notification-style cards).
+- **Icons**: lucide, 1.5–2 px strokes at 16–18 px; coloured `.tile`s (white glyph on a system
+  colour with a faint top gradient, as in iOS Settings) for lists, workspaces and settings rows.
+  App icons and crests are the owner's (§9.2).
+- **Focus and selection**: `:focus-visible` is a 3 px `--ring` halo, no outlines; selection uses
+  `--accent-soft`; scrollbars are thin overlay-style.
+
+**Dark mode**: `light | dark | system` per user (§10), applied before first paint; every token has
+both values; `<meta name="theme-color">` and the manifest colours follow the page (white /
+`#1C1C1E`), as Apple's apps do. Check every screen in both — a theme accent can be light (Ink), so
+text on the accent uses `--accent-fg`.
+
+**Checklist for a new screen**: a large title (+ subhead), content in `.card` / `.group`, actions
+as `.btn-primary` / `.btn-plain` in the title row or the sheet footer, forms in a sheet, both
+themes and a phone width checked (screenshots), strings in every locale.
 
 ---
 

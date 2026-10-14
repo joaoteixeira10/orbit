@@ -141,12 +141,12 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
         </div>
       </div>
 
-      <p class="border-t border-border pt-4 text-[12px] text-text-3">
+      <div class="border-t border-border pt-4 text-[12px] text-text-3">
         {{ t('bk.restoreHint') }}
-        <code class="mt-1 block whitespace-pre-wrap font-mono text-[11.5px] text-text">docker compose stop api
+        <pre class="mt-1.5 overflow-x-auto whitespace-pre rounded-lg bg-fill-2 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-text">docker compose stop api
 docker compose run --rm -v ./orbit-backup.json:/restore.json:ro api restore-backup /restore.json --force
-docker compose start api</code>
-      </p>
+docker compose start api</pre>
+      </div>
     </div>
   </div>
 </template>

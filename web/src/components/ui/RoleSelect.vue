@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { roleDescription } from '@/lib/privileges'
 import { ref, computed, reactive, watch, onUnmounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Role } from '@/api/types'
 import { ShieldCheck, Wrench, Eye, KeyRound, Search, Check, X, ChevronDown } from 'lucide-vue-next'
 
@@ -8,6 +10,7 @@ import { ShieldCheck, Wrench, Eye, KeyRound, Search, Check, X, ChevronDown } fro
 // instead of expanding it.
 const props = defineProps<{ modelValue: string[]; roles: Role[] }>()
 const emit = defineEmits<{ 'update:modelValue': [string[]] }>()
+const { t } = useI18n()
 
 const open = ref(false)
 const query = ref('')
@@ -18,7 +21,7 @@ const selected = computed(() => props.roles.filter((r) => props.modelValue.inclu
 const filtered = computed(() => {
   const s = query.value.trim().toLowerCase()
   if (!s) return props.roles
-  return props.roles.filter((r) => r.name.toLowerCase().includes(s) || (r.description || '').toLowerCase().includes(s))
+  return props.roles.filter((r) => r.name.toLowerCase().includes(s) || roleDescription(r).toLowerCase().includes(s))
 })
 
 function reposition() {
@@ -94,7 +97,7 @@ function iconFor(name: string) {
         {{ r.name }}
         <button type="button" class="opacity-70 hover:opacity-100" @click.stop="remove(r.id)"><X class="h-3 w-3" /></button>
       </span>
-      <span v-if="selected.length === 0" class="px-1 text-[13px] text-text-3">Select roles…</span>
+      <span v-if="selected.length === 0" class="px-1 text-[13px] text-text-3">{{ t('acct.roles.select') }}</span>
       <ChevronDown class="ml-auto h-4 w-4 text-text-3 transition" :class="{ 'rotate-180': open }" />
     </div>
 
@@ -112,7 +115,7 @@ function iconFor(name: string) {
               <input
                 v-model="query"
                 class="w-full rounded-lg border border-border bg-surface-2 py-1.5 pl-8 pr-2 text-[13px] outline-none focus:border-accent"
-                placeholder="Search roles…"
+                :placeholder="t('acct.roles.search')"
               />
             </div>
           </div>
@@ -128,11 +131,11 @@ function iconFor(name: string) {
               <component :is="iconFor(r.name)" class="h-[18px] w-[18px] shrink-0" :class="isSelected(r.id) ? 'text-accent-text' : 'text-text-3'" />
               <div class="min-w-0 flex-1">
                 <div class="text-[13px] font-medium" :class="isSelected(r.id) ? 'text-accent-text' : 'text-text'">{{ r.name }}</div>
-                <div class="truncate text-[12px] text-text-3">{{ r.description || '—' }}</div>
+                <div class="truncate text-[12px] text-text-3">{{ roleDescription(r) || '—' }}</div>
               </div>
               <Check v-if="isSelected(r.id)" class="h-4 w-4 shrink-0 text-accent-text" />
             </button>
-            <div v-if="filtered.length === 0" class="px-2.5 py-3 text-center text-[12px] text-text-3">No roles found.</div>
+            <div v-if="filtered.length === 0" class="px-2.5 py-3 text-center text-[12px] text-text-3">{{ t('acct.roles.none') }}</div>
           </div>
         </div>
       </template>

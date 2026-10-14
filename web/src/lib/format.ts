@@ -1,4 +1,6 @@
 import { usePrefsStore } from '@/stores/prefs'
+import { locale } from '@/lib/dates'
+import { i18n } from '@/i18n'
 
 // daysUntil returns whole days from now to the given ISO timestamp (may be negative).
 export function daysUntil(iso: string): number {
@@ -6,20 +8,23 @@ export function daysUntil(iso: string): number {
   return Math.floor((then - Date.now()) / 86_400_000)
 }
 
-// fmtDate formats an ISO timestamp in the user's preferred timezone.
+// fmtDate formats an ISO timestamp in the app's language, the user's time
+// zone and their 12- or 24-hour clock.
 export function fmtDate(iso?: string | null): string {
   if (!iso) return '—'
-  const tz = usePrefsStore().timezone
+  const prefs = usePrefsStore()
+  const tz = prefs.timezone
   const opts: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: prefs.timeFormat === '12h',
   }
   if (tz && tz !== 'local') opts.timeZone = tz
   try {
-    return new Intl.DateTimeFormat(undefined, opts).format(new Date(iso))
+    return new Intl.DateTimeFormat(locale(), opts).format(new Date(iso))
   } catch {
     return new Date(iso).toLocaleString()
   }
@@ -45,7 +50,7 @@ export function parseUA(ua: string): { os: string; browser: string } {
           ? 'Android'
           : /Linux/.test(ua)
             ? 'Linux'
-            : 'Unknown'
+            : i18n.global.t('acct.ua.unknownOS')
   const browser = /Edg\//.test(ua)
     ? 'Edge'
     : /OPR\/|Opera/.test(ua)
@@ -56,18 +61,18 @@ export function parseUA(ua: string): { os: string; browser: string } {
           ? 'Chrome'
           : /Safari\//.test(ua)
             ? 'Safari'
-            : 'Browser'
+            : i18n.global.t('acct.ua.browser')
   return { os, browser }
 }
 
-// relTime renders a coarse "time ago" for session activity.
+// relTime renders a coarse "time ago" for session activity, in the
+// interface language.
 export function relTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(ms / 60000)
-  if (m < 2) return 'Active now'
-  if (m < 60) return `${m} minutes ago`
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 2) return i18n.global.t('acct.ua.activeNow')
+  const rtf = new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' })
+  if (m < 60) return rtf.format(-m, 'minute')
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`
-  const d = Math.floor(h / 24)
-  return `${d} day${d > 1 ? 's' : ''} ago`
+  if (h < 24) return rtf.format(-h, 'hour')
+  return rtf.format(-Math.floor(h / 24), 'day')
 }

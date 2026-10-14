@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n, I18nT } from 'vue-i18n'
 import { setLocale, currentLocale, SUPPORTED_LOCALES, type LocaleCode } from '@/i18n'
 import { usePrefsStore, type Theme } from '@/stores/prefs'
 import { api, setAccessToken } from '@/lib/api'
@@ -84,7 +84,7 @@ async function saveAccount() {
     })
     if (avatarBroken.value) avatarUrl.value = ''
     auth.user = updated
-    toast.success('Account updated')
+    toast.success(t('acct.account.updated'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -205,7 +205,7 @@ async function changePassword() {
   pwMsg.value = ''
   pwErr.value = ''
   if (newPw.value !== confirmPw.value) {
-    pwErr.value = 'New password and confirmation do not match.'
+    pwErr.value = t('acct.password.mismatch')
     return
   }
   try {
@@ -216,12 +216,12 @@ async function changePassword() {
       body: JSON.stringify({ old_password: oldPw.value, new_password: newPw.value }),
     })
     if (res?.access_token) setAccessToken(res.access_token)
-    pwMsg.value = 'Password updated. Your other sessions were signed out.'
+    pwMsg.value = t('acct.password.updatedOthersOut')
     oldPw.value = ''
     newPw.value = ''
     confirmPw.value = ''
   } catch (e: any) {
-    pwErr.value = e?.message || 'Could not change password'
+    pwErr.value = e?.message || t('acct.password.cantChange')
   }
 }
 
@@ -253,14 +253,14 @@ async function regenerate() {
     regenCodes.value = r.backup_codes
     await auth.fetchMe()
   } catch (e: any) {
-    regenErr.value = e?.message || 'Invalid code'
+    regenErr.value = e?.message || t('acct.otp.invalidCode')
     regenCode.value = ''
   }
 }
 async function onOtpVerified() {
   showOtpSetup.value = false
   await auth.fetchMe()
-  toast.success('Two-factor authentication enabled')
+  toast.success(t('acct.otp.enabledToast'))
 }
 async function disableOtp() {
   if (disableCode.value.length < 6) return
@@ -270,9 +270,9 @@ async function disableOtp() {
     disableCode.value = ''
     showDisable.value = false
     await auth.fetchMe()
-    toast.success('Two-factor disabled')
+    toast.success(t('acct.otp.disabledToast'))
   } catch (e: any) {
-    otpErr.value = e?.message || 'Could not disable'
+    otpErr.value = e?.message || t('acct.otp.cantDisable')
     disableCode.value = ''
   }
 }
@@ -306,9 +306,9 @@ async function createPasskey() {
     showPkName.value = false
     await loadPasskeys()
     await auth.fetchMe()
-    toast.success('Passkey added')
+    toast.success(t('acct.passkeys.added'))
   } catch (e: any) {
-    pkErr.value = e?.name === 'NotAllowedError' ? 'Registration was cancelled' : e?.message || 'Could not add passkey'
+    pkErr.value = e?.name === 'NotAllowedError' ? t('acct.passkeys.cancelled') : e?.message || t('acct.passkeys.cantAdd')
   } finally {
     pkBusy.value = false
   }
@@ -321,9 +321,9 @@ async function removePasskey() {
     await passkeysApi.remove(cred.id)
     await loadPasskeys()
     await auth.fetchMe()
-    toast.success('Passkey removed')
+    toast.success(t('acct.passkeys.removed'))
   } catch (e: any) {
-    toast.error(e?.message || 'Could not remove passkey')
+    toast.error(e?.message || t('acct.passkeys.cantRemove'))
   }
 }
 onMounted(loadPasskeys)
@@ -375,25 +375,25 @@ async function createToken() {
     createdToken.value = r.token
     await loadTokens()
   } catch (e: any) {
-    tkErr.value = e?.message || 'Could not create token'
+    tkErr.value = e?.message || t('acct.tokens.cantCreate')
   } finally {
     tkBusy.value = false
   }
 }
 function copyToken() {
   navigator.clipboard.writeText(createdToken.value)
-  toast.success('Token copied')
+  toast.success(t('acct.tokens.copied'))
 }
 async function revokeToken() {
-  const t = confirmTk.value
+  const tk = confirmTk.value
   confirmTk.value = null
-  if (!t) return
+  if (!tk) return
   try {
-    await meApi.revokeApiToken(t.id)
+    await meApi.revokeApiToken(tk.id)
     await loadTokens()
-    toast.success('Token revoked')
+    toast.success(t('acct.tokens.revoked'))
   } catch (e: any) {
-    toast.error(e?.message || 'Could not revoke token')
+    toast.error(e?.message || t('acct.tokens.cantRevoke'))
   }
 }
 onMounted(loadTokens)
@@ -411,7 +411,7 @@ const sessionIcon = (ua: string) => {
   if (os === 'macOS' || os === 'Linux') return Laptop
   return Monitor
 }
-const sessionRel = (s: SessionInfo) => (s.current ? 'Active now' : relTime(s.last_used_at))
+const sessionRel = (s: SessionInfo) => (s.current ? t('acct.sessions.activeNow') : relTime(s.last_used_at))
 async function loadSessions() {
   if (!auth.features.sessions) return
   try {
@@ -425,9 +425,9 @@ async function revokeSession(sid: string) {
   try {
     await sessionsApi.revoke(sid)
     await loadSessions()
-    toast.success('Session revoked')
+    toast.success(t('acct.sessions.revoked'))
   } catch (e: any) {
-    toast.error(e?.message || 'Could not revoke session')
+    toast.error(e?.message || t('acct.sessions.cantRevoke'))
   } finally {
     sessionsBusy.value = false
   }
@@ -437,9 +437,9 @@ async function revokeOtherSessions() {
   try {
     await sessionsApi.revokeOthers()
     await loadSessions()
-    toast.success('Signed out all other sessions')
+    toast.success(t('acct.sessions.signedOutOthers'))
   } catch (e: any) {
-    toast.error(e?.message || 'Could not sign out other sessions')
+    toast.error(e?.message || t('acct.sessions.cantSignOutOthers'))
   } finally {
     sessionsBusy.value = false
   }
@@ -474,7 +474,7 @@ onMounted(loadSessions)
         </div>
       </nav>
 
-      <div class="flex min-w-0 flex-1 flex-col gap-5">
+      <div class="sections min-w-0 flex-1">
         <!-- Account -->
         <section id="account" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><User class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.account') }}</h2></div>
@@ -489,18 +489,18 @@ onMounted(loadSessions)
                 </div>
               </div>
               <label class="btn-ghost cursor-pointer">
-                <Upload class="h-4 w-4" /> Upload photo
+                <Upload class="h-4 w-4" /> {{ t('acct.account.uploadPhoto') }}
                 <input type="file" accept="image/*" class="hidden" @change="onAvatar" />
               </label>
             </div>
             <div v-if="auth.user?.oidc" class="rounded-xl border border-border bg-surface-2 px-3 py-2 text-[12px] text-text-3">
-              Your name and email are managed by your identity provider (SSO) and update on each sign-in.
+              {{ t('acct.account.ssoManaged') }}
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
-              <div><label class="label">Display name</label><input v-model="displayName" class="input" placeholder="Your name" :disabled="auth.user?.oidc" /></div>
-              <div><label class="label">Email address</label><input v-model="email" type="email" class="input" placeholder="you@example.org" :disabled="auth.user?.oidc" /></div>
+              <div><label class="label">{{ t('admin.displayName') }}</label><input v-model="displayName" class="input" :placeholder="t('acct.account.namePlaceholder')" :disabled="auth.user?.oidc" /></div>
+              <div><label class="label">{{ t('acct.account.email') }}</label><input v-model="email" type="email" class="input" placeholder="you@example.org" :disabled="auth.user?.oidc" /></div>
             </div>
-            <div class="flex justify-end"><button class="btn-primary" @click="saveAccount">Save changes</button></div>
+            <div class="flex justify-end"><button class="btn-primary" @click="saveAccount">{{ t('acct.saveChanges') }}</button></div>
           </div>
         </section>
 
@@ -509,7 +509,7 @@ onMounted(loadSessions)
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Palette class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.appearance') }}</h2></div>
           <div class="flex flex-col gap-5 p-5">
             <div class="flex items-center justify-between gap-4">
-              <div><div class="text-[13px] font-semibold">Theme</div><div class="text-[12px] text-text-3">Choose how the interface looks</div></div>
+              <div><div class="text-[13px] font-semibold">{{ t('acct.appearance.theme') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.themeHint') }}</div></div>
               <div class="seg">
                 <button v-for="t in themes" :key="t.value" class="inline-flex items-center gap-1.5" :class="{ on: prefs.theme === t.value }" @click="prefs.setTheme(t.value)">
                   <component :is="t.icon" class="h-3.5 w-3.5" /> {{ t.label }}
@@ -518,8 +518,8 @@ onMounted(loadSessions)
             </div>
             <div class="border-t border-border pt-5">
               <div class="flex items-center justify-between gap-4">
-                <div><div class="text-[13px] font-semibold">Accent colour</div><div class="text-[12px] text-text-3">A personal accent just for you — overrides the organization accent</div></div>
-                <button v-if="prefs.accentColor" class="text-[12px] text-text-3 hover:text-text" @click="prefs.setAccentColor('')">Reset to default</button>
+                <div><div class="text-[13px] font-semibold">{{ t('acct.appearance.accent') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.accentHint') }}</div></div>
+                <button v-if="prefs.accentColor" class="text-[12px] text-text-3 hover:text-text" @click="prefs.setAccentColor('')">{{ t('acct.appearance.resetAccent') }}</button>
               </div>
               <div class="mt-3 flex items-center gap-3">
                 <input :value="prefs.accentColor || '#3b82f6'" type="color" class="h-9 w-11 shrink-0 rounded-lg border border-border bg-surface-2" @input="prefs.setAccentColor(($event.target as HTMLInputElement).value)" />
@@ -634,35 +634,35 @@ onMounted(loadSessions)
         <section id="password" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Lock class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.password') }}</h2></div>
           <div v-if="auth.user?.oidc" class="p-5 text-[13px] text-text-2">
-            You sign in via SSO; your password is managed by your identity provider.
+            {{ t('acct.password.ssoManaged') }}
           </div>
           <form v-else class="flex flex-col gap-4 p-5" @submit.prevent="changePassword">
             <div>
-              <label class="label">Current password</label>
+              <label class="label">{{ t('acct.password.current') }}</label>
               <div class="relative">
-                <input v-model="oldPw" :type="showOld ? 'text' : 'password'" autocomplete="current-password" class="input pr-10" placeholder="Enter current password" />
+                <input v-model="oldPw" :type="showOld ? 'text' : 'password'" autocomplete="current-password" class="input pr-10" :placeholder="t('acct.password.currentPlaceholder')" />
                 <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-3 hover:text-text" @click="showOld = !showOld"><component :is="showOld ? EyeOff : Eye" class="h-4 w-4" /></button>
               </div>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <div>
-                <label class="label">New password</label>
+                <label class="label">{{ t('acct.password.new') }}</label>
                 <div class="relative">
-                  <input v-model="newPw" :type="showNew ? 'text' : 'password'" autocomplete="new-password" class="input pr-10" placeholder="Min 8 characters" />
+                  <input v-model="newPw" :type="showNew ? 'text' : 'password'" autocomplete="new-password" class="input pr-10" :placeholder="t('acct.password.newPlaceholder')" />
                   <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-3 hover:text-text" @click="showNew = !showNew"><component :is="showNew ? EyeOff : Eye" class="h-4 w-4" /></button>
                 </div>
               </div>
               <div>
-                <label class="label">Confirm new password</label>
+                <label class="label">{{ t('acct.password.confirm') }}</label>
                 <div class="relative">
-                  <input v-model="confirmPw" :type="showConfirm ? 'text' : 'password'" autocomplete="new-password" class="input pr-10" placeholder="Repeat password" />
+                  <input v-model="confirmPw" :type="showConfirm ? 'text' : 'password'" autocomplete="new-password" class="input pr-10" :placeholder="t('acct.password.confirmPlaceholder')" />
                   <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-3 hover:text-text" @click="showConfirm = !showConfirm"><component :is="showConfirm ? EyeOff : Eye" class="h-4 w-4" /></button>
                 </div>
               </div>
             </div>
             <p v-if="pwErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ pwErr }}</p>
             <p v-if="pwMsg" class="rounded-lg bg-ok-bg px-3 py-2 text-[12px] text-ok-text">{{ pwMsg }}</p>
-            <div class="flex justify-end"><button type="submit" class="btn-primary">Update password</button></div>
+            <div class="flex justify-end"><button type="submit" class="btn-primary">{{ t('acct.password.update') }}</button></div>
           </form>
         </section>
 
@@ -672,37 +672,37 @@ onMounted(loadSessions)
           <div class="flex flex-col gap-4 p-5">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-[13px] font-semibold">Authenticator app (TOTP)</div>
-                <div class="text-[12px] text-text-3">Require a 6-digit code from an authenticator app at sign-in.</div>
+                <div class="text-[13px] font-semibold">{{ t('acct.otp.app') }}</div>
+                <div class="text-[12px] text-text-3">{{ t('acct.otp.appHint') }}</div>
               </div>
               <span
                 class="rounded-full px-2 py-0.5 text-[11px] font-medium"
                 :class="auth.user?.otp_enabled ? 'bg-ok-bg text-ok-text' : 'bg-surface-3 text-text-2'"
               >
-                {{ auth.user?.otp_enabled ? 'Enabled' : 'Disabled' }}
+                {{ auth.user?.otp_enabled ? t('acct.enabled') : t('acct.disabled') }}
               </span>
             </div>
 
             <div v-if="!auth.user?.otp_enabled">
-              <button class="btn-primary" @click="showOtpSetup = true">Set up two-factor</button>
+              <button class="btn-primary" @click="showOtpSetup = true">{{ t('acct.otp.setUp') }}</button>
             </div>
             <template v-else>
               <!-- Recovery codes -->
               <div class="flex items-center justify-between border-t border-border pt-4">
                 <div>
-                  <div class="text-[13px] font-semibold">Recovery codes</div>
-                  <div class="text-[12px] text-text-3">{{ auth.otpBackupRemaining }} unused code(s) remaining</div>
+                  <div class="text-[13px] font-semibold">{{ t('acct.otp.recoveryCodes') }}</div>
+                  <div class="text-[12px] text-text-3">{{ t('acct.otp.remaining', auth.otpBackupRemaining) }}</div>
                 </div>
-                <button class="btn-ghost" @click="openRegen">Regenerate</button>
+                <button class="btn-ghost" @click="openRegen">{{ t('acct.otp.regenerate') }}</button>
               </div>
               <!-- Disable -->
               <div class="border-t border-border pt-4">
                 <div class="flex items-center justify-between gap-4">
                   <div>
-                    <div class="text-[13px] font-semibold">Disable two-factor</div>
-                    <div class="text-[12px] text-text-3">Enter a current code to confirm</div>
+                    <div class="text-[13px] font-semibold">{{ t('acct.otp.disableTitle') }}</div>
+                    <div class="text-[12px] text-text-3">{{ t('acct.otp.disableHint') }}</div>
                   </div>
-                  <button class="btn-danger" @click="openDisable">Disable</button>
+                  <button class="btn-danger" @click="openDisable">{{ t('acct.otp.disable') }}</button>
                 </div>
               </div>
             </template>
@@ -715,10 +715,10 @@ onMounted(loadSessions)
           <div class="flex flex-col gap-4 p-5">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-[13px] font-semibold">Passkeys</div>
-                <div class="text-[12px] text-text-3">Sign in with Touch ID, a security key, or a password manager — no code to type. A passkey counts as two-factor.</div>
+                <div class="text-[13px] font-semibold">{{ t('settings.passkeys') }}</div>
+                <div class="text-[12px] text-text-3">{{ t('acct.passkeys.hint') }}</div>
               </div>
-              <button class="btn-primary shrink-0" @click="openAddPasskey">Add a passkey</button>
+              <button class="btn-primary shrink-0" @click="openAddPasskey">{{ t('acct.passkeys.add') }}</button>
             </div>
 
             <div v-if="passkeys.length" class="flex flex-col divide-y divide-border rounded-xl border border-border">
@@ -728,19 +728,19 @@ onMounted(loadSessions)
                   <div>
                     <div class="flex items-center gap-2 text-[13px] font-medium">
                       {{ pk.name }}
-                      <span v-if="pk.backed_up" class="rounded-full bg-ok-bg px-1.5 py-0.5 text-[10px] font-medium text-ok-text">Synced</span>
+                      <span v-if="pk.backed_up" class="rounded-full bg-ok-bg px-1.5 py-0.5 text-[10px] font-medium text-ok-text">{{ t('acct.passkeys.synced') }}</span>
                     </div>
                     <div class="text-[11px] text-text-3">
-                      Added {{ fmtDate(pk.created_at) }}<span v-if="pk.last_used_at"> · last used {{ fmtDate(pk.last_used_at) }}</span>
+                      {{ t('acct.passkeys.addedOn', { when: fmtDate(pk.created_at) }) }}<span v-if="pk.last_used_at"> · {{ t('acct.passkeys.lastUsed', { when: fmtDate(pk.last_used_at) }) }}</span>
                     </div>
                   </div>
                 </div>
-                <button class="rounded-lg p-1.5 text-text-3 transition hover:bg-crit-bg hover:text-crit-text" title="Remove" @click="confirmPk = pk">
+                <button class="rounded-lg p-1.5 text-text-3 transition hover:bg-crit-bg hover:text-crit-text" :title="t('ws.remove')" @click="confirmPk = pk">
                   <Trash2 class="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <p v-else class="text-[12px] text-text-3">No passkeys yet.</p>
+            <p v-else class="text-[12px] text-text-3">{{ t('acct.passkeys.none') }}</p>
           </div>
         </section>
 
@@ -750,10 +750,13 @@ onMounted(loadSessions)
           <div class="flex flex-col gap-4 p-5">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-[13px] font-semibold">Personal access tokens</div>
-                <div class="text-[12px] text-text-3">For scripts and automation. A token carries your own permissions; use <code>Authorization: Bearer &lt;token&gt;</code>. Every endpoint is in the <a href="/api/docs" target="_blank" rel="noopener" class="text-accent hover:underline">API reference</a>.</div>
+                <div class="text-[13px] font-semibold">{{ t('acct.tokens.personal') }}</div>
+                <I18nT scope="global" keypath="acct.tokens.hint" tag="div" class="text-[12px] text-text-3">
+                  <template #code><code>Authorization: Bearer &lt;token&gt;</code></template>
+                  <template #link><a href="/api/docs" target="_blank" rel="noopener" class="text-accent hover:underline">{{ t('nav.apiDocs') }}</a></template>
+                </I18nT>
               </div>
-              <button class="btn-primary shrink-0" @click="openCreateToken">New token</button>
+              <button class="btn-primary shrink-0" @click="openCreateToken">{{ t('acct.tokens.new') }}</button>
             </div>
 
             <div v-if="tokens.length" class="flex flex-col divide-y divide-border rounded-xl border border-border">
@@ -766,15 +769,15 @@ onMounted(loadSessions)
                     <span v-for="p in tk.privileges ?? []" :key="p" class="pill !text-[11px]">{{ privLabel(p) }}</span>
                   </div>
                   <div class="text-[11px] text-text-3">
-                    Added {{ fmtDate(tk.created_at) }}<span v-if="tk.last_used_at"> · last used {{ fmtDate(tk.last_used_at) }}</span><span v-if="tk.expires_at"> · expires {{ fmtDate(tk.expires_at) }}</span><span v-else> · never expires</span>
+                    {{ t('acct.tokens.addedOn', { when: fmtDate(tk.created_at) }) }}<span v-if="tk.last_used_at"> · {{ t('acct.tokens.lastUsed', { when: fmtDate(tk.last_used_at) }) }}</span><span v-if="tk.expires_at"> · {{ t('acct.tokens.expiresOn', { when: fmtDate(tk.expires_at) }) }}</span><span v-else> · {{ t('acct.tokens.neverExpires') }}</span>
                   </div>
                 </div>
-                <button class="rounded-lg p-1.5 text-text-3 transition hover:bg-crit-bg hover:text-crit-text" title="Revoke" @click="confirmTk = tk">
+                <button class="rounded-lg p-1.5 text-text-3 transition hover:bg-crit-bg hover:text-crit-text" :title="t('common.revoke')" @click="confirmTk = tk">
                   <Trash2 class="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <p v-else class="text-[12px] text-text-3">No API tokens yet.</p>
+            <p v-else class="text-[12px] text-text-3">{{ t('acct.tokens.none') }}</p>
           </div>
         </section>
 
@@ -785,7 +788,7 @@ onMounted(loadSessions)
               <MonitorSmartphone class="h-[18px] w-[18px] text-text-2" />
               <h2 class="text-[14px] font-semibold">{{ t('settings.sessions') }}</h2>
             </div>
-            <span class="rounded-full bg-ok-bg px-2.5 py-0.5 text-[11px] font-semibold text-ok-text">{{ sessions.length }} active</span>
+            <span class="rounded-full bg-ok-bg px-2.5 py-0.5 text-[11px] font-semibold text-ok-text">{{ t('acct.sessions.active', sessions.length) }}</span>
           </div>
           <div>
             <div
@@ -800,17 +803,17 @@ onMounted(loadSessions)
                 <div class="min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="truncate text-[13.5px] font-semibold">{{ sessionDevice(s.user_agent) }}</span>
-                    <span v-if="s.current" class="shrink-0 rounded-full bg-ok-bg px-2 py-0.5 text-[11px] font-semibold text-ok-text">Current</span>
+                    <span v-if="s.current" class="shrink-0 rounded-full bg-ok-bg px-2 py-0.5 text-[11px] font-semibold text-ok-text">{{ t('acct.sessions.current') }}</span>
                   </div>
-                  <div class="truncate text-[12px] text-text-3">{{ s.ip || 'unknown IP' }} · {{ sessionRel(s) }}</div>
+                  <div class="truncate text-[12px] text-text-3">{{ s.ip || t('acct.sessions.unknownIp') }} · {{ sessionRel(s) }}</div>
                 </div>
               </div>
-              <button v-if="!s.current" class="btn-ghost shrink-0" :disabled="sessionsBusy" @click="revokeSession(s.id)">Revoke</button>
+              <button v-if="!s.current" class="btn-ghost shrink-0" :disabled="sessionsBusy" @click="revokeSession(s.id)">{{ t('common.revoke') }}</button>
             </div>
-            <div v-if="sessions.length === 0" class="px-5 py-6 text-center text-[13px] text-text-3">No active sessions.</div>
+            <div v-if="sessions.length === 0" class="px-5 py-6 text-center text-[13px] text-text-3">{{ t('acct.sessions.none') }}</div>
             <div v-if="sessions.length > 1" class="px-5 py-4">
               <button class="btn-ghost w-full justify-center" :disabled="sessionsBusy" @click="revokeOtherSessions">
-                <LogOut class="h-4 w-4" /> Sign out all other sessions
+                <LogOut class="h-4 w-4" /> {{ t('acct.sessions.signOutOthers') }}
               </button>
             </div>
           </div>
@@ -819,24 +822,24 @@ onMounted(loadSessions)
     </div>
 
     <!-- Create-token modal -->
-    <Overlay :open="showTokenCreate" title="New API token" mode="centered" @close="showTokenCreate = false">
+    <Overlay :open="showTokenCreate" :title="t('acct.tokens.newTitle')" mode="centered" @close="showTokenCreate = false">
       <div v-if="createdToken" class="flex flex-col gap-3 text-[13px]">
-        <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">Copy this token now — it won't be shown again.</p>
+        <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">{{ t('acct.tokens.copyNow') }}</p>
         <div class="flex items-center gap-2 rounded-xl border border-border bg-surface-2 p-3">
           <code class="flex-1 break-all font-mono text-[12px] select-all">{{ createdToken }}</code>
-          <button class="rounded-lg p-1.5 text-text-3 hover:text-text" title="Copy" @click="copyToken"><Copy class="h-4 w-4" /></button>
+          <button class="rounded-lg p-1.5 text-text-3 hover:text-text" :title="t('settings.copy')" @click="copyToken"><Copy class="h-4 w-4" /></button>
         </div>
-        <div class="flex justify-end"><button class="btn-primary" @click="showTokenCreate = false">Done</button></div>
+        <div class="flex justify-end"><button class="btn-primary" @click="showTokenCreate = false">{{ t('common.done') }}</button></div>
       </div>
       <form v-else class="flex flex-col gap-3" @submit.prevent="createToken">
-        <div><label class="label">Name</label><input v-model="tkName" class="input" placeholder="CI deploy" maxlength="128" autofocus /></div>
+        <div><label class="label">{{ t('common.name') }}</label><input v-model="tkName" class="input" :placeholder="t('acct.tokens.namePlaceholder')" maxlength="128" autofocus /></div>
         <div>
-          <label class="label">Expires</label>
+          <label class="label">{{ t('admin.colExpires') }}</label>
           <select v-model.number="tkExpiry" class="input">
-            <option :value="0">Never</option>
-            <option :value="30">30 days</option>
-            <option :value="90">90 days</option>
-            <option :value="365">1 year</option>
+            <option :value="0">{{ t('acct.tokens.never') }}</option>
+            <option :value="30">{{ t('acct.tokens.days', 30) }}</option>
+            <option :value="90">{{ t('acct.tokens.days', 90) }}</option>
+            <option :value="365">{{ t('acct.tokens.oneYear') }}</option>
           </select>
         </div>
         <Checkbox v-model="tkReadOnly" class="text-text-2">{{ t('settings.tokenReadOnlyLong') }}</Checkbox>
@@ -857,8 +860,8 @@ onMounted(loadSessions)
         </template>
         <p v-if="tkErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ tkErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showTokenCreate = false">Cancel</button>
-          <button type="submit" :disabled="tkBusy" class="btn-primary">{{ tkBusy ? 'Creating…' : 'Create token' }}</button>
+          <button type="button" class="btn-ghost" @click="showTokenCreate = false">{{ t('common.cancel') }}</button>
+          <button type="submit" :disabled="tkBusy" class="btn-primary">{{ tkBusy ? t('acct.tokens.creating') : t('acct.tokens.create') }}</button>
         </div>
       </form>
     </Overlay>
@@ -904,73 +907,73 @@ onMounted(loadSessions)
 
     <Confirm
       :open="!!confirmTk"
-      title="Revoke API token"
-      :message="`Revoke “${confirmTk?.name}”? Anything using it will stop working immediately.`"
-      confirm-label="Revoke"
+      :title="t('acct.tokens.revokeTitle')"
+      :message="t('acct.tokens.revokeBody', { name: confirmTk?.name })"
+      :confirm-label="t('common.revoke')"
       danger
       @confirm="revokeToken"
       @close="confirmTk = null"
     />
 
     <!-- Add-passkey modal -->
-    <Overlay :open="showPkName" title="Add a passkey" mode="centered" @close="showPkName = false">
+    <Overlay :open="showPkName" :title="t('acct.passkeys.add')" mode="centered" @close="showPkName = false">
       <form class="flex flex-col gap-3" @submit.prevent="createPasskey">
-        <p class="text-[13px] text-text-2">Give this passkey a name so you can recognise it later (e.g. "MacBook Touch ID", "YubiKey").</p>
-        <input v-model="pkName" class="input" placeholder="My passkey" maxlength="128" autofocus />
+        <p class="text-[13px] text-text-2">{{ t('acct.passkeys.nameHint') }}</p>
+        <input v-model="pkName" class="input" :placeholder="t('acct.passkeys.namePlaceholder')" maxlength="128" autofocus />
         <p v-if="pkErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ pkErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showPkName = false">Cancel</button>
-          <button type="submit" :disabled="pkBusy" class="btn-primary">{{ pkBusy ? 'Waiting…' : 'Create passkey' }}</button>
+          <button type="button" class="btn-ghost" @click="showPkName = false">{{ t('common.cancel') }}</button>
+          <button type="submit" :disabled="pkBusy" class="btn-primary">{{ pkBusy ? t('acct.passkeys.waiting') : t('acct.passkeys.create') }}</button>
         </div>
       </form>
     </Overlay>
 
     <Confirm
       :open="!!confirmPk"
-      title="Remove passkey"
-      :message="`Remove “${confirmPk?.name}”? You won't be able to sign in with it anymore.`"
-      confirm-label="Remove"
+      :title="t('acct.passkeys.removeTitle')"
+      :message="t('acct.passkeys.removeBody', { name: confirmPk?.name })"
+      :confirm-label="t('ws.remove')"
       danger
       @confirm="removePasskey"
       @close="confirmPk = null"
     />
 
     <!-- OTP setup modal -->
-    <Overlay :open="showOtpSetup" title="Set up two-factor" mode="centered" @close="showOtpSetup = false">
+    <Overlay :open="showOtpSetup" :title="t('acct.otp.setUp')" mode="centered" @close="showOtpSetup = false">
       <OtpSetup v-if="showOtpSetup" @verified="onOtpVerified" />
     </Overlay>
 
     <!-- Regenerate recovery codes modal -->
-    <Overlay :open="showRegen" title="Recovery codes" mode="centered" @close="showRegen = false">
+    <Overlay :open="showRegen" :title="t('acct.otp.recoveryCodes')" mode="centered" @close="showRegen = false">
       <div v-if="regenCodes.length" class="flex flex-col gap-3 text-[13px]">
         <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">
-          Your old codes are now invalid. Save these — shown only once.
+          {{ t('acct.otp.oldInvalid') }}
         </p>
         <div class="grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface-2 p-3 font-mono">
           <span v-for="c in regenCodes" :key="c" class="select-all">{{ c }}</span>
         </div>
-        <div class="flex justify-end"><button class="btn-primary" @click="showRegen = false">Done</button></div>
+        <div class="flex justify-end"><button class="btn-primary" @click="showRegen = false">{{ t('common.done') }}</button></div>
       </div>
       <form v-else class="flex flex-col gap-3" @submit.prevent="regenerate">
-        <p class="text-center text-[13px] text-text-2">Enter the 6-digit code from your authenticator app to generate a new set of recovery codes.</p>
+        <p class="text-center text-[13px] text-text-2">{{ t('acct.otp.regenPrompt') }}</p>
         <div class="flex justify-center"><CodeInput v-model="regenCode" @complete="regenerate" /></div>
         <p v-if="regenErr" class="rounded-lg bg-crit-bg px-3 py-2 text-center text-[12px] text-crit-text">{{ regenErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showRegen = false">Cancel</button>
-          <button type="submit" class="btn-primary" :disabled="regenCode.length < 6">Generate</button>
+          <button type="button" class="btn-ghost" @click="showRegen = false">{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn-primary" :disabled="regenCode.length < 6">{{ t('acct.otp.generate') }}</button>
         </div>
       </form>
     </Overlay>
 
     <!-- Turn off two-factor: the same code prompt -->
-    <Overlay :open="showDisable" title="Disable two-factor" mode="centered" @close="showDisable = false">
+    <Overlay :open="showDisable" :title="t('acct.otp.disableTitle')" mode="centered" @close="showDisable = false">
       <form class="flex flex-col gap-3" @submit.prevent="disableOtp">
-        <p class="text-center text-[13px] text-text-2">Enter the 6-digit code from your authenticator app to turn two-factor off.</p>
+        <p class="text-center text-[13px] text-text-2">{{ t('acct.otp.disablePrompt') }}</p>
         <div class="flex justify-center"><CodeInput v-model="disableCode" @complete="disableOtp" /></div>
         <p v-if="otpErr" class="rounded-lg bg-crit-bg px-3 py-2 text-center text-[12px] text-crit-text">{{ otpErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showDisable = false">Cancel</button>
-          <button type="submit" class="btn-danger" :disabled="disableCode.length < 6">Disable</button>
+          <button type="button" class="btn-ghost" @click="showDisable = false">{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn-danger" :disabled="disableCode.length < 6">{{ t('acct.otp.disable') }}</button>
         </div>
       </form>
     </Overlay>
@@ -980,6 +983,23 @@ onMounted(loadSessions)
 <style scoped>
 .settings-page {
   padding: 32px clamp(16px, 4vw, 48px) 64px;
-  max-width: 1080px;
+}
+/* The cards stack; on wide screens they flow into two balanced columns, so
+   the page uses the width it has. */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (min-width: 1500px) {
+  .sections {
+    display: block;
+    columns: 2;
+    column-gap: 20px;
+  }
+  .sections > * {
+    break-inside: avoid;
+    margin-bottom: 20px;
+  }
 }
 </style>

@@ -283,7 +283,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <div class="side-top">
         <div class="brand">
           <template v-if="branding.showMark">
-            <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" alt="logo" class="brand-logo" />
+            <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
             <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
           </template>
           <b v-if="branding.showName" class="truncate">{{ branding.appName }}</b>
@@ -296,7 +296,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
         </button>
       </div>
 
-      <nav class="side-scroll" aria-label="Main">
+      <nav class="side-scroll" :aria-label="t('acct.mainNav')">
         <div class="smart">
           <RouterLink :to="{ name: 'home' }" class="smart-tile" :class="{ on: route.name === 'home' }">
             <span class="tile h-7 w-7" style="--tile: #007aff"><House class="h-4 w-4" :stroke-width="2.4" /></span>
@@ -451,7 +451,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
         <RouterView v-if="ready" />
       </div>
 
-      <nav v-if="phone" class="tabbar material" aria-label="Modules">
+      <nav v-if="phone" class="tabbar material" :aria-label="t('ws.modules')">
         <RouterLink v-for="tb in tabs" :key="tb.key" :to="tb.to" class="tab" :class="{ on: tb.on }">
           <component :is="tb.icon" class="h-[22px] w-[22px]" :stroke-width="tb.on ? 2.3 : 1.8" />
           <span>{{ tb.label }}</span>

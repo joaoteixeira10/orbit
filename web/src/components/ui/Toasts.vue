@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useToastStore } from '@/stores/toast'
 
 const toasts = useToastStore()
+const { t: tr } = useI18n()
 </script>
 
 <template>
@@ -13,7 +15,7 @@ const toasts = useToastStore()
           <b>{{ t.message }}</b>
           <pre v-if="t.detail">{{ t.detail }}</pre>
         </div>
-        <button type="button" class="toast-x" aria-label="Dismiss" @click="toasts.dismiss(t.id)">✕</button>
+        <button type="button" class="toast-x" :aria-label="tr('acct.dismiss')" @click="toasts.dismiss(t.id)">✕</button>
       </div>
     </TransitionGroup>
   </div>

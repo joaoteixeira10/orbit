@@ -36,12 +36,12 @@ const autoLoginAllowed = computed(() => route.query.local !== '1')
 const showPasskey = computed(() => webauthnSupported() && branding.passwordlessEnabled)
 
 const ssoErrors: Record<string, string> = {
-  disabled: 'SSO is not enabled.',
-  unavailable: 'The identity provider is unavailable.',
-  idp_error: 'The identity provider returned an error.',
-  auth_failed: 'SSO sign-in failed.',
-  provisioning: 'Your account could not be provisioned (it may be disabled).',
-  token: 'Could not complete sign-in.',
+  disabled: t('acct.signin.ssoDisabled'),
+  unavailable: t('acct.signin.ssoUnavailable'),
+  idp_error: t('acct.signin.ssoIdpError'),
+  auth_failed: t('acct.signin.ssoFailed'),
+  provisioning: t('acct.signin.ssoProvisioning'),
+  token: t('acct.signin.ssoToken'),
 }
 
 function done() {
@@ -82,7 +82,7 @@ onMounted(async () => {
   const code = route.query.sso as string | undefined
   const ssoErr = route.query.sso_error as string | undefined
   if (ssoErr) {
-    error.value = ssoErrors[ssoErr] || 'SSO sign-in failed.'
+    error.value = ssoErrors[ssoErr] || t('acct.signin.ssoFailed')
     router.replace({ query: {} })
     return
   }
@@ -92,7 +92,7 @@ onMounted(async () => {
       await auth.exchangeSSO(code)
       done()
     } catch (e: any) {
-      error.value = e?.message || 'SSO sign-in failed.'
+      error.value = e?.message || t('acct.signin.ssoFailed')
       router.replace({ query: {} })
     } finally {
       loading.value = false
@@ -122,7 +122,7 @@ async function attempt(code?: string) {
     }
     done()
   } catch (e: any) {
-    error.value = e?.message || 'Login failed'
+    error.value = e?.message || t('acct.signin.failed')
     otp.value = ''
   } finally {
     loading.value = false
@@ -149,7 +149,7 @@ async function signInWithPasskey() {
     await auth.loginWithPasskey()
     done()
   } catch (e: any) {
-    error.value = e?.name === 'NotAllowedError' ? 'Passkey sign-in was cancelled' : e?.message || 'Passkey sign-in failed'
+    error.value = e?.name === 'NotAllowedError' ? t('acct.signin.passkeyCancelled') : e?.message || t('acct.signin.passkeyFailed')
   } finally {
     loading.value = false
   }
@@ -164,7 +164,7 @@ async function usedSecondFactorPasskey() {
     await auth.completeWithPasskey(passkeyChallenge.value.sessionId, passkeyChallenge.value.options)
     done()
   } catch (e: any) {
-    error.value = e?.name === 'NotAllowedError' ? 'Passkey was cancelled' : e?.message || 'Passkey authentication failed'
+    error.value = e?.name === 'NotAllowedError' ? t('acct.signin.secondPasskeyCancelled') : e?.message || t('acct.signin.secondPasskeyFailed')
   } finally {
     loading.value = false
   }
@@ -187,7 +187,7 @@ function backToCredentials() {
     <main class="wrap">
       <div class="brand">
         <template v-if="branding.showMark">
-          <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" alt="logo" class="brand-logo" />
+          <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
           <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
         </template>
         <template v-if="branding.showName">

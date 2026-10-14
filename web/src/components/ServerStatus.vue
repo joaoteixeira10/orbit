@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { aboutApi } from '@/api'
 import type { About } from '@/api/types'
 import { useBrandingStore } from '@/stores/branding'
@@ -13,6 +14,7 @@ const auth = useAuthStore()
 const about = ref<About | null>(null)
 const online = ref(false)
 const open = ref(false)
+const { t } = useI18n()
 
 async function refresh() {
   try {
@@ -45,11 +47,11 @@ const dotClass = computed(() => {
   return a.update_available ? 'bg-warn' : 'bg-ok'
 })
 const statusLabel = computed(() => {
-  if (!online.value) return 'Server offline'
+  if (!online.value) return t('acct.status.offline')
   const a = about.value
-  if (!a || !a.update_check_enabled) return 'Updates off'
-  if (!a.latest_version) return 'No release info'
-  return a.update_available ? 'Update available' : 'Up to date'
+  if (!a || !a.update_check_enabled) return t('acct.status.updatesOff')
+  if (!a.latest_version) return t('acct.status.noReleaseInfo')
+  return a.update_available ? t('acct.status.updateAvailable') : t('acct.status.upToDate')
 })
 
 // The backend reports the version with or without a leading "v" (dev default
@@ -87,7 +89,7 @@ function openDialog() {
     <span class="truncate font-mono text-text-3" :title="withV(about?.version)">{{ withV(about?.version) }}</span>
   </button>
 
-  <Overlay :open="open" title="About" mode="centered" wide @close="open = false">
+  <Overlay :open="open" :title="t('acct.status.about')" mode="centered" wide @close="open = false">
     <div v-if="about" class="grid grid-cols-2 gap-x-8 gap-y-5 text-[13px]">
       <div>
         <div class="font-semibold text-accent-text">{{ branding.appName }}</div>
@@ -98,51 +100,51 @@ function openDialog() {
       </div>
 
       <div>
-        <div class="font-semibold">Updates</div>
-        <span v-if="!about.update_check_enabled" class="text-text-3">checking disabled</span>
-        <span v-else-if="!about.latest_version" class="text-text-3">no release info</span>
-        <span v-else-if="about.update_available" class="text-warn-text">new release: {{ withV(about.latest_version) }}</span>
-        <span v-else class="text-ok-text">up to date</span>
+        <div class="font-semibold">{{ t('acct.status.updates') }}</div>
+        <span v-if="!about.update_check_enabled" class="text-text-3">{{ t('acct.status.checkingDisabled') }}</span>
+        <span v-else-if="!about.latest_version" class="text-text-3">{{ t('acct.status.noReleaseInfoLower') }}</span>
+        <span v-else-if="about.update_available" class="text-warn-text">{{ t('acct.status.newRelease', { version: withV(about.latest_version) }) }}</span>
+        <span v-else class="text-ok-text">{{ t('acct.status.upToDateLower') }}</span>
       </div>
 
       <div>
-        <div class="font-semibold">Repository</div>
+        <div class="font-semibold">{{ t('nav.repository') }}</div>
         <a v-if="about.repository_url" :href="about.repository_url" target="_blank" rel="noopener" class="break-all text-accent hover:underline">
           {{ about.repository_url.replace(/^https?:\/\//, '') }}
         </a>
         <span v-else class="text-text-3">—</span>
       </div>
       <div>
-        <div class="font-semibold">Changes</div>
+        <div class="font-semibold">{{ t('acct.status.changes') }}</div>
         <a v-if="changesUrl" :href="changesUrl" target="_blank" rel="noopener" class="text-accent hover:underline">
-          Release notes
+          {{ t('acct.status.releaseNotes') }}
         </a>
         <span v-else class="text-text-3">—</span>
       </div>
 
       <div>
-        <div class="font-semibold">Database</div>
+        <div class="font-semibold">{{ t('acct.status.database') }}</div>
         <div class="capitalize text-text-2">{{ about.db_driver }}</div>
       </div>
 
       <div class="col-span-2">
-        <div class="mb-1 font-semibold">Version history</div>
+        <div class="mb-1 font-semibold">{{ t('acct.status.history') }}</div>
         <ul v-if="history.length" class="flex flex-col gap-0.5 text-text-2">
           <li v-for="(h, i) in shownHistory" :key="i">
-            Installed {{ h.version }} on {{ fmtDate(h.installed_at) }}
+            {{ t('acct.status.installed', { version: h.version, date: fmtDate(h.installed_at) }) }}
           </li>
         </ul>
-        <div v-else class="text-text-3">No history.</div>
+        <div v-else class="text-text-3">{{ t('acct.status.noHistory') }}</div>
         <button
           v-if="history.length > HISTORY_PREVIEW"
           type="button"
           class="mt-1.5 text-[12px] text-accent hover:underline"
           @click="showAllHistory = !showAllHistory"
         >
-          {{ showAllHistory ? 'Show less' : `Show more (${history.length - HISTORY_PREVIEW})` }}
+          {{ showAllHistory ? t('acct.status.showLess') : t('acct.status.showMore', { n: history.length - HISTORY_PREVIEW }) }}
         </button>
       </div>
     </div>
-    <div v-else class="text-[13px] text-text-3">Loading…</div>
+    <div v-else class="text-[13px] text-text-3">{{ t('common.loading') }}</div>
   </Overlay>
 </template>

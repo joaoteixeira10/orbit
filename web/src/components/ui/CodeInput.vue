@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 // Segmented numeric code input (one box per digit) with auto-advance, backspace,
 // arrow navigation, paste, and password-manager / browser one-time-code autofill.
@@ -8,6 +9,7 @@ const props = withDefaults(
   { length: 6, autocomplete: 'one-time-code' },
 )
 const emit = defineEmits<{ 'update:modelValue': [string]; complete: [string] }>()
+const { t } = useI18n()
 
 const boxes = ref<HTMLInputElement[]>([])
 const digits = ref<string[]>(Array.from({ length: props.length }, () => ''))
@@ -78,7 +80,7 @@ function onPaste(e: ClipboardEvent) {
       inputmode="numeric"
       :autocomplete="autocomplete"
       :name="i === 0 ? 'one-time-code' : undefined"
-      :aria-label="`Digit ${i + 1}`"
+      :aria-label="t('acct.digit', { n: i + 1 })"
       maxlength="1"
       class="h-12 w-11 rounded-xl border border-border bg-surface-2 text-center text-[18px] font-semibold outline-none focus:border-accent"
       @input="onInput(i, $event)"

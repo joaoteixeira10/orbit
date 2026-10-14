@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Search } from 'lucide-vue-next'
 import { auditApi } from '@/api'
 import type { AuditEntry } from '@/api/types'
 import { useToastStore } from '@/stores/toast'
@@ -116,10 +117,10 @@ function otherDetail(a: AuditEntry) {
       <span v-if="verify" class="verify" :class="verify.ok ? 'ok' : 'bad'">
         {{ verify.ok ? t('audit.intact', { n: verify.checked }) : t('audit.broken', { id: verify.broken_at }) }}
       </span>
-      <button type="button" class="lb-btn" :disabled="verifying" @click="verifyChain">{{ t('audit.verify') }}</button>
-      <button type="button" class="lb-btn" :disabled="downloading" :title="t('audit.csvHint')" @click="downloadCsv">{{ t('audit.csv') }}</button>
+      <button type="button" class="btn btn-sm" :disabled="verifying" @click="verifyChain">{{ t('audit.verify') }}</button>
+      <button type="button" class="btn btn-sm" :disabled="downloading" :title="t('audit.csvHint')" @click="downloadCsv">{{ t('audit.csv') }}</button>
       <label class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <Search class="h-4 w-4 shrink-0" aria-hidden="true" />
         <input v-model="q" type="search" :placeholder="t('audit.search')" :aria-label="t('audit.searchLabel')" autocomplete="off" />
       </label>
     </div>
@@ -161,7 +162,7 @@ function otherDetail(a: AuditEntry) {
       </table>
       <div v-else class="empty-state">{{ !loaded ? t('audit.loading') : q ? t('audit.noMatch') : t('audit.none') }}</div>
     </div>
-    <div v-if="more" class="panel-body"><button type="button" class="lb-btn" @click="load(true)">{{ t('audit.older') }}</button></div>
+    <div v-if="more" class="panel-body"><button type="button" class="btn btn-sm" @click="load(true)">{{ t('audit.older') }}</button></div>
   </section>
   </div>
 </template>

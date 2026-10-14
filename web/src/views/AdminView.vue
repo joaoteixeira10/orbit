@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
 import { fmtDate } from '@/lib/format'
-import { P, GLOBAL_PRIVILEGES } from '@/lib/privileges'
+import { P, GLOBAL_PRIVILEGES, roleDescription } from '@/lib/privileges'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import RoleSelect from '@/components/ui/RoleSelect.vue'
@@ -72,8 +72,8 @@ const navGroups = computed(() => {
   if (!auth.isOwner && auth.canOwnerGated(P.settingsBranding)) sys.push({ id: 'branding', label: t('admin.branding'), icon: Palette })
   if (!auth.isOwner && auth.canOwnerGated(P.settingsNotifications)) sys.push({ id: 'notifications', label: t('admin.notifications'), icon: Bell })
   const groups: { title: string; items: typeof mgmt }[] = []
-  if (mgmt.length) groups.push({ title: 'Management', items: mgmt })
-  if (sys.length) groups.push({ title: 'System', items: sys })
+  if (mgmt.length) groups.push({ title: t('adm.management'), items: mgmt })
+  if (sys.length) groups.push({ title: t('nav.system'), items: sys })
   return groups
 })
 const tabs = computed<Tab[]>(() => navGroups.value.flatMap((g) => g.items).map((i) => i.id))
@@ -121,7 +121,7 @@ async function createUser() {
     if (res.generated_password) {
       createdCreds.value = { username: res.user.username, password: res.generated_password }
     } else {
-      toast.success('User created')
+      toast.success(t('adm.users.created'))
     }
     Object.assign(userForm, {
       username: '', display_name: '', email: '', password: '', generate_password: true,
@@ -136,9 +136,9 @@ async function copyCreds() {
   if (!createdCreds.value) return
   try {
     await navigator.clipboard.writeText(createdCreds.value.password)
-    toast.success('Password copied')
+    toast.success(t('adm.users.passwordCopied'))
   } catch {
-    toast.error('Could not copy')
+    toast.error(t('adm.users.copyFailed'))
   }
 }
 
@@ -181,7 +181,7 @@ async function saveEditUser() {
       otp_required: editUserForm.otp_required,
       role_ids: editUserForm.role_ids,
     })
-    toast.success('User updated')
+    toast.success(t('adm.users.updated'))
     showEditUser.value = false
     await reloadUsersAndFlash()
     if (editingSelf) await auth.fetchMe()
@@ -193,7 +193,7 @@ async function resetUserOtp() {
   if (!editUserTarget.value) return
   try {
     await usersApi.resetOtp(editUserTarget.value.id)
-    toast.success('Two-factor reset for this user')
+    toast.success(t('adm.users.otpResetDone'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -202,7 +202,7 @@ async function resetUserWebauthn() {
   if (!editUserTarget.value) return
   try {
     await usersApi.resetWebauthn(editUserTarget.value.id)
-    toast.success('Passkeys removed for this user')
+    toast.success(t('adm.users.passkeysRemoved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -313,7 +313,7 @@ async function removeUser() {
   if (!deleteUserTarget.value) return
   try {
     await usersApi.remove(deleteUserTarget.value.id)
-    toast.success('User deleted')
+    toast.success(t('adm.users.deleted'))
     deleteUserTarget.value = null
     await reloadUsersAndFlash()
   } catch (e: any) {
@@ -368,7 +368,7 @@ async function saveRole() {
   try {
     if (roleForm.id) await rolesApi.update(roleForm.id, body)
     else await rolesApi.create(body)
-    toast.success('Role saved')
+    toast.success(t('adm.roles.saved'))
     showRole.value = false
     await reloadRolesAndFlash()
     if (affectsSelf) await auth.fetchMe()
@@ -382,7 +382,7 @@ async function removeRole() {
   const affectsSelf = (auth.user?.roles ?? []).some((r) => r.id === deleteRoleTarget.value!.id)
   try {
     await rolesApi.remove(deleteRoleTarget.value.id)
-    toast.success('Role deleted')
+    toast.success(t('adm.roles.deleted'))
     deleteRoleTarget.value = null
     await loadRoles()
     await loadUsers()
@@ -441,9 +441,9 @@ async function revokeToken() {
 
 function roleSummary(r: Role): string {
   const parts: string[] = []
-  if (r.superuser) return 'Full access (superuser)'
-  if (r.global_privileges.length) parts.push(`${r.global_privileges.length} privilege(s)`)
-  return parts.join(' · ') || 'no privileges'
+  if (r.superuser) return t('admin.fullAccess')
+  if (r.global_privileges.length) parts.push(t('adm.roles.privCount', { n: r.global_privileges.length }, r.global_privileges.length))
+  return parts.join(' · ') || t('adm.roles.noPrivs')
 }
 
 // ---------- Branding ----------
@@ -505,7 +505,7 @@ async function saveBranding() {
       login_message: customLoginMessage.value ? loginMessage.value : '',
     })
     branding.apply(b)
-    toast.success('Branding saved')
+    toast.success(t('adm.branding.saved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -526,7 +526,7 @@ async function saveNotifConfig() {
   if (!notifCfg.value) return
   try {
     notifCfg.value = await notifyApi.updateConfig(notifCfg.value)
-    toast.success('Notification channels saved')
+    toast.success(t('adm.notify.saved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -538,9 +538,9 @@ async function testChannel(ch: string) {
     // Persist current edits first so the test uses the on-screen config.
     notifCfg.value = await notifyApi.updateConfig(notifCfg.value)
     await notifyApi.test(ch)
-    toast.success(`Test sent via ${ch}`)
+    toast.success(t('adm.notify.testSent', { channel: ch }))
   } catch (e: any) {
-    toast.error(`Test failed: ${e.message}`)
+    toast.error(t('adm.notify.testFailed', { error: e.message }))
   } finally {
     testing.value = ''
   }
@@ -563,7 +563,7 @@ async function loadSecurity() {
 async function setEnforce(v: boolean) {
   try {
     otpEnforced.value = (await securityApi.update({ otp_enforced: v })).otp_enforced
-    toast.success(v ? 'Two-factor is now enforced' : 'Two-factor enforcement disabled')
+    toast.success(v ? t('adm.security.enforced') : t('adm.security.unenforced'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -571,7 +571,7 @@ async function setEnforce(v: boolean) {
 async function setHideLocalLogin(v: boolean) {
   try {
     hideLocalLogin.value = (await securityApi.update({ hide_local_login: v })).hide_local_login
-    toast.success('Saved')
+    toast.success(t('common.saved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -579,7 +579,7 @@ async function setHideLocalLogin(v: boolean) {
 async function setPasswordless(v: boolean) {
   try {
     passwordlessEnabled.value = (await securityApi.update({ passwordless_enabled: v })).passwordless_enabled
-    toast.success('Saved')
+    toast.success(t('common.saved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -587,7 +587,7 @@ async function setPasswordless(v: boolean) {
 async function setAutoSso(v: boolean) {
   try {
     autoSso.value = (await securityApi.update({ auto_sso: v })).auto_sso
-    toast.success('Saved')
+    toast.success(t('common.saved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -604,7 +604,7 @@ async function saveOIDC() {
   try {
     oidcCfg.value = await oidcApi.updateConfig(oidcCfg.value)
     await branding.load() // refresh the public oidc_enabled flag
-    toast.success('SSO settings saved')
+    toast.success(t('adm.sso.saved'))
   } catch (e: any) {
     toast.error(e.message)
   } finally {
@@ -615,7 +615,7 @@ async function testOIDC() {
   if (!oidcCfg.value?.issuer) return
   try {
     await oidcApi.testDiscovery(oidcCfg.value.issuer)
-    toast.success('Discovery succeeded — issuer looks good')
+    toast.success(t('adm.sso.discoveryOk'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -674,13 +674,13 @@ const offUsersLive = onLiveEvent('users', async () => {
 onUnmounted(() => offUsersLive())
 
 // ---------- Owner (god mode) ----------
-const featureMeta: { key: string; label: string; hint: string }[] = [
-  { key: 'sessions', label: 'Active sessions', hint: 'Let users see and revoke their signed-in devices/sessions.' },
-  { key: 'impersonation', label: 'User impersonation', hint: 'Let admins with the “Impersonate users” privilege sign in as another user to diagnose issues.' },
-  { key: 'calendar_subscriptions', label: 'Calendar subscriptions (on by default)', hint: 'Editors can subscribe a workspace to an outside calendar by its ICS address (a timetable, Google, iCloud, Outlook). Orbit fetches it on a timer, through the guarded client, and stores the address encrypted. Off: the Calendars button, the API and the refreshes are gone.' },
-  { key: 'calendar_feeds', label: 'Calendar feeds (on by default)', hint: 'Users can publish a private ICS address of their events and due tasks for Apple Calendar, Google or Outlook (Settings → Calendar feeds). Off: existing feed addresses stop answering.' },
-  { key: 'step_up_auth', label: 'Step-up re-authentication', hint: 'Require a fresh password/passkey confirmation before dangerous actions (security policy and SSO changes, owner transfer, impersonation).' },
-]
+const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() => [
+  { key: 'sessions', label: t('adm.owner.feature.sessions'), hint: t('adm.owner.feature.sessionsHint') },
+  { key: 'impersonation', label: t('adm.owner.feature.impersonation'), hint: t('adm.owner.feature.impersonationHint') },
+  { key: 'calendar_subscriptions', label: t('adm.owner.feature.calSubs'), hint: t('adm.owner.feature.calSubsHint') },
+  { key: 'calendar_feeds', label: t('adm.owner.feature.calFeeds'), hint: t('adm.owner.feature.calFeedsHint') },
+  { key: 'step_up_auth', label: t('adm.owner.feature.stepUp'), hint: t('adm.owner.feature.stepUpHint') },
+])
 const featureFlags = ref<Record<string, boolean>>({ ...auth.features })
 async function toggleFeature(key: string, on: boolean) {
   const prev = featureFlags.value[key] ?? false
@@ -689,7 +689,7 @@ async function toggleFeature(key: string, on: boolean) {
     const updated = await featuresApi.update({ [key]: on })
     featureFlags.value = updated
     auth.features = updated // keep the app-wide flags in sync
-    toast.success(on ? 'Feature enabled' : 'Feature disabled')
+    toast.success(on ? t('adm.owner.featureOn') : t('adm.owner.featureOff'))
   } catch (e: any) {
     featureFlags.value = { ...featureFlags.value, [key]: prev } // revert on failure
     toast.error(e.message)
@@ -697,14 +697,14 @@ async function toggleFeature(key: string, on: boolean) {
 }
 
 // Owner-managed security alerts (broadcast on high-signal actions).
-const securityAlertMeta: { key: string; label: string }[] = [
-  { key: 'impersonation', label: 'Impersonation started' },
-  { key: 'owner_transfer', label: 'Ownership transferred' },
-  { key: 'admin_grant', label: 'Admin role granted' },
-  { key: 'config_change', label: 'Security/SSO config changed' },
-  { key: 'refresh_reuse', label: 'Session token reuse (possible theft)' },
-  { key: 'backup_export', label: 'An encrypted backup is downloaded' },
-]
+const securityAlertMeta = computed<{ key: string; label: string }[]>(() => [
+  { key: 'impersonation', label: t('adm.owner.alert.impersonation') },
+  { key: 'owner_transfer', label: t('adm.owner.alert.ownerTransfer') },
+  { key: 'admin_grant', label: t('adm.owner.alert.adminGrant') },
+  { key: 'config_change', label: t('adm.owner.alert.configChange') },
+  { key: 'refresh_reuse', label: t('adm.owner.alert.refreshReuse') },
+  { key: 'backup_export', label: t('adm.owner.alert.backupExport') },
+])
 const alertEvents = ref<Record<string, boolean>>({})
 const alertChannels = ref<string[]>([])
 const alertAvailable = ref<string[]>([])
@@ -745,7 +745,7 @@ async function toggleAlertChannel(ch: string, on: boolean) {
 async function saveAlertEmail() {
   try {
     await ownerApi.updateSecurityAlerts({ email: alertEmail.value })
-    toast.success('Alert recipient saved')
+    toast.success(t('adm.owner.alertEmailSaved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -760,7 +760,7 @@ async function runTransfer() {
   if (!transferTarget.value) return
   try {
     await ownerApi.transfer(transferTarget.value)
-    toast.success('Ownership transferred')
+    toast.success(t('adm.owner.transferred'))
     await auth.fetchMe() // we're no longer the owner → the whole Owner area disappears
     transferTarget.value = null
     if (!auth.isOwner) router.push({ name: 'dashboard' })
@@ -861,7 +861,7 @@ function switchTab(t: Tab) {
                 {{ r.name }}
                 <span v-if="r.builtin" class="ml-1 rounded bg-surface-3 px-1.5 py-0.5 font-sans text-[10px] font-medium uppercase text-text-3">{{ t('admin.builtin') }}</span>
               </h3>
-              <div class="text-[12px] text-text-3">{{ r.description || roleSummary(r) }}</div>
+              <div class="text-[12px] text-text-3">{{ roleDescription(r) || roleSummary(r) }}</div>
             </div>
             <div class="flex gap-1">
               <button class="btn-ghost px-2 py-1" :disabled="r.builtin" :title="r.builtin ? t('admin.builtinImmutable') : t('admin.edit')" @click="!r.builtin && openEditRole(r)"><Pencil class="h-4 w-4" /></button>
@@ -943,14 +943,14 @@ function switchTab(t: Tab) {
       <div class="flex flex-col gap-5">
       <!-- Identity -->
       <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Identity</h3></div>
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.identity') }}</h3></div>
         <div class="flex flex-col gap-4 p-5">
-          <div><label class="label">Application name</label><input v-model="brandForm.app_name" class="input" placeholder="Orbit" /></div>
+          <div><label class="label">{{ t('adm.branding.appName') }}</label><input v-model="brandForm.app_name" class="input" placeholder="Orbit" /></div>
           <div>
             <div>
-              <label class="label">Accent colour</label>
+              <label class="label">{{ t('adm.branding.accent') }}</label>
               <div class="flex items-center gap-2">
-                <input v-model="brandForm.accent_color" type="color" class="h-10 w-12 shrink-0 rounded-lg border border-border bg-surface-2" />
+                <input :value="brandForm.accent_color || '#007AFF'" type="color" class="h-10 w-12 shrink-0 rounded-lg border border-border bg-surface-2" @input="brandForm.accent_color = ($event.target as HTMLInputElement).value" />
                 <input v-model="brandForm.accent_color" class="input font-mono" placeholder="#007AFF" />
               </div>
               <div class="mt-2 flex gap-2">
@@ -975,56 +975,56 @@ function switchTab(t: Tab) {
       <div class="flex flex-col gap-5">
       <!-- Display options -->
       <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Display options</h3></div>
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.display') }}</h3></div>
         <div class="flex flex-col gap-4 p-5">
           <div class="flex items-center justify-between gap-4">
-            <div><div class="text-[13px] font-semibold">Show logo in sidebar</div><div class="text-[12px] text-text-3">Displays the mark/logo badge</div></div>
+            <div><div class="text-[13px] font-semibold">{{ t('adm.branding.showLogo') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.showLogoHint') }}</div></div>
             <Toggle v-model="brandForm.show_logo" />
           </div>
           <div class="flex items-center justify-between gap-4 border-t border-border pt-4">
-            <div><div class="text-[13px] font-semibold">Show application name in sidebar</div><div class="text-[12px] text-text-3">Displays the name next to the logo</div></div>
+            <div><div class="text-[13px] font-semibold">{{ t('adm.branding.showName') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.showNameHint') }}</div></div>
             <Toggle v-model="brandForm.show_app_name" />
           </div>
           <div class="border-t border-border pt-4">
             <div class="flex items-center justify-between gap-4">
-              <div><div class="text-[13px] font-semibold">Custom login page message</div><div class="text-[12px] text-text-3">Show a welcome message on the sign-in screen</div></div>
+              <div><div class="text-[13px] font-semibold">{{ t('adm.branding.loginMessage') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.loginMessageHint') }}</div></div>
               <Toggle v-model="customLoginMessage" />
             </div>
-            <textarea v-if="customLoginMessage" v-model="loginMessage" class="input mt-3 h-20" placeholder="Welcome — sign in with your company account."></textarea>
+            <textarea v-if="customLoginMessage" v-model="loginMessage" class="input mt-3 h-20" :placeholder="t('adm.branding.loginMessagePlaceholder')"></textarea>
           </div>
         </div>
       </div>
       <!-- Assets -->
       <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><ImageIcon class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Assets</h3></div>
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><ImageIcon class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.assets') }}</h3></div>
         <div class="flex flex-col gap-4 p-5">
           <div>
             <div>
-              <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">Logo</span> shown in the sidebar header</div>
+              <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">{{ t('adm.branding.logo') }}</span> {{ t('adm.branding.logoHint') }}</div>
               <div class="mb-2 flex h-20 items-center justify-center rounded-xl border border-border bg-surface-2">
                 <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="max-h-14 rounded" />
-                <span v-else class="text-[12px] text-text-3">No logo uploaded</span>
+                <span v-else class="text-[12px] text-text-3">{{ t('adm.branding.noLogo') }}</span>
               </div>
               <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border-2 px-3 py-3">
-                <span class="text-[13px]"><span class="font-medium">Upload logo</span><br /><span class="text-[12px] text-text-3">SVG or PNG, any aspect ratio</span></span>
+                <span class="text-[13px]"><span class="font-medium">{{ t('adm.branding.uploadLogo') }}</span><br /><span class="text-[12px] text-text-3">{{ t('adm.branding.logoFormats') }}</span></span>
                 <div class="flex shrink-0 items-center gap-2">
-                  <button v-if="brandForm.logo_data_url" type="button" class="btn-ghost" @click="brandForm.logo_data_url = ''">Remove</button>
-                  <label class="btn-ghost cursor-pointer">Choose file<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'logo_data_url')" /></label>
+                  <button v-if="brandForm.logo_data_url" type="button" class="btn-ghost" @click="brandForm.logo_data_url = ''">{{ t('adm.remove') }}</button>
+                  <label class="btn-ghost cursor-pointer">{{ t('adm.chooseFile') }}<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'logo_data_url')" /></label>
                 </div>
               </div>
             </div>
           </div>
           <div class="border-t border-border pt-4">
             <div>
-              <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">Favicon</span> browser tab icon, 32×32 recommended</div>
+              <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">{{ t('adm.branding.favicon') }}</span> {{ t('adm.branding.faviconHint') }}</div>
               <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border-2 px-3 py-3">
                 <span class="flex items-center gap-3 text-[13px]">
                   <img v-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-7 w-7 rounded" />
-                  <span><span class="font-medium">Upload favicon</span><br /><span class="text-[12px] text-text-3">ICO, PNG or SVG</span></span>
+                  <span><span class="font-medium">{{ t('adm.branding.uploadFavicon') }}</span><br /><span class="text-[12px] text-text-3">{{ t('adm.branding.faviconFormats') }}</span></span>
                 </span>
                 <div class="flex shrink-0 items-center gap-2">
-                  <button v-if="brandForm.favicon_data_url" type="button" class="btn-ghost" @click="brandForm.favicon_data_url = ''">Remove</button>
-                  <label class="btn-ghost cursor-pointer">Choose file<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'favicon_data_url')" /></label>
+                  <button v-if="brandForm.favicon_data_url" type="button" class="btn-ghost" @click="brandForm.favicon_data_url = ''">{{ t('adm.remove') }}</button>
+                  <label class="btn-ghost cursor-pointer">{{ t('adm.chooseFile') }}<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'favicon_data_url')" /></label>
                 </div>
               </div>
             </div>
@@ -1034,7 +1034,7 @@ function switchTab(t: Tab) {
 
       <!-- Live preview -->
       <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Eye class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Live preview</h3></div>
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Eye class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.preview') }}</h3></div>
         <div class="p-5">
           <div class="overflow-hidden rounded-xl border border-border">
             <!-- browser-tab strip (favicon) -->
@@ -1054,8 +1054,8 @@ function switchTab(t: Tab) {
               </div>
             </div>
             <div class="flex items-center gap-3 p-3">
-              <button class="btn-primary" :style="previewBtnStyle">New workspace</button>
-              <a class="text-[12px] hover:underline" :style="{ color: previewAccent?.accent || 'var(--accent)' }">View details →</a>
+              <button class="btn-primary" :style="previewBtnStyle">{{ t('adm.branding.previewButton') }}</button>
+              <a class="text-[12px] hover:underline" :style="{ color: previewAccent?.accent || 'var(--accent)' }">{{ t('adm.branding.previewLink') }}</a>
             </div>
           </div>
         </div>
@@ -1063,35 +1063,35 @@ function switchTab(t: Tab) {
 
       </div><!-- /right column -->
 
-      <div class="flex justify-end lg:col-span-2"><button class="btn-primary" @click="saveBranding"><Send class="h-4 w-4" /> Save branding</button></div>
+      <div class="flex justify-end lg:col-span-2"><button class="btn-primary" @click="saveBranding"><Send class="h-4 w-4" /> {{ t('adm.branding.save') }}</button></div>
     </section>
 
     <!-- ===== Notifications ===== -->
     <section v-else-if="tab === 'notifications'">
       <div v-if="notifCfg" class="flex flex-col gap-4">
         <p class="text-[13px] text-text-2">
-          Configure the channels users can choose from. Enable a channel, fill its settings, then send a test.
+          {{ t('adm.notify.intro') }}
         </p>
 
         <div class="columns-1 gap-x-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
         <!-- Email -->
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-[14px] font-semibold">Email (SMTP)</h3>
+            <h3 class="text-[14px] font-semibold">{{ t('adm.notify.email') }}</h3>
             <Toggle v-model="notifCfg.email.enabled" />
           </div>
           <div v-if="notifCfg.email.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">Host</label><input v-model="notifCfg.email.host" class="input" placeholder="smtp.example.org" /></div>
-              <div><label class="label">Port</label><input v-model.number="notifCfg.email.port" type="number" class="input" placeholder="587" /></div>
+              <div><label class="label">{{ t('adm.notify.host') }}</label><input v-model="notifCfg.email.host" class="input" placeholder="smtp.example.org" /></div>
+              <div><label class="label">{{ t('adm.notify.port') }}</label><input v-model.number="notifCfg.email.port" type="number" class="input" placeholder="587" /></div>
             </div>
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">Username</label><input v-model="notifCfg.email.username" class="input" /></div>
-              <div><label class="label">Password</label><input v-model="notifCfg.email.password" type="password" class="input" /></div>
+              <div><label class="label">{{ t('admin.colUsername') }}</label><input v-model="notifCfg.email.username" class="input" /></div>
+              <div><label class="label">{{ t('adm.password') }}</label><input v-model="notifCfg.email.password" type="password" class="input" /></div>
             </div>
-            <div><label class="label">From address</label><input v-model="notifCfg.email.from" class="input" placeholder="orbit@example.org" /></div>
-            <Checkbox v-model="notifCfg.email.start_tls" class="text-text-2">Use STARTTLS</Checkbox>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'email'" @click="testChannel('email')"><Send class="h-4 w-4" /> Test</button></div>
+            <div><label class="label">{{ t('adm.notify.from') }}</label><input v-model="notifCfg.email.from" class="input" placeholder="orbit@example.org" /></div>
+            <Checkbox v-model="notifCfg.email.start_tls" class="text-text-2">{{ t('adm.notify.startTls') }}</Checkbox>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'email'" @click="testChannel('email')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
@@ -1099,8 +1099,8 @@ function switchTab(t: Tab) {
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Discord</h3><Toggle v-model="notifCfg.discord.enabled" /></div>
           <div v-if="notifCfg.discord.enabled" class="flex flex-col gap-3">
-            <div><label class="label">Webhook URL</label><input v-model="notifCfg.discord.webhook_url" class="input" placeholder="https://discord.com/api/webhooks/…" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'discord'" @click="testChannel('discord')"><Send class="h-4 w-4" /> Test</button></div>
+            <div><label class="label">{{ t('adm.notify.webhookUrl') }}</label><input v-model="notifCfg.discord.webhook_url" class="input" placeholder="https://discord.com/api/webhooks/…" /></div>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'discord'" @click="testChannel('discord')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
@@ -1109,10 +1109,10 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Telegram</h3><Toggle v-model="notifCfg.telegram.enabled" /></div>
           <div v-if="notifCfg.telegram.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">Bot token</label><input v-model="notifCfg.telegram.bot_token" class="input" /></div>
-              <div><label class="label">Chat ID</label><input v-model="notifCfg.telegram.chat_id" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.botToken') }}</label><input v-model="notifCfg.telegram.bot_token" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.chatId') }}</label><input v-model="notifCfg.telegram.chat_id" class="input" /></div>
             </div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'telegram'" @click="testChannel('telegram')"><Send class="h-4 w-4" /> Test</button></div>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'telegram'" @click="testChannel('telegram')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
@@ -1121,11 +1121,11 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">ntfy</h3><Toggle v-model="notifCfg.ntfy.enabled" /></div>
           <div v-if="notifCfg.ntfy.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">Server URL</label><input v-model="notifCfg.ntfy.server_url" class="input" placeholder="https://ntfy.sh" /></div>
-              <div><label class="label">Topic</label><input v-model="notifCfg.ntfy.topic" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.serverUrl') }}</label><input v-model="notifCfg.ntfy.server_url" class="input" placeholder="https://ntfy.sh" /></div>
+              <div><label class="label">{{ t('adm.notify.topic') }}</label><input v-model="notifCfg.ntfy.topic" class="input" /></div>
             </div>
-            <div><label class="label">Token (optional)</label><input v-model="notifCfg.ntfy.token" class="input" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'ntfy'" @click="testChannel('ntfy')"><Send class="h-4 w-4" /> Test</button></div>
+            <div><label class="label">{{ t('adm.notify.tokenOptional') }}</label><input v-model="notifCfg.ntfy.token" class="input" /></div>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'ntfy'" @click="testChannel('ntfy')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
@@ -1134,10 +1134,10 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Gotify</h3><Toggle v-model="notifCfg.gotify.enabled" /></div>
           <div v-if="notifCfg.gotify.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">Server URL</label><input v-model="notifCfg.gotify.server_url" class="input" placeholder="https://gotify.example.org" /></div>
-              <div><label class="label">App token</label><input v-model="notifCfg.gotify.token" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.serverUrl') }}</label><input v-model="notifCfg.gotify.server_url" class="input" placeholder="https://gotify.example.org" /></div>
+              <div><label class="label">{{ t('adm.notify.appToken') }}</label><input v-model="notifCfg.gotify.token" class="input" /></div>
             </div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'gotify'" @click="testChannel('gotify')"><Send class="h-4 w-4" /> Test</button></div>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'gotify'" @click="testChannel('gotify')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
@@ -1145,9 +1145,9 @@ function switchTab(t: Tab) {
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Microsoft Teams</h3><Toggle v-model="notifCfg.teams.enabled" /></div>
           <div v-if="notifCfg.teams.enabled" class="flex flex-col gap-3">
-            <p class="text-[12px] text-text-3">In the channel: <b>Workflows → "Send webhook alerts to a channel"</b> (or "When a Teams webhook request is received"), and paste its URL. Messages arrive as an Adaptive Card.</p>
-            <div><label class="label">Workflow URL</label><input v-model="notifCfg.teams.webhook_url" class="input" placeholder="https://….logic.azure.com/workflows/…" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'teams'" @click="testChannel('teams')"><Send class="h-4 w-4" /> Test</button></div>
+            <i18n-t scope="global" keypath="adm.notify.teamsHint" tag="p" class="text-[12px] text-text-3"><template #path><b>{{ t('adm.notify.teamsPath') }}</b></template></i18n-t>
+            <div><label class="label">{{ t('adm.notify.workflowUrl') }}</label><input v-model="notifCfg.teams.webhook_url" class="input" placeholder="https://….logic.azure.com/workflows/…" /></div>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'teams'" @click="testChannel('teams')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
@@ -1155,30 +1155,30 @@ function switchTab(t: Tab) {
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Slack</h3><Toggle v-model="notifCfg.slack.enabled" /></div>
           <div v-if="notifCfg.slack.enabled" class="flex flex-col gap-3">
-            <p class="text-[12px] text-text-3">A Slack app's <b>Incoming Webhook</b> for the channel.</p>
-            <div><label class="label">Webhook URL</label><input v-model="notifCfg.slack.webhook_url" class="input" placeholder="https://hooks.slack.com/services/…" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'slack'" @click="testChannel('slack')"><Send class="h-4 w-4" /> Test</button></div>
+            <i18n-t scope="global" keypath="adm.notify.slackHint" tag="p" class="text-[12px] text-text-3"><template #hook><b>{{ t('adm.notify.slackHook') }}</b></template></i18n-t>
+            <div><label class="label">{{ t('adm.notify.webhookUrl') }}</label><input v-model="notifCfg.slack.webhook_url" class="input" placeholder="https://hooks.slack.com/services/…" /></div>
+            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'slack'" @click="testChannel('slack')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
           </div>
         </div>
 
         <!-- Integration webhook -->
         <div class="card p-5">
-          <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Integration webhook</h3><Toggle v-model="notifCfg.webhook.enabled" /></div>
+          <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">{{ t('adm.notify.webhook') }}</h3><Toggle v-model="notifCfg.webhook.enabled" /></div>
           <div v-if="notifCfg.webhook.enabled" class="flex flex-col gap-3">
-            <p class="text-[12px] text-text-3">A signed JSON POST for every audit-log event (<code>X-Orbit-Event: audit.user.create</code>, …; HMAC-SHA256 in <code>X-Orbit-Signature</code>): accounts, roles, workspaces and their members, settings. Never workspace content.</p>
+            <i18n-t scope="global" keypath="adm.notify.webhookHint" tag="p" class="text-[12px] text-text-3"><template #event><code>X-Orbit-Event: audit.user.create</code></template><template #header><code>X-Orbit-Signature</code></template></i18n-t>
             <div><label class="label">URL</label><input v-model="notifCfg.webhook.url" class="input" placeholder="https://hooks.example.org/orbit" /></div>
-            <div><label class="label">Signing secret</label><input v-model="notifCfg.webhook.secret" type="password" class="input" placeholder="HMAC key" /></div>
+            <div><label class="label">{{ t('adm.notify.secret') }}</label><input v-model="notifCfg.webhook.secret" type="password" class="input" :placeholder="t('adm.notify.secretPlaceholder')" /></div>
           </div>
         </div>
 
         </div>
         <!-- /channel grid -->
 
-        <p class="text-[12.5px] text-text-3">Each person chooses in Settings → Reminders which of these channels their reminders also go to (email goes to their own address).</p>
+        <p class="text-[12.5px] text-text-3">{{ t('adm.notify.perUser') }}</p>
 
-        <div class="flex justify-end"><button class="btn-primary" @click="saveNotifConfig">Save</button></div>
+        <div class="flex justify-end"><button class="btn-primary" @click="saveNotifConfig">{{ t('common.save') }}</button></div>
       </div>
-      <div v-else class="text-[13px] text-text-3">Loading…</div>
+      <div v-else class="text-[13px] text-text-3">{{ t('common.loading') }}</div>
     </section>
 
     <!-- ===== Security ===== -->
@@ -1186,9 +1186,9 @@ function switchTab(t: Tab) {
       <div class="card flex flex-col divide-y divide-border">
         <div class="flex items-center justify-between gap-4 p-5">
           <div>
-            <div class="text-[13px] font-semibold">Enforce two-factor authentication</div>
+            <div class="text-[13px] font-semibold">{{ t('adm.security.enforce') }}</div>
             <div class="text-[12px] text-text-3">
-              Every local user without 2FA must set it up at next sign-in (SSO accounts are exempt — MFA is the IdP's job).
+              {{ t('adm.security.enforceHint') }}
             </div>
           </div>
           <Toggle :model-value="otpEnforced" @update:model-value="setEnforce" />
@@ -1196,22 +1196,22 @@ function switchTab(t: Tab) {
 
         <div class="flex items-center justify-between gap-4 p-5">
           <div>
-            <div class="text-[13px] font-semibold">Hide password login</div>
-            <div class="text-[12px] text-text-3">
-              Hide the username/password form on the login page (effective when SSO is enabled). Recover it any
-              time at <code>/login?local=1</code> if your provider is down.
-            </div>
+            <div class="text-[13px] font-semibold">{{ t('adm.security.hideLocal') }}</div>
+            <i18n-t scope="global" keypath="adm.security.hideLocalHint" tag="div" class="text-[12px] text-text-3">
+              <template #path><code>/login?local=1</code></template>
+            </i18n-t>
           </div>
           <Toggle :model-value="hideLocalLogin" @update:model-value="setHideLocalLogin" />
         </div>
 
         <div class="flex items-center justify-between gap-4 p-5">
           <div>
-            <div class="text-[13px] font-semibold">Auto-start SSO sign-in</div>
+            <div class="text-[13px] font-semibold">{{ t('adm.security.autoSso') }}</div>
             <div class="text-[12px] text-text-3">
-              Redirect straight to your SSO provider when someone opens the login page. Skipped at
-              <code>/login?local=1</code>.
-              <span v-if="!branding.oidcEnabled" class="text-text-3">Enable SSO first.</span>
+              <i18n-t scope="global" keypath="adm.security.autoSsoHint" tag="span">
+                <template #path><code>/login?local=1</code></template>
+              </i18n-t>
+              <span v-if="!branding.oidcEnabled" class="text-text-3">{{ t('adm.security.enableSsoFirst') }}</span>
             </div>
           </div>
           <Toggle :model-value="autoSso" :disabled="!branding.oidcEnabled" @update:model-value="setAutoSso" />
@@ -1219,9 +1219,9 @@ function switchTab(t: Tab) {
 
         <div class="flex items-center justify-between gap-4 p-5">
           <div>
-            <div class="text-[13px] font-semibold">Allow passwordless passkey sign-in</div>
+            <div class="text-[13px] font-semibold">{{ t('adm.security.passwordless') }}</div>
             <div class="text-[12px] text-text-3">
-              Show the "Sign in with a passkey" button and allow passwordless login. Passkeys as a second factor are unaffected.
+              {{ t('adm.security.passwordlessHint') }}
             </div>
           </div>
           <Toggle :model-value="passwordlessEnabled" @update:model-value="setPasswordless" />
@@ -1235,40 +1235,39 @@ function switchTab(t: Tab) {
       <div v-if="oidcCfg" class="card p-5">
         <div class="mb-4 flex items-center justify-between gap-4">
           <div>
-            <h3 class="text-[14px] font-semibold">Single sign-on (OIDC)</h3>
-            <div class="text-[12px] text-text-3">Let users sign in via an OpenID Connect provider (Keycloak, Authentik, Google, …).</div>
+            <h3 class="text-[14px] font-semibold">{{ t('adm.sso.title') }}</h3>
+            <div class="text-[12px] text-text-3">{{ t('adm.sso.hint') }}</div>
           </div>
           <Toggle v-model="oidcCfg.enabled" />
         </div>
         <div class="flex flex-col gap-3">
           <div>
-            <label class="label">Issuer URL</label>
+            <label class="label">{{ t('adm.sso.issuer') }}</label>
             <div class="flex gap-2">
               <input v-model="oidcCfg.issuer" class="input" placeholder="https://idp.example.com/realms/main" />
-              <button type="button" class="btn-ghost shrink-0" @click="testOIDC">Test</button>
+              <button type="button" class="btn-ghost shrink-0" @click="testOIDC">{{ t('adm.test') }}</button>
             </div>
-            <p class="mt-1 text-[11px] text-text-3">The provider's base URL; its <code>/.well-known/openid-configuration</code> is discovered automatically.</p>
+            <i18n-t scope="global" keypath="adm.sso.issuerHint" tag="p" class="mt-1 text-[11px] text-text-3"><template #path><code>/.well-known/openid-configuration</code></template></i18n-t>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="label">Client ID</label><input v-model="oidcCfg.client_id" class="input" /></div>
+            <div><label class="label">{{ t('adm.sso.clientId') }}</label><input v-model="oidcCfg.client_id" class="input" /></div>
             <div>
-              <label class="label">Client secret</label>
-              <input v-model="oidcCfg.client_secret" type="password" class="input" :placeholder="oidcCfg.has_secret ? '•••••••• (unchanged)' : ''" />
+              <label class="label">{{ t('adm.sso.clientSecret') }}</label>
+              <input v-model="oidcCfg.client_secret" type="password" class="input" :placeholder="oidcCfg.has_secret ? t('adm.sso.secretUnchanged') : ''" />
             </div>
           </div>
           <div>
-            <label class="label">Redirect URL</label>
-            <input v-model="oidcCfg.redirect_url" class="input" placeholder="https://lb.example.org/api/v1/auth/oidc/callback" />
-            <p class="mt-1 text-[11px] text-text-3">Register this exact URL at your provider.</p>
+            <label class="label">{{ t('adm.sso.redirect') }}</label>
+            <input v-model="oidcCfg.redirect_url" class="input" placeholder="https://orbit.example.org/api/v1/auth/oidc/callback" />
+            <p class="mt-1 text-[11px] text-text-3">{{ t('adm.sso.redirectHint') }}</p>
           </div>
           <div class="grid grid-cols-3 gap-3">
-            <div><label class="label">Extra scopes</label><input v-model="oidcCfg.scopes" class="input" placeholder="groups" /></div>
-            <div><label class="label">Role claim</label><input v-model="oidcCfg.role_claim" class="input" placeholder="groups" /></div>
-            <div><label class="label">Default role</label><input v-model="oidcCfg.default_role" class="input" placeholder="none" /></div>
+            <div><label class="label">{{ t('adm.sso.scopes') }}</label><input v-model="oidcCfg.scopes" class="input" placeholder="groups" /></div>
+            <div><label class="label">{{ t('adm.sso.roleClaim') }}</label><input v-model="oidcCfg.role_claim" class="input" placeholder="groups" /></div>
+            <div><label class="label">{{ t('adm.sso.defaultRole') }}</label><input v-model="oidcCfg.default_role" class="input" :placeholder="t('adm.sso.defaultRoleNone')" /></div>
           </div>
           <p class="text-[11px] text-text-3">
-            New users are provisioned on first login. If a role claim is set, its values are matched to role names each
-            login; otherwise (or with no match) the default role is assigned.
+            {{ t('adm.sso.provisioning') }}
           </p>
           <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
             <div>
@@ -1277,7 +1276,7 @@ function switchTab(t: Tab) {
             </div>
             <Toggle :model-value="!!oidcCfg.allow_admin" @update:model-value="(v) => oidcCfg && (oidcCfg.allow_admin = v)" />
           </div>
-          <div class="flex justify-end"><button class="btn-primary" :disabled="oidcBusy" @click="saveOIDC">{{ oidcBusy ? 'Saving…' : 'Save SSO settings' }}</button></div>
+          <div class="flex justify-end"><button class="btn-primary" :disabled="oidcBusy" @click="saveOIDC">{{ oidcBusy ? t('common.saving') : t('adm.sso.save') }}</button></div>
         </div>
       </div>
     </section>
@@ -1291,10 +1290,10 @@ function switchTab(t: Tab) {
       <!-- Feature flags -->
       <div class="card overflow-hidden">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3">
-          <Crown class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">Feature flags</h3>
+          <Crown class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">{{ t('adm.owner.flags') }}</h3>
         </div>
         <div class="flex flex-col gap-4 p-5">
-          <p class="text-[12px] text-text-3">Opt-in capabilities. Only you (the instance owner) can change these.</p>
+          <p class="text-[12px] text-text-3">{{ t('adm.owner.flagsHint') }}</p>
           <div v-for="f in featureMeta" :key="f.key" class="flex items-center justify-between gap-4">
             <div>
               <div class="text-[13px] font-semibold">{{ f.label }}</div>
@@ -1312,11 +1311,11 @@ function switchTab(t: Tab) {
       <!-- Security alerts -->
       <div class="card overflow-hidden">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3">
-          <Bell class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">Security alerts</h3>
+          <Bell class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">{{ t('adm.owner.alerts') }}</h3>
         </div>
         <div class="flex flex-col gap-4 p-5">
           <p class="text-[12px] text-text-3">
-            Notify when a high-signal action happens. Configure channels under Notifications.
+            {{ t('adm.owner.alertsHint') }}
           </p>
           <div v-for="a in securityAlertMeta" :key="a.key" class="flex items-center justify-between gap-4">
             <div class="text-[13px]">{{ a.label }}</div>
@@ -1324,9 +1323,9 @@ function switchTab(t: Tab) {
           </div>
 
           <div class="border-t border-border pt-4">
-            <div class="mb-2 text-[12px] font-semibold text-text-2">Notify via</div>
+            <div class="mb-2 text-[12px] font-semibold text-text-2">{{ t('adm.owner.notifyVia') }}</div>
             <p v-if="alertAvailable.length === 0" class="text-[12px] text-text-3">
-              No channels enabled — set one up under Notifications first.
+              {{ t('adm.owner.noChannels') }}
             </p>
             <div v-else class="flex flex-wrap gap-3">
               <Checkbox
@@ -1340,10 +1339,10 @@ function switchTab(t: Tab) {
           </div>
 
           <div v-if="alertAvailable.includes('email')" class="border-t border-border pt-4">
-            <label class="label">Alert email recipient</label>
+            <label class="label">{{ t('adm.owner.alertEmail') }}</label>
             <div class="flex gap-2">
-              <input v-model="alertEmail" class="input" placeholder="defaults to the owner's email" />
-              <button class="btn-ghost shrink-0" @click="saveAlertEmail">Save</button>
+              <input v-model="alertEmail" class="input" :placeholder="t('adm.owner.alertEmailPlaceholder')" />
+              <button class="btn-ghost shrink-0" @click="saveAlertEmail">{{ t('common.save') }}</button>
             </div>
           </div>
         </div>
@@ -1384,63 +1383,62 @@ function switchTab(t: Tab) {
     />
 
     <!-- ===== New user modal ===== -->
-    <Overlay :open="showUser" title="New user" mode="centered" @close="showUser = false">
+    <Overlay :open="showUser" :title="t('admin.newUser')" mode="centered" @close="showUser = false">
       <form class="flex flex-col gap-4" @submit.prevent="createUser">
-        <div><label class="label">Username</label><input v-model="userForm.username" class="input" /></div>
+        <div><label class="label">{{ t('admin.colUsername') }}</label><input v-model="userForm.username" class="input" /></div>
         <div><label class="label">{{ t('admin.displayName') }}</label><input v-model="userForm.display_name" class="input" /></div>
-        <div><label class="label">Email</label><input v-model="userForm.email" type="email" class="input" /></div>
+        <div><label class="label">{{ t('admin.colEmail') }}</label><input v-model="userForm.email" type="email" class="input" /></div>
         <Checkbox v-model="userForm.generate_password" class="text-text-2">{{ t('admin.generateTemp') }}</Checkbox>
         <div v-if="!userForm.generate_password">
-          <label class="label">Password (min 8)</label>
+          <label class="label">{{ t('adm.users.passwordMin') }}</label>
           <input v-model="userForm.password" type="password" class="input" />
         </div>
-        <div><label class="label">Roles</label><RoleSelect v-model="userForm.role_ids" :roles="roles" /></div>
-        <Checkbox v-if="!userForm.generate_password" v-model="userForm.must_change_password" class="text-text-2">Require password change on first login</Checkbox>
+        <div><label class="label">{{ t('admin.colRoles') }}</label><RoleSelect v-model="userForm.role_ids" :roles="roles" /></div>
+        <Checkbox v-if="!userForm.generate_password" v-model="userForm.must_change_password" class="text-text-2">{{ t('adm.users.mustChangeFirst') }}</Checkbox>
         <Checkbox v-model="userForm.otp_required" class="text-text-2">{{ t('admin.requireOtp') }}</Checkbox>
         <div class="mt-1 flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showUser = false">Cancel</button>
-          <button type="submit" class="btn-primary">Create user</button>
+          <button type="button" class="btn-ghost" @click="showUser = false">{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn-primary">{{ t('adm.users.createUser') }}</button>
         </div>
       </form>
     </Overlay>
 
     <!-- ===== Generated credentials (one-time) ===== -->
-    <Overlay :open="!!createdCreds" :title="createdCreds?.reset ? t('admin.passwordReset') : 'User created'" mode="centered" @close="createdCreds = null">
+    <Overlay :open="!!createdCreds" :title="createdCreds?.reset ? t('admin.passwordReset') : t('adm.users.created')" mode="centered" @close="createdCreds = null">
       <div v-if="createdCreds" class="flex flex-col gap-3 text-[13px]">
         <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">
-          Copy this password now — it is shown only once and cannot be retrieved later.
-          The user must choose a new one at the first sign-in.
+          {{ t('adm.users.credsOnce') }}
         </p>
         <div class="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-1.5">
-          <span class="text-text-3">Username</span><span class="font-medium">{{ createdCreds.username }}</span>
-          <span class="text-text-3">Password</span><code class="select-all rounded bg-surface-2 px-2 py-1 font-mono">{{ createdCreds.password }}</code>
+          <span class="text-text-3">{{ t('admin.colUsername') }}</span><span class="font-medium">{{ createdCreds.username }}</span>
+          <span class="text-text-3">{{ t('adm.password') }}</span><code class="select-all rounded bg-surface-2 px-2 py-1 font-mono">{{ createdCreds.password }}</code>
         </div>
         <div class="mt-1 flex justify-end gap-2">
-          <button class="btn-ghost" @click="copyCreds"><Copy class="h-4 w-4" /> Copy password</button>
-          <button class="btn-primary" @click="createdCreds = null">Done</button>
+          <button class="btn-ghost" @click="copyCreds"><Copy class="h-4 w-4" /> {{ t('adm.users.copyPassword') }}</button>
+          <button class="btn-primary" @click="createdCreds = null">{{ t('common.done') }}</button>
         </div>
       </div>
     </Overlay>
 
     <!-- ===== Edit user modal ===== -->
-    <Overlay :open="showEditUser" title="Edit user" mode="centered" @close="showEditUser = false">
+    <Overlay :open="showEditUser" :title="t('adm.users.editUser')" mode="centered" @close="showEditUser = false">
       <form class="flex flex-col gap-4" @submit.prevent="saveEditUser">
-        <div v-if="editUserTarget?.oidc" class="rounded-xl border border-border bg-surface-2 px-3 py-2 text-[12px] text-text-3">
-          This is an <b>SSO</b> account — its email and display name come from the identity provider and are synced at each sign-in.
-        </div>
+        <i18n-t scope="global" v-if="editUserTarget?.oidc" keypath="adm.users.ssoAccount" tag="div" class="rounded-xl border border-border bg-surface-2 px-3 py-2 text-[12px] text-text-3">
+          <template #sso><b>SSO</b></template>
+        </i18n-t>
         <div>
           <label class="label">{{ t('admin.displayName') }}</label>
           <input v-model="editUserForm.display_name" class="input" :disabled="editUserTarget?.oidc" />
         </div>
         <div>
-          <label class="label">Email</label>
+          <label class="label">{{ t('admin.colEmail') }}</label>
           <input v-model="editUserForm.email" type="email" class="input" :disabled="editUserTarget?.oidc" />
         </div>
-        <div><label class="label">Roles</label><RoleSelect v-model="editUserForm.role_ids" :roles="roles" /></div>
+        <div><label class="label">{{ t('admin.colRoles') }}</label><RoleSelect v-model="editUserForm.role_ids" :roles="roles" /></div>
 
         <div v-if="editUserTarget?.id !== auth.user?.id" class="flex items-center justify-between border-t border-border pt-4">
           <div>
-            <div class="text-[13px] font-semibold">Disable account</div>
+            <div class="text-[13px] font-semibold">{{ t('adm.users.disableAccount') }}</div>
             <div class="text-[12px] text-text-3">{{ t('admin.disableHint') }}</div>
           </div>
           <Toggle v-model="editUserForm.disabled" />
@@ -1456,43 +1454,43 @@ function switchTab(t: Tab) {
 
         <div v-if="!editUserTarget?.oidc" class="flex items-center justify-between border-t border-border pt-4">
           <div>
-            <div class="text-[13px] font-semibold">Two-factor</div>
+            <div class="text-[13px] font-semibold">{{ t('settings.twofa') }}</div>
             <div class="text-[12px] text-text-3">
-              {{ editUserTarget?.otp_enabled ? 'Enabled' : 'Not set up' }} — reset to clear a lost authenticator
+              {{ editUserTarget?.otp_enabled ? t('adm.users.otpOn') : t('adm.users.otpOff') }}
             </div>
           </div>
           <button type="button" class="btn-ghost" :disabled="!editUserTarget?.otp_enabled" @click="resetUserOtp">
-            Reset 2FA
+            {{ t('adm.users.resetOtp') }}
           </button>
         </div>
 
         <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
           <div>
-            <div class="text-[13px] font-semibold">Passkeys</div>
-            <div class="text-[12px] text-text-3">Remove all of this user's registered passkeys (e.g. a lost device).</div>
+            <div class="text-[13px] font-semibold">{{ t('settings.passkeys') }}</div>
+            <div class="text-[12px] text-text-3">{{ t('adm.users.passkeysHint') }}</div>
           </div>
-          <button type="button" class="btn-ghost" @click="resetUserWebauthn">Reset passkeys</button>
+          <button type="button" class="btn-ghost" @click="resetUserWebauthn">{{ t('adm.users.resetPasskeys') }}</button>
         </div>
 
         <div class="mt-1 flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showEditUser = false">Cancel</button>
-          <button type="submit" class="btn-primary">Save changes</button>
+          <button type="button" class="btn-ghost" @click="showEditUser = false">{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn-primary">{{ t('adm.users.saveChanges') }}</button>
         </div>
       </form>
     </Overlay>
 
     <!-- ===== Role editor modal ===== -->
-    <Overlay :open="showRole" :title="roleForm.id ? 'Edit role' : 'New role'" mode="centered" wide @close="showRole = false">
+    <Overlay :open="showRole" :title="roleForm.id ? t('adm.roles.editRole') : t('admin.newRole')" mode="centered" wide @close="showRole = false">
       <form class="flex flex-col gap-6" @submit.prevent="saveRole">
         <!-- Name + description -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Name <span class="text-text-3">required</span></label>
-            <input v-model="roleForm.name" class="input" placeholder="e.g. Staging operators" />
+            <label class="label">{{ t('common.name') }} <span class="text-text-3">{{ t('adm.roles.required') }}</span></label>
+            <input v-model="roleForm.name" class="input" :placeholder="t('adm.roles.namePlaceholder')" />
           </div>
           <div>
-            <label class="label">Description <span class="text-text-3">optional</span></label>
-            <input v-model="roleForm.description" class="input" placeholder="What this role allows" />
+            <label class="label">{{ t('admin.colDescription') }} <span class="text-text-3">{{ t('adm.roles.optional') }}</span></label>
+            <input v-model="roleForm.description" class="input" :placeholder="t('adm.roles.descPlaceholder')" />
           </div>
         </div>
 
@@ -1500,10 +1498,10 @@ function switchTab(t: Tab) {
         <div>
           <div class="mb-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-[11px] font-semibold uppercase tracking-wide text-text-3">Global privileges</span>
-              <span class="rounded-full bg-surface-3 px-1.5 py-0.5 text-[11px] text-text-2">{{ roleForm.global_privileges.length }} of {{ GLOBAL_PRIVILEGES.length }}</span>
+              <span class="text-[11px] font-semibold uppercase tracking-wide text-text-3">{{ t('adm.roles.globalPrivs') }}</span>
+              <span class="rounded-full bg-surface-3 px-1.5 py-0.5 text-[11px] text-text-2">{{ t('adm.roles.selected', { n: roleForm.global_privileges.length, total: GLOBAL_PRIVILEGES.length }) }}</span>
             </div>
-            <button type="button" class="btn-ghost px-2.5 py-1" @click="toggleAllGlobal">{{ allGlobalSelected ? 'Clear all' : 'Select all' }}</button>
+            <button type="button" class="btn-ghost px-2.5 py-1" @click="toggleAllGlobal">{{ allGlobalSelected ? t('adm.roles.clearAll') : t('adm.roles.selectAll') }}</button>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <button
@@ -1511,7 +1509,7 @@ function switchTab(t: Tab) {
               :key="gp.id"
               type="button"
               :disabled="gp.ownerOnly && !auth.isOwner"
-              :title="gp.ownerOnly && !auth.isOwner ? 'Only the instance owner can grant this' : ''"
+              :title="gp.ownerOnly && !auth.isOwner ? t('adm.roles.ownerOnly') : ''"
               class="flex items-start gap-3 rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
               :class="roleForm.global_privileges.includes(gp.id) ? 'border-accent bg-accent-bg' : 'border-border bg-surface-2 hover:border-border-2'"
               @click="toggle(roleForm.global_privileges, gp.id)"
@@ -1529,33 +1527,33 @@ function switchTab(t: Tab) {
         </div>
 
         <p class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] text-text-2">
-          Roles are about running Orbit. What someone can do inside a workspace is set by that workspace's owners (owner, editor or viewer), and admins can't open other people's workspaces.
+          {{ t('adm.roles.explain') }}
         </p>
 
         <!-- Footer -->
         <div class="flex items-center justify-between border-t border-border pt-4">
-          <span class="text-[12px] text-text-3">Roles apply to users immediately on save</span>
+          <span class="text-[12px] text-text-3">{{ t('adm.roles.applyNow') }}</span>
           <div class="flex gap-2">
-            <button type="button" class="btn-ghost" @click="showRole = false">Cancel</button>
-            <button type="submit" class="btn-primary">Save role</button>
+            <button type="button" class="btn-ghost" @click="showRole = false">{{ t('common.cancel') }}</button>
+            <button type="submit" class="btn-primary">{{ t('adm.roles.saveRole') }}</button>
           </div>
         </div>
       </form>
     </Overlay>
 
     <!-- ===== Reset password modal ===== -->
-    <Overlay :open="!!resetTarget" title="Reset password" mode="centered" @close="resetTarget = null">
+    <Overlay :open="!!resetTarget" :title="t('admin.resetPassword')" mode="centered" @close="resetTarget = null">
       <form class="flex flex-col gap-3" @submit.prevent="resetPassword">
-        <p class="text-[13px] text-text-2">Set a new password for <b>{{ resetTarget?.username }}</b>.</p>
+        <i18n-t scope="global" keypath="adm.reset.setFor" tag="p" class="text-[13px] text-text-2"><template #user><b>{{ resetTarget?.username }}</b></template></i18n-t>
         <Checkbox v-model="resetGenerate" class="text-text-2">{{ t('admin.generateTemp') }}</Checkbox>
         <template v-if="!resetGenerate">
-          <input v-model="newPassword" type="password" class="input" placeholder="New password (min 8)" />
-          <Checkbox v-model="resetMustChange" class="text-text-2">Require a new password at next sign-in</Checkbox>
+          <input v-model="newPassword" type="password" class="input" :placeholder="t('adm.reset.newPassword')" />
+          <Checkbox v-model="resetMustChange" class="text-text-2">{{ t('adm.reset.mustChange') }}</Checkbox>
         </template>
-        <p class="text-[12px] text-text-3">All of this user's sessions are signed out immediately.</p>
+        <p class="text-[12px] text-text-3">{{ t('adm.reset.signsOut') }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="resetTarget = null">Cancel</button>
-          <button type="submit" class="btn-primary">Reset</button>
+          <button type="button" class="btn-ghost" @click="resetTarget = null">{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn-primary">{{ t('adm.reset.reset') }}</button>
         </div>
       </form>
     </Overlay>
@@ -1589,18 +1587,18 @@ function switchTab(t: Tab) {
     />
     <Confirm
       :open="!!deleteUserTarget"
-      title="Delete user?"
-      :message="`Permanently delete ${deleteUserTarget?.username}?`"
-      confirm-label="Delete"
+      :title="t('adm.users.deleteTitle')"
+      :message="t('adm.users.deleteConfirm', { name: deleteUserTarget?.username })"
+      :confirm-label="t('common.delete')"
       danger
       @confirm="removeUser"
       @close="deleteUserTarget = null"
     />
     <Confirm
       :open="!!deleteRoleTarget"
-      title="Delete role?"
-      :message="`Delete role ${deleteRoleTarget?.name}? It will be removed from any users who have it.`"
-      confirm-label="Delete"
+      :title="t('adm.roles.deleteTitle')"
+      :message="t('adm.roles.deleteConfirm', { name: deleteRoleTarget?.name })"
+      :confirm-label="t('common.delete')"
       danger
       @confirm="removeRole"
       @close="deleteRoleTarget = null"

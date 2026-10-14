@@ -4,7 +4,9 @@
 //   - "privileges": the current user's permissions changed → re-fetch /auth/me
 //     (handled internally below) so privilege-gated UI updates without a reload.
 //   - "users" / "roles": the lists changed → the admin views re-fetch.
-//     (Proxy-state events join in the proxy-domain phase.)
+//   - "ws": something in a workspace changed ({ws, what, origin}) → its stores
+//     reload (a tab skips the events it caused itself).
+//   - "reminder": a task or event is due → a toast and a system notification.
 //
 // EventSource can't send an Authorization header, so we first fetch a one-time
 // ticket (authenticated) and open the stream with ?ticket=. That ticket is

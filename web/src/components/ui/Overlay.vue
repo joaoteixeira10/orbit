@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 
 // Overlay is Orbit's sheet: a centred panel on wide screens, a bottom sheet
@@ -10,6 +11,7 @@ const props = withDefaults(
   { mode: 'centered', wide: false, size: 'md' },
 )
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n()
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') {
@@ -54,7 +56,7 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
           <header v-if="title || $slots.actions" class="flex shrink-0 items-center gap-3 px-5 pb-2 pt-4">
             <h2 class="title-3 min-w-0 flex-1 truncate">{{ title }}</h2>
             <slot name="actions" />
-            <button class="icon-btn -mr-1.5 h-7 w-7 rounded-full bg-fill" :aria-label="'Close'" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
+            <button class="icon-btn -mr-1.5 h-7 w-7 rounded-full bg-fill" :aria-label="t('common.close')" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
           </header>
           <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-2"><slot /></div>
           <footer v-if="$slots.footer" class="flex shrink-0 items-center justify-end gap-2 border-t-[0.5px] border-border px-5 py-3">
@@ -72,7 +74,7 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
         >
           <header v-if="title" class="flex items-center justify-between border-b-[0.5px] border-border px-5 py-3.5">
             <h2 class="title-3">{{ title }}</h2>
-            <button class="icon-btn h-7 w-7 rounded-full bg-fill" aria-label="Close" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
+            <button class="icon-btn h-7 w-7 rounded-full bg-fill" :aria-label="t('common.close')" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
           </header>
           <div class="flex-1 overflow-y-auto p-5"><slot /></div>
         </div>

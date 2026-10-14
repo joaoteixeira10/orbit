@@ -2,6 +2,7 @@
 // their display metadata. What someone may do inside a workspace is their role
 // there (owner / editor / viewer), not one of these.
 import { Users, ShieldCheck, Settings, Bell, ClipboardList, VenetianMask, LayoutGrid, type LucideIcon } from 'lucide-vue-next'
+import { i18n } from '@/i18n'
 
 export const P = {
   usersManage: 'users.manage',
@@ -29,12 +30,35 @@ export function isOwnerOnlyPriv(p: string): boolean {
   return OWNER_ONLY_PRIVS.includes(p)
 }
 
+// A privilege's name and description are looked up when read, so they follow
+// the interface language (messages: priv.<id>.label / .desc).
+function priv(id: string, key: string, icon: LucideIcon, ownerOnly = false): PrivilegeMeta {
+  return {
+    id,
+    icon,
+    ownerOnly,
+    get label() {
+      return i18n.global.t(`priv.${key}.label`)
+    },
+    get desc() {
+      return i18n.global.t(`priv.${key}.desc`)
+    },
+  }
+}
+
 export const GLOBAL_PRIVILEGES: PrivilegeMeta[] = [
-  { id: P.workspacesCreate, label: 'Create workspaces', desc: 'Start their own workspaces (invited ones need nothing)', icon: LayoutGrid },
-  { id: P.usersManage, label: 'Manage users', desc: 'Create, disable, reset and sign out accounts', icon: Users },
-  { id: P.rolesManage, label: 'Manage roles', desc: 'Create roles and choose their privileges', icon: ShieldCheck },
-  { id: P.auditRead, label: 'View audit log', desc: 'Read all audit events', icon: ClipboardList },
-  { id: P.usersImpersonate, label: 'Impersonate users', desc: 'Sign in as another user (not owner/admins)', icon: VenetianMask, ownerOnly: true },
-  { id: P.settingsBranding, label: 'Manage branding', desc: 'App name, accent, logo', icon: Settings, ownerOnly: true },
-  { id: P.settingsNotifications, label: 'Manage notifications', desc: 'Notification channels', icon: Bell, ownerOnly: true },
+  priv(P.workspacesCreate, 'workspacesCreate', LayoutGrid),
+  priv(P.usersManage, 'usersManage', Users),
+  priv(P.rolesManage, 'rolesManage', ShieldCheck),
+  priv(P.auditRead, 'auditRead', ClipboardList),
+  priv(P.usersImpersonate, 'usersImpersonate', VenetianMask, true),
+  priv(P.settingsBranding, 'settingsBranding', Settings, true),
+  priv(P.settingsNotifications, 'settingsNotifications', Bell, true),
 ]
+
+// roleDescription is a role's description; the built-in roles' (seeded in
+// English by the server, and not editable) are shown in the interface language.
+const BUILTIN_ROLES = ['admin', 'member', 'none']
+export function roleDescription(r: { name: string; description?: string; builtin?: boolean }): string {
+  return r.builtin && BUILTIN_ROLES.includes(r.name) ? i18n.global.t(`priv.role.${r.name}`) : (r.description ?? '')
+}

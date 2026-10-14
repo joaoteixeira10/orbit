@@ -11,6 +11,9 @@ import { calEn, calPt } from './calendar'
 import { notesEn, notesPt } from './notes'
 import { tlEn, tlPt } from './timeline'
 import { chEn, chPt } from './charts'
+import { sysEn, sysPt } from './system'
+import { accountUiEn, accountUiPt } from './accountui'
+import { adminUiEn, adminUiPt } from './adminui'
 
 export const SUPPORTED_LOCALES = [
   { code: 'en', label: 'English' },
@@ -27,6 +30,9 @@ const en = {
   ...notesEn,
   ...tlEn,
   ...chEn,
+  ...sysEn,
+  ...accountUiEn,
+  ...adminUiEn,
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -291,6 +297,9 @@ const pt: typeof en = {
   ...notesPt,
   ...tlPt,
   ...chPt,
+  ...sysPt,
+  ...accountUiPt,
+  ...adminUiPt,
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',

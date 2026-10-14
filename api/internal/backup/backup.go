@@ -2,9 +2,9 @@
 // restores it (from PKI Management's backup, adapted).
 //
 // Everything worth keeping is in the SQLite database — users (password
-// hashes, sealed two-factor secrets, passkeys), roles, the proxy registry
-// (sealed agent tokens), settings (sealed SSO and notification secrets), the
-// desired states, scheduled changes, freezes and the audit chain — so the
+// hashes, sealed two-factor secrets, passkeys), roles, settings (sealed SSO
+// and notification secrets), the audit chain, and the workspaces with their
+// pages, notes, tasks, events and (sealed) calendar subscriptions — so the
 // archive is a consistent snapshot of it (VACUUM INTO), gzipped and sealed
 // with AES-256-GCM in a JSON envelope. Two modes:
 //
@@ -14,7 +14,8 @@
 //     its own salt), to keep or move the archive without the master key. The
 //     secrets inside the database stay sealed with the instance's master key,
 //     so a restore with another ORBIT_MASTER_KEY works but those secrets can't be
-//     read (agent tokens to re-enter, two-factor to set up again).
+//     read (two-factor to set up again, SSO and notification secrets and
+//     calendar subscriptions to re-enter).
 //
 // A restore writes the database file with Orbit stopped (orbit
 // restore-backup); it never swaps the database of a running instance.

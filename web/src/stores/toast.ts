@@ -10,8 +10,8 @@ export interface Toast {
 
 let nextId = 1
 
-// As in v0: success toasts go away on their own; an error with a detail (e.g.
-// what a proxy answered) stays until dismissed.
+// Success toasts go away on their own; an error with a detail (e.g. what a
+// subscribed calendar's server answered) stays until dismissed.
 export const useToastStore = defineStore('toast', {
   state: () => ({ toasts: [] as Toast[] }),
   actions: {

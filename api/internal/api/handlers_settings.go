@@ -18,31 +18,7 @@ const (
 	keyShowAppName    = "show_app_name"
 	keyShowLogo       = "show_logo"
 	keyLoginMessage   = "login_message"
-
-	// Developer themes: a closed set of curated themes (accent + UBonito proxy
-	// crest + "UBonito" wordmark); per asset, the theme's or the org's own.
-	keyDevThemesEnabled = "developer_themes_enabled"
-	keyDevTheme         = "developer_theme"       // blue | gold | red | ink
-	keyAssetSrcLogo     = "asset_source_logo"     // theme | keep
-	keyAssetSrcWordmark = "asset_source_wordmark" // theme | keep
-	keyAssetSrcFavicon  = "asset_source_favicon"  // theme | keep
 )
-
-// validDevTheme / validAssetSource clamp stored values to the closed sets.
-func validDevTheme(s string) string {
-	switch s {
-	case "blue", "gold", "red", "ink":
-		return s
-	}
-	return "blue"
-}
-
-func validAssetSource(s string) string {
-	if s == "keep" {
-		return "keep"
-	}
-	return "theme"
-}
 
 // brandingResponse is the public theming payload the SPA loads at boot.
 type brandingResponse struct {
@@ -58,11 +34,6 @@ type brandingResponse struct {
 	PasswordlessEnabled bool   `json:"passwordless_enabled"` // SPA shows the "Sign in with a passkey" button
 	AutoSSO             bool   `json:"auto_sso"`             // login page auto-starts SSO (unless ?local=1)
 
-	DeveloperThemesEnabled bool   `json:"developer_themes_enabled"`
-	DeveloperTheme         string `json:"developer_theme"`       // blue | gold | red | ink
-	AssetSourceLogo        string `json:"asset_source_logo"`     // theme | keep
-	AssetSourceWordmark    string `json:"asset_source_wordmark"` // theme | keep
-	AssetSourceFavicon     string `json:"asset_source_favicon"`  // theme | keep
 }
 
 type updateSettingsRequest struct {
@@ -73,12 +44,6 @@ type updateSettingsRequest struct {
 	ShowAppName    *bool   `json:"show_app_name"`
 	ShowLogo       *bool   `json:"show_logo"`
 	LoginMessage   *string `json:"login_message"`
-
-	DeveloperThemesEnabled *bool   `json:"developer_themes_enabled"`
-	DeveloperTheme         *string `json:"developer_theme"`
-	AssetSourceLogo        *string `json:"asset_source_logo"`
-	AssetSourceWordmark    *string `json:"asset_source_wordmark"`
-	AssetSourceFavicon     *string `json:"asset_source_favicon"`
 }
 
 // getBranding returns public branding (no auth) so the SPA can theme at boot.
@@ -109,12 +74,6 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		HideLocalLogin:      h.hideLocalLogin(),
 		PasswordlessEnabled: h.passwordlessEnabled(),
 		AutoSSO:             h.autoSSO(),
-
-		DeveloperThemesEnabled: m[keyDevThemesEnabled] == "true",
-		DeveloperTheme:         validDevTheme(m[keyDevTheme]),
-		AssetSourceLogo:        validAssetSource(m[keyAssetSrcLogo]),
-		AssetSourceWordmark:    validAssetSource(m[keyAssetSrcWordmark]),
-		AssetSourceFavicon:     validAssetSource(m[keyAssetSrcFavicon]),
 	})
 }
 
@@ -174,25 +133,6 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 	}
 	if req.LoginMessage != nil {
 		h.setSetting(keyLoginMessage, *req.LoginMessage)
-	}
-	if req.DeveloperThemesEnabled != nil {
-		v := "false"
-		if *req.DeveloperThemesEnabled {
-			v = "true"
-		}
-		h.setSetting(keyDevThemesEnabled, v)
-	}
-	if req.DeveloperTheme != nil {
-		h.setSetting(keyDevTheme, validDevTheme(*req.DeveloperTheme))
-	}
-	if req.AssetSourceLogo != nil {
-		h.setSetting(keyAssetSrcLogo, validAssetSource(*req.AssetSourceLogo))
-	}
-	if req.AssetSourceWordmark != nil {
-		h.setSetting(keyAssetSrcWordmark, validAssetSource(*req.AssetSourceWordmark))
-	}
-	if req.AssetSourceFavicon != nil {
-		h.setSetting(keyAssetSrcFavicon, validAssetSource(*req.AssetSourceFavicon))
 	}
 	h.recordCtx(c, "settings.update", "settings", "branding", nil)
 	h.getBranding(c)

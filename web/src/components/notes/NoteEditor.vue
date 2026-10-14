@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Popover from '@/components/ui/Popover.vue'
 import NoteFields from './NoteFields.vue'
@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<{ open: boolean; ws: string; noteId: stri
   editable: false,
   canTasks: false,
 })
-const emit = defineEmits<{ close: []; page: [n: Note]; tasks: [n: Note]; copy: [n: Note]; remove: [n: Note] }>()
+const emit = defineEmits<{ close: []; page: [n: Note]; tasks: [n: Note]; copy: [n: Note]; move: [n: Note]; remove: [n: Note] }>()
 const notes = useNotesStore()
 const toast = useToastStore()
 const { t } = useI18n()
@@ -111,7 +111,7 @@ function toggleChecklist() {
   else toChecklist(draft.value)
   void fields.value?.focus('end')
 }
-async function act(kind: 'page' | 'tasks' | 'copy' | 'remove') {
+async function act(kind: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   menu.value = ''
   if (kind !== 'remove') await save()
   const n = note.value
@@ -124,6 +124,7 @@ async function act(kind: 'page' | 'tasks' | 'copy' | 'remove') {
   if (kind === 'page') emit('page', n)
   else if (kind === 'tasks') emit('tasks', n)
   else if (kind === 'copy') emit('copy', n)
+  else if (kind === 'move') emit('move', n)
   else emit('remove', n)
 }
 
@@ -172,6 +173,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
         <NoteColorPicker v-model="draft.color" />
       </Popover>
       <Popover v-if="menu === 'more'" :anchor="moreBtn" placement="top-start" :width="210" @close="menu = ''">
+        <button class="menu-item" @click="act('move')"><FolderInput class="h-4 w-4 text-text-2" />{{ t('notes.mine.moveTo') }}</button>
         <button class="menu-item" @click="act('page')"><FileText class="h-4 w-4 text-text-2" />{{ t('notes.toPage') }}</button>
         <button v-if="canTasks" class="menu-item" @click="act('tasks')"><ListChecks class="h-4 w-4 text-text-2" />{{ t('notes.toTasks') }}</button>
         <button class="menu-item" @click="act('copy')"><Copy class="h-4 w-4 text-text-2" />{{ t('notes.copy') }}</button>

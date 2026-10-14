@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote } from 'lucide-vue-next'
+import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen } from 'lucide-vue-next'
 import WsIcon from './ui/WsIcon.vue'
 import { plannerApi, pagesApi, type SearchHit } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -14,7 +14,7 @@ import { relDay, fmtDate } from '@/lib/dates'
 // ⌘K / Ctrl+K: search pages, tasks, notes and events in every workspace, jump to a
 // workspace, or run a quick action. Arrows move, Enter opens, Esc closes.
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ close: []; newWorkspace: []; newTask: [ws: string] }>()
+const emit = defineEmits<{ close: []; newWorkspace: []; newTask: [ws: string]; quickNote: [] }>()
 const router = useRouter()
 const route = useRoute()
 const wss = useWorkspacesStore()
@@ -82,6 +82,7 @@ const actions = computed<Item[]>(() => {
     if (wss.byId(currentWs.value)?.modules.includes('notes'))
       out.push({ key: 'a-note', label: t('cmd.newNote'), icon: Plus, run: () => router.push({ name: 'ws-notes', params: { ws: currentWs.value }, query: { new: '1' } }) })
   }
+  out.push({ key: 'a-quick', label: t('notes.mine.action'), sub: '⌥N', icon: NotebookPen, run: () => emit('quickNote') })
   out.push({ key: 'a-ws', label: t('ws.new'), icon: Plus, run: () => emit('newWorkspace') })
   out.push({ key: 'a-theme', label: prefs.isDark() ? t('cmd.lightMode') : t('cmd.darkMode'), icon: prefs.isDark() ? Sun : Moon, run: () => prefs.setTheme(prefs.isDark() ? 'light' : 'dark') })
   out.push({ key: 'a-settings', label: t('nav.settings'), icon: Settings, run: () => router.push({ name: 'settings' }) })
@@ -96,8 +97,12 @@ const results = computed<Item[]>(() =>
       return { key: 'p-' + h.id, label: h.title || t('pages.untitled'), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: h.icon || FileText, run: () => router.push({ name: 'ws-page', params: { ws: h.workspace_id, page: h.id } }) }
     if (h.kind === 'task')
       return { key: 't-' + h.id, label: h.title, sub: [where, h.due ? relDay(h.due) : ''].filter(Boolean).join(' · '), icon: h.done ? CheckCircle2 : Circle, done: h.done, run: () => router.push({ name: 'ws-tasks', params: { ws: h.workspace_id, list: h.list_id }, query: { task: h.id } }) }
-    if (h.kind === 'note')
-      return { key: 'n-' + h.id, label: h.title || h.snippet || '', sub: h.title && h.snippet ? `${where} · ${h.snippet}` : where, icon: StickyNote, run: () => router.push({ name: 'ws-notes', params: { ws: h.workspace_id }, query: { note: h.id } }) }
+    if (h.kind === 'note') {
+      // A personal note (no workspace) is in Quick Notes.
+      const at = h.workspace_id ? where : t('notes.mine.title')
+      const to = h.workspace_id ? { name: 'ws-notes', params: { ws: h.workspace_id }, query: { note: h.id } } : { name: 'my-notes', query: { note: h.id } }
+      return { key: 'n-' + h.id, label: h.title || h.snippet || '', sub: h.title && h.snippet ? `${at} · ${h.snippet}` : at, icon: StickyNote, run: () => router.push(to) }
+    }
     return { key: 'e-' + h.id, label: h.title, sub: [where, h.start ? fmtDate(new Date(h.start), { day: 'numeric', month: 'short', year: 'numeric' }) : ''].filter(Boolean).join(' · '), icon: CalendarDays, run: () => router.push({ name: 'ws-calendar', params: { ws: h.workspace_id }, query: { date: h.start?.slice(0, 10) } }) }
   }),
 )

@@ -101,14 +101,54 @@ func itemsToText(items []noteItem) string {
 	return strings.Join(lines, "\n")
 }
 
+// noteAccess loads the :id note: a workspace's note follows its roles; a
+// personal note is its owner's alone (anyone else gets 404).
 func (h *Handlers) noteAccess(c *gin.Context, need string) (models.Note, bool) {
 	var n models.Note
 	if err := h.db.First(&n, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
 		return n, false
 	}
+	if n.WorkspaceID == "" {
+		if n.OwnerID != auth.UserID(c) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
+			return n, false
+		}
+		if need != models.WSViewer && auth.Effective(c).ReadOnly {
+			c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+			return n, false
+		}
+		return n, true
+	}
 	_, _, ok := h.wsAccess(c, n.WorkspaceID, need)
 	return n, ok
+}
+
+// publishNotes tells the open tabs a wall of notes changed: a workspace's
+// members, or (personal notes, ws "me") the owner.
+func (h *Handlers) publishNotes(c *gin.Context, n models.Note) {
+	if n.WorkspaceID != "" {
+		h.publishWS(c, n.WorkspaceID, "notes")
+		return
+	}
+	b, _ := json.Marshal(gin.H{"type": "ws", "ws": "me", "what": "notes", "origin": c.GetHeader("X-Orbit-Client")})
+	h.events.Publish(n.OwnerID, string(b))
+}
+
+// topRank is a rank above every note of a wall (new notes go first).
+func (h *Handlers) topRank(wsID, ownerID string) float64 {
+	var first struct{ Min *float64 }
+	q := h.db.Model(&models.Note{}).Select("MIN(rank) AS min")
+	if wsID != "" {
+		q = q.Where("workspace_id = ?", wsID)
+	} else {
+		q = q.Where("workspace_id = '' AND owner_id = ?", ownerID)
+	}
+	q.Scan(&first)
+	if first.Min == nil {
+		return 1024
+	}
+	return *first.Min - 1024
 }
 
 // listNotes returns a workspace's notes, pinned first, then in their order.
@@ -194,7 +234,7 @@ func noteEmpty(n models.Note) bool {
 	return n.Title == "" && strings.TrimSpace(n.Body) == "" && len(decodeItems(n.Items)) == 0
 }
 
-// createNote adds a note at the top of the wall (editors).
+// createNote adds a note at the top of a workspace's wall (editors).
 //
 //	@Summary	Create a quick note
 //	@Tags		notes
@@ -210,37 +250,85 @@ func (h *Handlers) createNote(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var req noteRequest
-	if !bindJSON(c, &req) {
+	if n, ok := h.addNote(c, models.Note{WorkspaceID: ws.ID}); ok {
+		h.notifyActivity(c, ws, "note_added", noteTitle(n), noteLink(n))
+	}
+}
+
+// listMyNotes returns the caller's personal notes (their scratchpad),
+// pinned first.
+//
+//	@Summary	My quick notes
+//	@Tags		notes
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Success	200	{array}	noteResponse
+//	@Router		/me/notes [get]
+func (h *Handlers) listMyNotes(c *gin.Context) {
+	var notes []models.Note
+	h.db.Where("workspace_id = '' AND owner_id = ?", auth.UserID(c)).Order("pinned DESC, rank").Find(&notes)
+	out := make([]noteResponse, 0, len(notes))
+	for _, n := range notes {
+		out = append(out, toNoteResponse(n))
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// createMyNote jots a personal note, in no workspace.
+//
+//	@Summary	Create a personal quick note
+//	@Tags		notes
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		noteRequest	true	"Note"
+//	@Success	201		{object}	noteResponse
+//	@Router		/me/notes [post]
+func (h *Handlers) createMyNote(c *gin.Context) {
+	if auth.Effective(c).ReadOnly {
+		c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
 		return
 	}
+	h.addNote(c, models.Note{OwnerID: auth.UserID(c)})
+}
+
+// addNote creates n (in a workspace, or personal) from the request and
+// writes the response.
+func (h *Handlers) addNote(c *gin.Context, n models.Note) (models.Note, bool) {
+	var req noteRequest
+	if !bindJSON(c, &req) {
+		return n, false
+	}
 	uid := auth.UserID(c)
-	n := models.Note{WorkspaceID: ws.ID, Items: "[]", CreatedBy: uid, UpdatedBy: uid}
+	n.Items, n.CreatedBy, n.UpdatedBy = "[]", uid, uid
 	if req.Checklist != nil && *req.Checklist && req.Items != nil {
 		// A new checklist: no text to convert.
 		n.Checklist = true
 	}
 	if msg := applyNoteFields(req, &n); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
-		return
+		return n, false
 	}
 	if noteEmpty(n) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "the note is empty"})
-		return
+		return n, false
 	}
-	var first struct{ Min *float64 }
-	h.db.Model(&models.Note{}).Select("MIN(rank) AS min").Where("workspace_id = ?", ws.ID).Scan(&first)
-	n.Rank = 1024
-	if first.Min != nil {
-		n.Rank = *first.Min - 1024
-	}
+	n.Rank = h.topRank(n.WorkspaceID, n.OwnerID)
 	if err := h.db.Create(&n).Error; err != nil {
 		h.internalError(c, err, "could not create the note")
-		return
+		return n, false
 	}
-	h.publishWS(c, ws.ID, "notes")
-	h.notifyActivity(c, ws, "note_added", noteTitle(n), "/w/"+ws.ID+"/notes?note="+n.ID)
+	h.publishNotes(c, n)
 	c.JSON(http.StatusCreated, toNoteResponse(n))
+	return n, true
+}
+
+// noteLink opens a note in the app.
+func noteLink(n models.Note) string {
+	if n.WorkspaceID == "" {
+		return "/notes?note=" + n.ID
+	}
+	return "/w/" + n.WorkspaceID + "/notes?note=" + n.ID
 }
 
 // updateNote changes a note (editors).
@@ -272,7 +360,7 @@ func (h *Handlers) updateNote(c *gin.Context) {
 		h.internalError(c, err, "could not save the note")
 		return
 	}
-	h.publishWS(c, n.WorkspaceID, "notes")
+	h.publishNotes(c, n)
 	c.JSON(http.StatusOK, toNoteResponse(n))
 }
 
@@ -293,7 +381,7 @@ func (h *Handlers) deleteNote(c *gin.Context) {
 		h.internalError(c, err, "could not delete the note")
 		return
 	}
-	h.publishWS(c, n.WorkspaceID, "notes")
+	h.publishNotes(c, n)
 	c.Status(http.StatusNoContent)
 }
 
@@ -326,6 +414,88 @@ func (h *Handlers) orderNotes(c *gin.Context) {
 	}
 	h.publishWS(c, ws.ID, "notes")
 	c.Status(http.StatusNoContent)
+}
+
+// orderMyNotes sets the order of the caller's personal notes.
+//
+//	@Summary	Reorder my quick notes
+//	@Tags		notes
+//	@Accept		json
+//	@Security	BearerAuth
+//	@Param		body	body	orderRequest	true	"Note ids in order"
+//	@Success	204
+//	@Router		/me/notes/order [put]
+func (h *Handlers) orderMyNotes(c *gin.Context) {
+	var req orderRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if len(req.IDs) > 2000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "too many notes"})
+		return
+	}
+	uid := auth.UserID(c)
+	for i, id := range req.IDs {
+		h.db.Model(&models.Note{}).Where("id = ? AND workspace_id = '' AND owner_id = ?", id, uid).Update("rank", float64(i+1)*1024)
+	}
+	h.publishNotes(c, models.Note{OwnerID: uid})
+	c.Status(http.StatusNoContent)
+}
+
+type moveNoteRequest struct {
+	WorkspaceID string `json:"workspace_id"` // "" = my own notes
+}
+
+// moveNote puts a note somewhere else: from the caller's own notes into a
+// workspace they can edit, between workspaces, or back to their own notes.
+// It goes to the top of its new wall.
+//
+//	@Summary	Move a quick note
+//	@Tags		notes
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string			true	"Note id"
+//	@Param		body	body		moveNoteRequest	true	"Where to"
+//	@Success	200		{object}	noteResponse
+//	@Router		/notes/{id}/move [post]
+func (h *Handlers) moveNote(c *gin.Context) {
+	n, ok := h.noteAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	var req moveNoteRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if req.WorkspaceID == n.WorkspaceID {
+		c.JSON(http.StatusOK, toNoteResponse(n))
+		return
+	}
+	uid := auth.UserID(c)
+	from := n
+	var target models.Workspace
+	if req.WorkspaceID != "" {
+		ws, _, ok := h.wsAccess(c, req.WorkspaceID, models.WSEditor)
+		if !ok {
+			return
+		}
+		target = ws
+		n.WorkspaceID, n.OwnerID = ws.ID, ""
+	} else {
+		n.WorkspaceID, n.OwnerID = "", uid
+	}
+	n.Rank, n.UpdatedBy = h.topRank(n.WorkspaceID, n.OwnerID), uid
+	if err := h.db.Save(&n).Error; err != nil {
+		h.internalError(c, err, "could not move the note")
+		return
+	}
+	h.publishNotes(c, from)
+	h.publishNotes(c, n)
+	if target.ID != "" {
+		h.notifyActivity(c, target, "note_added", noteTitle(n), noteLink(n))
+	}
+	c.JSON(http.StatusOK, toNoteResponse(n))
 }
 
 // noteTitle names a note in a notification: its title, else its first line.

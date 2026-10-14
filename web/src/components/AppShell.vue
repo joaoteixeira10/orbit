@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
-  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff,
+  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
@@ -17,6 +17,7 @@ import { wireNotesLive } from '@/stores/notes'
 import { wireInboxLive } from '@/stores/inbox'
 import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
+import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
 import { pagesApi, workspacesApi, type Workspace } from '@/api/planner'
 import { ICONS, MODULE_ROUTES } from '@/lib/icons'
 import { P } from '@/lib/privileges'
@@ -246,8 +247,16 @@ function onKey(e: KeyboardEvent) {
   } else if (mod && e.key === '\\') {
     e.preventDefault()
     toggleSide()
+  } else if (e.altKey && !mod && e.code === 'KeyN') {
+    // ⌥N / Alt+N: a quick note from anywhere.
+    e.preventDefault()
+    quickNoteOpen.value = true
   } else if (e.key === 'Escape' && drawerOpen.value) drawerOpen.value = false
 }
+// A quick note from anywhere: ⌥N, the + on Quick Notes, ⌘K, or a page
+// asking for it (orbit:quick-note).
+const quickNoteOpen = ref(false)
+const onQuickNote = () => (quickNoteOpen.value = true)
 watch(() => route.fullPath, () => (drawerOpen.value = false))
 watch(drawerOpen, (open) => (document.documentElement.style.overflow = open ? 'hidden' : ''))
 
@@ -257,6 +266,7 @@ const tabs = computed(() => {
   if (!w) return [
     { key: 'today', label: t('nav.today'), icon: House, to: { name: 'home' }, on: route.name === 'home' },
     { key: 'cal', label: t('nav.calendar'), icon: CalendarDays, to: { name: 'calendar' }, on: route.name === 'calendar' },
+    { key: 'notes', label: t('notes.mine.title'), icon: NotebookPen, to: { name: 'my-notes' }, on: route.name === 'my-notes' },
   ]
   return w.modules.slice(0, 5).map((k) => ({
     key: k, label: t(`modules.${k}`), icon: moduleIcon(k), to: { name: moduleRoute[k] ?? 'ws', params: { ws: w.id } }, on: isModuleActive(w.id, k),
@@ -269,6 +279,7 @@ onMounted(() => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('orbit:settings', onOpenSettings)
   window.addEventListener('orbit:new-workspace', onNewWorkspace)
+  window.addEventListener('orbit:quick-note', onQuickNote)
 })
 onUnmounted(() => {
   narrowMq.removeEventListener('change', onNarrow)
@@ -276,6 +287,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('orbit:settings', onOpenSettings)
   window.removeEventListener('orbit:new-workspace', onNewWorkspace)
+  window.removeEventListener('orbit:quick-note', onQuickNote)
   document.documentElement.style.overflow = ''
 })
 
@@ -315,6 +327,15 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
             <span class="tile h-7 w-7" style="--tile: #ff3b30"><CalendarDays class="h-4 w-4" :stroke-width="2.4" /></span>
             <span>{{ t('nav.calendar') }}</span>
           </RouterLink>
+          <div class="smart-tile wide" :class="{ on: route.name === 'my-notes' }">
+            <RouterLink :to="{ name: 'my-notes' }" class="flex min-w-0 flex-1 items-center gap-2.5">
+              <span class="tile h-7 w-7" style="--tile: #ffcc00"><NotebookPen class="h-4 w-4" :stroke-width="2.4" /></span>
+              <span class="truncate">{{ t('notes.mine.title') }}</span>
+            </RouterLink>
+            <button class="jot" :title="t('notes.mine.action') + (isMac ? ' (⌥N)' : ' (Alt+N)')" :aria-label="t('notes.mine.action')" @click="quickNoteOpen = true">
+              <Plus class="h-4 w-4" :stroke-width="2.4" />
+            </button>
+          </div>
         </div>
 
         <template v-if="wss.favorites.length">
@@ -472,7 +493,8 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       </nav>
     </main>
 
-    <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" />
+    <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
+    <QuickNoteSheet :open="quickNoteOpen" @close="quickNoteOpen = false" />
     <NewWorkspaceSheet :open="newWsOpen" @close="newWsOpen = false" />
     <WorkspaceSettingsSheet :open="!!settingsFor" :ws-id="settingsFor" :initial-tab="settingsTab" @close="settingsFor = ''" />
   </div>
@@ -571,6 +593,32 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 }
 html.dark .smart-tile {
   background: rgba(255, 255, 255, 0.07);
+}
+/* Quick Notes spans the row: its name, and + for a new note. */
+.smart-tile.wide {
+  grid-column: span 2;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 7px 7px 10px;
+}
+.jot {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  color: var(--text-2);
+}
+.jot:hover {
+  background: var(--fill);
+  color: var(--text);
+}
+.smart-tile.on .jot {
+  color: #fff;
+}
+.smart-tile.on .jot:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 .smart-tile:active {
   transform: scale(0.97);

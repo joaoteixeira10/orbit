@@ -132,7 +132,8 @@ export interface NoteItem {
 }
 export interface Note {
   id: string
-  workspace_id: string
+  workspace_id: string // "" for a personal note (Quick Notes)
+  owner_id: string // personal notes: whose
   title: string
   body: string
   checklist: boolean
@@ -249,6 +250,7 @@ export interface Home {
   events: Occurrence[]
   pages: PageSummary[]
   notes: Note[] // pinned
+  mine: Note[] // my latest personal notes, not pinned (Today only)
 }
 export interface SearchHit {
   kind: 'page' | 'task' | 'event' | 'note'
@@ -322,12 +324,16 @@ export const tasksApi = {
   remove: (id: string) => api<void>(`/tasks/${id}`, { method: 'DELETE' }),
 }
 
+// Notes of a workspace, or — ws "me" — the user's own Quick Notes.
+const notesBase = (ws: string) => (ws === 'me' ? '/me/notes' : `/workspaces/${ws}/notes`)
 export const notesApi = {
-  list: (ws: string) => api<Note[]>(`/workspaces/${ws}/notes`),
-  create: (ws: string, b: NoteInput) => api<Note>(`/workspaces/${ws}/notes`, { method: 'POST', body: j(b) }),
+  list: (ws: string) => api<Note[]>(notesBase(ws)),
+  create: (ws: string, b: NoteInput) => api<Note>(notesBase(ws), { method: 'POST', body: j(b) }),
   update: (id: string, b: NoteInput) => api<Note>(`/notes/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/notes/${id}`, { method: 'DELETE' }),
-  order: (ws: string, ids: string[]) => api<void>(`/workspaces/${ws}/notes/order`, { method: 'PUT', body: j({ ids }) }),
+  order: (ws: string, ids: string[]) => api<void>(`${notesBase(ws)}/order`, { method: 'PUT', body: j({ ids }) }),
+  // move puts a note in a workspace ("" = my Quick Notes).
+  move: (id: string, workspace_id: string) => api<Note>(`/notes/${id}/move`, { method: 'POST', body: j({ workspace_id }) }),
 }
 
 export const inboxApi = {

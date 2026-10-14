@@ -314,6 +314,12 @@ definitions:
         items:
           $ref: '#/definitions/api.occurrence'
         type: array
+      mine:
+        description: Mine is the caller's latest personal notes, not pinned (Today
+          only).
+        items:
+          $ref: '#/definitions/api.noteResponse'
+        type: array
       notes:
         description: pinned quick notes
         items:
@@ -427,6 +433,12 @@ definitions:
     required:
     - role
     type: object
+  api.moveNoteRequest:
+    properties:
+      workspace_id:
+        description: '"" = my own notes'
+        type: string
+    type: object
   api.movePageRequest:
     properties:
       after_id:
@@ -500,6 +512,9 @@ definitions:
         items:
           $ref: '#/definitions/api.noteItem'
         type: array
+      owner_id:
+        description: personal notes only
+        type: string
       pinned:
         type: boolean
       rank:
@@ -2390,6 +2405,63 @@ paths:
       summary: Revoke a calendar feed
       tags:
       - calendar
+  /me/notes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.noteResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My quick notes
+      tags:
+      - notes
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.noteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.noteResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a personal quick note
+      tags:
+      - notes
+  /me/notes/order:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note ids in order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.orderRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reorder my quick notes
+      tags:
+      - notes
   /me/notifications:
     get:
       parameters:
@@ -2889,6 +2961,34 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a quick note
+      tags:
+      - notes
+  /notes/{id}/move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Where to
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.moveNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.noteResponse'
+      security:
+      - BearerAuth: []
+      summary: Move a quick note
       tags:
       - notes
   /notifications/channels:

@@ -255,7 +255,7 @@ export const plPt: typeof plEn = {
     homeDesc: 'O que está para fazer, o que vem a seguir e páginas recentes',
     pages: 'Páginas',
     pagesDesc: 'Documentos e notas mais longas com blocos, listas de verificação e tabelas',
-    notes: 'Notas rápidas',
+    notes: 'Notas',
     notesDesc: 'Notas autocolantes e listas rápidas, fixadas e por cores',
     timeline: 'Cronograma',
     timelineDesc: 'Tarefas como barras num gráfico de Gantt, arraste para reagendar',

@@ -3,8 +3,9 @@ import { notesApi, type Note, type NoteInput } from '@/api/planner'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 
-// Quick notes per workspace, pinned first, then by rank (the server's
-// order). Changes show at once and are reconciled with the server's answer.
+// Quick notes per workspace — and under "me" the user's own Quick Notes —
+// pinned first, then by rank (the server's order). Changes show at once and
+// are reconciled with the server's answer.
 const order = (a: Note, b: Note) => Number(b.pinned) - Number(a.pinned) || a.rank - b.rank
 
 export const useNotesStore = defineStore('notes', {
@@ -53,6 +54,14 @@ export const useNotesStore = defineStore('notes', {
         throw e
       }
       return cur
+    },
+    // move puts a note in another workspace ("me" = my Quick Notes); it
+    // leaves this wall and lands on top of the other one, if loaded.
+    async move(from: string, id: string, to: string) {
+      const n = await notesApi.move(id, to === 'me' ? '' : to)
+      this.byWs[from] = (this.byWs[from] ?? []).filter((x) => x.id !== id)
+      if (this.byWs[to]) this.put(to, n)
+      return n
     },
     // reorder saves a new order of the given notes (every note of the wall).
     async reorder(ws: string, ids: string[]) {

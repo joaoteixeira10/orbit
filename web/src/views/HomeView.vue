@@ -16,6 +16,9 @@ import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 import { ICONS, MODULE_ROUTES } from '@/lib/icons'
 import { ensureNoteColorStyles } from '@/components/notes/noteColors'
+import NoteCapture from '@/components/notes/NoteCapture.vue'
+import { useNotesStore } from '@/stores/notes'
+import type { Note, NoteInput } from '@/api/planner'
 import { orderedItems } from '@/components/notes/noteModel'
 import { todayStr, dateStr, startOfDay, addDays, fmtDate, fmtTime, relDay, sameDay, allDayDate, parseDate } from '@/lib/dates'
 
@@ -151,6 +154,20 @@ function newWorkspace() {
 function settings(tab: 'general' | 'members' = 'general') {
   window.dispatchEvent(new CustomEvent('orbit:settings', { detail: { ws: wsId.value, tab } }))
 }
+// ---- Quick Notes (Today only): jot here; they wait in Quick Notes ----
+const notesStore = useNotesStore()
+async function jot(body: NoteInput) {
+  try {
+    await notesStore.create('me', body)
+    await load()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const noteLink = (n: Note) =>
+  n.workspace_id ? { name: 'ws-notes', params: { ws: n.workspace_id }, query: { note: n.id } } : { name: 'my-notes', query: { note: n.id } }
+const noteWhere = (n: Note) => (n.workspace_id ? wss.byId(n.workspace_id)?.name ?? '' : t('notes.mine.title'))
+
 const nothing = computed(() => !!data.value && !data.value.overdue.length && !data.value.today.length && !data.value.upcoming.length && !data.value.events.length)
 </script>
 
@@ -171,10 +188,11 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
         <button class="icon-btn" :title="t('ws.settings')" @click="settings()"><Settings class="h-[18px] w-[18px]" /></button>
       </div>
     </header>
-    <header v-else class="mb-8">
+    <header v-else class="mb-6">
       <p class="text-[13px] font-semibold uppercase tracking-wide text-text-3">{{ dateLine }}</p>
       <h1 class="large-title mt-1">{{ greeting }}</h1>
     </header>
+    <NoteCapture v-if="!workspace && !auth.privileges.read_only" class="jot-box mb-8" :placeholder="t('notes.mine.capture')" @create="jot" />
 
     <p v-if="workspace?.archived_at" class="mb-6 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
 
@@ -283,7 +301,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
           <RouterLink
             v-for="n in data.notes"
             :key="n.id"
-            :to="{ name: 'ws-notes', params: { ws: n.workspace_id }, query: { note: n.id } }"
+            :to="noteLink(n)"
             class="mini-note"
             :data-note="n.color"
           >
@@ -295,7 +313,27 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
                 <span class="truncate">{{ it.text }}</span>
               </span>
             </span>
-            <span v-if="!wsId" class="mt-1.5 block truncate text-[11px] text-text-3">{{ wss.byId(n.workspace_id)?.name }}</span>
+            <span v-if="!wsId" class="mt-1.5 block truncate text-[11px] text-text-3">{{ noteWhere(n) }}</span>
+          </RouterLink>
+        </div>
+      </section>
+
+      <!-- Quick Notes: the latest, not pinned (pinned ones are above) -->
+      <section v-if="!wsId && data.mine?.length" class="widget card p-5">
+        <h2 class="widget-title" style="color: #c99a00">
+          {{ t('notes.mine.title') }}
+          <RouterLink :to="{ name: 'my-notes' }" class="ml-auto text-[13px] font-medium text-accent-text">{{ t('notes.mine.showAll') }}</RouterLink>
+        </h2>
+        <div class="mini-notes">
+          <RouterLink v-for="n in data.mine" :key="n.id" :to="noteLink(n)" class="mini-note" :data-note="n.color">
+            <span v-if="n.title" class="block truncate text-[13.5px] font-semibold">{{ n.title }}</span>
+            <span v-if="!n.checklist" class="mini-body">{{ n.body }}</span>
+            <span v-else class="mt-0.5 block">
+              <span v-for="it in orderedItems(n.items).slice(0, 4)" :key="it.id" class="flex items-center gap-1.5 text-[12.5px]" :class="{ 'text-text-3 line-through': it.done }">
+                <span class="mini-check" :class="{ on: it.done }"><Check v-if="it.done" class="h-2 w-2" :stroke-width="4" /></span>
+                <span class="truncate">{{ it.text }}</span>
+              </span>
+            </span>
           </RouterLink>
         </div>
       </section>
@@ -394,6 +432,11 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 }
 .event.now {
   background: var(--crit-bg);
+}
+/* The jot box sits under the greeting, as wide as a widget. */
+.jot-box {
+  margin-left: 0;
+  max-width: min(100%, 680px);
 }
 .mini-notes {
   display: grid;

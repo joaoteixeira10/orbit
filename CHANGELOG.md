@@ -49,6 +49,9 @@ merge, not at release time.
   checklist on a coloured card, pin what matters, reorder by dragging, tick
   items on the card, turn a note into a page or into tasks; undo a delete.
   Pinned notes show on Today and on the overview; notes are searchable.
+- **Quick Notes** — your own notes, in no workspace and seen by no one else:
+  jot one on Today, with ⌥N / Alt+N anywhere, or from ⌘K; later move it into
+  a workspace or turn it into a page or tasks there.
 - **Timeline** — a Gantt chart of a workspace's tasks, by list: tasks have
   a **start date** now, bars run from start to due; drag a bar to move it or
   its ends to change the dates, click an empty row to schedule a task;

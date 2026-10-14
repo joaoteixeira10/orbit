@@ -106,6 +106,30 @@ test('quick notes: a checklist note is kept, then turned into tasks', async ({ p
   await expect(page.getByText('2 tasks added')).toBeVisible()
 })
 
+test('quick notes: jot one on Today, find it in Quick Notes, move it into a workspace', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.getByText('Jot something down…').click()
+  await page.keyboard.type('Buy a birthday card')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.mini-note', { hasText: 'Buy a birthday card' })).toBeVisible()
+
+  // ⌥N / Alt+N from anywhere.
+  await page.keyboard.press('Alt+KeyN')
+  await page.keyboard.type('Renew the passport')
+  await page.getByRole('button', { name: 'Done' }).click()
+
+  await page.locator('#sidebar').getByRole('link', { name: 'Quick Notes' }).click()
+  const card = page.locator('.note-card', { hasText: 'Buy a birthday card' })
+  await expect(card).toBeVisible()
+  await expect(page.locator('.note-card', { hasText: 'Renew the passport' })).toBeVisible()
+  await card.hover()
+  await card.getByRole('button', { name: 'More options' }).click()
+  await page.getByRole('button', { name: 'Move to…' }).click()
+  await page.getByRole('dialog').locator('.group-row').nth(0).click()
+  await expect(card).toBeHidden()
+  await expect(page.getByText(/^Moved to /)).toBeVisible()
+})
+
 test('timeline and charts show the tasks, and the filter narrows them', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.locator('.ws-row').first().click()

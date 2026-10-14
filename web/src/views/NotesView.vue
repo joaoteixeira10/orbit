@@ -6,6 +6,7 @@ import { Search, StickyNote, X } from 'lucide-vue-next'
 import NoteCapture from '@/components/notes/NoteCapture.vue'
 import NoteCard from '@/components/notes/NoteCard.vue'
 import NoteEditor from '@/components/notes/NoteEditor.vue'
+import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
 import { ensureNoteColorStyles, NOTE_COLORS } from '@/components/notes/noteColors'
 import { convertedInput, matches, noteText, pageDoc, taskTitles } from '@/components/notes/noteModel'
 import { useNotesStore } from '@/stores/notes'
@@ -17,11 +18,13 @@ import { useToastStore } from '@/stores/toast'
 import { useSortable, type SortMove } from '@/lib/sortable'
 import { pagesApi, type Note, type NoteColor, type NoteInput } from '@/api/planner'
 
-// Quick notes: a wall of sticky notes (Keep-like), pinned ones first. The
-// box on top takes a new note; a card opens in an editor (?note=<id> deep
-// links there, ?new=1 opens the box). The wall is a masonry grid that reads
-// left to right — each card spans as many 8px rows as it is tall — so drag
-// and drop (editors) reorders it in reading order.
+// Quick notes: a wall of sticky notes (Keep-like), pinned ones first — a
+// workspace's (/w/:ws/notes), or the user's own Quick Notes (/notes), in no
+// workspace until moved into one. The box on top takes a new note; a card
+// opens in an editor (?note=<id> deep links there, ?new=1 opens the box).
+// The wall is a masonry grid that reads left to right — each card spans as
+// many 8px rows as it is tall — so drag and drop (editors) reorders it in
+// reading order.
 ensureNoteColorStyles()
 const route = useRoute()
 const router = useRouter()
@@ -31,10 +34,14 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const { t } = useI18n()
 
-const ws = computed(() => String(route.params.ws))
+// "me" is the user's own Quick Notes.
+const ws = computed(() => (typeof route.params.ws === 'string' ? route.params.ws : 'me'))
+const personal = computed(() => ws.value === 'me')
 const workspace = computed(() => wss.byId(ws.value))
-const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
-const hasModule = (m: string) => !workspace.value?.modules?.length || workspace.value.modules.includes(m)
+const editable = computed(() =>
+  personal.value ? !auth.privileges.read_only : !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only,
+)
+const hasModule = (m: string) => personal.value || !workspace.value?.modules?.length || workspace.value.modules.includes(m)
 const canTasks = computed(() => editable.value && hasModule('tasks'))
 
 const loaded = ref(false)
@@ -154,24 +161,48 @@ async function copy(n: Note) {
   }
 }
 
-async function toPage(n: Note) {
+// Quick Notes belong nowhere yet: turning one into a page, into tasks, or
+// moving it asks where to.
+const picker = ref<{ mode: 'move' | 'tasks' | 'page'; note: Note } | null>(null)
+async function onPick(target: string) {
+  const p = picker.value
+  picker.value = null
+  if (!p) return
+  if (p.mode === 'move') return moveTo(p.note, target)
+  if (p.mode === 'page') return toPage(p.note, target)
+  return toTasks(p.note, target)
+}
+async function moveTo(n: Note, target: string) {
+  closeEditor()
   try {
-    const p = await pagesApi.create(ws.value, { title: n.title, content: pageDoc(n) })
-    await usePagesStore().load(ws.value)
-    router.push({ name: 'ws-page', params: { ws: ws.value, page: p.id } })
+    await notes.move(ws.value, n.id, target)
+    toast.success(t('notes.mine.moved', { where: target === 'me' ? t('notes.mine.title') : wss.byId(target)?.name ?? '' }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const askMove = (n: Note) => (picker.value = { mode: 'move', note: n })
+
+async function toPage(n: Note, target = ws.value) {
+  if (target === 'me') return (picker.value = { mode: 'page', note: n })
+  try {
+    const p = await pagesApi.create(target, { title: n.title, content: pageDoc(n) })
+    await usePagesStore().load(target)
+    router.push({ name: 'ws-page', params: { ws: target, page: p.id } })
   } catch (e: any) {
     toast.error(e.message)
   }
 }
 
-async function toTasks(n: Note) {
+async function toTasks(n: Note, target = ws.value) {
   const titles = taskTitles(n)
   if (!titles.length) return toast.info(t('notes.noTasks'))
+  if (target === 'me') return (picker.value = { mode: 'tasks', note: n })
   const tasks = useTasksStore()
   let done = 0
   try {
     for (const title of titles) {
-      await tasks.create(ws.value, { title })
+      await tasks.create(target, { title })
       done++
     }
   } catch (e: any) {
@@ -238,8 +269,8 @@ watch(
   <div class="notes-view">
     <header class="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
       <div class="min-w-0 flex-1">
-        <h1 class="large-title">{{ t('modules.notes') }}</h1>
-        <p class="subhead mt-0.5">{{ workspace?.name }} · {{ all.length }}</p>
+        <h1 class="large-title">{{ personal ? t('notes.mine.title') : t('modules.notes') }}</h1>
+        <p class="subhead mt-0.5">{{ personal ? t('notes.mine.subtitle') : `${workspace?.name} · ${all.length}` }}</p>
       </div>
       <div v-if="all.length" class="flex w-full flex-wrap items-center gap-3 sm:w-auto">
         <div v-if="usedColors.length > 1" class="dots" role="radiogroup" :aria-label="t('notes.filterColor')">
@@ -286,6 +317,7 @@ watch(
                 @page="toPage(n)"
                 @tasks="toTasks(n)"
                 @copy="copy(n)"
+                @move="askMove(n)"
                 @remove="remove(n)"
               />
             </div>
@@ -309,6 +341,7 @@ watch(
                 @page="toPage(n)"
                 @tasks="toTasks(n)"
                 @copy="copy(n)"
+                @move="askMove(n)"
                 @remove="remove(n)"
               />
             </div>
@@ -324,8 +357,8 @@ watch(
       </template>
       <template v-else>
         <div class="empty-icon"><StickyNote class="h-9 w-9" :stroke-width="1.6" /></div>
-        <p class="title-3">{{ t('notes.empty') }}</p>
-        <p class="subhead mx-auto mt-1 max-w-sm">{{ editable ? t('notes.emptyHint') : t('notes.emptyReadOnly') }}</p>
+        <p class="title-3">{{ personal ? t('notes.mine.empty') : t('notes.empty') }}</p>
+        <p class="subhead mx-auto mt-1 max-w-sm">{{ personal ? t('notes.mine.emptyHint') : editable ? t('notes.emptyHint') : t('notes.emptyReadOnly') }}</p>
       </template>
     </div>
 
@@ -339,8 +372,10 @@ watch(
       @page="toPage"
       @tasks="toTasks"
       @copy="copy"
+      @move="askMove"
       @remove="remove"
     />
+    <NotePlacePicker :open="!!picker" :mode="picker?.mode ?? 'move'" :current="ws" @close="picker = null" @pick="onPick" />
 
     <Teleport to="body">
       <Transition name="snack">

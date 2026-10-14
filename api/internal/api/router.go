@@ -258,6 +258,10 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/notes", h.createNote)
 			authed.PUT("/workspaces/:ws/notes/order", h.orderNotes)
 			authed.PUT("/notes/:id", h.updateNote)
+			authed.POST("/notes/:id/move", h.moveNote)
+			authed.GET("/me/notes", h.listMyNotes)
+			authed.POST("/me/notes", h.createMyNote)
+			authed.PUT("/me/notes/order", h.orderMyNotes)
 			authed.DELETE("/notes/:id", h.deleteNote)
 
 			authed.GET("/workspaces/:ws/lists", h.listLists)

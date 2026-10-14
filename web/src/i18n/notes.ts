@@ -1,6 +1,24 @@
 // Quick notes (the Notes module).
 export const notesEn = {
   notes: {
+    mine: {
+      title: 'Quick Notes',
+      subtitle: 'Only you see these. When you know where something belongs, move it into a workspace.',
+      capture: 'Jot something down…',
+      showAll: 'Show all',
+      moveTo: 'Move to…',
+      moved: 'Moved to {where}',
+      pickMove: 'Move the note to',
+      pickTasks: 'Add the tasks to',
+      pickPage: 'Create the page in',
+      action: 'Quick note',
+      saved: 'Saved to Quick Notes',
+      hint: '{key} anywhere for a quick note',
+      empty: 'Nothing jotted down yet',
+      emptyHint: 'Write whatever comes up — an idea, a number, a to-do — and sort it out later.',
+      noTarget: 'You don’t edit any workspace yet.',
+      onlyYou: 'Only you',
+    },
     title: 'Notes',
     takeNote: 'Take a note…',
     titlePlaceholder: 'Title',
@@ -53,7 +71,25 @@ export const notesEn = {
 
 export const notesPt: typeof notesEn = {
   notes: {
-    title: 'Notas rápidas',
+    mine: {
+      title: 'Notas Rápidas',
+      subtitle: 'Só você as vê. Quando souber onde algo pertence, mova-o para um espaço.',
+      capture: 'Aponte alguma coisa…',
+      showAll: 'Ver todas',
+      moveTo: 'Mover para…',
+      moved: 'Movida para {where}',
+      pickMove: 'Mover a nota para',
+      pickTasks: 'Adicionar as tarefas a',
+      pickPage: 'Criar a página em',
+      action: 'Nota rápida',
+      saved: 'Guardada nas Notas Rápidas',
+      hint: '{key} em qualquer lado para uma nota rápida',
+      empty: 'Ainda nada apontado',
+      emptyHint: 'Escreva o que surgir — uma ideia, um número, uma tarefa — e arrume depois.',
+      noTarget: 'Ainda não edita nenhum espaço.',
+      onlyYou: 'Só você',
+    },
+    title: 'Notas',
     takeNote: 'Escreva uma nota…',
     titlePlaceholder: 'Título',
     bodyPlaceholder: 'Nota',

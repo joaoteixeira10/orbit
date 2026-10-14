@@ -122,10 +122,13 @@ type Task struct {
 // Note is a quick note (a sticky note): a short text or a checklist on a
 // coloured card. Items (JSON [{id, text, done}]) is set for a checklist note,
 // which then has no Body. Pinned notes come first; Rank orders the rest.
-// Longer writing belongs in a Page.
+// Longer writing belongs in a Page. A note is in a workspace, or — with no
+// WorkspaceID — personal: OwnerID's own scratchpad, until it's moved into a
+// workspace.
 type Note struct {
 	Base
-	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	WorkspaceID string  `gorm:"size:36;not null;default:'';index" json:"workspace_id"`
+	OwnerID     string  `gorm:"size:36;not null;default:'';index" json:"owner_id"` // personal notes only
 	Title       string  `gorm:"size:300" json:"title"`
 	Body        string  `gorm:"type:text" json:"body"`
 	Items       string  `gorm:"type:text" json:"-"`

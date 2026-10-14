@@ -17,6 +17,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
       { path: 'calendar', name: 'calendar', component: () => import('@/views/CalendarView.vue') },
+      { path: 'notes', name: 'my-notes', component: () => import('@/views/NotesView.vue') },
       { path: 'w/:ws', name: 'ws', component: () => import('@/views/HomeView.vue') },
       { path: 'w/:ws/tasks/:list?', name: 'ws-tasks', component: () => import('@/views/TasksView.vue') },
       { path: 'w/:ws/board/:list?', name: 'ws-board', component: () => import('@/views/BoardView.vue') },

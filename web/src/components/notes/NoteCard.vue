@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks } from 'lucide-vue-next'
+import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
 import { orderedItems } from './noteModel'
@@ -21,6 +21,7 @@ const emit = defineEmits<{
   page: []
   tasks: []
   copy: []
+  move: []
   remove: []
 }>()
 const { t } = useI18n()
@@ -45,11 +46,12 @@ const color = computed({
   get: () => props.note.color,
   set: (c: NoteColor) => emit('color', c),
 })
-function act(e: 'page' | 'tasks' | 'copy' | 'remove') {
+function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   menu.value = ''
   if (e === 'page') emit('page')
   else if (e === 'tasks') emit('tasks')
   else if (e === 'copy') emit('copy')
+  else if (e === 'move') emit('move')
   else emit('remove')
 }
 </script>
@@ -118,6 +120,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'remove') {
       <NoteColorPicker v-model="color" />
     </Popover>
     <Popover v-if="menu === 'more'" :anchor="moreBtn" placement="bottom-start" :width="210" @close="menu = ''">
+      <button class="menu-item" @click="act('move')"><FolderInput class="h-4 w-4 text-text-2" />{{ t('notes.mine.moveTo') }}</button>
       <button class="menu-item" @click="act('page')"><FileText class="h-4 w-4 text-text-2" />{{ t('notes.toPage') }}</button>
       <button v-if="canTasks" class="menu-item" @click="act('tasks')"><ListChecks class="h-4 w-4 text-text-2" />{{ t('notes.toTasks') }}</button>
       <button class="menu-item" @click="act('copy')"><Copy class="h-4 w-4 text-text-2" />{{ t('notes.copy') }}</button>

@@ -12,6 +12,7 @@ import type { NoteInput } from '@/api/planner'
 // (or checklist) with a colour, checklist and pin toolbar; a click outside,
 // Close, Escape or ⌘↵ adds the note (when there is something in it) and
 // folds the box again.
+const props = defineProps<{ placeholder?: string }>()
 const emit = defineEmits<{ create: [body: NoteInput] }>()
 const { t } = useI18n()
 
@@ -80,7 +81,7 @@ defineExpose({ start })
 <template>
   <div ref="root" class="capture" :class="{ open }" :data-note="open ? draft.color : ''" @keydown="onKey">
     <div v-if="!open" class="flex items-center">
-      <button class="cap-prompt" @click="start(false)">{{ t('notes.takeNote') }}</button>
+      <button class="cap-prompt" @click="start(false)">{{ props.placeholder || t('notes.takeNote') }}</button>
       <button class="tb mr-2" :aria-label="t('notes.newList')" :title="t('notes.newList')" @click="start(true)">
         <SquareCheck class="h-[19px] w-[19px]" />
       </button>

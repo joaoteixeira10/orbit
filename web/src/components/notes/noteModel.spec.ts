@@ -6,6 +6,7 @@ import { NOTE_COLORS, noteColorCss, noteColors } from './noteColors'
 const note = (over: Partial<Note> = {}): Note => ({
   id: 'n1',
   workspace_id: 'w',
+  owner_id: '',
   title: '',
   body: '',
   checklist: false,

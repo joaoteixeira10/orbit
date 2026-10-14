@@ -23,6 +23,8 @@ type homeResponse struct {
 	Events   []occurrence   `json:"events"`
 	Pages    []pageSummary  `json:"pages"`
 	Notes    []noteResponse `json:"notes"` // pinned quick notes
+	// Mine is the caller's latest personal notes, not pinned (Today only).
+	Mine []noteResponse `json:"mine"`
 }
 
 // home returns the overview. The browser sends its local date (?today=) and
@@ -56,12 +58,26 @@ func (h *Handlers) home(c *gin.Context) {
 		}
 		wsIDs = []string{ws}
 	}
-	resp := homeResponse{Overdue: []taskResponse{}, Today: []taskResponse{}, Upcoming: []taskResponse{}, Events: []occurrence{}, Pages: []pageSummary{}, Notes: []noteResponse{}}
+	resp := homeResponse{Overdue: []taskResponse{}, Today: []taskResponse{}, Upcoming: []taskResponse{}, Events: []occurrence{}, Pages: []pageSummary{}, Notes: []noteResponse{}, Mine: []noteResponse{}}
+	uid := auth.UserID(c)
+	// Today (all workspaces) also shows the caller's own notes.
+	personal := c.Query("ws") == ""
+	if personal {
+		var mine []models.Note
+		h.db.Where("workspace_id = '' AND owner_id = ? AND NOT pinned", uid).Order("updated_at DESC").Limit(9).Find(&mine)
+		for _, n := range mine {
+			resp.Mine = append(resp.Mine, toNoteResponse(n))
+		}
+	}
 	if len(wsIDs) == 0 {
+		var pinned []models.Note
+		h.db.Where("workspace_id = '' AND owner_id = ? AND pinned", uid).Order("updated_at DESC").Limit(12).Find(&pinned)
+		for _, n := range pinned {
+			resp.Notes = append(resp.Notes, toNoteResponse(n))
+		}
 		c.JSON(http.StatusOK, resp)
 		return
 	}
-	uid := auth.UserID(c)
 	d, _ := time.Parse(planner.DateLayout, today)
 	weekEnd := d.AddDate(0, 0, 7).Format(planner.DateLayout)
 	// My tasks: assigned to me, or unassigned ones I can see.
@@ -82,7 +98,11 @@ func (h *Handlers) home(c *gin.Context) {
 		resp.Pages = append(resp.Pages, summarize(p, fav))
 	}
 	var notes []models.Note
-	h.db.Where("workspace_id IN ? AND pinned", wsIDs).Order("updated_at DESC").Limit(12).Find(&notes)
+	q := h.db.Where("workspace_id IN ? AND pinned", wsIDs)
+	if personal {
+		q = h.db.Where("pinned AND (workspace_id IN ? OR (workspace_id = '' AND owner_id = ?))", wsIDs, uid)
+	}
+	q.Order("updated_at DESC").Limit(12).Find(&notes)
 	for _, n := range notes {
 		resp.Notes = append(resp.Notes, toNoteResponse(n))
 	}
@@ -137,10 +157,8 @@ func (h *Handlers) search(c *gin.Context) {
 		}
 		wsIDs = []string{ws}
 	}
-	if len(wsIDs) == 0 {
-		c.JSON(http.StatusOK, out)
-		return
-	}
+	// No workspaces: "IN ?" matches nothing, and the caller's own notes still
+	// count.
 	pat := "%" + strings.ToLower(likeEscape(q)) + "%"
 	var pages []models.Page
 	h.db.Select("id", "workspace_id", "title", "icon", "content_text").
@@ -156,7 +174,12 @@ func (h *Handlers) search(c *gin.Context) {
 		out = append(out, searchHit{Kind: "task", ID: t.ID, WorkspaceID: t.WorkspaceID, Title: t.Title, Snippet: planner.Snippet(t.Notes, q, 100), Due: t.Due, Done: t.CompletedAt != nil, ListID: t.ListID})
 	}
 	var notes []models.Note
-	h.db.Where(`workspace_id IN ? AND (LOWER(title) LIKE ? ESCAPE '\' OR LOWER(plain_text) LIKE ? ESCAPE '\')`, wsIDs, pat, pat).
+	scope := h.db.Where("workspace_id IN ?", wsIDs)
+	if c.Query("ws") == "" {
+		// And the caller's own notes.
+		scope = h.db.Where("workspace_id IN ? OR (workspace_id = '' AND owner_id = ?)", wsIDs, auth.UserID(c))
+	}
+	h.db.Where(scope).Where(`LOWER(title) LIKE ? ESCAPE '\' OR LOWER(plain_text) LIKE ? ESCAPE '\'`, pat, pat).
 		Order("updated_at DESC").Limit(8).Find(&notes)
 	for _, n := range notes {
 		out = append(out, searchHit{Kind: "note", ID: n.ID, WorkspaceID: n.WorkspaceID, Title: n.Title, Snippet: planner.Snippet(n.PlainText, q, 100)})

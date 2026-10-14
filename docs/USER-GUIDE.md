@@ -205,7 +205,9 @@ workspace:
 - **Up Next** — this week's events by day (the one happening **now** is
   highlighted), including subscribed calendars;
 - **This Week** — tasks due in the next seven days;
-- **Pinned Notes** — your pinned quick notes (click one to open it);
+- **Jot something down…** — a quick note to your own [Quick Notes](#quick-notes-your-own);
+- **Pinned Notes** — your pinned notes (click one to open it), and **Quick
+  Notes**, the latest of your own;
 - **Recent Pages** — the last pages edited.
 
 Tasks show only when they're assigned to you or to nobody. A workspace's own
@@ -258,6 +260,22 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
   closing it deletes it.
 - **Drag** cards to reorder them (between Pinned and Others to pin or unpin).
 - **Search notes** and the colour dots at the top narrow the wall.
+
+### Quick Notes (your own)
+
+**Quick Notes** (under Today and Calendar in the sidebar) is your scratchpad:
+notes that belong to no workspace and only you see — for what comes up in the
+moment. Jot one from anywhere:
+
+- **Jot something down…** at the top of **Today**;
+- the **+** on **Quick Notes** in the sidebar, or **⌥N** (Alt+N on Windows and
+  Linux) on any page, or ⌘K → **Quick note**;
+- the box on the Quick Notes page.
+
+They work like any notes (pin, colour, checklist, search). Today shows the
+latest ones; pinned ones join **Pinned Notes**. When you know where one
+belongs, `⋯` → **Move to…** a workspace you edit (or back to Quick Notes), or
+**Turn into page** / **Turn into tasks** and pick the workspace.
 
 ## 7. Tasks
 

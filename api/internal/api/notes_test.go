@@ -149,3 +149,82 @@ func TestTaskStart(t *testing.T) {
 		t.Fatalf("repeat: %+v", up)
 	}
 }
+
+// TestPersonalNotes: my own notes are mine alone; I can move one into a
+// workspace I edit (not one I only view) and back; Today and search see them.
+func TestPersonalNotes(t *testing.T) {
+	r, _, alice, bob := plannerSetup(t)
+	w := authdo(r, "POST", "/api/v1/me/notes", `{"body":"call the dentist about Friday"}`, alice)
+	expect(t, w, http.StatusCreated, "jot")
+	var n struct {
+		noteResp
+		WorkspaceID string `json:"workspace_id"`
+		OwnerID     string `json:"owner_id"`
+	}
+	decode(t, w, &n)
+	if n.WorkspaceID != "" || n.OwnerID == "" {
+		t.Fatalf("personal note: %+v", n)
+	}
+	var mine []noteResp
+	decode(t, authdo(r, "GET", "/api/v1/me/notes", "", alice), &mine)
+	if len(mine) != 1 {
+		t.Fatalf("my notes: %+v", mine)
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/notes", "", bob), &mine)
+	if len(mine) != 0 {
+		t.Fatalf("bob sees alice's notes: %+v", mine)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/notes/"+n.ID, `{"pinned":true}`, bob), http.StatusNotFound, "bob edits")
+
+	// Today and search.
+	var home struct {
+		Notes []noteResp `json:"notes"`
+		Mine  []noteResp `json:"mine"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/home?today=2026-10-13&from=2026-10-13T00:00:00Z&to=2026-10-20T00:00:00Z", "", alice), &home)
+	if len(home.Mine) != 1 || len(home.Notes) != 0 {
+		t.Errorf("today: %+v", home)
+	}
+	var hits []searchHit
+	decode(t, authdo(r, "GET", "/api/v1/search?q=dentist", "", alice), &hits)
+	if len(hits) != 1 || hits[0].ID != n.ID {
+		t.Errorf("search mine: %+v", hits)
+	}
+	decode(t, authdo(r, "GET", "/api/v1/search?q=dentist", "", bob), &hits)
+	if len(hits) != 0 {
+		t.Errorf("bob finds alice's note: %+v", hits)
+	}
+
+	// Into a workspace: not one bob only views; yes one he edits.
+	ws := createWS(t, r, bob, `{"name":"Casa","kind":"shared"}`)
+	expect(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/members", `{"user":"alice","role":"viewer"}`, bob), http.StatusCreated, "invite viewer")
+	expect(t, authdo(r, "POST", "/api/v1/notes/"+n.ID+"/move", `{"workspace_id":"`+ws.ID+`"}`, alice), http.StatusForbidden, "move as viewer")
+	var members []struct {
+		UserID string `json:"user_id"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/members", "", bob), &members)
+	for _, m := range members {
+		authdo(r, "PUT", "/api/v1/workspaces/"+ws.ID+"/members/"+m.UserID, `{"role":"editor"}`, bob)
+	}
+	w = authdo(r, "POST", "/api/v1/notes/"+n.ID+"/move", `{"workspace_id":"`+ws.ID+`"}`, alice)
+	expect(t, w, http.StatusOK, "move in")
+	decode(t, w, &n)
+	if n.WorkspaceID != ws.ID || n.OwnerID != "" {
+		t.Fatalf("moved: %+v", n)
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/notes", "", alice), &mine)
+	var wall []noteResp
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/notes", "", bob), &wall)
+	if len(mine) != 0 || len(wall) != 2 || wall[1].ID != n.ID && wall[0].ID != n.ID {
+		t.Errorf("after the move: mine %d, wall %+v", len(mine), wall)
+	}
+	// And back to my own notes: bob can't see it any more.
+	expect(t, authdo(r, "POST", "/api/v1/notes/"+n.ID+"/move", `{"workspace_id":""}`, alice), http.StatusOK, "move out")
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/notes", "", bob), &wall)
+	for _, x := range wall {
+		if x.ID == n.ID {
+			t.Errorf("still in the workspace")
+		}
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/notes/"+n.ID, `{"pinned":true}`, bob), http.StatusNotFound, "bob after the move out")
+}

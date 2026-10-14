@@ -1369,6 +1369,101 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/notes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "My quick notes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.noteResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Create a personal quick note",
+                "parameters": [
+                    {
+                        "description": "Note",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.noteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.noteResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/notes/order": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Reorder my quick notes",
+                "parameters": [
+                    {
+                        "description": "Note ids in order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.orderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/me/notifications": {
             "get": {
                 "security": [
@@ -2197,6 +2292,51 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/notes/{id}/move": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Move a quick note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Note id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Where to",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.moveNoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.noteResponse"
+                        }
                     }
                 }
             }
@@ -5136,6 +5276,13 @@ const docTemplate = `{
                         "$ref": "#/definitions/api.occurrence"
                     }
                 },
+                "mine": {
+                    "description": "Mine is the caller's latest personal notes, not pinned (Today only).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.noteResponse"
+                    }
+                },
                 "notes": {
                     "description": "pinned quick notes",
                     "type": "array",
@@ -5306,6 +5453,15 @@ const docTemplate = `{
                 }
             }
         },
+        "api.moveNoteRequest": {
+            "type": "object",
+            "properties": {
+                "workspace_id": {
+                    "description": "\"\" = my own notes",
+                    "type": "string"
+                }
+            }
+        },
         "api.movePageRequest": {
             "type": "object",
             "properties": {
@@ -5414,6 +5570,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.noteItem"
                     }
+                },
+                "owner_id": {
+                    "description": "personal notes only",
+                    "type": "string"
                 },
                 "pinned": {
                     "type": "boolean"

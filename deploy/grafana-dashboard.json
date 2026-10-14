@@ -37,22 +37,22 @@
   "panels": [
     {
       "id": 1,
-      "title": "Agents reachable",
+      "title": "Users",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
         "x": 0,
-        "y": 0
+        "y": 0,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(lb_proxy_reachable) / count(lb_proxy_reachable)",
+          "expr": "orbit_users",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -85,51 +85,22 @@
     },
     {
       "id": 2,
-      "title": "Servers up",
+      "title": "Workspaces",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 0
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(lb_server_up)",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
-      "id": 3,
-      "title": "In maintenance",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 0
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(lb_server_maintenance)",
+          "expr": "orbit_workspaces",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -138,15 +109,68 @@
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "percentunit",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
                 "color": "orange",
+                "value": 0.99
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Pages",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "orbit_pages",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.99
+              },
+              {
+                "color": "green",
                 "value": 1
               }
             ]
@@ -157,22 +181,22 @@
     },
     {
       "id": 4,
-      "title": "Down (not in maintenance)",
+      "title": "Open tasks",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 0
+        "x": 12,
+        "y": 0,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "count((lb_server_up == 0) and (lb_server_maintenance == 0)) or vector(0)",
+          "expr": "orbit_tasks_open",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -181,15 +205,20 @@
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "percentunit",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "orange",
+                "value": 0.99
+              },
+              {
+                "color": "green",
                 "value": 1
               }
             ]
@@ -200,27 +229,123 @@
     },
     {
       "id": 5,
-      "title": "Requests / s by backend",
+      "title": "Calendars failing",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "orbit_calendar_subscriptions_failing",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.99
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Up",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"orbit\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.99
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Requests / s by status",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 4
+        "y": 4,
+        "w": 12,
+        "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (proxy, backend) (rate(lb_backend_requests_total[5m]))",
+          "expr": "sum by (status) (rate(orbit_http_requests_total[5m]))",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "legendFormat": "{{backend}} @ {{proxy}}"
+          "legendFormat": "{{status}}"
         }
       ],
       "fieldConfig": {
@@ -231,195 +356,18 @@
       }
     },
     {
-      "id": 6,
-      "title": "Error ratio by backend",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 4
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (proxy, backend) (rate(lb_server_errors_total[5m])) / clamp_min(sum by (proxy, backend) (rate(lb_server_requests_total[5m])), 1e-9)",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "legendFormat": "{{backend}} @ {{proxy}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 7,
-      "title": "Response time p95 / avg by server",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 12
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "lb_server_latency_ms{quantile=~\"0.95|avg\"}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "legendFormat": "{{label}} @ {{proxy}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms"
-        },
-        "overrides": []
-      }
-    },
-    {
       "id": 8,
-      "title": "Servers in rotation by service",
+      "title": "HTTP p95 by route",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 12,
-        "y": 12
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (service) (lb_server_in_rotation)",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "legendFormat": "{{service}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "title": "Sessions (HAProxy)",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
+        "y": 4,
         "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "lb_server_sessions",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "legendFormat": "{{label}} @ {{proxy}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
-      "id": 10,
-      "title": "Servers",
-      "type": "table",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 20
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "lb_server_up",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "format": "table",
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "job": true,
-              "instance": true
-            },
-            "renameByName": {
-              "Value": "up"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": 11,
-      "title": "Orbit HTTP p95 by route",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 28
+        "h": 8
       },
       "targets": [
         {
@@ -434,10 +382,75 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "title": "Sign-ins by method and result",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (method, result) (rate(orbit_logins_total[15m])) * 900",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "legendFormat": "{{method}} {{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Open tasks",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "orbit_tasks_open",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "legendFormat": "open tasks"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
         },
         "overrides": []
       }
     }
-  ]
+  ],
+  "description": "Orbit: usage and HTTP health."
 }

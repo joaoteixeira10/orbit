@@ -3,228 +3,184 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
-  LayoutDashboard,
-  Network,
-  LayoutGrid,
-  Server,
-  ClipboardList,
-  UserRound,
-  RefreshCw as Refresh,
-  ArrowUp,
-  BookOpen,
-  Settings,
-  ShieldEllipsis,
-  Crown,
-  Moon,
-  Sun,
-  LogOut,
-  ChevronDown,
-  Copy,
-  RefreshCw,
-  VenetianMask,
-  FileBadge,
-  Menu,
+  Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
+  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
 import { useToastStore } from '@/stores/toast'
-import { getAccessToken, setAccessToken } from '@/lib/api'
-import { meApi } from '@/api'
-import { useFlash } from '@/lib/highlight'
-import ServerStatus from '@/components/ServerStatus.vue'
-import ChangeDialog from '@/components/proxy/ChangeDialog.vue'
-import { useProxiesStore } from '@/stores/proxies'
+import { useWorkspacesStore, wireWorkspaceLive } from '@/stores/workspaces'
+import { usePagesStore, wirePagesLive } from '@/stores/pages'
+import { wireTasksLive } from '@/stores/tasks'
+import { pagesApi, type Workspace } from '@/api/planner'
+import { onLiveEvent } from '@/lib/live'
+import { ICONS } from '@/lib/icons'
 import { P } from '@/lib/privileges'
-import { actionKind, changeDetail, fmtDur, uniq } from '@/lib/proxy'
+import ServerStatus from '@/components/ServerStatus.vue'
+import WsIcon from '@/components/ui/WsIcon.vue'
+import Avatar from '@/components/ui/Avatar.vue'
+import Popover from '@/components/ui/Popover.vue'
+import PageTree from '@/components/PageTree.vue'
+import CommandPalette from '@/components/CommandPalette.vue'
+import NewWorkspaceSheet from '@/components/NewWorkspaceSheet.vue'
+import WorkspaceSettingsSheet from '@/components/WorkspaceSettingsSheet.vue'
 
 const auth = useAuthStore()
 const prefs = usePrefsStore()
 const branding = useBrandingStore()
 const toast = useToastStore()
+const wss = useWorkspacesStore()
+const pages = usePagesStore()
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 
-const menuOpen = ref(false)
-const displayName = computed(() => auth.user?.display_name || auth.user?.username || '')
-const roleLabel = computed(() => auth.user?.roles?.map((r) => r.name).join(', ') || 'none')
-// v0's role pill colours: admin purple, operator blue, others grey.
-const roleClass = computed(() => {
-  const names = auth.user?.roles?.map((r) => r.name) ?? []
-  if (auth.user?.roles?.some((r) => r.superuser)) return 'admin'
-  if (names.includes('operator')) return 'operator'
-  return names.length ? '' : 'off'
-})
+// ---- Data ----
+// The API refuses everything else while a password change or two-factor
+// setup is pending, so the data loads once those are done.
+const ready = computed(() => auth.isAuthenticated && !auth.user?.must_change_password && !auth.mustSetupOtp)
+watch(
+  ready,
+  async (r) => {
+    if (!r) return
+    wireWorkspaceLive()
+    wirePagesLive()
+    wireTasksLive()
+    try {
+      await Promise.all([wss.load(), wss.loadFavorites(), wss.loadCatalog()])
+    } catch (e: any) {
+      toast.error(e.message)
+    }
+  },
+  { immediate: true },
+)
 
-async function copyToken() {
-  const tok = getAccessToken()
-  if (!tok) return
-  try {
-    await navigator.clipboard.writeText(tok)
-    toast.success('Access token copied — paste it as a Bearer token in your shell')
-  } catch {
-    toast.error('Could not copy to clipboard')
-  }
-  menuOpen.value = false
+// Which workspaces are open in the sidebar (remembered).
+const expanded = ref(new Set<string>(JSON.parse(localStorage.getItem('orbit_ws_open') || '[]') as string[]))
+function persistExpanded() {
+  localStorage.setItem('orbit_ws_open', JSON.stringify([...expanded.value]))
 }
-async function rotateToken() {
+function toggleWs(id: string) {
+  if (expanded.value.has(id)) expanded.value.delete(id)
+  else {
+    expanded.value.add(id)
+    if (!pages.byWs[id]) void pages.load(id).catch(() => {})
+  }
+  persistExpanded()
+}
+const currentWsId = computed(() => (typeof route.params.ws === 'string' ? route.params.ws : ''))
+const currentWs = computed(() => wss.byId(currentWsId.value))
+watch(currentWsId, (id) => {
+  if (!id) return
+  wss.setLast(id)
+  expanded.value.add(id)
+  persistExpanded()
+  if (!pages.byWs[id]) void pages.load(id).catch(() => {})
+}, { immediate: true })
+// A workspace that doesn't exist (deleted, or someone else's): back home.
+watch(
+  () => [wss.loaded, currentWsId.value] as const,
+  ([loaded, id]) => {
+    if (loaded && id && !wss.byId(id)) router.replace({ name: 'home' })
+  },
+)
+
+const pagesOpen = ref(new Set<string>(JSON.parse(localStorage.getItem('orbit_pages_open') || '[]') as string[]))
+function togglePages(id: string) {
+  if (pagesOpen.value.has(id)) pagesOpen.value.delete(id)
+  else pagesOpen.value.add(id)
+  localStorage.setItem('orbit_pages_open', JSON.stringify([...pagesOpen.value]))
+}
+const showArchived = ref(false)
+// Opening a page reveals it in the sidebar: its workspace's Pages tree and
+// the pages above it are expanded.
+watch(
+  () => [route.name, route.params.page, currentWsId.value, pages.byWs[currentWsId.value]?.length] as const,
+  ([name, page, ws]) => {
+    if (name !== 'ws-page' || typeof page !== 'string' || !ws) return
+    if (!pagesOpen.value.has(ws)) {
+      pagesOpen.value.add(ws)
+      localStorage.setItem('orbit_pages_open', JSON.stringify([...pagesOpen.value]))
+    }
+    for (const p of pages.path(ws, page).slice(0, -1)) if (!pages.open.has(p.id)) pages.toggle(p.id, true)
+  },
+  { immediate: true },
+)
+
+// ---- Module navigation ----
+const moduleRoute: Record<string, string> = { home: 'ws', pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board', calendar: 'ws-calendar' }
+function moduleIcon(key: string) {
+  return ICONS[wss.modules.find((m) => m.key === key)?.icon ?? ''] ?? FileText
+}
+function isModuleActive(ws: string, key: string): boolean {
+  if (currentWsId.value !== ws) return false
+  const n = String(route.name)
+  return n === moduleRoute[key] || (key === 'pages' && (n === 'ws-page' || n === 'ws-trash'))
+}
+function goModule(ws: string, key: string) {
+  router.push({ name: moduleRoute[key] ?? 'ws', params: { ws } })
+}
+const canEdit = (w: Workspace) => w.role !== 'viewer' && !w.archived_at && !auth.privileges.read_only
+
+async function addPage(ws: string, parent: string | null) {
   try {
-    const r = await meApi.rotateToken()
-    setAccessToken(r.access_token) // new refresh token arrives as the HttpOnly cookie
-    toast.success('Token rotated — any copied token is now revoked')
+    const p = await pagesApi.create(ws, { parent_id: parent, title: '' })
+    if (parent) pages.toggle(parent, true)
+    pagesOpen.value.add(ws)
+    await pages.load(ws)
+    router.push({ name: 'ws-page', params: { ws, page: p.id } })
   } catch (e: any) {
     toast.error(e.message)
   }
-  menuOpen.value = false
+}
+async function movePage(ws: string, id: string, parent: string | null, after: string) {
+  try {
+    await pagesApi.move(id, parent, after)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+  await pages.load(ws)
 }
 
-interface NavItem {
-  name: string
-  label: string
-  icon: typeof LayoutDashboard
-  count?: number | null
-  alert?: number // requests waiting for you
-  params?: Record<string, string>
+// ---- Sheets and palette ----
+const paletteOpen = ref(false)
+const newWsOpen = ref(false)
+const settingsFor = ref('')
+const settingsTab = ref<'general' | 'modules' | 'members'>('general')
+function openSettings(id: string, tab: 'general' | 'modules' | 'members' = 'general') {
+  settingsTab.value = tab
+  settingsFor.value = id
+  wsMenu.value = ''
 }
-const px = useProxiesStore()
-// v0's sidebar: Proxies, Operations, Security.
-const sections = computed<{ title: string; items: NavItem[] }[]>(() => {
-  const E = px.entries
-  const lastProxy = typeof route.params.name === 'string' ? route.params.name : ''
-  const out: { title: string; items: NavItem[] }[] = [
-    {
-      title: t('nav.proxies'),
-      items: [
-        { name: 'proxies', label: t('nav.proxies'), icon: Network, count: px.data?.proxies.length ?? null, params: lastProxy ? { name: lastProxy } : undefined },
-        ...(auth.features.certificates !== false && auth.can(P.certsRead) ? [{ name: 'certificates', label: t('cert.nav'), icon: FileBadge }] : []),
-      ],
-    },
-    {
-      title: t('nav.operations'),
-      items: [
-        { name: 'operations-services', label: t('nav.services'), icon: LayoutGrid, count: px.data ? uniq(E.map((e) => e.service)).length : null, alert: (px.data?.requests ?? []).filter((r) => r.can_decide).length },
-        { name: 'operations-servers', label: t('nav.servers'), icon: Server, count: px.data ? uniq(E.map((e) => e.machine)).length : null },
-      ],
-    },
-  ]
-  const sec: NavItem[] = []
-  if (auth.can(P.auditRead)) sec.push({ name: 'audit', label: t('nav.audit'), icon: ClipboardList })
-  sec.push({ name: 'dashboard', label: t('nav.yourAccess'), icon: UserRound })
-  if (auth.isAdminArea) sec.push({ name: 'admin', label: t('nav.admin'), icon: ShieldEllipsis })
-  if (auth.isOwner) sec.push({ name: 'owner', label: t('nav.owner'), icon: Crown })
-  out.push({ title: t('nav.security'), items: sec })
-  return out
-})
-const allNav = computed(() => sections.value.flatMap((s) => s.items))
-
-// Glow nav items that appear live (e.g. after an admin grants a privilege).
-const { flash: flashNav, isFlashing: navFlashing } = useFlash<string>()
-watch(allNav, (next, prev) => {
-  const had = new Set((prev ?? []).map((i) => i.name))
-  flashNav(next.filter((i) => !had.has(i.name)).map((i) => i.name))
-})
-
-function navTo(item: NavItem) {
-  router.push({ name: item.name, params: item.params })
+const wsMenu = ref('')
+const wsMenuAnchor = ref<HTMLElement | null>(null)
+function openWsMenu(id: string, e: MouseEvent) {
+  wsMenu.value = id
+  wsMenuAnchor.value = e.currentTarget as HTMLElement
+}
+function onNewTask(ws: string) {
+  router.push({ name: 'ws-tasks', params: { ws }, query: { new: '1' } })
+}
+// Views ask for the sheets through window events (no prop drilling).
+function onOpenSettings(e: Event) {
+  const d = (e as CustomEvent).detail as { ws: string; tab?: 'general' | 'modules' | 'members' }
+  openSettings(d.ws, d.tab)
+}
+function onNewWorkspace() {
+  newWsOpen.value = true
 }
 
-// Phones and narrow tablets: the sidebar is a drawer behind the menu button.
-// Same breakpoint as the CSS below.
-const narrowMq = window.matchMedia('(max-width: 1023px)')
-const narrow = ref(narrowMq.matches)
-const drawerOpen = ref(false)
-function onNarrow(e: MediaQueryListEvent) {
-  narrow.value = e.matches
-  if (!e.matches) drawerOpen.value = false
-}
-function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && drawerOpen.value) drawerOpen.value = false
-}
-// Any navigation closes it (nav items, links inside pages, back button).
-watch(() => route.fullPath, () => (drawerOpen.value = false))
-// The page behind an open drawer doesn't scroll.
-watch(drawerOpen, (open) => (document.documentElement.style.overflow = open ? 'hidden' : ''))
-
-const isActive = (name: string) => route.name === name
-// Breadcrumbs, as in v0: "lb / proxies / gmr".
-const crumbs = computed<{ path: string[]; last: string }>(() => {
-  const n = String(route.name ?? '')
-  if (n === 'proxies') return { path: [t('nav.proxies').toLowerCase()], last: String(route.params.name || '') }
-  if (n.startsWith('operations-')) return { path: [t('nav.operations').toLowerCase()], last: t(n === 'operations-servers' ? 'nav.servers' : 'nav.services').toLowerCase() }
-  if (n === 'audit') return { path: [t('nav.security').toLowerCase()], last: t('nav.audit').toLowerCase() }
-  const item = allNav.value.find((i) => i.name === n)
-  return { path: [], last: item?.label ?? (n === 'settings' ? t('nav.settings') : n) }
-})
-
-// The live proxy state (shared with the pages) and "updated 3s ago".
-const clock = ref(Date.now())
-let tick: ReturnType<typeof setInterval> | null = null
-onMounted(() => {
-  px.start()
-  tick = setInterval(() => (clock.value = Date.now()), 1000)
-  window.addEventListener('scroll', onScroll, { passive: true })
-  narrowMq.addEventListener('change', onNarrow)
-  window.addEventListener('keydown', onKey)
-})
-onUnmounted(() => {
-  px.stop()
-  if (tick) clearInterval(tick)
-  window.removeEventListener('scroll', onScroll)
-  narrowMq.removeEventListener('change', onNarrow)
-  window.removeEventListener('keydown', onKey)
-  document.documentElement.style.overflow = ''
-})
-const updated = computed(() => (px.receivedAt ? t('nav.updatedAgo', { d: fmtDur((clock.value - px.receivedAt) / 1000) }) : ''))
-const refreshing = ref(false)
-async function refreshNow() {
-  refreshing.value = true
-  await px.fetch(true)
-  refreshing.value = false
-}
-const onProxyPages = computed(() => ['proxies', 'operations-services', 'operations-servers'].includes(String(route.name)))
-
-// Recent server changes (the sidebar feed).
-const activity = computed(() =>
-  (px.data?.activity ?? []).slice(0, 30).map((a) => {
-    const d = changeDetail(a.detail)
-    return {
-      id: a.id,
-      kind: actionKind(a.action),
-      ok: d.ok !== false,
-      targets: d.targets ?? [],
-      scope: d.scope ?? '',
-      until: d.until ? new Date(d.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-      title: (d.targets ?? []).join('\n') + (d.error ? '\n\n' + d.error : '') + (d.reason ? '\n\n' + d.reason : ''),
-      ago: fmtDur((clock.value - new Date(a.created_at).getTime()) / 1000),
-      who: a.user_name || a.ip,
-    }
-  }),
-)
-
-// Change freezes on now, or starting within a day.
-const freezes = computed(() =>
-  (px.data?.freezes ?? []).filter((f) => f.active || new Date(f.from).getTime() - clock.value < 24 * 3600 * 1000),
-)
-const whenFreeze = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-
-// Back to top, as in v0.
-const showTop = ref(false)
-function onScroll() {
-  showTop.value = window.scrollY > 400
-}
-function toTop() {
-  window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-}
-function toggleTheme() {
-  prefs.setTheme(prefs.isDark() ? 'light' : 'dark')
-}
-function goSettings() {
-  menuOpen.value = false
-  router.push({ name: 'settings' })
+// ---- User menu ----
+const userMenu = ref(false)
+const userAnchor = ref<HTMLElement | null>(null)
+const displayName = computed(() => auth.user?.display_name || auth.user?.username || '')
+function go(name: string) {
+  userMenu.value = false
+  router.push({ name })
 }
 async function logout() {
-  menuOpen.value = false
+  userMenu.value = false
   await auth.logout()
   router.push({ name: 'login' })
 }
@@ -232,548 +188,559 @@ async function stopImpersonating() {
   try {
     await auth.stopImpersonation()
     toast.success(t('impersonate.returned'))
-    router.push({ name: 'proxies' })
+    router.push({ name: 'home' })
   } catch (e: any) {
     toast.error(e.message)
   }
 }
+
+// ---- Layout: drawer below 1024 px, tab bar below 640 px ----
+const narrowMq = window.matchMedia('(max-width: 1023px)')
+const phoneMq = window.matchMedia('(max-width: 639px)')
+const narrow = ref(narrowMq.matches)
+const phone = ref(phoneMq.matches)
+const drawerOpen = ref(false)
+// Desktop: the sidebar can be hidden (⌘\ or the toolbar button), like macOS.
+const sideHidden = ref(localStorage.getItem('orbit_side_hidden') === '1')
+function toggleSide() {
+  if (narrow.value) drawerOpen.value = !drawerOpen.value
+  else {
+    sideHidden.value = !sideHidden.value
+    localStorage.setItem('orbit_side_hidden', sideHidden.value ? '1' : '0')
+  }
+}
+function onNarrow(e: MediaQueryListEvent) {
+  narrow.value = e.matches
+  if (!e.matches) drawerOpen.value = false
+}
+function onPhone(e: MediaQueryListEvent) {
+  phone.value = e.matches
+}
+function onKey(e: KeyboardEvent) {
+  const mod = e.metaKey || e.ctrlKey
+  if (mod && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    paletteOpen.value = !paletteOpen.value
+  } else if (mod && e.key === '\\') {
+    e.preventDefault()
+    toggleSide()
+  } else if (e.key === 'Escape' && drawerOpen.value) drawerOpen.value = false
+}
+watch(() => route.fullPath, () => (drawerOpen.value = false))
+watch(drawerOpen, (open) => (document.documentElement.style.overflow = open ? 'hidden' : ''))
+
+// The bottom tab bar (phones): the current workspace's modules, else Today/Calendar.
+const tabs = computed(() => {
+  const w = currentWs.value
+  if (!w) return [
+    { key: 'today', label: t('nav.today'), icon: House, to: { name: 'home' }, on: route.name === 'home' },
+    { key: 'cal', label: t('nav.calendar'), icon: CalendarDays, to: { name: 'calendar' }, on: route.name === 'calendar' },
+  ]
+  return w.modules.slice(0, 5).map((k) => ({
+    key: k, label: t(`modules.${k}`), icon: moduleIcon(k), to: { name: moduleRoute[k] ?? 'ws', params: { ws: w.id } }, on: isModuleActive(w.id, k),
+  }))
+})
+
+// Reminders pushed by the server: a toast, and a system notification when
+// the user allowed them and the tab isn't in front.
+let offReminder: (() => void) | null = null
+onMounted(() => {
+  narrowMq.addEventListener('change', onNarrow)
+  phoneMq.addEventListener('change', onPhone)
+  window.addEventListener('keydown', onKey)
+  window.addEventListener('orbit:settings', onOpenSettings)
+  window.addEventListener('orbit:new-workspace', onNewWorkspace)
+  offReminder = onLiveEvent('reminder', (e) => {
+    const title = String(e.title ?? '')
+    const body = String(e.body ?? '')
+    toast.info(`⏰ ${title} — ${body}`)
+    if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+      new Notification(title, { body, tag: String(e.id ?? ''), icon: '/favicon-192.png' })
+    }
+  })
+})
+onUnmounted(() => {
+  narrowMq.removeEventListener('change', onNarrow)
+  phoneMq.removeEventListener('change', onPhone)
+  window.removeEventListener('keydown', onKey)
+  window.removeEventListener('orbit:settings', onOpenSettings)
+  window.removeEventListener('orbit:new-workspace', onNewWorkspace)
+  offReminder?.()
+  document.documentElement.style.overflow = ''
+})
+
+const wsStyle = computed(() => (currentWs.value ? { '--ws': currentWs.value.color } : {}))
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" :class="{ 'side-hidden': sideHidden && !narrow }">
     <div v-if="drawerOpen" class="side-backdrop" aria-hidden="true" @click="drawerOpen = false" />
-    <aside id="sidebar" class="side" :class="{ open: drawerOpen }" :inert="(narrow && !drawerOpen) || undefined">
-      <div class="brand">
-        <!-- Mark: a developer theme's crest, an uploaded logo, else the default
-             crest (the favicon). Hidden by the "Show logo" toggle (not a theme's). -->
-        <template v-if="branding.showMark">
-          <img v-if="branding.logoMode === 'theme'" :src="branding.crestUrl" alt="logo" class="logo" />
-          <img v-else-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" alt="logo" class="brand-logo" />
-          <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
-        </template>
-        <div v-if="branding.showName" class="brand-text">
-          <b v-if="branding.wordmarkIsTheme && branding.theme" class="brand-word blackletter" :style="{ color: branding.theme.mark, '-webkit-text-stroke': `1.6px ${branding.theme.halo}` }">UBonito</b>
-          <b v-else>{{ branding.appName }}</b>
-          <small>nginx · haproxy</small>
+    <aside id="sidebar" class="side material" :class="{ open: drawerOpen }" :inert="(narrow && !drawerOpen) || undefined">
+      <div class="side-top">
+        <div class="brand">
+          <template v-if="branding.showMark">
+            <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" alt="logo" class="brand-logo" />
+            <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
+          </template>
+          <b v-if="branding.showName" class="truncate">{{ branding.appName }}</b>
+          <button v-if="!narrow" class="icon-btn ml-auto h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></button>
         </div>
+        <button class="search-btn" @click="paletteOpen = true">
+          <Search class="h-4 w-4" />
+          <span class="flex-1 text-left">{{ t('nav.search') }}</span>
+          <kbd>{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+        </button>
       </div>
 
-      <nav class="nav" aria-label="Main">
-        <template v-for="sec in sections" :key="sec.title">
-          <div class="nav-title cap">{{ sec.title }}</div>
-          <button
-            v-for="item in sec.items"
-            :key="item.name"
-            class="nav-item"
-            :class="[{ on: isActive(item.name) }, navFlashing(item.name) && 'nav-flash']"
-            @click="navTo(item)"
+      <nav class="side-scroll" aria-label="Main">
+        <div class="smart">
+          <RouterLink :to="{ name: 'home' }" class="smart-tile" :class="{ on: route.name === 'home' }">
+            <span class="tile h-7 w-7" style="--tile: #007aff"><House class="h-4 w-4" :stroke-width="2.4" /></span>
+            <span>{{ t('nav.today') }}</span>
+          </RouterLink>
+          <RouterLink :to="{ name: 'calendar' }" class="smart-tile" :class="{ on: route.name === 'calendar' }">
+            <span class="tile h-7 w-7" style="--tile: #ff3b30"><CalendarDays class="h-4 w-4" :stroke-width="2.4" /></span>
+            <span>{{ t('nav.calendar') }}</span>
+          </RouterLink>
+        </div>
+
+        <template v-if="wss.favorites.length">
+          <div class="sec-title">{{ t('nav.favorites') }}</div>
+          <RouterLink
+            v-for="f in wss.favorites"
+            :key="f.id"
+            :to="{ name: 'ws-page', params: { ws: f.workspace_id, page: f.id } }"
+            class="side-item"
+            :class="{ on: route.params.page === f.id }"
+            :style="{ '--ws': wss.byId(f.workspace_id)?.color }"
           >
-            <component :is="item.icon" :size="17" :stroke-width="1.8" />
-            <span>{{ item.label }}</span>
-            <span v-if="item.alert" class="count alert" :title="t('rq.toDecide', { n: item.alert }, item.alert)">{{ item.alert }}</span>
-            <span v-else-if="item.count != null" class="count">{{ item.count }}</span>
+            <span v-if="f.icon" class="w-4 text-center text-[13px]">{{ f.icon }}</span>
+            <Star v-else class="h-3.5 w-3.5" />
+            <span class="truncate">{{ f.title || t('pages.untitled') }}</span>
+          </RouterLink>
+        </template>
+
+        <div class="sec-title flex items-center">
+          <span class="flex-1">{{ t('nav.workspaces') }}</span>
+          <button v-if="auth.canCreateWorkspaces" class="add-btn" :title="t('ws.new')" @click="newWsOpen = true"><Plus class="h-3.5 w-3.5" /></button>
+        </div>
+
+        <div v-for="w in wss.active" :key="w.id" class="ws-block" :style="{ '--ws': w.color }">
+          <div class="ws-row group/ws" :class="{ on: currentWsId === w.id && route.name === 'ws' }" @click="router.push({ name: 'ws', params: { ws: w.id } })">
+            <button class="chev" :aria-label="t('nav.expand')" @click.stop="toggleWs(w.id)">
+              <ChevronRight class="h-3 w-3 transition-transform" :class="{ 'rotate-90': expanded.has(w.id) }" :stroke-width="2.6" />
+            </button>
+            <WsIcon :icon="w.icon" :color="w.color" :size="22" :name="w.name" />
+            <span class="min-w-0 flex-1 truncate font-medium">{{ w.name }}</span>
+            <span v-if="w.member_count > 1" class="text-[11px] text-text-3">{{ w.member_count }}</span>
+            <button class="more" :title="t('ws.settings')" @click.stop="openWsMenu(w.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
+          </div>
+          <div v-if="expanded.has(w.id)" class="ws-mods">
+            <template v-for="m in w.modules" :key="m">
+              <div v-if="m === 'pages'">
+                <div class="side-item group/pg" :class="{ on: isModuleActive(w.id, 'pages') && route.name === 'ws-pages' }" @click="goModule(w.id, 'pages')">
+                  <button class="-ml-1 grid h-4 w-4 place-items-center rounded hover:bg-fill" @click.stop="togglePages(w.id)">
+                    <ChevronRight class="h-3 w-3 !text-text-3 transition-transform" :class="{ 'rotate-90': pagesOpen.has(w.id) }" :stroke-width="2.6" />
+                  </button>
+                  <component :is="moduleIcon(m)" class="h-4 w-4" />
+                  <span class="flex-1">{{ t('modules.pages') }}</span>
+                  <button v-if="canEdit(w)" class="hidden h-5 w-5 place-items-center rounded hover:bg-fill group-hover/pg:grid" :title="t('pages.new')" @click.stop="addPage(w.id, null)">
+                    <Plus class="h-3.5 w-3.5 !text-text-2" />
+                  </button>
+                </div>
+                <div v-if="pagesOpen.has(w.id)" class="pl-3">
+                  <PageTree
+                    :ws="w.id"
+                    :nodes="pages.tree(w.id)"
+                    :can-edit="canEdit(w)"
+                    @add="(p) => addPage(w.id, p)"
+                    @move="(id, p, a) => movePage(w.id, id, p, a)"
+                  />
+                  <div v-if="pages.byWs[w.id] && !pages.byWs[w.id].length" class="px-3 py-1 text-[12px] text-text-3">{{ t('pages.none') }}</div>
+                </div>
+              </div>
+              <button v-else-if="m !== 'home'" class="side-item" :class="{ on: isModuleActive(w.id, m) }" @click="goModule(w.id, m)">
+                <component :is="moduleIcon(m)" class="h-4 w-4" />
+                <span>{{ t(`modules.${m}`) }}</span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="wss.loaded && !wss.active.length" class="empty-ws">
+          <p>{{ t('nav.noWorkspaces') }}</p>
+          <button v-if="auth.canCreateWorkspaces" class="btn-tinted btn-sm mt-2" @click="newWsOpen = true"><Plus class="h-3.5 w-3.5" />{{ t('ws.new') }}</button>
+        </div>
+
+        <template v-if="wss.archived.length">
+          <button class="sec-title flex w-full items-center gap-1 text-left" @click="showArchived = !showArchived">
+            <ChevronRight class="h-3 w-3 transition-transform" :class="{ 'rotate-90': showArchived }" :stroke-width="2.6" />
+            {{ t('nav.archived') }} <span class="ml-1 font-normal">{{ wss.archived.length }}</span>
           </button>
+          <template v-if="showArchived">
+            <div v-for="w in wss.archived" :key="w.id" class="ws-row opacity-70" @click="router.push({ name: 'ws', params: { ws: w.id } })">
+              <span class="w-4" />
+              <WsIcon :icon="w.icon" :color="w.color" :size="22" :name="w.name" />
+              <span class="min-w-0 flex-1 truncate">{{ w.name }}</span>
+              <Archive class="h-3.5 w-3.5 text-text-3" />
+            </div>
+          </template>
         </template>
       </nav>
 
-      <div class="nav-title cap">{{ t('nav.activity') }}</div>
-      <ol class="activity">
-        <li v-for="a in activity" :key="a.id" class="act" :class="[a.kind.toLowerCase(), { failed: !a.ok }]">
-          <span class="act-kind" :class="[a.kind, { failed: !a.ok }]">{{ a.kind }}{{ a.ok ? '' : ' · ' + t('nav.failed') }}</span>
-          <span v-if="a.scope" class="act-target" :title="a.title">{{ a.scope }} <em>· {{ t('px.nServers', { n: a.targets.length }, a.targets.length) }}</em></span>
-          <span v-else class="act-target" :title="a.title">{{ a.targets[0] || '' }}<em v-if="a.targets.length > 1"> +{{ a.targets.length - 1 }}</em></span>
-          <span class="act-meta">{{ t('nav.ago', { d: a.ago }) }} · {{ a.who }}<template v-if="a.until"> · ⏱ {{ t('px.until', { at: a.until }) }}</template></span>
-        </li>
-        <li v-if="!activity.length" class="empty">{{ t('nav.noChanges') }}</li>
-      </ol>
-
       <div class="side-foot">
-        <!-- The repository link lives in the About dialog (click the status line). -->
+        <button ref="userAnchor" class="user-btn" :aria-expanded="userMenu" @click="userMenu = !userMenu">
+          <Avatar :name="displayName" :src="auth.user?.avatar_url" :size="28" />
+          <span class="min-w-0 flex-1 text-left">
+            <span class="block truncate text-[13px] font-medium">{{ displayName }}</span>
+            <span class="block truncate text-[11px] text-text-3">@{{ auth.user?.username }}</span>
+          </span>
+          <Settings class="h-4 w-4 text-text-3" />
+        </button>
         <ServerStatus />
       </div>
     </aside>
 
-    <main class="main">
-      <!-- Impersonation banner: persistent while acting as another user. -->
+    <Popover v-if="userMenu" :anchor="userAnchor" placement="top-start" :width="248" @close="userMenu = false">
+      <button class="menu-item" @click="go('settings')"><Settings class="h-4 w-4 text-text-2" />{{ t('nav.settings') }}</button>
+      <button v-if="auth.can(P.auditRead)" class="menu-item" @click="go('audit')"><ClipboardList class="h-4 w-4 text-text-2" />{{ t('nav.audit') }}</button>
+      <button v-if="auth.isAdminArea" class="menu-item" @click="go('admin')"><ShieldEllipsis class="h-4 w-4 text-text-2" />{{ t('nav.admin') }}</button>
+      <button v-if="auth.isOwner" class="menu-item" @click="go('owner')"><Crown class="h-4 w-4 text-text-2" />{{ t('nav.owner') }}</button>
+      <div class="menu-sep" />
+      <button class="menu-item" @click="prefs.setTheme(prefs.isDark() ? 'light' : 'dark')">
+        <component :is="prefs.isDark() ? Sun : Moon" class="h-4 w-4 text-text-2" />{{ prefs.isDark() ? t('cmd.lightMode') : t('cmd.darkMode') }}
+      </button>
+      <a class="menu-item" href="/api/docs" target="_blank" rel="noopener" @click="userMenu = false"><BookOpen class="h-4 w-4 text-text-2" />{{ t('nav.apiDocs') }}</a>
+      <div class="menu-sep" />
+      <button class="menu-item" @click="logout"><LogOut class="h-4 w-4 text-text-2" />{{ t('nav.signOut') }}</button>
+    </Popover>
+
+    <Popover v-if="wsMenu" :anchor="wsMenuAnchor" placement="right-start" :width="230" @close="wsMenu = ''">
+      <button class="menu-item" @click="openSettings(wsMenu)"><Settings class="h-4 w-4 text-text-2" />{{ t('ws.settings') }}</button>
+      <button class="menu-item" @click="openSettings(wsMenu, 'modules')"><FileText class="h-4 w-4 text-text-2" />{{ t('ws.modules') }}</button>
+      <button class="menu-item" @click="openSettings(wsMenu, 'members')"><Plus class="h-4 w-4 text-text-2" />{{ t('ws.members') }}</button>
+      <div class="menu-sep" />
+      <button class="menu-item" @click="router.push({ name: 'ws-trash', params: { ws: wsMenu } }); wsMenu = ''"><Trash2 class="h-4 w-4 text-text-2" />{{ t('pages.trash') }}</button>
+    </Popover>
+
+    <main class="main" :style="wsStyle">
       <div v-if="auth.impersonator" class="imp-banner">
-        <VenetianMask :size="16" />
+        <VenetianMask class="h-4 w-4" />
         <span>{{ t('impersonate.banner', { user: displayName, admin: auth.impersonator.username }) }}</span>
-        <button class="btn" @click="stopImpersonating">{{ t('impersonate.return') }}</button>
+        <button class="btn btn-sm" @click="stopImpersonating">{{ t('impersonate.return') }}</button>
       </div>
 
-      <header class="topbar">
-        <button
-          class="icon-btn menu-btn"
-          :aria-label="drawerOpen ? t('nav.closeMenu') : t('nav.openMenu')"
-          :title="drawerOpen ? t('nav.closeMenu') : t('nav.openMenu')"
-          aria-controls="sidebar"
-          :aria-expanded="drawerOpen"
-          @click="drawerOpen = !drawerOpen"
-        >
-          <Menu :size="17" />
+      <!-- Narrow screens: a slim bar with the menu and search. -->
+      <header v-if="narrow || sideHidden" class="topbar">
+        <button class="icon-btn" :aria-label="t('nav.openMenu')" aria-controls="sidebar" :aria-expanded="drawerOpen" @click="toggleSide">
+          <Menu v-if="narrow" class="h-5 w-5" />
+          <PanelLeft v-else class="h-[18px] w-[18px]" />
         </button>
-        <div class="crumbs">lb / <template v-for="c in crumbs.path" :key="c">{{ c }} / </template><b>{{ crumbs.last }}</b></div>
-        <div class="top-actions">
-          <span class="cap">{{ updated }}</span>
-          <button class="icon-btn" :aria-label="t('nav.refresh')" :title="t('nav.refresh')" :disabled="refreshing" @click="refreshNow">
-            <Refresh :size="15" :class="{ 'animate-spin': refreshing }" />
-          </button>
-          <button class="icon-btn" :aria-label="prefs.isDark() ? 'Light' : 'Dark'" :title="prefs.isDark() ? 'Light' : 'Dark'" @click="toggleTheme">
-            <Sun v-if="prefs.isDark()" :size="15" />
-            <Moon v-else :size="15" />
-          </button>
-
-          <div v-if="auth.user" class="user">
-            <button class="user-btn" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">
-              <span class="user-name">{{ displayName }}</span>
-              <span class="role" :class="roleClass">{{ roleLabel }}</span>
-              <ChevronDown :size="14" class="chev" :class="{ 'rotate-180': menuOpen }" />
-            </button>
-
-            <div v-if="menuOpen" class="fixed inset-0 z-40" @click="menuOpen = false" />
-            <div v-if="menuOpen" class="menu">
-              <button class="menu-item" @click="goSettings"><Settings :size="16" /> {{ t('nav.settings') }}</button>
-              <div class="menu-div" />
-              <button class="menu-item" @click="copyToken"><Copy :size="16" /> Copy access token</button>
-              <button class="menu-item" @click="rotateToken"><RefreshCw :size="16" /> Rotate token</button>
-              <a class="menu-item" href="/api/docs" target="_blank" rel="noopener" @click="menuOpen = false"><BookOpen :size="16" /> {{ t('nav.apiDocs') }}</a>
-              <div class="menu-div" />
-              <button class="menu-item" @click="logout"><LogOut :size="16" /> {{ t('nav.signOut') }}</button>
-            </div>
-          </div>
+        <div class="flex min-w-0 flex-1 items-center justify-center gap-2 font-semibold">
+          <WsIcon v-if="currentWs" :icon="currentWs.icon" :color="currentWs.color" :size="20" :name="currentWs.name" />
+          <span class="truncate">{{ currentWs?.name ?? branding.appName }}</span>
         </div>
+        <button class="icon-btn" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></button>
       </header>
 
-      <!-- Change freezes: on now, or starting within a day. -->
-      <div v-for="f in freezes" :key="f.id" class="imp-banner freeze" role="status">
-        <span>
-          <b>{{ f.active ? t('px.freezeOn', { until: whenFreeze(f.until) }) : t('px.freezeSoon', { from: whenFreeze(f.from), until: whenFreeze(f.until) }) }}</b>
-          {{ f.reason }}<template v-if="f.rules.length"> · {{ f.rules.join('; ') }}</template> · {{ t('px.freezeAdmins') }}
-        </span>
+      <div class="content" :class="{ 'with-tabs': phone }">
+        <RouterView v-if="ready" />
       </div>
 
-      <template v-if="onProxyPages">
-        <div v-if="px.error" class="alert" role="alert">{{ t('nav.apiDown') }}<pre>{{ px.error }}</pre></div>
-        <template v-for="p in px.data?.proxies ?? []" :key="p.id">
-          <div v-if="!p.reachable" class="alert" role="alert">
-            {{ t('nav.proxyDown', { name: p.name }) }}<template v-if="p.fetched"> {{ t('nav.lastData', { d: fmtDur((clock - new Date(p.fetched).getTime()) / 1000) }) }}</template>
-            <pre>{{ p.error }}</pre>
-          </div>
-        </template>
-      </template>
-
-      <RouterView />
+      <nav v-if="phone" class="tabbar material" aria-label="Modules">
+        <RouterLink v-for="tb in tabs" :key="tb.key" :to="tb.to" class="tab" :class="{ on: tb.on }">
+          <component :is="tb.icon" class="h-[22px] w-[22px]" :stroke-width="tb.on ? 2.3 : 1.8" />
+          <span>{{ tb.label }}</span>
+        </RouterLink>
+      </nav>
     </main>
 
-    <ChangeDialog />
-    <button v-if="showTop" type="button" class="to-top" :aria-label="t('nav.toTop')" :title="t('nav.toTop')" @click="toTop"><ArrowUp :size="17" /></button>
+    <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" />
+    <NewWorkspaceSheet :open="newWsOpen" @close="newWsOpen = false" />
+    <WorkspaceSettingsSheet :open="!!settingsFor" :ws-id="settingsFor" :initial-tab="settingsTab" @close="settingsFor = ''" />
   </div>
 </template>
 
 <style scoped>
-/* Orbit v0's shell (tag v0-python: admin-host/admin/index.html). */
 .app {
+  --side-w: 264px;
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
-  min-height: 100vh;
+  grid-template-columns: var(--side-w) minmax(0, 1fr);
+  min-height: 100dvh;
+  transition: grid-template-columns 0.3s var(--spring);
+}
+.app.side-hidden {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+.app.side-hidden .side {
+  visibility: hidden;
 }
 .side {
   position: sticky;
   top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  background: var(--side);
-  border-right: 1px solid var(--border);
-  padding: 16px 12px 16px;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  border-right: 0.5px solid var(--border);
+  padding-top: env(safe-area-inset-top);
+  overflow: hidden;
+  z-index: 30;
+}
+.side-top {
+  padding: 12px 12px 6px;
 }
 .brand {
   display: flex;
-  gap: 10px;
   align-items: center;
-  padding: 2px 8px 16px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 6px;
+  gap: 9px;
+  padding: 2px 4px 12px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
 .logo {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   flex: none;
-}
-.brand-word {
-  font-size: 19px !important;
-  line-height: 1;
-  letter-spacing: 0.01em;
+  border-radius: 6px;
 }
 .brand-logo {
-  height: 28px;
-  width: auto;
-  max-width: 160px;
+  height: 24px;
+  max-width: 150px;
   object-fit: contain;
   border-radius: 6px;
-  flex: none;
 }
-.brand-text {
-  min-width: 0;
-}
-.brand-text b {
-  display: block;
-  font-size: 14px;
-}
-.brand-text small {
-  color: var(--text-3);
-  font: 11px var(--font-mono);
-}
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.nav-title {
-  padding: 16px 8px 6px;
-}
-.nav-item {
+.search-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 7px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
   border-radius: 8px;
-  color: var(--text-2);
-  border: 1px solid transparent;
-  background: none;
-  text-align: left;
-  cursor: pointer;
+  background: var(--fill);
+  color: var(--text-3);
+  font-size: 13.5px;
+  transition: background 0.15s;
 }
-.nav-item svg {
-  flex: none;
+.search-btn:hover {
+  background: var(--fill-strong);
 }
-.nav-item:hover {
-  background: var(--surface-hover);
-  color: var(--text);
+.search-btn kbd {
+  font: 500 11px var(--font-sans);
+  color: var(--text-3);
 }
-.nav-item.on {
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-}
-.count {
-  margin-left: auto;
-  font: 11px var(--font-mono);
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-2);
-  border: 1px solid var(--border);
-}
-.count.alert {
-  color: #fff;
-  background: var(--warn);
-  font-weight: 700;
-}
-.nav-item.on .count {
-  color: var(--accent);
-}
-.activity {
-  list-style: none;
-  margin: 0;
-  padding: 0 4px;
-  display: grid;
-  gap: 10px;
-  min-height: 0;
+.side-scroll {
+  flex: 1;
   overflow-y: auto;
+  padding: 6px 10px 16px;
 }
-.act {
-  border-left: 2px solid var(--ok);
-  padding: 1px 0 1px 10px;
-  min-width: 0;
+.smart {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 4px 2px 6px;
 }
-.act.disable {
-  border-color: var(--warn);
+.smart-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border), 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: transform 0.15s var(--ease);
 }
-.act.drain {
-  border-color: var(--drain);
+html.dark .smart-tile {
+  background: rgba(255, 255, 255, 0.07);
 }
-.act.restore {
-  border-color: var(--accent);
+.smart-tile:active {
+  transform: scale(0.97);
 }
-.act.reset {
-  border-color: var(--text-3);
+.smart-tile.on,
+html.dark .smart-tile.on {
+  background: var(--accent);
+  color: #fff;
 }
-.act.failed {
-  border-color: var(--crit);
+.smart-tile.on .tile {
+  --tile: #fff !important;
+  color: var(--accent);
 }
-.act-target {
-  display: block;
-  font: 12px var(--font-mono);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.act-target em {
+.sec-title {
+  padding: 16px 8px 5px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-3);
-  font-style: normal;
 }
-.act-meta {
-  font: 11px var(--font-mono);
-  color: var(--text-3);
-}
-.activity .empty {
-  color: var(--text-3);
-  font-size: 12.5px;
-}
-.to-top {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 6;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
+.add-btn {
   display: grid;
   place-items: center;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow);
-  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--text-2);
+}
+.add-btn:hover {
+  background: var(--fill);
+}
+.ws-block + .ws-block {
+  margin-top: 2px;
+}
+.ws-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 6px 0 2px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: default;
+}
+.ws-row:hover {
+  background: var(--surface-hover);
+}
+.ws-row.on {
+  background: var(--fill-strong);
+}
+.ws-row .chev {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  color: var(--text-3);
+}
+.ws-row .chev:hover {
+  background: var(--fill);
+}
+.ws-row .more {
+  display: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--text-2);
+}
+.ws-row:hover .more {
+  display: grid;
+}
+.ws-row .more:hover {
+  background: var(--fill);
+}
+.ws-mods {
+  padding: 2px 0 6px 22px;
+}
+.empty-ws {
+  margin: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--border-2);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-2);
 }
 .side-foot {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top: 0.5px solid var(--border);
+}
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px;
+  border-radius: 9px;
+}
+.user-btn:hover {
+  background: var(--surface-hover);
 }
 
 .main {
   min-width: 0;
-  padding: 16px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.content {
+  flex: 1;
+  min-height: 0;
+}
+.content.with-tabs {
+  padding-bottom: calc(58px + env(safe-area-inset-bottom));
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: calc(48px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--border);
 }
 .imp-banner {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-weight: 600;
-  color: var(--warn-text);
+  padding: 8px 16px;
   background: var(--warn-bg);
-  border: 1px solid var(--warn-border);
+  color: var(--warn-text);
+  font-size: 13px;
 }
-.imp-banner.freeze {
-  font-weight: 500;
-  color: var(--text);
-  background: var(--crit-bg);
-  border-color: var(--crit-border);
-}
-.imp-banner.freeze b {
-  color: var(--crit);
-  margin-right: 6px;
-}
-.imp-banner span {
-  flex: 1;
-  min-width: 0;
-}
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-  min-height: 36px;
-}
-.crumbs {
-  font: 11.5px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-.crumbs b {
-  color: var(--text);
-  font-weight: 600;
-}
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-}
-.icon-btn:hover {
-  background: var(--surface-hover);
-}
-.user {
-  position: relative;
-  padding-left: 8px;
-  margin-left: 4px;
-  border-left: 1px solid var(--border);
-  min-width: 0;
-}
-.user-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border: 0;
-  border-radius: 7px;
-  background: none;
-  color: var(--text);
-  cursor: pointer;
-}
-.user-btn:hover {
-  background: var(--surface-hover);
-}
-.user-name {
-  font-weight: 600;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.role {
-  font: 600 10.5px var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 999px;
-  color: var(--text-2);
-  background: var(--surface-3);
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.role.admin {
-  color: var(--violet);
-  background: color-mix(in srgb, var(--violet) 14%, transparent);
-}
-.role.operator {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.role.off {
-  color: var(--crit);
-  background: var(--crit-bg);
-}
-.chev {
-  color: var(--text-3);
-  transition: transform var(--speed);
-}
-.menu {
-  position: absolute;
+.tabbar {
+  position: fixed;
+  left: 0;
   right: 0;
-  z-index: 50;
-  margin-top: 6px;
-  width: 220px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  padding: 4px;
-  box-shadow: var(--shadow);
-}
-.menu-item {
+  bottom: 0;
+  z-index: 25;
   display: flex;
-  width: 100%;
+  justify-content: space-around;
+  padding: 6px 4px calc(4px + env(safe-area-inset-bottom));
+  border-top: 0.5px solid var(--border);
+}
+.tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  border-radius: 7px;
-  padding: 7px 10px;
-  font-size: 12.5px;
-  color: var(--text-2);
-  background: none;
-  border: none;
-  cursor: pointer;
+  gap: 2px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-3);
 }
-.menu-item:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-.menu-div {
-  margin: 4px 0;
-  border-top: 1px solid var(--border);
-}
-
-.menu-btn {
-  display: none;
-  flex: none;
+.tab.on {
+  color: var(--ws);
 }
 .side-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 55;
-  background: rgba(15, 23, 42, 0.45);
+  z-index: 29;
+  background: var(--backdrop);
 }
 
-/* Phones and narrow tablets: the sidebar is a drawer (menu button in the top
-   bar). Insets keep content clear of the notch / home bar when installed
-   (viewport-fit=cover); they're 0 everywhere else. */
 @media (max-width: 1023px) {
   .app {
     grid-template-columns: minmax(0, 1fr);
   }
   .side {
     position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 60;
-    width: min(272px, 85vw);
-    height: 100dvh;
-    padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-    box-shadow: var(--shadow);
-    transform: translateX(-100%);
-    visibility: hidden;
-    transition:
-      transform 0.22s ease,
-      visibility 0.22s;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(var(--side-w), 85vw);
+    background: var(--side-solid);
+    transform: translateX(-102%);
+    transition: transform 0.32s var(--spring);
+    box-shadow: var(--shadow-lg);
   }
   .side.open {
     transform: none;
-    visibility: visible;
-  }
-  .menu-btn {
-    display: grid;
-  }
-  .topbar {
-    justify-content: flex-start;
-  }
-  .crumbs {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .main {
-    padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  }
-  .to-top {
-    right: max(16px, env(safe-area-inset-right));
-    bottom: max(16px, env(safe-area-inset-bottom));
-  }
-}
-@media (max-width: 640px) {
-  .top-actions > .cap,
-  .user-name {
-    display: none;
-  }
-  .user {
-    padding-left: 4px;
-    margin-left: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .side {
-    transition: none;
   }
 }
 </style>

@@ -103,7 +103,7 @@ func New(d Deps) *gin.Engine {
 		cc := cors.DefaultConfig()
 		cc.AllowOrigins = d.Cfg.CORSOrigins
 		cc.AllowCredentials = true
-		cc.AddAllowHeaders("Authorization")
+		cc.AddAllowHeaders("Authorization", "X-Orbit-Client", "X-CSRF-Token")
 		r.Use(cors.New(cc))
 	}
 

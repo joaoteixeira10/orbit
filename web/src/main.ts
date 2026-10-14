@@ -8,7 +8,6 @@ import { useBrandingStore } from './stores/branding'
 import { i18n, currentLocale } from './i18n'
 import { installStepUp } from './lib/stepup'
 import './styles/main.css'
-import './styles/lb.css'
 
 async function bootstrap() {
   const app = createApp(App)

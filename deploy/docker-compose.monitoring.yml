@@ -5,8 +5,8 @@
 #   2. From this deploy/ directory:  docker compose -f docker-compose.monitoring.yml up -d
 #   3. Grafana: http://localhost:3000 (admin / admin) → Dashboards → "Orbit".
 #
-# Prometheus scrapes host.docker.internal:8080 (Orbit on the host). If LB
-# Admin runs in another compose project, put its service name in
+# Prometheus scrapes host.docker.internal:8080 (Orbit on the host). If Orbit
+# runs in another compose project, put its service name in
 # prometheus.yml (e.g. "api:8080") and attach this stack to that network.
 services:
   prometheus:

@@ -233,7 +233,9 @@ func (h *Handlers) getPage(c *gin.Context) {
 	}
 	var n int64
 	h.db.Model(&models.PageFavorite{}).Where("user_id = ? AND page_id = ?", auth.UserID(c), p.ID).Count(&n)
-	canEdit := roleRank(m.Role) >= roleRank(models.WSEditor) && !auth.Effective(c).ReadOnly && p.TrashedAt == nil
+	var ws models.Workspace
+	h.db.Select("id", "archived_at").First(&ws, "id = ?", p.WorkspaceID)
+	canEdit := roleRank(m.Role) >= roleRank(models.WSEditor) && !auth.Effective(c).ReadOnly && p.TrashedAt == nil && ws.ArchivedAt == nil
 	c.JSON(http.StatusOK, pageResponse{Page: p, Favorite: n > 0, CanEdit: canEdit})
 }
 

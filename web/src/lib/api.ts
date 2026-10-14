@@ -1,8 +1,12 @@
-// Fetch wrapper for the /api/v1 surface with transparent access-token refresh.
-// In M7 this is replaced by an orval-generated typed client built from the
-// OpenAPI spec; for now it gives the app a single place for auth + errors.
+// Fetch wrapper for the /api/v1 surface with transparent access-token refresh:
+// the app's single place for auth and errors.
 
 const BASE = '/api/v1'
+
+// CLIENT_ID names this tab. It rides on every request (X-Orbit-Client) and
+// comes back on the live updates a request caused, so the tab that made a
+// change doesn't re-fetch what it already has.
+export const CLIENT_ID = Math.random().toString(36).slice(2) + Date.now().toString(36)
 
 // The access token lives ONLY in memory (never localStorage): an XSS can't read
 // a credential that isn't persisted. The refresh token is an HttpOnly cookie the
@@ -95,6 +99,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    // The parsed JSON body of the error (e.g. a 409 carries the newer page).
+    public body?: any,
   ) {
     super(message)
   }
@@ -135,7 +141,7 @@ async function doRefresh(): Promise<boolean> {
 export function tryRefresh(): Promise<boolean> {
   if (!refreshInFlight) {
     const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined
-    const run = locks ? locks.request('lb-auth-refresh', doRefresh) : doRefresh()
+    const run = locks ? locks.request('orbit-auth-refresh', doRefresh) : doRefresh()
     refreshInFlight = run.finally(() => {
       refreshInFlight = null
     })
@@ -147,6 +153,7 @@ async function rawFetch(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)
   if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+  headers.set('X-Orbit-Client', CLIENT_ID)
   const csrf = readCookie('orbit_csrf')
   if (csrf) headers.set('X-CSRF-Token', csrf) // needed by /auth/logout; harmless elsewhere
   // Include cookies so the HttpOnly refresh cookie rides on the /auth/* calls.
@@ -182,13 +189,14 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
 
   if (!res.ok) {
     let msg = res.statusText
+    let body: any
     try {
-      const body = await res.json()
+      body = await res.json()
       if (body?.error) msg = body.error
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, msg)
+    throw new ApiError(res.status, msg, body)
   }
   if (res.status === 204) return undefined as T
   return (await res.json()) as T

@@ -2,16 +2,20 @@
 import { watch, onUnmounted } from 'vue'
 import { X } from 'lucide-vue-next'
 
-// Overlay renders its content either as a right-hand drawer ('side') or a
-// centered modal ('centered'). The cert-detail layout honors the per-user pref.
+// Overlay is Orbit's sheet: a centred panel on wide screens, a bottom sheet
+// on phones ('centered'), or an inspector sliding in from the right ('side').
+// The title row is optional; #actions sits at its right (e.g. Done).
 const props = withDefaults(
-  defineProps<{ open: boolean; title?: string; mode?: 'side' | 'centered'; wide?: boolean }>(),
-  { mode: 'centered', wide: false },
+  defineProps<{ open: boolean; title?: string; mode?: 'side' | 'centered'; wide?: boolean; size?: 'sm' | 'md' | 'lg' | 'xl' }>(),
+  { mode: 'centered', wide: false, size: 'md' },
 )
 const emit = defineEmits<{ close: [] }>()
 
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
+  if (e.key === 'Escape') {
+    e.stopPropagation()
+    emit('close')
+  }
 }
 
 // Escape-to-close via a document listener (the overlay element isn't reliably
@@ -23,51 +27,52 @@ watch(
     if (o) document.addEventListener('keydown', onKey)
     else document.removeEventListener('keydown', onKey)
   },
+  { immediate: true },
 )
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   document.body.style.overflow = ''
 })
+
+const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[680px]', xl: 'sm:max-w-[880px]' }
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition name="fade">
-      <div
-        v-if="open"
-        class="fixed inset-0 z-50 bg-[rgba(15,23,42,.45)]"
-        tabindex="-1"
-        @click.self="emit('close')"
-        @keydown="onKey"
-      >
-        <!-- Centered modal -->
+    <Transition name="sheet">
+      <div v-if="open" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style="background: var(--backdrop)" @mousedown.self="emit('close')">
+        <!-- Sheet -->
         <div
           v-if="mode === 'centered'"
           role="dialog"
           aria-modal="true"
           :aria-label="title"
-          class="absolute left-1/2 top-1/2 max-h-[88vh] w-full -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-border bg-surface shadow-soft"
-          :class="wide ? 'max-w-3xl' : 'max-w-lg'"
+          class="sheet-panel sheet flex max-h-[92dvh] w-full flex-col overflow-hidden sm:max-h-[86vh] sm:w-[calc(100%-32px)]"
+          :class="wide ? widths.lg : widths[size]"
         >
-          <header v-if="title" class="flex items-center justify-between border-b border-border px-5 py-3.5">
-            <h2 class="text-[15px] font-semibold">{{ title }}</h2>
-            <button class="text-text-3 hover:text-text" aria-label="Close" @click="emit('close')"><X class="h-5 w-5" /></button>
+          <header v-if="title || $slots.actions" class="flex shrink-0 items-center gap-3 px-5 pb-2 pt-4">
+            <h2 class="title-3 min-w-0 flex-1 truncate">{{ title }}</h2>
+            <slot name="actions" />
+            <button class="icon-btn -mr-1.5 h-7 w-7 rounded-full bg-fill" :aria-label="'Close'" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
           </header>
-          <div class="p-5"><slot /></div>
+          <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-2"><slot /></div>
+          <footer v-if="$slots.footer" class="flex shrink-0 items-center justify-end gap-2 border-t-[0.5px] border-border px-5 py-3">
+            <slot name="footer" />
+          </footer>
         </div>
 
-        <!-- Right drawer -->
+        <!-- Inspector -->
         <div
           v-else
           role="dialog"
           aria-modal="true"
           :aria-label="title"
-          class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col border-l border-border bg-surface shadow-soft"
+          class="sheet-panel absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col bg-surface shadow-lg2"
         >
-          <header v-if="title" class="flex items-center justify-between border-b border-border px-5 py-3.5">
-            <h2 class="text-[15px] font-semibold">{{ title }}</h2>
-            <button class="text-text-3 hover:text-text" aria-label="Close" @click="emit('close')"><X class="h-5 w-5" /></button>
+          <header v-if="title" class="flex items-center justify-between border-b-[0.5px] border-border px-5 py-3.5">
+            <h2 class="title-3">{{ title }}</h2>
+            <button class="icon-btn h-7 w-7 rounded-full bg-fill" aria-label="Close" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
           </header>
           <div class="flex-1 overflow-y-auto p-5"><slot /></div>
         </div>
@@ -77,12 +82,19 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease;
+.sheet {
+  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  box-shadow: var(--shadow-lg);
+  padding-bottom: env(safe-area-inset-bottom);
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+@media (min-width: 640px) {
+  .sheet {
+    border-radius: 16px;
+    padding-bottom: 0;
+  }
+}
+:global(html.dark) .sheet {
+  background: #2c2c2e;
 }
 </style>

@@ -23,6 +23,7 @@ interface MeResponse {
   webauthn_enabled: boolean
   is_owner: boolean
   features: Record<string, boolean>
+  can_create_workspaces: boolean
   impersonator?: { id: string; username: string }
 }
 
@@ -42,7 +43,7 @@ interface TokenResponse {
 // is required (TOTP and/or a passkey challenge to offer the user).
 export type LoginResult = { status: 'ok' } | { status: '2fa'; otp: boolean; webauthn?: WebAuthnChallenge }
 
-const emptyPrivs: Privileges = { superuser: false, global: [], all_servers: [], scopes: {} }
+const emptyPrivs: Privileges = { superuser: false, global: [] }
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -55,6 +56,7 @@ export const useAuthStore = defineStore('auth', {
     webauthnEnabled: false,
     isOwner: false,
     features: {} as Record<string, boolean>,
+    canCreateWorkspaces: false,
     // The real admin when the current session is an impersonation, else null.
     impersonator: null as { id: string; username: string } | null,
   }),
@@ -66,7 +68,7 @@ export const useAuthStore = defineStore('auth', {
     isAdminArea: (s) =>
       s.isOwner ||
       s.privileges.superuser ||
-      ['users.manage', 'roles.manage', 'proxies.manage'].some((p) => s.privileges.global.includes(p)) ||
+      ['users.manage', 'roles.manage'].some((p) => s.privileges.global.includes(p)) ||
       ['settings.branding', 'settings.notifications'].some((p) => s.privileges.global.includes(p)),
   },
   actions: {
@@ -79,14 +81,6 @@ export const useAuthStore = defineStore('auth', {
     // explicitly lists the privilege.
     canOwnerGated(priv: string): boolean {
       return this.isOwner || this.privileges.global.includes(priv)
-    },
-    // Does the user hold a server-scoped privilege on at least some servers?
-    // (For showing a feature; whether a given server is in scope comes with the
-    // proxy state from the server, which is authoritative.)
-    canAnywhere(priv: string): boolean {
-      if (this.privileges.superuser) return true
-      if (this.privileges.all_servers.includes(priv)) return true
-      return (this.privileges.scopes[priv] || []).length > 0
     },
 
     // Password login: returns {status:'ok'} when authenticated, or {status:'2fa'}
@@ -161,6 +155,7 @@ export const useAuthStore = defineStore('auth', {
         this.webauthnEnabled = me.webauthn_enabled
         this.isOwner = me.is_owner ?? false
         this.features = me.features ?? {}
+        this.canCreateWorkspaces = me.can_create_workspaces ?? false
         this.impersonator = me.impersonator ?? null
         this.hasToken = true
         if (me.user.prefs) usePrefsStore().hydrateFromServer(me.user.prefs)
@@ -199,6 +194,7 @@ export const useAuthStore = defineStore('auth', {
       this.hasPasskey = false
       this.isOwner = false
       this.features = {}
+      this.canCreateWorkspaces = false
       this.impersonator = null
       import('@/lib/live').then((m) => m.stopLiveUpdates())
     },

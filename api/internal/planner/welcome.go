@@ -36,18 +36,17 @@ func WelcomeDoc(workspace, locale string) string {
 		return en
 	}
 	doc := node{Type: "doc", Content: []node{
-		heading(1, t("Welcome to ", "Bem-vindo a ")+workspace),
-		para(txt(t("This is a page. Write anything here: notes, plans, a reading list. Type ",
-			"Isto é uma página. Escreve o que quiseres: notas, planos, uma lista de leituras. Escreve ")),
+		para(txt(t("This is "+workspace+"’s first page. Write anything here: notes, plans, a reading list. Type ",
+			"Esta é a primeira página de "+workspace+". Escreva o que quiser: notas, planos, uma lista de leituras. Escreva ")),
 			bold("/"), txt(t(" for headings, checklists, tables, quotes and more.",
 				" para títulos, listas de verificação, tabelas, citações e mais."))),
-		heading(2, t("Try it", "Experimenta")),
+		heading(2, t("Try it", "Experimente")),
 		{Type: "taskList", Content: []node{
-			todo(t("Open this page and tick me", "Abre esta página e marca-me"), true),
-			todo(t("Type / on an empty line", "Escreve / numa linha vazia"), false),
-			todo(t("Add a task in Tasks, then drag it on the Board", "Cria uma tarefa em Tarefas e arrasta-a no Quadro"), false),
-			todo(t("Give a task a due date and find it in the Calendar", "Dá uma data a uma tarefa e encontra-a no Calendário"), false),
-			todo(t("Press ⌘K (Ctrl+K) to search everything", "Carrega ⌘K (Ctrl+K) para procurar em tudo"), false),
+			todo(t("Open this page and tick me", "Abra esta página e marque-me"), true),
+			todo(t("Type / on an empty line", "Escreva / numa linha vazia"), false),
+			todo(t("Add a task in Tasks, then drag it on the Board", "Crie uma tarefa em Tarefas e arraste-a no Quadro"), false),
+			todo(t("Give a task a due date and find it in the Calendar", "Dê uma data a uma tarefa e encontre-a no Calendário"), false),
+			todo(t("Press ⌘K (Ctrl+K) to search everything", "Carregue em ⌘K (Ctrl+K) para procurar em tudo"), false),
 		}},
 		{Type: "blockquote", Content: []node{para(txt(t(
 			"Workspace settings (the ⋯ next to its name) turn modules on and off and invite people.",

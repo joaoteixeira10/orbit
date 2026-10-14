@@ -4,35 +4,28 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { onLiveEvent } from '@/lib/live'
 import { useFlash } from '@/lib/highlight'
-import { usersApi, apiTokensAdminApi, uiSettingsApi, rolesApi, settingsApi, notifyApi, securityApi, oidcApi, featuresApi, ownerApi, type CreateUserInput, type RoleInput } from '@/api'
+import { usersApi, apiTokensAdminApi, rolesApi, settingsApi, notifyApi, securityApi, oidcApi, featuresApi, ownerApi, type CreateUserInput, type RoleInput } from '@/api'
 import type { User, Role, NotifConfig, OIDCConfig, APIToken } from '@/api/types'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
 import { fmtDate } from '@/lib/format'
-import { P, GLOBAL_PRIVILEGES, SCOPED_PRIVILEGES, RULE_KEYS } from '@/lib/privileges'
+import { P, GLOBAL_PRIVILEGES } from '@/lib/privileges'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import RoleSelect from '@/components/ui/RoleSelect.vue'
-import ProxiesAdmin from '@/components/admin/ProxiesAdmin.vue'
-import { useProxiesStore } from '@/stores/proxies'
-import { parseRules, matchesRules } from '@/lib/proxy'
 import Toggle from '@/components/ui/Toggle.vue'
 import BackupCard from '@/components/admin/BackupCard.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
-  Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck, Network, RefreshCw,
-  Code2, Sparkles, Type, Info,
+  Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
 } from 'lucide-vue-next'
-import { usePrefsStore } from '@/stores/prefs'
-import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 
 const auth = useAuthStore()
 const toast = useToastStore()
 const branding = useBrandingStore()
-const prefs = usePrefsStore()
 const router = useRouter()
 const { t, locale } = useI18n()
 
@@ -45,7 +38,7 @@ function ago(iso: string): string {
   return rtf.format(0, 'minute')
 }
 
-type Tab = 'users' | 'roles' | 'tokens' | 'proxies' | 'branding' | 'notifications' | 'security' | 'sso' | 'owner'
+type Tab = 'users' | 'roles' | 'tokens' | 'branding' | 'notifications' | 'security' | 'sso' | 'owner'
 
 // This view backs two top-level sections: the admin area (/admin) and the
 // owner-only area (/owner), selected by the route's `area` meta. Each area
@@ -72,7 +65,6 @@ const navGroups = computed(() => {
   if (auth.can(P.usersManage)) mgmt.push({ id: 'users', label: t('admin.users'), icon: Users, count: users.value.length })
   if (auth.can(P.rolesManage)) mgmt.push({ id: 'roles', label: t('admin.roles'), icon: ShieldCheck, count: roles.value.length })
   if (auth.can(P.usersManage)) mgmt.push({ id: 'tokens', label: t('admin.apiTokens'), icon: Terminal })
-  if (auth.can(P.proxiesManage)) mgmt.push({ id: 'proxies', label: t('nav.proxies'), icon: Network })
   const sys: { id: Tab; label: string; icon: any; count?: number }[] = []
   // Branding/notifications are owner concerns and live under the Owner section.
   // A delegated (non-owner) admin granted the owner-gated privilege still manages
@@ -330,26 +322,16 @@ async function removeUser() {
 }
 
 // ---------- Roles ----------
-// A server-scoped grant in the editor: every server, or the servers matching
-// the scope rules (one per line in the textarea).
-interface GrantForm {
-  all_servers: boolean
-  rulesText: string
-  privileges: string[]
-}
+// A role is a set of instance privileges. What someone may do inside a
+// workspace is their role there, set by its owners.
 interface RoleForm {
   id?: string
   name: string
   description: string
   global_privileges: string[]
-  grants: GrantForm[]
 }
 const showRole = ref(false)
-const roleForm = reactive<RoleForm>({ name: '', description: '', global_privileges: [], grants: [] })
-
-function newGrant(): GrantForm {
-  return { all_servers: true, rulesText: '', privileges: [] }
-}
+const roleForm = reactive<RoleForm>({ name: '', description: '', global_privileges: [] })
 // Privileges the current user may grant (owner-only ones excluded for non-owners,
 // but any already on the role are preserved so a non-owner edit doesn't drop them).
 function grantableGlobals(): string[] {
@@ -365,7 +347,7 @@ function toggleAllGlobal() {
   roleForm.global_privileges = allGlobalSelected.value ? lockedOn : Array.from(new Set([...lockedOn, ...g]))
 }
 function openCreateRole() {
-  Object.assign(roleForm, { id: undefined, name: '', description: '', global_privileges: [], grants: [newGrant()] })
+  Object.assign(roleForm, { id: undefined, name: '', description: '', global_privileges: [] })
   showRole.value = true
 }
 function openEditRole(r: Role) {
@@ -373,12 +355,6 @@ function openEditRole(r: Role) {
   roleForm.name = r.name
   roleForm.description = r.description
   roleForm.global_privileges = [...r.global_privileges]
-  roleForm.grants = r.grants.map((g) => ({
-    all_servers: g.all_servers,
-    rulesText: (g.rules ?? []).join('\n'),
-    privileges: [...g.privileges],
-  }))
-  if (roleForm.grants.length === 0) roleForm.grants = [newGrant()]
   showRole.value = true
 }
 async function saveRole() {
@@ -386,11 +362,6 @@ async function saveRole() {
     name: roleForm.name,
     description: roleForm.description,
     global_privileges: roleForm.global_privileges,
-    grants: roleForm.grants.map((g) => ({
-      all_servers: g.all_servers,
-      rules: g.all_servers ? [] : g.rulesText.split('\n').map((l) => l.trim()).filter(Boolean),
-      privileges: g.privileges,
-    })),
   }
   // Editing a role we currently hold changes our own privileges — refresh them.
   const affectsSelf = !!roleForm.id && (auth.user?.roles ?? []).some((r) => r.id === roleForm.id)
@@ -426,7 +397,7 @@ const canManageMembers = computed(() => auth.can(P.usersManage))
 const roleMembers = (r: Role) => users.value.filter((u) => u.roles?.some((x) => x.id === r.id))
 const nonMembers = (r: Role) => users.value.filter((u) => !u.roles?.some((x) => x.id === r.id))
 const addMember = reactive<Record<string, string | undefined>>({})
-const privLabel = (id: string) => [...GLOBAL_PRIVILEGES, ...SCOPED_PRIVILEGES].find((p) => p.id === id)?.label ?? id
+const privLabel = (id: string) => GLOBAL_PRIVILEGES.find((p) => p.id === id)?.label ?? id
 async function setMember(u: User, r: Role, on: boolean) {
   const ids = (u.roles ?? []).map((x) => x.id).filter((id) => id !== r.id)
   if (on) ids.push(r.id)
@@ -468,56 +439,15 @@ async function revokeToken() {
   }
 }
 
-// Live "matches N servers" under a grant's rules (against the servers you can see).
-const px = useProxiesStore()
-
-// Owner → Live updates: the refresh interval.
-const refreshSeconds = ref(10)
-watch(
-  () => px.data?.ui?.refresh_seconds,
-  (v) => v && (refreshSeconds.value = v),
-  { immediate: true },
-)
-const refreshIsCustom = computed(() => !!px.data?.ui && px.data.ui.refresh_seconds !== px.data.ui.default_refresh_seconds)
-async function saveRefresh() {
-  const n = Math.round(refreshSeconds.value)
-  if (!(n >= 1 && n <= 300)) {
-    toast.error(t('owner.refreshRange'))
-    return
-  }
-  try {
-    await uiSettingsApi.setRefresh(n)
-    toast.success(t('owner.refreshSaved', { n }))
-    await px.fetch()
-  } catch (e: any) {
-    toast.error(e.message)
-  }
-}
-async function resetRefresh() {
-  try {
-    await uiSettingsApi.setRefresh(0)
-    await px.fetch()
-    toast.success(t('owner.refreshSaved', { n: px.data?.ui?.refresh_seconds ?? 10 }))
-  } catch (e: any) {
-    toast.error(e.message)
-  }
-}
-function ruleMatch(text: string): { hits: string[]; error: string } {
-  const { rules, error } = parseRules(text)
-  if (error) return { hits: [], error }
-  return { hits: [...new Set(px.targets.filter((x) => matchesRules(x, rules)).map((x) => `${x.label} @ ${x.proxy}`))], error: '' }
-}
-
 function roleSummary(r: Role): string {
   const parts: string[] = []
   if (r.superuser) return 'Full access (superuser)'
-  if (r.global_privileges.length) parts.push(`${r.global_privileges.length} global`)
-  if (r.grants.length) parts.push(`${r.grants.length} server grant(s)`)
+  if (r.global_privileges.length) parts.push(`${r.global_privileges.length} privilege(s)`)
   return parts.join(' · ') || 'no privileges'
 }
 
 // ---------- Branding ----------
-const accentSwatches = ['#07cab3', '#185fa5', '#7c3aed', '#16a34a', '#d97706', '#dc2626', '#db2777']
+const accentSwatches = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500', '#34C759', '#30B0C7']
 const brandForm = reactive({
   app_name: '',
   accent_color: '',
@@ -525,34 +455,15 @@ const brandForm = reactive({
   favicon_data_url: '',
   show_app_name: true,
   show_logo: true,
-  // Developer themes (a closed curated set; the accent is locked to the theme while on).
-  developer_themes_enabled: false,
-  developer_theme: 'blue' as DevThemeId,
-  asset_source_logo: 'theme' as 'theme' | 'keep',
-  asset_source_wordmark: 'theme' as 'theme' | 'keep',
-  asset_source_favicon: 'theme' as 'theme' | 'keep',
 })
 const customLoginMessage = ref(false)
 const loginMessage = ref('')
 
-// The curated themes (the grid) and the one selected.
-const devThemeList = DEV_THEME_LIST
-const activeTheme = computed(() => DEV_THEME_LIST.find((x) => x.id === brandForm.developer_theme) ?? DEV_THEME_LIST[0])
-// Accent for the preview: the theme's when the flag is on (Ink flips with
-// light/dark), else the owner's chosen accent, or none = default.
+// Accent for the preview: the owner's chosen accent, or none = default.
 const previewAccent = computed(() => {
-  if (brandForm.developer_themes_enabled) {
-    const r = resolveThemeAccent(activeTheme.value, prefs.isDark())
-    return { accent: r.accent, strong: r.accentStrong, fg: r.onAccent }
-  }
   const a = brandForm.accent_color
   return a ? { accent: a, strong: `color-mix(in srgb, ${a} 78%, #000)`, fg: '#fff' } : null
 })
-// The selected theme's crest, and which mark / wordmark / favicon the preview shows.
-const previewCrest = computed(() => resolveCrest(activeTheme.value, prefs.isDark()))
-const previewLogoTheme = computed(() => brandForm.developer_themes_enabled && brandForm.asset_source_logo === 'theme')
-const previewWordTheme = computed(() => brandForm.developer_themes_enabled && brandForm.asset_source_wordmark === 'theme')
-const previewFavTheme = computed(() => brandForm.developer_themes_enabled && brandForm.asset_source_favicon === 'theme')
 
 // The Live preview button reuses the real .btn-primary, but with the *previewed*
 // accent vars scoped to it (same derivation the branding store applies on save),
@@ -575,11 +486,6 @@ function loadBrandForm() {
   brandForm.favicon_data_url = branding.faviconDataURL
   brandForm.show_app_name = branding.showAppName
   brandForm.show_logo = branding.showLogo
-  brandForm.developer_themes_enabled = branding.devThemesEnabled
-  brandForm.developer_theme = branding.devTheme
-  brandForm.asset_source_logo = branding.assetSourceLogo
-  brandForm.asset_source_wordmark = branding.assetSourceWordmark
-  brandForm.asset_source_favicon = branding.assetSourceFavicon
   loginMessage.value = branding.loginMessage
   customLoginMessage.value = !!branding.loginMessage
 }
@@ -611,40 +517,10 @@ const testing = ref('')
 async function loadNotifConfig() {
   const cfg = await notifyApi.getConfig()
   // Tolerate older payloads.
-  const defaults: NotifConfig['events'] = { server_down: false, proxy_down: false, changes: false, maint_expiring: false, drift: false, requests: false, certificates: false, channels: null, emails: '' }
-  cfg.events = Object.assign(defaults, cfg.events || {})
   if (!cfg.webhook) cfg.webhook = { enabled: false, url: '', secret: '' }
   if (!cfg.teams) cfg.teams = { enabled: false, webhook_url: '' }
   if (!cfg.slack) cfg.slack = { enabled: false, webhook_url: '' }
   notifCfg.value = cfg
-}
-// Server events: the toggles, and the shared channels they go to.
-const serverEvents = [
-  { key: 'server_down', label: 'A server goes down, and is back', hint: 'Fails its health checks (repeats within 2 minutes are held back)' },
-  { key: 'proxy_down', label: 'An agent is unreachable, and is back', hint: 'Two failed polls in a row' },
-  { key: 'changes', label: 'Changes', hint: 'Enable, disable, drain, restore — by a user, lbctl or Orbit itself (timers, drains), with who and why' },
-  { key: 'maint_expiring', label: 'A timed maintenance ends soon', hint: '15 minutes before, with who set it and why' },
-  { key: 'requests', label: 'Maintenance requests', hint: 'Requests, approvals and denials, grace periods for pending extensions (approvers and requesters get them by email anyway)' },
-  { key: 'drift', label: 'Drift and failures', hint: 'A server is not in its desired state; a timer, a drain or an automatic restore failed' },
-  { key: 'certificates', label: 'Certificates', hint: 'A certificate a proxy (or agent) serves expires soon, was replaced, or its automatic renewal failed (with the certificates feature on)' },
-] as const
-const sharedChannels = [
-  { key: 'discord', label: 'Discord' },
-  { key: 'telegram', label: 'Telegram' },
-  { key: 'ntfy', label: 'ntfy' },
-  { key: 'gotify', label: 'Gotify' },
-  { key: 'teams', label: 'Teams' },
-  { key: 'slack', label: 'Slack' },
-]
-const enabledShared = computed(() => sharedChannels.filter((c) => (notifCfg.value as any)?.[c.key]?.enabled))
-function eventChannelOn(key: string) {
-  const ch = notifCfg.value?.events.channels
-  return ch == null || ch.includes(key)
-}
-function toggleEventChannel(key: string, on: boolean) {
-  const ev = notifCfg.value!.events
-  const cur = ev.channels ?? enabledShared.value.map((c) => c.key)
-  ev.channels = on ? [...new Set([...cur, key])] : cur.filter((c) => c !== key)
 }
 async function saveNotifConfig() {
   if (!notifCfg.value) return
@@ -905,10 +781,10 @@ function switchTab(t: Tab) {
 </script>
 
 <template>
-  <div>
-    <header class="mb-4">
-      <h1 class="text-[19px] font-semibold tracking-tight">{{ isOwnerArea ? t('admin.ownerTitle') : t('admin.title') }}</h1>
-      <p class="mt-1 text-[13px] text-text-2">{{ isOwnerArea ? t('admin.ownerSubtitle') : t('admin.subtitle') }}</p>
+  <div class="admin-page">
+    <header class="mb-6">
+      <h1 class="large-title">{{ isOwnerArea ? t('admin.ownerTitle') : t('admin.title') }}</h1>
+      <p class="subhead mt-1">{{ isOwnerArea ? t('admin.ownerSubtitle') : t('admin.subtitle') }}</p>
     </header>
 
     <!-- Section tabs (v0's sub-tabs) -->
@@ -1023,24 +899,13 @@ function switchTab(t: Tab) {
                 <div v-if="r.global_privileges.length" class="mb-2 flex flex-wrap gap-1">
                   <span v-for="p in r.global_privileges" :key="p" class="rounded bg-surface-3 px-1.5 py-0.5 text-[11.5px] text-text-2">{{ privLabel(p) }}</span>
                 </div>
-                <div v-for="(g, i) in r.grants" :key="i" class="mb-1.5 text-[12px]">
-                  <span v-if="g.all_servers" class="font-medium">{{ t('admin.everyServer') }}</span>
-                  <span v-else class="inline-flex flex-wrap gap-1 align-middle">
-                    <code v-for="rule in g.rules" :key="rule" class="rounded border border-border bg-surface-2 px-1.5 text-[11.5px]">{{ rule }}</code>
-                  </span>
-                  <span class="text-text-3"> → </span>
-                  <span class="text-text-2">{{ g.privileges.map(privLabel).join(', ') }}</span>
-                </div>
-                <p v-if="!r.global_privileges.length && !r.grants.length" class="text-[12px] text-text-3">{{ t('admin.noPrivileges') }}</p>
+                <p v-if="!r.global_privileges.length" class="text-[12px] text-text-3">{{ t('admin.noPrivileges') }}</p>
               </template>
             </div>
           </div>
         </div>
       </div>
     </section>
-
-    <!-- ===== Proxies (registry) ===== -->
-    <section v-else-if="tab === 'proxies'"><ProxiesAdmin /></section>
 
     <!-- ===== API tokens (every user's) ===== -->
     <section v-else-if="tab === 'tokens'">
@@ -1055,10 +920,10 @@ function switchTab(t: Tab) {
               <td class="td"><span class="font-medium">{{ tk.name }}</span> <span class="font-mono text-[11px] text-text-3">{{ tk.prefix }}…</span></td>
               <td class="td font-mono">{{ tk.username || '—' }}</td>
               <td class="td">
-                <span v-if="!tk.privileges?.length && !tk.rules?.length" class="text-text-3">{{ t('admin.tokenFull') }}</span>
+                <span v-if="!tk.privileges?.length && !tk.read_only" class="text-text-3">{{ t('admin.tokenFull') }}</span>
                 <span v-else class="flex flex-wrap gap-1">
-                  <span v-for="p in tk.privileges ?? []" :key="p" class="rounded bg-surface-3 px-1.5 text-[11.5px]">{{ privLabel(p) }}</span>
-                  <code v-for="rule in tk.rules ?? []" :key="rule" class="rounded border border-border bg-surface-2 px-1.5 text-[11.5px]">{{ rule }}</code>
+                  <span v-if="tk.read_only" class="pill !text-[11px]">{{ t('settings.tokenReadOnly') }}</span>
+                  <span v-for="p in tk.privileges ?? []" :key="p" class="pill !text-[11px]">{{ privLabel(p) }}</span>
                 </span>
               </td>
               <td class="td text-text-2">{{ tk.last_used_at ? ago(tk.last_used_at) : t('admin.never') }}</td>
@@ -1083,11 +948,11 @@ function switchTab(t: Tab) {
         <div class="flex flex-col gap-4 p-5">
           <div><label class="label">Application name</label><input v-model="brandForm.app_name" class="input" placeholder="Orbit" /></div>
           <div>
-            <div class="lockable" :class="{ locked: brandForm.developer_themes_enabled }">
+            <div>
               <label class="label">Accent colour</label>
               <div class="flex items-center gap-2">
                 <input v-model="brandForm.accent_color" type="color" class="h-10 w-12 shrink-0 rounded-lg border border-border bg-surface-2" />
-                <input v-model="brandForm.accent_color" class="input font-mono" placeholder="#07cab3" />
+                <input v-model="brandForm.accent_color" class="input font-mono" placeholder="#007AFF" />
               </div>
               <div class="mt-2 flex gap-2">
                 <button
@@ -1099,88 +964,6 @@ function switchTab(t: Tab) {
                   :style="{ backgroundColor: sw }"
                   @click="brandForm.accent_color = sw"
                 />
-              </div>
-            </div>
-            <div class="lock-note" :class="{ show: brandForm.developer_themes_enabled }">
-              <Info class="h-4 w-4 shrink-0" />
-              <span>Accent colour is controlled by the active developer theme. Pick a theme below, or turn the flag off to choose your own.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Developer themes -->
-      <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
-          <Code2 class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Developer themes</h3>
-          <span class="ml-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="brandForm.developer_themes_enabled ? 'bg-accent-bg text-accent-text' : 'bg-surface-3 text-text-3'">{{ brandForm.developer_themes_enabled ? 'On' : 'Off' }}</span>
-        </div>
-        <div class="p-5">
-          <div class="dev-master">
-            <div class="flex items-center gap-[13px]">
-              <div class="dm-ico"><Sparkles class="h-[19px] w-[19px]" /></div>
-              <div>
-                <div class="text-[15px] font-semibold">Enable developer themes</div>
-                <p class="mt-[3px] max-w-[420px] text-[12.5px] leading-snug text-text-3">Locks the accent to a curated theme and swaps in the matching UBonito crest, wordmark &amp; favicon for everyone.</p>
-              </div>
-            </div>
-            <Toggle v-model="brandForm.developer_themes_enabled" />
-          </div>
-
-          <div v-if="brandForm.developer_themes_enabled" class="mt-[22px]">
-            <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">Theme — sets the accent colour</div>
-            <div class="theme-grid">
-              <button
-                v-for="th in devThemeList"
-                :key="th.id"
-                type="button"
-                class="theme-card"
-                :class="{ on: brandForm.developer_theme === th.id }"
-                :aria-pressed="brandForm.developer_theme === th.id"
-                :style="{ '--tc': th.accent, '--tc-ground': th.ground, '--tc-badge': th.badge, '--tc-mark': th.mark, '--tc-halo': th.halo }"
-                @click="brandForm.developer_theme = th.id"
-              >
-                <span class="tc-check"><Check class="h-[13px] w-[13px]" /></span>
-                <div class="theme-prev">
-                  <img :src="th.crest" alt="" class="h-[50px] w-[50px]" />
-                  <div class="tp-word blackletter">UBonito</div>
-                </div>
-                <div class="theme-foot">
-                  <span class="tf-dot" /><b class="text-[13.5px] font-semibold">{{ th.name }}</b><span class="tf-hex">{{ th.accent }}</span>
-                </div>
-              </button>
-            </div>
-
-            <div class="mt-6">
-              <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">Apply theme assets — or keep your own</div>
-              <div class="src-row">
-                <div class="src-ico"><ImageIcon class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">Logo / mark</b><span class="mt-0.5 block text-[12px] text-text-3">{{ brandForm.logo_data_url ? 'You have an uploaded logo' : 'No custom logo uploaded' }}</span></div>
-                <div class="seg">
-                  <button type="button" :class="{ on: brandForm.asset_source_logo === 'theme' }" @click="brandForm.asset_source_logo = 'theme'">Theme crest</button>
-                  <button type="button" class="keep" :class="{ on: brandForm.asset_source_logo === 'keep' }" @click="brandForm.asset_source_logo = 'keep'">{{ brandForm.logo_data_url ? 'My logo' : 'Default' }}</button>
-                </div>
-              </div>
-              <div class="src-row">
-                <div class="src-ico"><Type class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">Wordmark</b><span class="mt-0.5 block text-[12px] text-text-3">Blackletter “UBonito” vs. your application name</span></div>
-                <div class="seg">
-                  <button type="button" :class="{ on: brandForm.asset_source_wordmark === 'theme' }" @click="brandForm.asset_source_wordmark = 'theme'">Theme wordmark</button>
-                  <button type="button" class="keep" :class="{ on: brandForm.asset_source_wordmark === 'keep' }" @click="brandForm.asset_source_wordmark = 'keep'">App name</button>
-                </div>
-              </div>
-              <div class="src-row">
-                <div class="src-ico"><ShieldCheck class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">Favicon</b><span class="mt-0.5 block text-[12px] text-text-3">{{ brandForm.favicon_data_url ? 'You have an uploaded favicon' : 'No custom favicon uploaded' }}</span></div>
-                <div class="seg">
-                  <button type="button" :class="{ on: brandForm.asset_source_favicon === 'theme' }" @click="brandForm.asset_source_favicon = 'theme'">Theme favicon</button>
-                  <button type="button" class="keep" :class="{ on: brandForm.asset_source_favicon === 'keep' }" @click="brandForm.asset_source_favicon = 'keep'">{{ brandForm.favicon_data_url ? 'My favicon' : 'Default' }}</button>
-                </div>
-              </div>
-              <div class="src-row forced">
-                <div class="src-ico"><SlidersHorizontal class="h-4 w-4" /></div>
-                <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">Accent colour</b><span class="mt-0.5 block text-[12px] text-text-3">Driven by the selected theme above</span></div>
-                <span class="src-badge">Always theme</span>
               </div>
             </div>
           </div>
@@ -1195,15 +978,14 @@ function switchTab(t: Tab) {
       <div class="card overflow-hidden">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Display options</h3></div>
         <div class="flex flex-col gap-4 p-5">
-          <div class="flex items-center justify-between gap-4" :class="{ 'opacity-50': brandForm.developer_themes_enabled }">
+          <div class="flex items-center justify-between gap-4">
             <div><div class="text-[13px] font-semibold">Show logo in sidebar</div><div class="text-[12px] text-text-3">Displays the mark/logo badge</div></div>
-            <Toggle v-model="brandForm.show_logo" :disabled="brandForm.developer_themes_enabled" />
+            <Toggle v-model="brandForm.show_logo" />
           </div>
-          <div class="flex items-center justify-between gap-4 border-t border-border pt-4" :class="{ 'opacity-50': brandForm.developer_themes_enabled }">
+          <div class="flex items-center justify-between gap-4 border-t border-border pt-4">
             <div><div class="text-[13px] font-semibold">Show application name in sidebar</div><div class="text-[12px] text-text-3">Displays the name next to the logo</div></div>
-            <Toggle v-model="brandForm.show_app_name" :disabled="brandForm.developer_themes_enabled" />
+            <Toggle v-model="brandForm.show_app_name" />
           </div>
-          <p v-if="brandForm.developer_themes_enabled" class="-mt-1 flex items-start gap-1.5 text-[11px] text-text-3"><Info class="h-3.5 w-3.5 shrink-0" />Controlled by the active developer theme.</p>
           <div class="border-t border-border pt-4">
             <div class="flex items-center justify-between gap-4">
               <div><div class="text-[13px] font-semibold">Custom login page message</div><div class="text-[12px] text-text-3">Show a welcome message on the sign-in screen</div></div>
@@ -1218,7 +1000,7 @@ function switchTab(t: Tab) {
         <div class="flex items-center gap-2 border-b border-border px-5 py-3"><ImageIcon class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Assets</h3></div>
         <div class="flex flex-col gap-4 p-5">
           <div>
-            <div class="lockable" :class="{ locked: previewLogoTheme }">
+            <div>
               <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">Logo</span> shown in the sidebar header</div>
               <div class="mb-2 flex h-20 items-center justify-center rounded-xl border border-border bg-surface-2">
                 <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="max-h-14 rounded" />
@@ -1232,13 +1014,9 @@ function switchTab(t: Tab) {
                 </div>
               </div>
             </div>
-            <div class="lock-note" :class="{ show: previewLogoTheme }">
-              <Info class="h-4 w-4 shrink-0" />
-              <span>Showing the theme crest. To use your own, set <b>Logo / mark</b> to “{{ brandForm.logo_data_url ? 'My logo' : 'Default' }}” under Developer themes.</span>
-            </div>
           </div>
           <div class="border-t border-border pt-4">
-            <div class="lockable" :class="{ locked: previewFavTheme }">
+            <div>
               <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">Favicon</span> browser tab icon, 32×32 recommended</div>
               <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border-2 px-3 py-3">
                 <span class="flex items-center gap-3 text-[13px]">
@@ -1251,10 +1029,6 @@ function switchTab(t: Tab) {
                 </div>
               </div>
             </div>
-            <div class="lock-note" :class="{ show: previewFavTheme }">
-              <Info class="h-4 w-4 shrink-0" />
-              <span>Showing the theme favicon. To use your own, set <b>Favicon</b> to “{{ brandForm.favicon_data_url ? 'My favicon' : 'Default' }}” under Developer themes.</span>
-            </div>
           </div>
         </div>
       </div>
@@ -1266,26 +1040,22 @@ function switchTab(t: Tab) {
           <div class="overflow-hidden rounded-xl border border-border">
             <!-- browser-tab strip (favicon) -->
             <div class="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-2.5">
-              <img v-if="previewFavTheme" :src="previewCrest" alt="" class="h-6 w-6" />
-              <img v-else-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-6 w-6 rounded" />
+              <img v-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-6 w-6 rounded" />
               <img v-else :src="DEFAULT_MARK" alt="" class="h-6 w-6 rounded" />
               <span class="text-[13px] font-semibold">{{ brandForm.app_name || 'Orbit' }}</span>
             </div>
             <!-- sidebar brand (mark + wordmark), honouring the show-logo/name toggles -->
             <div class="flex items-center gap-3 px-3 pt-3">
-              <template v-if="previewLogoTheme || brandForm.show_logo">
-                <img v-if="previewLogoTheme" :src="previewCrest" alt="" class="h-[42px] w-[42px]" />
-                <img v-else-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="h-[38px] w-auto max-w-[150px] rounded-md object-contain" />
+              <template v-if="brandForm.show_logo">
+                <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="h-[38px] w-auto max-w-[150px] rounded-md object-contain" />
                 <img v-else :src="DEFAULT_MARK" alt="" class="h-[42px] w-[42px]" />
               </template>
-              <div v-if="previewWordTheme || brandForm.show_app_name">
-                <div v-if="previewWordTheme" class="blackletter text-[22px] leading-none" :style="{ color: activeTheme.mark, '-webkit-text-stroke': `2.2px ${activeTheme.halo}` }">UBonito</div>
-                <div v-else class="text-[18px] font-semibold leading-tight">{{ brandForm.app_name || 'Orbit' }}</div>
-                <div class="mt-0.5 text-[11.5px] text-text-3">{{ t('nav.tagline') }}</div>
+              <div v-if="brandForm.show_app_name">
+                <div class="text-[18px] font-semibold leading-tight">{{ brandForm.app_name || 'Orbit' }}</div>
               </div>
             </div>
             <div class="flex items-center gap-3 p-3">
-              <button class="btn-primary" :style="previewBtnStyle">Enable server</button>
+              <button class="btn-primary" :style="previewBtnStyle">New workspace</button>
               <a class="text-[12px] hover:underline" :style="{ color: previewAccent?.accent || 'var(--accent)' }">View details →</a>
             </div>
           </div>
@@ -1405,30 +1175,7 @@ function switchTab(t: Tab) {
         </div>
         <!-- /channel grid -->
 
-        <!-- Server events for the organisation -->
-        <div class="card overflow-hidden">
-          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Bell class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">Server events</h3></div>
-          <div class="flex flex-col gap-4 p-5">
-            <p class="text-[12px] text-text-3">What goes to the channels above for everyone (all off by default). Users can also get them by email for the servers in their scope (Settings → Notifications).</p>
-            <div v-for="ev in serverEvents" :key="ev.key" class="flex items-center justify-between gap-4">
-              <div><div class="text-[13px] font-semibold">{{ ev.label }}</div><div class="text-[12px] text-text-3">{{ ev.hint }}</div></div>
-              <Toggle v-model="notifCfg.events[ev.key]" :aria-label="ev.label" />
-            </div>
-            <div class="border-t border-border pt-4">
-              <div class="mb-2 text-[13px] font-semibold">Send to</div>
-              <div v-if="enabledShared.length" class="flex flex-wrap gap-3">
-                <Checkbox v-for="c in enabledShared" :key="c.key" :model-value="eventChannelOn(c.key)" class="text-text-2" @update:model-value="(v: boolean) => toggleEventChannel(c.key, v)">{{ c.label }}</Checkbox>
-              </div>
-              <p v-else class="text-[12px] text-text-3">No shared channel is enabled above.</p>
-              <div class="mt-3">
-                <label class="label">Email to</label>
-                <input v-model="notifCfg.events.emails" class="input" :disabled="!notifCfg.email.enabled" placeholder="ops@example.org, oncall@example.org" />
-                <p class="mt-1 text-[11.5px] text-text-3">{{ notifCfg.email.enabled ? 'Comma-separated. Leave empty for no email.' : 'Turn on Email above to send these by email.' }}</p>
-              </div>
-              <p v-if="notifCfg.webhook.enabled" class="mt-3 text-[12px] text-text-3">The integration webhook gets the same events, as JSON (<code>X-Orbit-Event: server.down</code>, …).</p>
-            </div>
-          </div>
-        </div>
+        <p class="text-[12.5px] text-text-3">Each person chooses in Settings → Reminders which of these channels their reminders also go to (email goes to their own address).</p>
 
         <div class="flex justify-end"><button class="btn-primary" @click="saveNotifConfig">Save</button></div>
       </div>
@@ -1556,23 +1303,6 @@ function switchTab(t: Tab) {
             </div>
             <Toggle :model-value="featureFlags[f.key] ?? false" :aria-label="f.label" @update:model-value="(v) => toggleFeature(f.key, v)" />
           </div>
-        </div>
-      </div>
-
-      <!-- Live updates: how often proxies are polled and pages refresh -->
-      <div class="card overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
-          <RefreshCw class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">{{ t('owner.refreshTitle') }}</h3>
-        </div>
-        <div class="flex flex-col gap-3 p-5">
-          <p class="text-[12px] text-text-3">{{ t('owner.refreshHint', { d: px.data?.ui?.default_refresh_seconds ?? 10 }) }}</p>
-          <form class="flex items-center gap-2" @submit.prevent="saveRefresh">
-            <input v-model.number="refreshSeconds" type="number" min="1" max="300" class="input w-24" />
-            <span class="text-[13px] text-text-2">{{ t('owner.seconds') }}</span>
-            <span class="flex-1" />
-            <button v-if="refreshIsCustom" type="button" class="btn-ghost" @click="resetRefresh">{{ t('owner.useDefault') }}</button>
-            <button type="submit" class="btn-primary">{{ t('common.save') }}</button>
-          </form>
         </div>
       </div>
 
@@ -1799,91 +1529,9 @@ function switchTab(t: Tab) {
           </div>
         </div>
 
-        <!-- Server grants -->
-        <div>
-          <div class="mb-2 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] font-semibold uppercase tracking-wide text-text-3">Server grants</span>
-              <span class="rounded-full bg-surface-3 px-1.5 py-0.5 text-[11px] text-text-2">{{ roleForm.grants.length }} grant{{ roleForm.grants.length === 1 ? '' : 's' }}</span>
-            </div>
-            <button type="button" class="btn-ghost px-2.5 py-1" @click="roleForm.grants.push(newGrant())"><Plus class="h-4 w-4" /> Add grant</button>
-          </div>
-
-          <div class="flex flex-col gap-3">
-            <div v-for="(g, gi) in roleForm.grants" :key="gi" class="overflow-hidden rounded-xl border border-border">
-              <!-- Grant header -->
-              <div class="flex items-center justify-between border-b border-border bg-surface-2 px-3 py-2.5">
-                <div class="flex items-center gap-2">
-                  <span class="flex h-5 w-5 items-center justify-center rounded-full border border-border-2 text-[11px] text-text-2">{{ gi + 1 }}</span>
-                  <span class="text-[13px] font-medium">Server grant</span>
-                </div>
-                <button type="button" class="rounded-lg border border-border px-2 py-1 text-text-3 hover:text-crit-text" @click="roleForm.grants.splice(gi, 1)"><Trash2 class="h-4 w-4" /></button>
-              </div>
-
-              <!-- All servers -->
-              <button
-                type="button"
-                class="flex w-full items-center justify-between border-b border-border px-3 py-2.5 text-left transition hover:bg-surface-2"
-                @click="g.all_servers = !g.all_servers"
-              >
-                <span class="flex items-center gap-2 text-[13px] font-medium">
-                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border" :class="g.all_servers ? 'border-accent bg-accent text-white' : 'border-border-2'">
-                    <Check v-if="g.all_servers" class="h-3 w-3" />
-                  </span>
-                  All servers
-                </span>
-                <span class="text-[12px] text-text-3">Every server on every proxy</span>
-              </button>
-
-              <!-- Scope rules -->
-              <div v-if="!g.all_servers" class="border-b border-border px-3 py-2.5">
-                <div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-3">Scope rules</div>
-                <textarea
-                  v-model="g.rulesText"
-                  rows="3"
-                  class="input font-mono text-[12.5px]"
-                  :placeholder="'env=gmr\nservice=facebook\nenv=rda machine=web0*'"
-                  spellcheck="false"
-                />
-                <p v-if="g.rulesText.trim()" class="mt-1.5 text-[12px]" :class="ruleMatch(g.rulesText).error ? 'text-crit-text' : 'text-text-2'">
-                  <template v-if="ruleMatch(g.rulesText).error">{{ t('admin.ruleBad', { part: ruleMatch(g.rulesText).error }) }}</template>
-                  <template v-else>
-                    {{ t('admin.ruleMatches', { n: ruleMatch(g.rulesText).hits.length, m: px.targets.length }) }}
-                    <span v-if="ruleMatch(g.rulesText).hits.length" class="font-mono text-text-3">
-                      {{ ruleMatch(g.rulesText).hits.slice(0, 6).join(', ') }}{{ ruleMatch(g.rulesText).hits.length > 6 ? ', …' : '' }}
-                    </span>
-                  </template>
-                </p>
-                <p class="mt-1.5 text-[11.5px] text-text-3">
-                  One rule per line; a server is in scope if any rule matches. A rule's parts must all match. Keys:
-                  <code v-for="(k, ki) in RULE_KEYS" :key="k">{{ k }}{{ ki < RULE_KEYS.length - 1 ? ', ' : '' }}</code>; <code>*</code> and <code>?</code> wildcards.
-                </p>
-              </div>
-
-              <!-- Scoped privileges -->
-              <div class="grid grid-cols-2 gap-x-6 gap-y-1 p-3">
-                <button
-                  v-for="sp in SCOPED_PRIVILEGES"
-                  :key="sp.id"
-                  type="button"
-                  class="flex items-center justify-between rounded-lg px-1.5 py-1.5 text-left transition hover:bg-surface-2"
-                  @click="toggle(g.privileges, sp.id)"
-                >
-                  <span class="flex items-center gap-2 text-[13px]">
-                    <component :is="sp.icon" class="h-[16px] w-[16px] text-text-3" /> {{ sp.label }}
-                  </span>
-                  <span class="flex h-4 w-4 items-center justify-center rounded border" :class="g.privileges.includes(sp.id) ? 'border-accent bg-accent text-white' : 'border-border-2'">
-                    <Check v-if="g.privileges.includes(sp.id)" class="h-3 w-3" />
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <button type="button" class="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-2 py-2.5 text-[13px] text-text-2 hover:bg-surface-2" @click="roleForm.grants.push(newGrant())">
-              <Plus class="h-4 w-4" /> Add grant
-            </button>
-          </div>
-        </div>
+        <p class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] text-text-2">
+          Roles are about running Orbit. What someone can do inside a workspace is set by that workspace's owners (owner, editor or viewer), and admins can't open other people's workspaces.
+        </p>
 
         <!-- Footer -->
         <div class="flex items-center justify-between border-t border-border pt-4">
@@ -1960,3 +1608,9 @@ function switchTab(t: Tab) {
     />
   </div>
 </template>
+
+<style scoped>
+.admin-page {
+  padding: 32px clamp(16px, 4vw, 48px) 64px;
+}
+</style>

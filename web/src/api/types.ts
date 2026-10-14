@@ -2,14 +2,9 @@ export interface UserPrefs {
   timezone: string
   theme: 'light' | 'dark' | 'system'
   accent_color: string // personal #rrggbb accent; "" = follow the org accent
-}
-
-// A server-scoped grant: privileges on every server (all_servers) or on the
-// servers matching the scope rules ("env=gmr", "env=rda machine=web0*", …).
-export interface RoleGrant {
-  all_servers: boolean
-  rules: string[]
-  privileges: string[]
+  week_start?: 0 | 1 // 0 = Sunday, 1 = Monday
+  time_format?: '24h' | '12h'
+  device_tz?: string
 }
 
 export interface Role {
@@ -19,17 +14,14 @@ export interface Role {
   builtin: boolean
   superuser: boolean
   global_privileges: string[]
-  grants: RoleGrant[]
 }
 
-// The caller's effective privileges (from /auth/me). scopes maps each scoped
-// privilege to ["*"] (every server) or the scope rules it is limited to; the
-// per-server answer comes with the proxy state.
+// The caller's instance privileges (from /auth/me). What they may do inside
+// a workspace is their role there (owner / editor / viewer), not these.
 export interface Privileges {
   superuser: boolean
   global: string[]
-  all_servers: string[]
-  scopes: Record<string, string[]>
+  read_only?: boolean // a read-only API token
 }
 
 export interface User {
@@ -59,7 +51,7 @@ export interface APIToken {
   expires_at?: string | null
   last_used_at?: string | null
   privileges?: string[] // narrowed to these (absent = all of the owner's)
-  rules?: string[] // server privileges only where these scope rules match
+  read_only?: boolean // workspace content can be read, not changed
   user_id?: string
   username?: string // admin list only
 }
@@ -99,12 +91,6 @@ export interface Branding {
   hide_local_login: boolean
   passwordless_enabled: boolean
   auto_sso: boolean
-  // Developer themes (owner): a curated accent + UBonito crest / wordmark / favicon.
-  developer_themes_enabled?: boolean
-  developer_theme?: 'blue' | 'gold' | 'red' | 'ink'
-  asset_source_logo?: 'theme' | 'keep'
-  asset_source_wordmark?: 'theme' | 'keep'
-  asset_source_favicon?: 'theme' | 'keep'
 }
 
 export interface OIDCConfig {
@@ -134,19 +120,6 @@ export interface NotifConfig {
   teams: { enabled: boolean; webhook_url: string }
   slack: { enabled: boolean; webhook_url: string }
   webhook: { enabled: boolean; url: string; secret: string }
-  // Server events for the organisation: which, to which channels (null = every
-  // enabled one except email), and to which email addresses.
-  events: {
-    server_down: boolean
-    proxy_down: boolean
-    changes: boolean
-    maint_expiring: boolean
-    drift: boolean
-    requests: boolean
-    certificates: boolean
-    channels: string[] | null
-    emails: string
-  }
 }
 
 export interface NotifyPrefs {

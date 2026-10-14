@@ -1,40 +1,49 @@
 # Orbit
 
-One web admin for several load balancers — nginx or HAProxy. Take servers in
-and out of rotation (enable / drain / disable) for one server, a whole service,
-a machine or an environment, on every proxy that serves them, with a preview
-of exactly what will change.
+A self-hosted planner for every part of your life. Make a **workspace** for
+school, work, home, a shared household — each with only the **modules** it
+needs — and keep everything in one place that looks and feels like an Apple
+app.
 
-- Each proxy machine runs **lb-agent** (one static Go binary) next to its load
-  balancer; Orbit talks to every agent with a per-proxy token (stored
-  sealed), over HTTP, HTTPS or mutual TLS — chosen per agent.
-- People sign in to Orbit itself: password with optional two-factor
-  (authenticator app or passkey), passkeys, or SSO (OpenID Connect: Entra ID,
-  Authentik, …). Roles give privileges on **every server** or only on the
-  servers matching **scope rules** (`env=gmr`, `env=rda machine=web0*`).
-- Every change and every refusal goes to a tamper-evident audit log
-  (optionally also to syslog / your SIEM).
+- **Pages** — Notion-style documents: type `/` for headings, checklists,
+  tables, quotes, code; nest pages inside pages; favourites and a trash.
+- **Tasks** — Reminders-style lists with due dates and times, repeats,
+  priorities, tags, sub-tasks and smart lists (Today, Scheduled, All,
+  Completed). Quick add understands “Essay tomorrow 14:30 !! #maths”.
+- **Boards** — the same tasks as kanban columns; drag a card into a done
+  column and it's done.
+- **Calendar** — month, week and day; events with repeats and reminders,
+  tasks on their due dates, and **subscribed calendars** (a school timetable,
+  Google / iCloud / Outlook via their secret ICS address). A private **feed**
+  puts Orbit in Apple Calendar, Google Calendar or Outlook.
+- **Today** — what's late, due and coming up across every workspace.
+- **Shared workspaces** — invite people as owner, editor or viewer; changes
+  appear live for everyone. A workspace is private to its members: instance
+  admins manage accounts, not your planner.
+- **Accounts** — passwords with two-factor (authenticator app or passkey),
+  passkeys, SSO (OpenID Connect), API tokens (optionally read-only), a
+  tamper-evident audit log, encrypted backups.
+- **Anywhere** — light and dark, English and Portuguese, and installable on a
+  phone (Add to Home Screen) with a bottom tab bar.
 
 ## What's where
 
 | Path | What |
 |---|---|
-| [api/](api/) | Orbit's backend (Go, Gin, GORM + SQLite); API reference at `/api/docs` (Scalar), see [docs/API.md](docs/API.md). Also `lbctl` (`cmd/lbctl`) and **lb-agent** (`cmd/lb-agent`) |
-| [web/](web/) | The page (Vue 3, Vite, Tailwind), English and Portuguese |
-| [lab/](lab/) | Demo proxy machines: nginx (`gmr`, `rda`) and HAProxy (`gmr-hap`, in front of the same machines as `gmr`) |
-| [docs/](docs/) | The guides and blueprints (see [Documentation](#documentation)) |
-| [deploy/](deploy/) | Monitoring: Prometheus + Grafana in one command, the dashboard and alert rules |
-| [BACKLOG.md](BACKLOG.md) | The plan, phase by phase |
-
-The Python v0 (its admin and the lb-idp sign-in service) is retired; it's kept
-at the git tag `v0-python`.
+| [api/](api/) | The backend (Go, Gin, GORM + SQLite); API reference at `/api/docs`, see [docs/API.md](docs/API.md) |
+| [web/](web/) | The app (Vue 3, Vite, Tailwind, TipTap) |
+| [docs/](docs/) | Guides and blueprints (see [Documentation](#documentation)) |
+| [deploy/](deploy/) | Monitoring: Prometheus + Grafana, a dashboard and alert rules |
 
 ## Quick start
 
 ```sh
-cp .env.example .env        # then set JWT_SECRET and ORBIT_MASTER_KEY (32+ characters each)
-docker compose up -d        # harbor.ubonito.org/proxy_manager/orbit, on http://localhost:8080
+cp .env.example .env        # set JWT_SECRET and ORBIT_MASTER_KEY (openssl rand -hex 32 each)
+docker compose up -d        # on http://localhost:8080
 ```
+
+> **Back up `ORBIT_MASTER_KEY`.** It seals two-factor secrets, the SSO client
+> secret and subscribed calendar addresses. Lose it and those can't be read.
 
 **First sign-in.** On an empty database Orbit creates the admin account
 `ADMIN_USER` (default `admin`), who is also the instance **owner**:
@@ -44,83 +53,72 @@ docker compose up -d        # harbor.ubonito.org/proxy_manager/orbit, on http://
 
   ```sh
   docker compose logs api | grep "First sign-in"
-  # First sign-in: user admin, temporary password k7mq-8ra2-xw4n-p3de
   ```
 
-Either way you choose your own password at the first sign-in.
+Either way you choose your own password at the first sign-in. Then **New
+workspace** (the `+` next to Workspaces), pick a template, choose its modules.
 
-**Add your proxies** in Admin → Proxies: a name (used in scope rules, e.g.
-`gmr-nginx`), the agent URL and its `AGENT_TOKEN`, and the load balancer URL
-for the traffic test. **Test connection** checks them before you save.
+**More people.** Admin → Users → New user. New accounts get the `member` role
+(they can create workspaces); `none` accounts only see workspaces they're
+invited to. Invite someone to a workspace from its settings (`⋯` → Members).
+
+## Deployment
+
+One container and one volume (`/data`). Put it behind your reverse proxy with
+TLS (or set `TLS_CERT_FILE` / `TLS_KEY_FILE`), and set:
+
+- `PUBLIC_URL` — the address people use, for calendar-feed links;
+- `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_ORIGINS` — the host name, for passkeys;
+- `TRUSTED_PROXIES` — your reverse proxy, so rate limits and the audit log
+  see real client addresses.
+
+`docker-compose-build.yml` builds from source instead of pulling. Backups:
+Owner → Backups (download now, or automatic to a directory or S3). Every
+variable: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Development
 
-```sh
-make dev                    # API with live reload on :8080, the page with Vite on http://localhost:5173 (admin / admin)
-make test lint              # Go tests + golangci-lint, in containers
-make web-test web-lint      # Vitest + ESLint
-make lb-agent               # lb-agent binaries (linux amd64 / arm64) into dist/lb-agent
-make e2e-lab                # Playwright against Orbit + a real nginx / lb-agent lab (all in compose)
-make help                   # everything else
-```
-
-The dev containers install packages when they start: after `package.json` or
-`go.mod` changes (e.g. a pull), restart them with
-`docker compose -f docker-compose.dev.yml restart web api`.
-
-## The lab
-
-Three demo proxies and their machines, each a compose project:
+Nothing but Docker on the host.
 
 ```sh
-for p in gmr rda gmr-hap; do                      # each proxy gets its own agent token
-  echo "AGENT_TOKEN=$(openssl rand -hex 32)" > lab/$p/.env
-done
-(cd lab/gmr && docker compose up -d --build)
-(cd lab/rda && docker compose up -d --build)
-(cd lab/gmr-hap && docker compose up -d --build)  # after gmr (it joins gmr's network)
+make dev                    # API with live reload + the app with Vite → http://localhost:5180 (admin / admin)
+make test vet lint          # Go tests, vet, golangci-lint
+make web-test web-typecheck web-lint
+make swag                   # regenerate the OpenAPI spec after changing handlers
 ```
 
-With `make dev` running, `make lab-seed` adds them to the dev instance (tokens
-read from `lab/<name>/.env`, stored sealed), names the environments, and creates
-test users (`olivia` operator, `victor` viewer, `gina` staging only, `noah` no
-role) whose passwords it prints once. Or add them by hand in Admin → Proxies
-(from Orbit in Docker, the host is `host.docker.internal`):
+| Target | Does |
+|---|---|
+| `make dev` | the dev stack (`docker-compose.dev.yml`): API on :8090, app on :5180 |
+| `make test` / `vet` / `lint` / `vuln` | Go checks, in a pinned container |
+| `make web-test` / `web-typecheck` / `web-lint` / `web-build` | the web checks |
+| `make check` | what CI's Test workflow runs (minus lint) |
+| `make image` / `up-build` | build the image locally / build and run it |
+| `make set-version VERSION=x.y.z` | bump every version marker |
 
-| Name | Agent URL | Load balancer URL | Token |
-|---|---|---|---|
-| `gmr` | `http://host.docker.internal:9001` | `http://host.docker.internal:8081` | `AGENT_TOKEN` in `lab/gmr/.env` |
-| `rda` | `http://host.docker.internal:9002` | `http://host.docker.internal:8082` | `AGENT_TOKEN` in `lab/rda/.env` |
-| `gmr-hap` | `http://host.docker.internal:9003` | `http://host.docker.internal:8083` | `AGENT_TOKEN` in `lab/gmr-hap/.env` |
+## Security
 
-and in Admin → Proxies → Environments: `gmr` → Staging, `rda` → Production.
-
-## Coming from v0
-
-- **Proxies**: v0's `PROXIES` JSON (same format) imported once at start-up into
-  an empty registry; set `PROXIES` for the first start, then remove it.
-- **Audit history**: `orbit import-v0-audit /path/to/v0/data/orbit.db`
-  appends v0's log to the chained one, keeping the original times.
-- v0's API tokens and lb-idp's users aren't moved: recreate them.
+Workspace content is visible only to its members — the API answers 404 to
+anyone else, admins included. Secrets at rest are sealed with AES-256-GCM
+under `ORBIT_MASTER_KEY`; calendar addresses are fetched through an
+SSRF-guarded client. Details: [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Documentation
 
-| Doc | What's in it |
+| Doc | For |
 |---|---|
-| [User guide](docs/USER-GUIDE.md) | Using the page, task by task: sign-in, Proxies, Operations, confirmations, audit, Settings, Admin, Owner |
-| [Configuration](docs/CONFIGURATION.md) | Every environment variable (required or not, default), secrets backends, settings made on the page |
-| [Security](docs/SECURITY.md) | Threat model, sign-in and access, secrets at rest, audit, operator checklist, known risks |
-| [Agents](docs/AGENTS.md) | Installing lb-agent next to nginx or HAProxy, server naming, the traffic test, adding a proxy |
-| [Reverse proxies](docs/reverse-proxies.md) | Putting Orbit behind nginx, HAProxy, Caddy or Traefik with TLS |
-| [SSO with Entra ID](docs/SSO-entra.md), [SSO with Authentik](docs/SSO-authentik.md) | Single sign-on and role mapping |
-| [API](docs/API.md) | Scripts and pipelines: tokens, taking servers out and back, errors; the reference is at `/api/docs` |
-| [lbctl](docs/LBCTL.md) | The command-line tool for deploy pipelines: `lbctl disable … --for 20m --wait`, patterns, exit codes |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | Symptom → fix |
-| [Architecture](docs/ARCHITECTURE.md) | How it's built: pieces, data model, the proxy subsystem, decisions |
-| [Releasing](docs/RELEASING.md) | The release runbook (build and release are manual) |
-| [Auth blueprint](docs/AUTH-BLUEPRINT.md), [Project blueprint](docs/PROJECT-BLUEPRINT.md), [Blueprint fit](docs/BLUEPRINT-FIT.md) | The designs Orbit follows and what must work |
-| [Backlog](BACKLOG.md), [Changelog](CHANGELOG.md) | The plan, phase by phase, and what changed |
+| [USER-GUIDE.md](docs/USER-GUIDE.md) | Using Orbit: workspaces, pages, tasks, boards, calendars, sharing |
+| [CONFIGURATION.md](docs/CONFIGURATION.md) | Every environment variable |
+| [SECURITY.md](docs/SECURITY.md) | Threat model, what's protected and how |
+| [API.md](docs/API.md) | Scripting Orbit with API tokens |
+| [SSO-entra.md](docs/SSO-entra.md), [SSO-authentik.md](docs/SSO-authentik.md) | Single sign-on |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptoms and fixes |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's built and why |
+| [RELEASING.md](docs/RELEASING.md) | Cutting a release |
+| [ROADMAP.md](docs/ROADMAP.md) | What could come next |
+| [BLUEPRINT-FIT.md](docs/BLUEPRINT-FIT.md) | How the project blueprint applies here |
+| [PROJECT-BLUEPRINT.md](docs/PROJECT-BLUEPRINT.md), [AUTH-BLUEPRINT.md](docs/AUTH-BLUEPRINT.md) | The blueprints Orbit follows |
 
 ## License
 
-[Apache-2.0](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).

@@ -3,17 +3,25 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { auditApi } from '@/api'
 import type { AuditEntry } from '@/api/types'
-import { useProxiesStore } from '@/stores/proxies'
 import { useToastStore } from '@/stores/toast'
 import { fmtDate } from '@/lib/format'
 import { downloadAuthed } from '@/lib/api'
-import { actionKind, changeDetail } from '@/lib/proxy'
+import { onLiveEvent } from '@/lib/live'
 
-// v0's audit page: who changed what, where, and whether it worked. Server
-// changes show their targets; other events (sign-ins, users, roles...) show
-// their target and detail. The first page refreshes when a change arrives.
+// The audit log: who did what to which account, role, workspace or setting,
+// from where, and whether it worked. The first page refreshes when users or
+// roles change.
 const { t } = useI18n()
-const store = useProxiesStore()
+
+// changeDetail reads the JSON detail of an entry (fields vary by action).
+function changeDetail(detail: string): { targets?: string[]; ok?: boolean; error?: string; reason?: string; actor?: string; via?: string; scope?: string } {
+  try {
+    const d = JSON.parse(detail || '{}')
+    return d && typeof d === 'object' ? d : {}
+  } catch {
+    return {}
+  }
+}
 const toast = useToastStore()
 const PER_PAGE = 100
 
@@ -45,14 +53,10 @@ watch(q, () => {
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => load(), 250)
 })
-// A new change in the activity feed: refresh the first page (unless searching or paging back).
-watch(
-  () => store.data?.activity[0]?.id,
-  (top, prev) => {
-    if (prev !== undefined && top !== prev && !q.value && page.value === 1) load()
-  },
-)
+// Accounts or roles changed: refresh the first page (unless searching or paging back).
+const offs = ['users', 'roles', 'workspaces'].map((ev) => onLiveEvent(ev, () => !q.value && page.value === 1 && load()))
 onMounted(() => load())
+onUnmounted(() => offs.forEach((off) => off()))
 
 // Verify the hash chain: every entry links to the one before, unchanged.
 const verify = ref<{ ok: boolean; checked: number; broken_at?: string } | null>(null)
@@ -82,10 +86,7 @@ async function downloadCsv() {
 }
 onUnmounted(() => timer && clearTimeout(timer))
 
-const isChange = (a: AuditEntry) => a.action.startsWith('server.') || a.action === 'proxy.reset'
-function kind(a: AuditEntry) {
-  return isChange(a) ? actionKind(a.action) : a.action
-}
+const kind = (a: AuditEntry) => a.action
 function targets(a: AuditEntry): string[] {
   const d = changeDetail(a.detail)
   if (d.targets?.length) return d.targets
@@ -99,17 +100,18 @@ function result(a: AuditEntry) {
   const d = changeDetail(a.detail)
   return { ok: d.ok !== false, error: d.error || '', reason: d.reason || '' }
 }
-// The raw detail for non-change events (e.g. what a user update touched).
+// The raw detail (e.g. what a user update touched).
 function otherDetail(a: AuditEntry) {
-  if (isChange(a) || !a.detail) return ''
+  if (!a.detail) return ''
   return a.detail.length > 160 ? a.detail.slice(0, 160) + '…' : a.detail
 }
 </script>
 
 <template>
+  <div class="audit-page">
+  <h1 class="large-title mb-6">{{ t('audit.title') }}</h1>
   <section class="panel">
-    <div class="panel-head">
-      <h3>{{ t('audit.title') }}</h3>
+    <div class="panel-head flex-wrap">
       <span class="spacer" />
       <span v-if="verify" class="verify" :class="verify.ok ? 'ok' : 'bad'">
         {{ verify.ok ? t('audit.intact', { n: verify.checked }) : t('audit.broken', { id: verify.broken_at }) }}
@@ -161,10 +163,11 @@ function otherDetail(a: AuditEntry) {
     </div>
     <div v-if="more" class="panel-body"><button type="button" class="lb-btn" @click="load(true)">{{ t('audit.older') }}</button></div>
   </section>
+  </div>
 </template>
 
 <style scoped>
-/* v0's table.list */
+.audit-page { padding: 32px clamp(16px, 4vw, 48px) 64px; }
 .panel-head { justify-content: flex-start; }
 .panel-head .search { height: 32px; min-width: 260px; }
 .verify { font-size: 12px; font-weight: 550; }

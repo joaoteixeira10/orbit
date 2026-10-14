@@ -1,6 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import Confirm from './Confirm.vue'
+import { i18n } from '@/i18n'
+
+// Confirm's labels come from vue-i18n (English by default in jsdom).
+const global = { plugins: [i18n] }
 
 // Confirm renders inside Overlay, which <Teleport>s to <body> — so we assert
 // against document.body rather than the wrapper subtree.
@@ -15,6 +19,7 @@ describe('Confirm', () => {
 
   it('renders title/message and a danger action button, emits confirm', async () => {
     const w = mount(Confirm, {
+      global,
       props: { open: true, title: 'Delete user?', message: 'Permanently delete bob?', confirmLabel: 'Delete', danger: true },
     })
     expect(document.body.textContent).toContain('Delete user?')
@@ -30,7 +35,7 @@ describe('Confirm', () => {
   })
 
   it('defaults to a primary "Confirm" button and emits close on cancel', async () => {
-    const w = mount(Confirm, { props: { open: true, title: 'T', message: 'M' } })
+    const w = mount(Confirm, { global, props: { open: true, title: 'T', message: 'M' } })
 
     const confirm = bodyButtons().find((b) => b.textContent?.trim() === 'Confirm')
     expect(confirm!.className).toContain('btn-primary')
@@ -42,12 +47,13 @@ describe('Confirm', () => {
   })
 
   it('renders nothing when closed', () => {
-    mount(Confirm, { props: { open: false, title: 'Hidden', message: 'nope' } })
+    mount(Confirm, { global, props: { open: false, title: 'Hidden', message: 'nope' } })
     expect(document.body.textContent).not.toContain('Hidden')
   })
 
   it('with typeToConfirm, enables the action only after the exact text is typed', async () => {
     const w = mount(Confirm, {
+      global,
       props: { open: true, title: 'Transfer?', message: 'm', confirmLabel: 'Transfer', danger: true, typeToConfirm: 'bob' },
     })
     const btn = () => bodyButtons().find((b) => b.textContent?.trim() === 'Transfer')!

@@ -10,7 +10,7 @@ var pt = map[string]string{
 	"Reminders": "Lembretes", "Shopping": "Compras", "Chores": "Tarefas da casa",
 	"To do": "Por fazer", "Doing": "Em curso", "Done": "Feito",
 	"Handed in": "Entregue", "Upcoming": "Próximos", "Studying": "A estudar",
-	"Backlog": "Pendentes", "In progress": "Em progresso", "Review": "Revisão",
+	"Backlog": "Pendentes", "In progress": "Em execução", "Review": "Revisão",
 	"To buy": "Comprar", "Bought": "Comprado",
 	"Class notes": "Apontamentos", "Meeting notes": "Notas de reuniões",
 	"Journal": "Diário", "House notes": "Notas da casa",

@@ -33,3 +33,6 @@ wordmark-assets/
 
 # Vite dev-server dependency cache
 web/.vite/
+
+# Dev screenshots
+web/.shots/

@@ -182,18 +182,16 @@ function backToCredentials() {
 </script>
 
 <template>
-  <!-- Orbit v0's sign-in card; the code step keeps PKI's six-box input. -->
+  <!-- The sign-in card; the code step keeps PKI's six-box input. -->
   <div class="login">
     <main class="wrap">
       <div class="brand">
         <template v-if="branding.showMark">
-          <img v-if="branding.logoMode === 'theme'" :src="branding.crestUrl" alt="logo" class="logo" />
-          <img v-else-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" alt="logo" class="brand-logo" />
+          <img v-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" alt="logo" class="brand-logo" />
           <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
         </template>
         <template v-if="branding.showName">
-          <b v-if="branding.wordmarkIsTheme && branding.theme" class="brand-word blackletter" :style="{ color: branding.theme.mark, '-webkit-text-stroke': `1.8px ${branding.theme.halo}` }">UBonito</b>
-          <b v-else>{{ branding.appName }}</b>
+          <b>{{ branding.appName }}</b>
         </template>
       </div>
 
@@ -272,183 +270,182 @@ function backToCredentials() {
 </template>
 
 <style scoped>
-/* v0's sign-in page (tag v0-python: idp/pages.py). */
+/* Sign-in, the way Apple's account pages look: the mark large and centred,
+   a clean card, filled fields, one prominent button. */
 .login {
   min-height: 100%;
   display: grid;
   place-items: center;
-  padding: 24px 16px;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
   font-size: 14px;
   line-height: 1.5;
+  background:
+    radial-gradient(1200px 600px at 20% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, #af52de 14%, transparent), transparent 60%),
+    var(--grouped);
 }
 .wrap {
-  width: min(400px, 100%);
+  width: min(380px, 100%);
 }
 .brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 22px;
 }
 .brand b {
-  font-size: 16px;
+  font: 700 26px var(--font-display);
+  letter-spacing: -0.02em;
 }
 .logo {
-  width: 34px;
-  height: 34px;
+  width: 64px;
+  height: 64px;
   flex: none;
-}
-.brand-word {
-  font-size: 24px;
-  line-height: 1;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
 }
 .brand-logo {
-  height: 34px;
+  height: 56px;
   width: auto;
-  max-width: 200px;
+  max-width: 220px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 12px;
 }
 .lcard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 26px 28px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border-radius: 18px;
+  padding: 28px 26px;
+  box-shadow: var(--shadow-lg);
 }
 h1 {
-  margin: 0 0 6px;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+  font: 700 22px var(--font-display);
+  letter-spacing: -0.015em;
+  text-align: center;
 }
 .lead {
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   color: var(--text-2);
+  text-align: center;
 }
 .lead.center {
   margin: 0;
-  text-align: center;
 }
 .fields {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-label {
-  display: grid;
-  gap: 6px;
-  font-weight: 550;
+.fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
 }
-input {
-  font: inherit;
-  font-weight: 400;
-  padding: 9px 11px;
-  border-radius: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-2);
-  color: var(--text);
+.fields input {
   width: 100%;
+  padding: 10px 13px;
+  font-size: 15px;
+  color: var(--text);
+  border-radius: 11px;
+  border: 0;
+  background: var(--fill-2);
+  outline: none;
+  transition: box-shadow 0.2s var(--ease);
 }
-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-color: var(--accent);
+.fields input:focus {
+  box-shadow: 0 0 0 3px var(--ring);
 }
-input.code {
-  font: 600 18px var(--font-mono);
-  letter-spacing: 0.1em;
+.code {
   text-align: center;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
 }
 .primary,
 .alt {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font: inherit;
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 15px;
   font-weight: 600;
+  border-radius: 11px;
+  border: 0;
   cursor: pointer;
-  padding: 10px 14px;
-  border-radius: 8px;
+  transition: filter 0.15s, transform 0.1s;
 }
 .primary {
-  border: 1px solid var(--accent);
+  margin-top: 4px;
   background: var(--accent);
   color: var(--accent-fg);
-  margin-top: 4px;
 }
 .alt {
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
+  background: var(--fill);
   color: var(--text);
 }
-.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
+.primary:hover:not(:disabled),
 .alt:hover:not(:disabled) {
-  background: var(--surface-hover);
+  filter: brightness(1.06);
+}
+.primary:active:not(:disabled),
+.alt:active:not(:disabled) {
+  transform: scale(0.985);
 }
 .primary:disabled,
 .alt:disabled {
   opacity: 0.5;
   cursor: default;
 }
-.alt svg {
-  color: var(--accent);
-}
 .or {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 11px;
+  gap: 10px;
   color: var(--text-3);
+  font-size: 12px;
 }
 .or span {
-  height: 1px;
   flex: 1;
+  height: 0.5px;
   background: var(--border);
 }
 .error {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
   background: var(--crit-bg);
   color: var(--crit-text);
-  border: 1px solid var(--crit-border);
-  font-weight: 550;
   font-size: 13px;
 }
 .links {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  font-size: 12.5px;
+  gap: 8px;
+  margin-top: 4px;
 }
 .link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: 0;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-2);
   background: none;
-  padding: 0;
-  color: var(--text-3);
+  border: 0;
   cursor: pointer;
 }
-.link:hover {
-  color: var(--text);
-}
 .link.accent {
-  color: var(--accent);
-}
-.link.accent:hover {
-  text-decoration: underline;
+  color: var(--accent-text);
 }
 .foot {
+  margin-top: 18px;
   text-align: center;
-  margin-top: 16px;
-  color: var(--text-3);
   font-size: 12px;
+  color: var(--text-3);
 }
 </style>

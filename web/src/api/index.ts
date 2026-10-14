@@ -1,8 +1,8 @@
 import { api } from '@/lib/api'
 import type { User, Role, AuditEntry, Branding, About, NotifConfig, NotifyPrefs, OIDCConfig, APIToken } from './types'
 
-// Typed endpoint groups for /api/v1. The proxy-domain endpoints (proxies,
-// operations, preview) join in the proxy-domain phase.
+// Typed endpoint groups for /api/v1: accounts and administration here, the
+// planner (workspaces, pages, tasks, calendar) in ./planner.
 
 export interface Paged<T> {
   items: T[]
@@ -63,16 +63,10 @@ export const apiTokensAdminApi = {
 }
 
 // ---- Roles ----
-export interface RoleGrantInput {
-  all_servers: boolean
-  rules: string[] // scope rules, one per entry ("env=gmr", "env=rda machine=web0*")
-  privileges: string[]
-}
 export interface RoleInput {
   name: string
   description?: string
   global_privileges: string[]
-  grants: RoleGrantInput[]
 }
 export const rolesApi = {
   list: () => api<Role[]>('/roles'),
@@ -112,10 +106,10 @@ export const meApi = {
     api<{ backup_codes: string[] }>('/me/otp/backup-codes', { method: 'POST', body: JSON.stringify({ code }) }),
   apiTokens: () => api<APIToken[]>('/me/api-tokens'),
   // privileges / rules (optional) narrow the token below your own rights.
-  createApiToken: (name: string, expires_in_days: number, privileges: string[] = [], rules: string[] = []) =>
+  createApiToken: (name: string, expires_in_days: number, privileges: string[] = [], read_only = false) =>
     api<{ token: string; api_token: APIToken }>('/me/api-tokens', {
       method: 'POST',
-      body: JSON.stringify({ name, expires_in_days, privileges, rules }),
+      body: JSON.stringify({ name, expires_in_days, privileges, read_only }),
     }),
   revokeApiToken: (id: string) => api<void>(`/me/api-tokens/${id}`, { method: 'DELETE' }),
 }
@@ -198,58 +192,4 @@ export const sessionsApi = {
   list: () => api<{ sessions: SessionInfo[] }>('/me/sessions'),
   revoke: (sid: string) => api<void>(`/me/sessions/${sid}`, { method: 'DELETE' }),
   revokeOthers: () => api<void>('/me/sessions/revoke-others', { method: 'POST' }),
-}
-
-// ---- Proxies (registry: proxies.manage) ----
-export interface ProxyRow {
-  id: string
-  name: string
-  label: string
-  agent_url: string
-  lb_url: string
-  public_url: string
-  position: number
-  has_token: boolean
-}
-export interface ProxyInput {
-  name: string
-  label: string
-  agent_url: string
-  agent_token?: string // write-only; empty on edit = keep
-  lb_url: string
-  public_url: string
-  position: number
-}
-export const proxiesApi = {
-  list: () => api<ProxyRow[]>('/proxies'),
-  create: (b: ProxyInput) => api<ProxyRow>('/proxies', { method: 'POST', body: JSON.stringify(b) }),
-  update: (id: string, b: ProxyInput) => api<ProxyRow>(`/proxies/${id}`, { method: 'PUT', body: JSON.stringify(b) }),
-  remove: (id: string) => api<void>(`/proxies/${id}`, { method: 'DELETE' }),
-  check: (b: { id?: string; agent_url: string; agent_token?: string }) =>
-    api<{ engine: string; node: string }>('/proxies/check', { method: 'POST', body: JSON.stringify(b) }),
-  environments: () => api<Record<string, string>>('/environments'),
-  setEnvironments: (m: Record<string, string>) => api<Record<string, string>>('/environments', { method: 'PUT', body: JSON.stringify(m) }),
-}
-
-// ---- Page settings (in /state as `ui`) ----
-export const freezesApi = {
-  // proxies.manage: from (optional, ISO) until (ISO), reason, scope rules (empty = every server).
-  create: (body: { from?: string; until: string; reason: string; rules: string[] }) =>
-    api<unknown>('/freezes', { method: 'POST', body: JSON.stringify(body) }),
-  remove: (id: string) => api<unknown>(`/freezes/${id}`, { method: 'DELETE' }),
-}
-
-export const uiSettingsApi = {
-  // Owner: seconds between polls / page refreshes (0 = the default).
-  setRefresh: (seconds: number) => api<unknown>('/settings/refresh', { method: 'PUT', body: JSON.stringify({ seconds }) }),
-  // proxies.manage: '' lets each user choose, else enforce for everyone.
-  setChangeDetails: (policy: '' | 'detailed' | 'compact') =>
-    api<unknown>('/settings/change-details', { method: 'PUT', body: JSON.stringify({ policy }) }),
-  // proxies.manage: let changes leave a backend with no server in rotation.
-  setEmptyBackends: (allow: boolean) => api<unknown>('/settings/empty-backends', { method: 'PUT', body: JSON.stringify({ allow }) }),
-  // proxies.manage: every change needs a reason.
-  setRequireReason: (on: boolean) => api<unknown>('/settings/require-reason', { method: 'PUT', body: JSON.stringify({ on }) }),
-  // proxies.manage: drifted servers are put back in their desired state by Orbit itself.
-  setAutoRestore: (on: boolean) => api<unknown>('/settings/auto-restore', { method: 'PUT', body: JSON.stringify({ on }) }),
-  setAgentsHttps: (on: boolean) => api<unknown>('/settings/agents-https', { method: 'PUT', body: JSON.stringify({ on }) }),
 }

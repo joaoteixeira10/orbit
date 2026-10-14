@@ -1,6 +1,6 @@
-# Orbit v1 — production: one container (Go API + embedded SPA) and a volume.
+# Orbit — production: one container (Go API + embedded SPA) and a volume.
 # Runs the published multi-arch image (built by the "Build & Push" workflow).
-# Pin a version in .env — e.g. ORBIT_VERSION=v1.0.0 — then:
+# Pin a version in .env — e.g. ORBIT_VERSION=v0.1.0 — then:
 #   docker compose pull && docker compose up -d
 # TLS: terminate it upstream (reverse proxy), or set TLS_CERT_FILE / TLS_KEY_FILE.
 # First sign-in: see "First sign-in" in the README (the first admin's temporary
@@ -8,7 +8,7 @@
 
 services:
   api:
-    image: ${ORBIT_IMAGE:-harbor.ubonito.org/proxy_manager/orbit}:${ORBIT_VERSION:-latest}
+    image: ${ORBIT_IMAGE:-harbor.ubonito.org/orbit/orbit}:${ORBIT_VERSION:-latest}
     ports:
       - "${ORBIT_PORT:-8080}:8080"
     # Pass the whole .env so every documented setting takes effect; the

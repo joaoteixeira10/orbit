@@ -72,7 +72,7 @@ async function download() {
   downloading.value = true
   try {
     const mode = usePass.value ? 'passphrase' : 'masterkey'
-    await downloadAuthedPost('/backup/export', usePass.value ? { passphrase: pass.value } : {}, `orbit-backup-${mode}-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.json`)
+    await downloadAuthedPost('/backup/export', usePass.value ? { passphrase: pass.value } : {}, `orbit-backup-${mode}-${new Date().toISOString().slice(0, 19).replace(/\D/g, '')}.json`)
     toast.success(t('bk.downloaded'))
     pass.value = pass2.value = ''
   } catch (e: any) {

@@ -1,10 +1,11 @@
-# Orbit v1 — development: Go API (air) + Vite SPA, both live-reloading.
-#   docker compose -f docker-compose.dev.yml up      → http://localhost:5173
+# Orbit — development: Go API (air) + Vite SPA, both live-reloading.
+#   docker compose -f docker-compose.dev.yml up      → http://localhost:5180
 # Bind mounts on Docker Desktop don't deliver inotify events, so both watchers
 # poll (api/.air.toml, VITE_POLL). Caches and node_modules live in named volumes.
 # Insecure throwaway secrets on purpose: dev only. Sign in as admin / admin
 # (you're asked to choose a new password at first sign-in).
-# Ports 8080 / 5173 don't clash with the v0 lab (8404, 8200, 8081-8083).
+# Host ports 8090 (API) / 5180 (SPA), so Orbit runs next to the other
+# projects' dev stacks (LB Admin and PKI use 8080 / 5173).
 
 services:
   api:
@@ -12,7 +13,7 @@ services:
     working_dir: /src/api
     command: sh -c "go install github.com/air-verse/air@v1.67.1 && exec air"
     ports:
-      - "8080:8080"
+      - "8090:8080"
     environment:
       GIN_MODE: debug
       METRICS_ENABLED: "true"
@@ -22,7 +23,10 @@ services:
       ORBIT_MASTER_KEY: dev-insecure-master-key-change-me-32b
       ADMIN_USER: admin
       ADMIN_PASSWORD: admin
-      CORS_ORIGINS: http://localhost:5173
+      # :5173 is Vite seen from inside the web container (screenshots, E2E).
+      CORS_ORIGINS: http://localhost:5180,http://localhost:5173
+      WEBAUTHN_RP_ORIGINS: http://localhost:5180,http://localhost:8090
+      PUBLIC_URL: http://localhost:5180
       GOFLAGS: -buildvcs=false
     volumes:
       - .:/src
@@ -36,7 +40,7 @@ services:
     working_dir: /src/web
     command: sh -c "npm ci --no-audit --no-fund && npm run dev"
     ports:
-      - "5173:5173"
+      - "5180:5173"
     environment:
       VITE_PROXY_TARGET: http://api:8080 # proxy /api to the api service
       VITE_POLL: "1"

@@ -15,10 +15,10 @@ Companion doc: [PROJECT-BLUEPRINT.md](PROJECT-BLUEPRINT.md) covers everything th
 
 Checked against the running app, not only the code. Everything below must work
 as in PKI Management. Client-certificate login (§5.4) is optional: a project
-may leave it out (Orbit does).
+may leave it out (LB Admin does).
 
 **Features from PKI, design from the project.** Copy what PKI does, not how it
-looks: pages keep the project's own look (Orbit: v0's neutral greys, blue
+looks: pages keep the project's own look (LB Admin: v0's neutral greys, blue
 accent, system font with mono labels, compact controls, sidebar and sign-in card). The one PKI design
 kept is **how the code is asked for** — see "The two-factor code prompt" below.
 
@@ -433,7 +433,7 @@ Settings live in the DB (`settings.certlogin_config`) and are owner-only. The fi
    - `POST /auth/cert/test` is a **pure dry run**. It returns `would_provision: true` instead of creating the user.
 4. Split-origin (prompt on click, not on page load): `login_url` = the cert host,
    `COOKIE_DOMAIN` = the parent domain, main origin added to `CORS_ORIGINS`. The CSP `connect-src` picks up the origin automatically.
-- The proxy must **strip client-supplied copies** of the header. Snippets are in PKI Management's CERT-LOGIN.md (Orbit has no certificate login).
+- The proxy must **strip client-supplied copies** of the header. Snippets are in PKI Management's CERT-LOGIN.md (LB Admin has no certificate login).
 
 ### 5.5 API tokens
 `pkim_` + base64url(32B). The plaintext is shown once, the sha256 is stored, and the display

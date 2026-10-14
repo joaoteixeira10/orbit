@@ -2,8 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { setLocale, currentLocale, SUPPORTED_LOCALES, type LocaleCode } from '@/i18n'
-import { usePrefsStore, type Theme, type ChangeDetails } from '@/stores/prefs'
-import { useProxiesStore } from '@/stores/proxies'
+import { usePrefsStore, type Theme } from '@/stores/prefs'
 import { api, setAccessToken } from '@/lib/api'
 import { meApi, prefsApi, notifyApi, sessionsApi, type SessionInfo } from '@/api'
 import { passkeysApi, webauthnSupported } from '@/api/webauthn'
@@ -12,25 +11,21 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { fmtDate, parseUA, relTime } from '@/lib/format'
 import Toggle from '@/components/ui/Toggle.vue'
+import Avatar from '@/components/ui/Avatar.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut } from 'lucide-vue-next'
+import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink } from 'lucide-vue-next'
+import { calendarApi, type Feed } from '@/api/planner'
+import { useWorkspacesStore } from '@/stores/workspaces'
 import type { APIToken } from '@/api/types'
-import { GLOBAL_PRIVILEGES, SCOPED_PRIVILEGES, isOwnerOnlyPriv } from '@/lib/privileges'
+import { GLOBAL_PRIVILEGES, isOwnerOnlyPriv } from '@/lib/privileges'
 
 const prefs = usePrefsStore()
-// Change confirmations: the user's choice, unless an admin enforces one.
-const px = useProxiesStore()
-const detailPolicy = computed(() => px.data?.ui?.change_details_policy || '')
-const detailChoice = computed<ChangeDetails>(() => detailPolicy.value || prefs.changeDetails)
-const detailOptions = computed<{ value: ChangeDetails; label: string; hint: string }[]>(() => [
-  { value: 'detailed', label: t('settings.cdDetailed'), hint: t('settings.cdDetailedHint') },
-  { value: 'compact', label: t('settings.cdCompact'), hint: t('settings.cdCompactHint') },
-])
 const auth = useAuthStore()
+const wss = useWorkspacesStore()
 const { t } = useI18n()
 
 // ---- Language ----
@@ -42,13 +37,14 @@ function changeLocale(code: LocaleCode) {
 const toast = useToastStore()
 
 const sections = computed(() => [
-  { group: 'Personal', items: [
+  { group: t('settings.personal'), items: [
     { id: 'account', label: t('settings.account'), icon: User },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
     { id: 'language', label: t('settings.languageTime'), icon: Globe },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
+    ...(auth.features.calendar_feeds !== false ? [{ id: 'feeds', label: t('settings.feeds'), icon: CalendarRange }] : []),
   ] },
-  { group: 'Security', items: [
+  { group: t('settings.security'), items: [
     { id: 'password', label: t('settings.password'), icon: Lock },
     // TOTP is unusable for SSO accounts (no password login), so hide it for them.
     ...(auth.user?.oidc ? [] : [{ id: 'twofa', label: t('settings.twofa'), icon: ShieldCheck }]),
@@ -68,9 +64,6 @@ const displayName = ref(auth.user?.display_name ?? '')
 const email = ref(auth.user?.email ?? '')
 const avatarUrl = ref(auth.user?.avatar_url ?? '')
 const avatarBroken = ref(false)
-function initials(name?: string) {
-  return (name || auth.user?.username || '?').slice(0, 2).toUpperCase()
-}
 function onAvatar(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
@@ -103,7 +96,7 @@ const themes: { value: Theme; label: string; icon: any }[] = [
   { value: 'dark', label: t('settings.themeDark'), icon: Moon },
   { value: 'system', label: t('settings.themeSystem'), icon: Monitor },
 ]
-const accentSwatches = ['#07cab3', '#185fa5', '#7c3aed', '#16a34a', '#d97706', '#dc2626', '#db2777']
+const accentSwatches = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500', '#34C759', '#30B0C7']
 
 // ---- Language & time ----
 const deviceTZ = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -113,15 +106,24 @@ const explicitZones = [
 ].filter((v, i, a) => a.indexOf(v) === i)
 
 // ---- Notifications ----
-// Personal server alerts go by email; the shared channels (Discord, Teams, …)
-// carry the organisation's server events, set by the owner.
+// Reminders (tasks with a due time, events with a reminder) always show in
+// open Orbit tabs; the browser can also show them as system notifications,
+// and they can go out through the channels the owner enabled.
 const enabledChannels = ref<string[]>([])
 const notifyEvents = ref(false)
-const emailOn = computed(() => enabledChannels.value.includes('email'))
+const notifyChannels = ref<string[]>([])
+const browserPerm = ref<NotificationPermission | 'unsupported'>('Notification' in window ? Notification.permission : 'unsupported')
+async function askBrowser() {
+  if (!('Notification' in window)) return
+  browserPerm.value = await Notification.requestPermission()
+}
+function toggleChannel(ch: string, on: boolean) {
+  notifyChannels.value = on ? [...notifyChannels.value, ch] : notifyChannels.value.filter((c) => c !== ch)
+}
 async function saveNotifications() {
   try {
-    await prefsApi.update({ notify_events: notifyEvents.value, notify_channels: notifyEvents.value ? ['email'] : [] })
-    toast.success('Notification preferences saved')
+    await prefsApi.update({ notify_events: notifyEvents.value, notify_channels: notifyEvents.value ? notifyChannels.value : [] })
+    toast.success(t('settings.saved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -130,13 +132,65 @@ async function saveNotifications() {
 onMounted(async () => {
   try {
     const [chans, p] = await Promise.all([notifyApi.channels(), prefsApi.get()])
-    const enabled = chans.enabled ?? []
-    enabledChannels.value = enabled
-    notifyEvents.value = p.notify_events && (p.notify_channels || []).includes('email')
+    enabledChannels.value = chans.enabled ?? []
+    notifyEvents.value = p.notify_events
+    notifyChannels.value = (p.notify_channels || []).filter((c) => enabledChannels.value.includes(c))
   } catch {
     /* ignore */
   }
 })
+
+// ---- Calendar feeds ----
+const feeds = ref<Feed[]>([])
+const feedSheet = ref(false)
+const feedName = ref('')
+const feedAll = ref(true)
+const feedWs = ref<string[]>([])
+const feedTasks = ref(true)
+const feedResult = ref<{ url: string; webcal: string } | null>(null)
+const confirmFeed = ref<Feed | null>(null)
+async function loadFeeds() {
+  if (auth.features.calendar_feeds === false) return
+  try {
+    feeds.value = await calendarApi.feeds()
+  } catch {
+    /* ignore */
+  }
+}
+function openFeed() {
+  feedName.value = 'Orbit'
+  feedAll.value = true
+  feedWs.value = []
+  feedTasks.value = true
+  feedResult.value = null
+  feedSheet.value = true
+}
+async function createFeed() {
+  try {
+    const r = await calendarApi.createFeed({ name: feedName.value.trim(), workspace_ids: feedAll.value ? [] : feedWs.value, include_tasks: feedTasks.value })
+    feedResult.value = { url: r.url, webcal: r.webcal }
+    await loadFeeds()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function revokeFeed() {
+  const f = confirmFeed.value
+  confirmFeed.value = null
+  if (!f) return
+  try {
+    await calendarApi.removeFeed(f.id)
+    await loadFeeds()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+function copyText(v: string) {
+  navigator.clipboard.writeText(v)
+  toast.success(t('settings.copied'))
+}
+const feedWsNames = (f: Feed) => (f.workspace_ids.length ? f.workspace_ids.map((id) => wss.byId(id)?.name ?? '…').join(', ') : t('settings.feedAllWs'))
+onMounted(loadFeeds)
 
 // ---- Password ----
 const oldPw = ref('')
@@ -282,16 +336,14 @@ const tkExpiry = ref(0) // days; 0 = never
 const tkBusy = ref(false)
 const tkErr = ref('')
 const createdToken = ref('') // shown once
-// Optional narrowing: fewer privileges and/or scope rules (one per line).
+// Optional narrowing: fewer instance privileges, and/or read-only access to
+// workspace content.
 const tkLimit = ref(false)
 const tkPrivs = ref<string[]>([])
-const tkRules = ref('')
+const tkReadOnly = ref(false)
 // Only what you hold can be given to a token (owner status never is).
-const tokenPrivChoices = computed(() => [
-  ...GLOBAL_PRIVILEGES.filter((p) => (isOwnerOnlyPriv(p.id) ? auth.privileges.global.includes(p.id) : auth.can(p.id))),
-  ...SCOPED_PRIVILEGES.filter((p) => auth.canAnywhere(p.id)),
-])
-const privLabel = (id: string) => [...GLOBAL_PRIVILEGES, ...SCOPED_PRIVILEGES].find((p) => p.id === id)?.label ?? id
+const tokenPrivChoices = computed(() => GLOBAL_PRIVILEGES.filter((p) => (isOwnerOnlyPriv(p.id) ? auth.privileges.global.includes(p.id) : auth.can(p.id))))
+const privLabel = (id: string) => GLOBAL_PRIVILEGES.find((p) => p.id === id)?.label ?? id
 function toggleTkPriv(id: string, on: boolean) {
   tkPrivs.value = on ? [...tkPrivs.value, id] : tkPrivs.value.filter((p) => p !== id)
 }
@@ -310,7 +362,7 @@ function openCreateToken() {
   tkErr.value = ''
   tkLimit.value = false
   tkPrivs.value = []
-  tkRules.value = ''
+  tkReadOnly.value = false
   createdToken.value = ''
   showTokenCreate.value = true
 }
@@ -318,13 +370,8 @@ async function createToken() {
   tkErr.value = ''
   tkBusy.value = true
   try {
-    const rules = tkLimit.value ? tkRules.value.split('\n').map((l) => l.trim()).filter(Boolean) : []
     const privs = tkLimit.value ? tkPrivs.value : []
-    if (tkLimit.value && !privs.length && !rules.length) {
-      tkErr.value = t('settings.tokenLimitEmpty')
-      return
-    }
-    const r = await meApi.createApiToken(tkName.value.trim() || 'token', tkExpiry.value, privs, rules)
+    const r = await meApi.createApiToken(tkName.value.trim() || 'token', tkExpiry.value, privs, tkReadOnly.value)
     createdToken.value = r.token
     await loadTokens()
   } catch (e: any) {
@@ -401,10 +448,10 @@ onMounted(loadSessions)
 </script>
 
 <template>
-  <div>
-    <header class="mb-6">
-      <h1 class="text-xl font-semibold tracking-tight">Settings</h1>
-      <p class="mt-1 text-[13px] text-text-2">Your personal preferences. These follow you across devices.</p>
+  <div class="settings-page">
+    <header class="mb-7">
+      <h1 class="large-title">{{ t('nav.settings') }}</h1>
+      <p class="subhead mt-1">{{ t('settings.subtitle') }}</p>
     </header>
 
     <div class="flex gap-8">
@@ -435,7 +482,7 @@ onMounted(loadSessions)
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-3">
                 <img v-if="avatarUrl && !avatarBroken" :src="avatarUrl" class="h-12 w-12 rounded-full object-cover" @error="avatarBroken = true" />
-                <div v-else class="flex h-12 w-12 items-center justify-center rounded-full bg-accent-bg text-[15px] font-semibold text-accent-text">{{ initials(displayName) }}</div>
+                <Avatar v-else :name="displayName || auth.user?.username || '?'" :size="48" />
                 <div>
                   <div class="text-[14px] font-semibold">{{ displayName || auth.user?.username }}</div>
                   <div class="text-[12px] text-text-3">{{ auth.user?.username }}</div>
@@ -463,9 +510,9 @@ onMounted(loadSessions)
           <div class="flex flex-col gap-5 p-5">
             <div class="flex items-center justify-between gap-4">
               <div><div class="text-[13px] font-semibold">Theme</div><div class="text-[12px] text-text-3">Choose how the interface looks</div></div>
-              <div class="flex gap-1.5">
-                <button v-for="t in themes" :key="t.value" class="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] transition" :class="prefs.theme === t.value ? 'border-accent bg-accent-bg text-accent-text' : 'border-border bg-surface-2 text-text-2 hover:text-text'" @click="prefs.setTheme(t.value)">
-                  <component :is="t.icon" class="h-4 w-4" /> {{ t.label }}
+              <div class="seg">
+                <button v-for="t in themes" :key="t.value" class="inline-flex items-center gap-1.5" :class="{ on: prefs.theme === t.value }" @click="prefs.setTheme(t.value)">
+                  <component :is="t.icon" class="h-3.5 w-3.5" /> {{ t.label }}
                 </button>
               </div>
             </div>
@@ -489,27 +536,6 @@ onMounted(loadSessions)
                 </div>
               </div>
             </div>
-            <div class="border-t border-border pt-5">
-              <div class="text-[13px] font-semibold">{{ t('settings.changeDetails') }}</div>
-              <div class="mb-3 text-[12px] text-text-3">
-                {{ detailPolicy ? t('settings.cdEnforced') : t('settings.changeDetailsHint') }}
-              </div>
-              <div class="grid gap-2 sm:grid-cols-2">
-                <button
-                  v-for="o in detailOptions"
-                  :key="o.value"
-                  type="button"
-                  class="rounded-xl border px-3 py-2.5 text-left transition disabled:cursor-not-allowed"
-                  :class="detailChoice === o.value ? 'border-accent bg-accent-bg' : 'border-border bg-surface-2 hover:border-border-strong'"
-                  :disabled="!!detailPolicy"
-                  :aria-pressed="detailChoice === o.value"
-                  @click="prefs.setChangeDetails(o.value)"
-                >
-                  <div class="text-[13px] font-medium" :class="detailChoice === o.value ? 'text-accent-text' : ''">{{ o.label }}</div>
-                  <div class="text-[12px] text-text-3">{{ o.hint }}</div>
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -528,9 +554,23 @@ onMounted(loadSessions)
               <div class="text-[13px] font-semibold">{{ t('settings.timezone') }}</div>
               <div class="mb-2 text-[12px] text-text-3">{{ t('settings.timezoneHint') }}</div>
               <select :value="prefs.timezone" class="input" @change="prefs.setTimezone(($event.target as HTMLSelectElement).value)">
-                <option value="local">Device ({{ deviceTZ }})</option>
+                <option value="local">{{ t('settings.tzDevice', { tz: deviceTZ }) }}</option>
                 <option v-for="tz in explicitZones" :key="tz" :value="tz">{{ tz }}</option>
               </select>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+              <div><div class="text-[13px] font-semibold">{{ t('settings.weekStart') }}</div><div class="text-[12px] text-text-3">{{ t('settings.weekStartHint') }}</div></div>
+              <div class="seg">
+                <button :class="{ on: prefs.weekStart === 1 }" @click="prefs.setWeekStart(1)">{{ t('settings.monday') }}</button>
+                <button :class="{ on: prefs.weekStart === 0 }" @click="prefs.setWeekStart(0)">{{ t('settings.sunday') }}</button>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+              <div><div class="text-[13px] font-semibold">{{ t('settings.timeFormat') }}</div><div class="text-[12px] text-text-3">{{ t('settings.timeFormatHint') }}</div></div>
+              <div class="seg">
+                <button :class="{ on: prefs.timeFormat === '24h' }" @click="prefs.setTimeFormat('24h')">13:00</button>
+                <button :class="{ on: prefs.timeFormat === '12h' }" @click="prefs.setTimeFormat('12h')">1:00 PM</button>
+              </div>
             </div>
           </div>
         </section>
@@ -539,20 +579,54 @@ onMounted(loadSessions)
         <section id="notifications" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Bell class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.notifications') }}</h2></div>
           <div class="flex flex-col gap-5 p-5">
+            <p class="text-[13px] text-text-2">{{ t('settings.remindersHint') }}</p>
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-[13px] font-semibold">Server alerts by email</div>
-                <div class="text-[12px] text-text-3">For the servers in your scope: down and back up, agents unreachable, changes by others, a timed maintenance ending in 15 minutes, drift and failures.</div>
+                <div class="text-[13px] font-semibold">{{ t('settings.browserNotif') }}</div>
+                <div class="text-[12px] text-text-3">{{ t('settings.browserNotifHint') }}</div>
               </div>
-              <Toggle v-model="notifyEvents" :disabled="!emailOn" />
+              <span v-if="browserPerm === 'granted'" class="pill !bg-ok-bg !text-ok-text">{{ t('settings.on') }}</span>
+              <span v-else-if="browserPerm === 'denied'" class="pill">{{ t('settings.blocked') }}</span>
+              <span v-else-if="browserPerm === 'unsupported'" class="pill">{{ t('settings.unsupported') }}</span>
+              <button v-else class="btn-tinted btn-sm" @click="askBrowser">{{ t('settings.allow') }}</button>
             </div>
-            <div class="rounded-xl border border-border bg-surface-2 p-3 text-[12px] text-text-3">
-              <template v-if="!emailOn">Email is not set up. Ask the owner to turn it on (Owner → Notifications).</template>
-              <template v-else-if="!auth.user?.email">Sent to your email address — set one under Account above.</template>
-              <template v-else>Sent to <b class="text-text">{{ auth.user.email }}</b>.</template>
-              The team channels (Discord, Teams, Slack, …) get the organisation's server events, set by the owner.
+            <div class="border-t border-border pt-5">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <div class="text-[13px] font-semibold">{{ t('settings.sendReminders') }}</div>
+                  <div class="text-[12px] text-text-3">{{ t('settings.sendRemindersHint') }}</div>
+                </div>
+                <Toggle v-model="notifyEvents" :disabled="!enabledChannels.length" />
+              </div>
+              <div v-if="notifyEvents && enabledChannels.length" class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                <Checkbox v-for="ch in enabledChannels" :key="ch" :model-value="notifyChannels.includes(ch)" @update:model-value="(v) => toggleChannel(ch, v)">
+                  {{ ch === 'email' ? t('settings.chEmail', { email: auth.user?.email || '—' }) : ch.charAt(0).toUpperCase() + ch.slice(1) }}
+                </Checkbox>
+              </div>
+              <p v-if="!enabledChannels.length" class="mt-3 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('settings.noChannels') }}</p>
             </div>
-            <div class="flex justify-end"><button class="btn-primary" @click="saveNotifications">Save preferences</button></div>
+            <div class="flex justify-end"><button class="btn-primary" @click="saveNotifications">{{ t('common.save') }}</button></div>
+          </div>
+        </section>
+
+        <!-- Calendar feeds -->
+        <section v-if="auth.features.calendar_feeds !== false" id="feeds" class="card overflow-hidden scroll-mt-4">
+          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><CalendarRange class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.feeds') }}</h2></div>
+          <div class="flex flex-col gap-4 p-5">
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-[12.5px] text-text-3">{{ t('settings.feedsHint') }}</p>
+              <button class="btn-primary shrink-0" @click="openFeed"><Plus class="h-4 w-4" />{{ t('settings.newFeed') }}</button>
+            </div>
+            <div v-if="feeds.length" class="group">
+              <div v-for="f in feeds" :key="f.id" class="group-row">
+                <CalendarRange class="h-4 w-4 text-text-3" />
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-[13.5px] font-medium">{{ f.name }} <span class="font-mono text-[11px] text-text-3">{{ f.prefix }}…</span></div>
+                  <div class="truncate text-[12px] text-text-3">{{ feedWsNames(f) }}{{ f.include_tasks ? ' · ' + t('settings.feedWithTasks') : '' }}<span v-if="f.last_used_at"> · {{ t('settings.lastUsed', { when: fmtDate(f.last_used_at) }) }}</span></div>
+                </div>
+                <button class="icon-btn !text-danger" :title="t('common.revoke')" @click="confirmFeed = f"><Trash2 class="h-4 w-4" /></button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -686,10 +760,10 @@ onMounted(loadSessions)
               <div v-for="tk in tokens" :key="tk.id" class="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <div class="text-[13px] font-medium">{{ tk.name }} <span class="font-mono text-[11px] text-text-3">{{ tk.prefix }}…</span></div>
-                  <div v-if="tk.privileges?.length || tk.rules?.length" class="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-text-2">
+                  <div v-if="tk.privileges?.length || tk.read_only" class="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-text-2">
                     <span class="cap">{{ t('settings.tokenLimited') }}</span>
-                    <span v-for="p in tk.privileges ?? []" :key="p" class="rounded bg-surface-3 px-1.5">{{ privLabel(p) }}</span>
-                    <code v-for="r in tk.rules ?? []" :key="r" class="rounded border border-border bg-surface-2 px-1.5">{{ r }}</code>
+                    <span v-if="tk.read_only" class="pill !text-[11px]">{{ t('settings.tokenReadOnly') }}</span>
+                    <span v-for="p in tk.privileges ?? []" :key="p" class="pill !text-[11px]">{{ privLabel(p) }}</span>
                   </div>
                   <div class="text-[11px] text-text-3">
                     Added {{ fmtDate(tk.created_at) }}<span v-if="tk.last_used_at"> · last used {{ fmtDate(tk.last_used_at) }}</span><span v-if="tk.expires_at"> · expires {{ fmtDate(tk.expires_at) }}</span><span v-else> · never expires</span>
@@ -765,6 +839,7 @@ onMounted(loadSessions)
             <option :value="365">1 year</option>
           </select>
         </div>
+        <Checkbox v-model="tkReadOnly" class="text-text-2">{{ t('settings.tokenReadOnlyLong') }}</Checkbox>
         <Checkbox v-model="tkLimit" class="text-text-2">{{ t('settings.tokenLimit') }}</Checkbox>
         <template v-if="tkLimit">
           <div>
@@ -779,11 +854,6 @@ onMounted(loadSessions)
               >{{ p.label }}</Checkbox>
             </div>
           </div>
-          <div>
-            <label class="label">{{ t('settings.tokenRules') }}</label>
-            <textarea v-model="tkRules" rows="3" class="input font-mono" placeholder="env=gmr&#10;env=rda machine=web0*" />
-            <p class="mt-1 text-[11.5px] text-text-3">{{ t('settings.tokenRulesHint') }}</p>
-          </div>
         </template>
         <p v-if="tkErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ tkErr }}</p>
         <div class="flex justify-end gap-2">
@@ -792,6 +862,45 @@ onMounted(loadSessions)
         </div>
       </form>
     </Overlay>
+
+    <!-- New calendar feed -->
+    <Overlay :open="feedSheet" :title="t('settings.newFeed')" @close="feedSheet = false">
+      <div v-if="feedResult" class="flex flex-col gap-3 text-[13px]">
+        <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">{{ t('settings.feedOnce') }}</p>
+        <div class="flex items-center gap-2 rounded-xl bg-fill-2 p-3">
+          <code class="flex-1 break-all font-mono text-[12px] select-all">{{ feedResult.url }}</code>
+          <button class="icon-btn" :title="t('settings.copy')" @click="copyText(feedResult.url)"><Copy class="h-4 w-4" /></button>
+        </div>
+        <p class="text-[12px] text-text-3">{{ t('settings.feedHow') }}</p>
+        <div class="flex justify-end gap-2">
+          <a :href="feedResult.webcal" class="btn"><ExternalLink class="h-4 w-4" />{{ t('settings.feedOpen') }}</a>
+          <button class="btn-primary" @click="feedSheet = false">{{ t('common.done') }}</button>
+        </div>
+      </div>
+      <form v-else class="flex flex-col gap-4" @submit.prevent="createFeed">
+        <div><label class="label">{{ t('common.name') }}</label><input v-model="feedName" class="input" maxlength="120" /></div>
+        <div>
+          <Checkbox v-model="feedAll">{{ t('settings.feedAllWs') }}</Checkbox>
+          <div v-if="!feedAll" class="mt-2 grid grid-cols-2 gap-2 pl-6">
+            <Checkbox v-for="w in wss.active" :key="w.id" :model-value="feedWs.includes(w.id)" @update:model-value="(v) => (feedWs = v ? [...feedWs, w.id] : feedWs.filter((x) => x !== w.id))">{{ w.name }}</Checkbox>
+          </div>
+        </div>
+        <Checkbox v-model="feedTasks">{{ t('settings.feedIncludeTasks') }}</Checkbox>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn" @click="feedSheet = false">{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn-primary" :disabled="!feedAll && !feedWs.length">{{ t('common.create') }}</button>
+        </div>
+      </form>
+    </Overlay>
+    <Confirm
+      :open="!!confirmFeed"
+      :title="t('settings.revokeFeedTitle')"
+      :message="t('settings.revokeFeedBody', { name: confirmFeed?.name })"
+      :confirm-label="t('common.revoke')"
+      danger
+      @confirm="revokeFeed"
+      @close="confirmFeed = null"
+    />
 
     <Confirm
       :open="!!confirmTk"
@@ -867,3 +976,10 @@ onMounted(loadSessions)
     </Overlay>
   </div>
 </template>
+
+<style scoped>
+.settings-page {
+  padding: 32px clamp(16px, 4vw, 48px) 64px;
+  max-width: 1080px;
+}
+</style>

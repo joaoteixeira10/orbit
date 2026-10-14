@@ -224,10 +224,15 @@ func (h *Handlers) deleteList(c *gin.Context) {
 	if !ok {
 		return
 	}
-	h.db.Transaction(func(tx *gorm.DB) error {
-		tx.Where("list_id = ?", l.ID).Delete(&models.Task{})
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("list_id = ?", l.ID).Delete(&models.Task{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&l).Error
-	})
+	}); err != nil {
+		h.internalError(c, err, "could not delete the list")
+		return
+	}
 	h.publishWS(c, l.WorkspaceID, "lists")
 	c.Status(http.StatusNoContent)
 }
@@ -679,10 +684,15 @@ func (h *Handlers) moveTask(c *gin.Context) {
 	} else if !col.Done && t.CompletedAt != nil {
 		up["completed_at"] = nil
 	}
-	h.db.Transaction(func(tx *gorm.DB) error {
-		tx.Model(&models.Task{}).Where("id = ?", t.ID).Updates(up)
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.Task{}).Where("id = ?", t.ID).Updates(up).Error; err != nil {
+			return err
+		}
 		return tx.Model(&models.Task{}).Where("parent_id = ?", t.ID).Updates(map[string]any{"list_id": list.ID, "column_id": col.ID}).Error
-	})
+	}); err != nil {
+		h.internalError(c, err, "could not move the task")
+		return
+	}
 	t = reloadTask(h, t.ID)
 	h.publishWS(c, t.WorkspaceID, "tasks")
 	c.JSON(http.StatusOK, toTaskResponse(t))

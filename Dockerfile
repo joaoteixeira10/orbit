@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Orbit v1 — one image: the Go API with the Vue SPA embedded.
+# Orbit — one image: the Go API with the Vue SPA embedded.
 # Multi-arch by cross-compiling (pure Go, CGO off), so amd64 + arm64 build
 # natively on one runner, no QEMU. Same structure as PKI Management.
 
@@ -37,11 +37,7 @@ RUN VP=gitea.ubonito.org/jteixeira/orbit/api/internal/version; \
     [ -n "$COMMIT" ]     && LDFLAGS="$LDFLAGS -X $VP.Commit=$COMMIT"; \
     [ -n "$BUILD_TIME" ] && LDFLAGS="$LDFLAGS -X $VP.BuildTime=$BUILD_TIME"; \
     GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
-    go build -ldflags "$LDFLAGS" -o /out/orbit ./cmd/server && \
-    GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
-    go build -ldflags "$LDFLAGS" -o /out/lbctl ./cmd/lbctl && \
-    GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
-    go build -ldflags "$LDFLAGS" -o /out/lb-agent ./cmd/lb-agent
+    go build -ldflags "$LDFLAGS" -o /out/orbit ./cmd/server
 # An empty /data for the runtime image: distroless has no shell to mkdir, and a
 # volume mounted where the image has no directory is created root-owned, which
 # the nonroot user can't write (SQLite then fails with "unable to open database
@@ -51,10 +47,6 @@ RUN mkdir -p /out/data
 # ---------- Stage 3: minimal runtime ----------
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=api /out/orbit /orbit
-# The CLI too: docker run --rm -e LB_URL -e LB_TOKEN --entrypoint /lbctl <image> status
-COPY --from=api /out/lbctl /lbctl
-# And lb-agent, to copy onto the proxies: docker create --name x <image>; docker cp x:/lb-agent .
-COPY --from=api /out/lb-agent /lb-agent
 COPY --from=api --chown=65532:65532 /out/data /data
 EXPOSE 8080
 VOLUME ["/data"]

@@ -1,8 +1,6 @@
 # Release — tag the current main HEAD and create the Gitea release. Manual trigger.
 #
 # Does NOT build the image — run "Build & Push" first for the same version.
-# Attaches the lbctl binaries (linux / macOS, amd64 + arm64), the lb-agent
-# binaries (linux amd64 + arm64) and SHA256SUMS.
 # Creates git tag + release `v<version>`. The release body is a curated "what's
 # new" summary lifted from CHANGELOG.md (the `## [<version>]` section, falling
 # back to `## [Unreleased]`) followed by the auto-generated commit list since the
@@ -85,35 +83,3 @@ jobs:
           # 201 = created. (409 would mean the tag/release already exists.)
           [ "$code" = "201" ]
           jq -r .id /tmp/rel.json > /tmp/rel.id
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: api/go.mod
-          cache-dependency-path: api/go.sum
-
-      - name: Build and attach lbctl and lb-agent
-        env:
-          TOKEN: ${{ secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN || github.token }}
-          VERSION: ${{ inputs.version }}
-        run: |
-          set -e
-          VP=gitea.ubonito.org/jteixeira/orbit/api/internal/version
-          mkdir -p dist
-          for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
-            (cd api && CGO_ENABLED=0 GOOS=${t%/*} GOARCH=${t#*/} GOFLAGS=-buildvcs=false \
-              go build -ldflags "-s -w -X $VP.Version=${VERSION} -X $VP.Commit=${GITHUB_SHA::7}" \
-              -o ../dist/lbctl-${t%/*}-${t#*/} ./cmd/lbctl)
-          done
-          for t in linux/amd64 linux/arm64; do
-            (cd api && CGO_ENABLED=0 GOOS=${t%/*} GOARCH=${t#*/} GOFLAGS=-buildvcs=false \
-              go build -trimpath -ldflags "-s -w -X $VP.Version=${VERSION} -X $VP.Commit=${GITHUB_SHA::7}" \
-              -o ../dist/lb-agent-${t%/*}-${t#*/} ./cmd/lb-agent)
-          done
-          (cd dist && sha256sum lbctl-* lb-agent-* > SHA256SUMS)
-          ID=$(cat /tmp/rel.id)
-          for f in dist/*; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
-              "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/releases/${ID}/assets?name=$(basename "$f")" \
-              -H "Authorization: token ${TOKEN}" -F "attachment=@${f}")
-            echo "$(basename "$f"): $code"; [ "$code" = "201" ]
-          done

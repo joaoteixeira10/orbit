@@ -1,0 +1,93 @@
+import { defineStore } from 'pinia'
+import { tasksApi, type Task, type TaskList, type TaskInput } from '@/api/planner'
+import { onLiveEvent } from '@/lib/live'
+import { CLIENT_ID } from '@/lib/api'
+
+// Task lists and tasks per workspace. The Tasks and Board views share it, so
+// a change on one shows on the other at once. Updates are applied locally
+// first and reconciled with the server's answer.
+export const useTasksStore = defineStore('tasks', {
+  state: () => ({
+    lists: {} as Record<string, TaskList[]>,
+    tasks: {} as Record<string, Task[]>,
+    loading: {} as Record<string, boolean>,
+  }),
+  getters: {
+    listsOf: (s) => (ws: string) => s.lists[ws] ?? [],
+    tasksOf: (s) => (ws: string) => s.tasks[ws] ?? [],
+    subtasksOf: (s) => (ws: string, parent: string) =>
+      (s.tasks[ws] ?? []).filter((t) => t.parent_id === parent).sort((a, b) => a.rank - b.rank),
+  },
+  actions: {
+    async load(ws: string) {
+      this.loading[ws] = true
+      try {
+        const [lists, tasks] = await Promise.all([tasksApi.lists(ws), tasksApi.list(ws)])
+        this.lists[ws] = lists
+        this.tasks[ws] = tasks
+      } finally {
+        this.loading[ws] = false
+      }
+    },
+    async loadLists(ws: string) {
+      this.lists[ws] = await tasksApi.lists(ws)
+    },
+    put(ws: string, t: Task) {
+      const list = (this.tasks[ws] ??= [])
+      const i = list.findIndex((x) => x.id === t.id)
+      if (i >= 0) list[i] = t
+      else list.push(t)
+    },
+    async create(ws: string, body: TaskInput) {
+      const t = await tasksApi.create(ws, body)
+      this.put(ws, t)
+      void this.loadLists(ws) // counts
+      return t
+    },
+    // update applies the patch locally, then the server's answer. It returns
+    // whether a repeating task moved to its next date.
+    async update(ws: string, id: string, body: TaskInput): Promise<{ task: Task; repeated: boolean }> {
+      const cur = this.tasks[ws]?.find((t) => t.id === id)
+      if (cur) {
+        const optimistic = { ...cur } as Task
+        if (body.title !== undefined) optimistic.title = body.title
+        if (body.completed !== undefined) optimistic.done = body.completed
+        if (body.priority !== undefined) optimistic.priority = body.priority as Task['priority']
+        this.put(ws, optimistic)
+      }
+      try {
+        const r = await tasksApi.update(id, body)
+        this.put(ws, r.task)
+        if (body.completed !== undefined || body.list_id !== undefined || body.column_id !== undefined) void this.loadLists(ws)
+        return r
+      } catch (e) {
+        if (cur) this.put(ws, cur)
+        throw e
+      }
+    },
+    async move(ws: string, id: string, column_id: string, after_id: string, list_id?: string) {
+      const t = await tasksApi.move(id, { column_id, after_id, list_id })
+      this.put(ws, t)
+      // Sub-tasks follow; refresh them from the server.
+      void this.load(ws)
+      return t
+    },
+    async remove(ws: string, id: string) {
+      await tasksApi.remove(id)
+      this.tasks[ws] = (this.tasks[ws] ?? []).filter((t) => t.id !== id && t.parent_id !== id)
+      void this.loadLists(ws)
+    },
+  },
+})
+
+let wired = false
+export function wireTasksLive() {
+  if (wired) return
+  wired = true
+  const s = useTasksStore()
+  onLiveEvent('ws', (e) => {
+    if ((e.what !== 'tasks' && e.what !== 'lists') || e.origin === CLIENT_ID) return
+    const ws = String(e.ws)
+    if (s.tasks[ws]) void s.load(ws)
+  })
+}

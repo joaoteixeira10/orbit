@@ -55,6 +55,9 @@ export default defineConfig({
     // events, so opt into polling when running in the container.
     watch: process.env.VITE_POLL ? { usePolling: true, interval: 300 } : undefined,
   },
+  // The page editor (TipTap + ProseMirror) is one lazily loaded chunk of
+  // ~500 kB (160 kB gzipped), loaded only when a page opens.
+  build: { chunkSizeWarningLimit: 600 },
   // `npm test` runs Vitest in a jsdom environment (browser globals like
   // localStorage are available to the module graph under test).
   test: {

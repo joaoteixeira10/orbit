@@ -2,14 +2,30 @@ import { defineStore } from 'pinia'
 import { api } from '@/lib/api'
 
 export type Theme = 'light' | 'dark' | 'system'
-// How a server change is confirmed: the per-proxy preview, or just the essentials.
-export type ChangeDetails = 'detailed' | 'compact'
+export type TimeFormat = '24h' | '12h'
 
 interface ServerPrefs {
   timezone: string
   theme: Theme
   accent_color: string
-  change_details?: ChangeDetails
+  week_start?: 0 | 1
+  time_format?: TimeFormat
+  device_tz?: string
+}
+
+function browserTZ(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+  } catch {
+    return ''
+  }
+}
+
+// The default first day of the week and clock for this browser's language.
+function localeDefaults(): { weekStart: 0 | 1; timeFormat: TimeFormat } {
+  const lang = navigator.language || 'en'
+  const us = /^en-(US|CA)|^pt-BR/.test(lang)
+  return { weekStart: us ? 0 : 1, timeFormat: /^en-(US|CA|AU)/.test(lang) ? '12h' : '24h' }
 }
 
 // Push the per-user accent into the branding store and repaint. Lazy import
@@ -31,7 +47,8 @@ export const usePrefsStore = defineStore('prefs', {
     timezone: localStorage.getItem('orbit_timezone') || 'local',
     // Personal accent override ("" = follow the org accent).
     accentColor: localStorage.getItem('orbit_accent') || '',
-    changeDetails: (localStorage.getItem('orbit_change_details') as ChangeDetails) || 'detailed',
+    weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
+    timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
   }),
   actions: {
     isDark(): boolean {
@@ -55,13 +72,18 @@ export const usePrefsStore = defineStore('prefs', {
       this.theme = p.theme
       this.timezone = p.timezone
       this.accentColor = p.accent_color || ''
-      this.changeDetails = p.change_details || 'detailed'
-      localStorage.setItem('orbit_change_details', this.changeDetails)
+      this.weekStart = p.week_start === 0 ? 0 : 1
+      this.timeFormat = p.time_format === '12h' ? '12h' : '24h'
+      localStorage.setItem('orbit_week_start', String(this.weekStart))
+      localStorage.setItem('orbit_time_format', this.timeFormat)
       localStorage.setItem('orbit_theme', p.theme)
       localStorage.setItem('orbit_timezone', p.timezone)
       localStorage.setItem('orbit_accent', this.accentColor)
       pushAccent(this.accentColor)
       this.applyTheme()
+      // Reminders need the zone this browser is in (while the setting is "local").
+      const tz = browserTZ()
+      if (tz && tz !== p.device_tz) void this.persist({ device_tz: tz })
     },
 
     async setTheme(t: Theme) {
@@ -75,10 +97,15 @@ export const usePrefsStore = defineStore('prefs', {
       localStorage.setItem('orbit_timezone', tz)
       await this.persist({ timezone: tz })
     },
-    async setChangeDetails(v: ChangeDetails) {
-      this.changeDetails = v
-      localStorage.setItem('orbit_change_details', v)
-      await this.persist({ change_details: v })
+    async setWeekStart(v: 0 | 1) {
+      this.weekStart = v
+      localStorage.setItem('orbit_week_start', String(v))
+      await this.persist({ week_start: v })
+    },
+    async setTimeFormat(v: TimeFormat) {
+      this.timeFormat = v
+      localStorage.setItem('orbit_time_format', v)
+      await this.persist({ time_format: v })
     },
     // Set ("" clears) the personal accent; repaints immediately + persists.
     async setAccentColor(color: string) {

@@ -1,4 +1,4 @@
-# Orbit v1 — build from source instead of pulling (air-gapped hosts, local
+# Orbit — build from source instead of pulling (air-gapped hosts, local
 # changes). `make up-build` fills VERSION / COMMIT / BUILD_TIME from git.
 # Same env, port and data volume as docker-compose.yml (the volume name is
 # shared, so switching between built and pulled keeps the data).

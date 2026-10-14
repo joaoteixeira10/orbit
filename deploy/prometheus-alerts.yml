@@ -4,7 +4,7 @@
 groups:
   - name: orbit
     rules:
-      - alert: LBAdminDown
+      - alert: OrbitDown
         expr: up{job="orbit"} == 0
         for: 5m
         labels: { severity: critical }
@@ -12,60 +12,36 @@ groups:
           summary: "Orbit is down"
           description: "{{ $labels.instance }} has been unreachable for 5 minutes."
 
-      - alert: LBAgentUnreachable
-        expr: lb_proxy_reachable == 0
-        for: 2m
-        labels: { severity: critical }
-        annotations:
-          summary: "Agent of {{ $labels.proxy }} unreachable"
-          description: "Orbit can't poll the agent of {{ $labels.proxy }}; its servers can't be seen or changed."
-
-      - alert: LBServerDown
-        expr: lb_server_up == 0 and lb_server_maintenance == 0
-        for: 2m
-        labels: { severity: warning }
-        annotations:
-          summary: "{{ $labels.label }} down on {{ $labels.proxy }}"
-          description: "{{ $labels.server }} ({{ $labels.backend }}) fails its health checks and is not in maintenance."
-
-      - alert: LBServiceWithoutServers
-        expr: sum by (service) (lb_server_in_rotation) == 0
-        for: 1m
-        labels: { severity: critical }
-        annotations:
-          summary: "Service {{ $labels.service }} has no server in rotation"
-          description: "No server of {{ $labels.service }} is up and ready on any proxy: its requests fail."
-
-      - alert: LBHighErrorRate
+      - alert: OrbitServerErrors
         expr: |
-          sum by (proxy, backend) (rate(lb_server_errors_total[5m]))
-            / clamp_min(sum by (proxy, backend) (rate(lb_server_requests_total[5m])), 1e-9) > 0.05
+          sum(rate(orbit_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(orbit_http_requests_total[5m])), 1e-9) > 0.02
         for: 10m
         labels: { severity: warning }
         annotations:
-          summary: "Errors over 5% on {{ $labels.backend }} @ {{ $labels.proxy }}"
-          description: "{{ $value | humanizePercentage }} of the requests failed (5xx or failed attempts) over 5 minutes."
+          summary: "Orbit answers more than 2% of requests with errors"
+          description: "{{ $value | humanizePercentage }} of the requests failed with 5xx over 5 minutes."
 
-      - alert: LBSlowServer
-        expr: lb_server_latency_ms{quantile=~"0.95|avg"} > 1000
+      - alert: OrbitSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(orbit_http_request_duration_seconds_bucket[5m]))) > 1
         for: 10m
         labels: { severity: warning }
         annotations:
-          summary: "{{ $labels.label }} slow on {{ $labels.proxy }}"
-          description: "Response time ({{ $labels.quantile }}) is {{ $value | printf \"%.0f\" }} ms."
+          summary: "Orbit is slow"
+          description: "95% of requests take up to {{ $value | printf \"%.2f\" }} s."
 
-      - alert: LBLongMaintenance
-        expr: lb_server_maintenance == 1
-        for: 24h
+      - alert: OrbitSignInFailures
+        expr: sum(rate(orbit_logins_total{result="failure"}[10m])) * 600 > 30
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Many failed sign-ins"
+          description: "About {{ $value | printf \"%.0f\" }} failed sign-ins in 10 minutes: someone may be guessing passwords."
+
+      - alert: OrbitCalendarSubscriptionsFailing
+        expr: orbit_calendar_subscriptions_failing > 0
+        for: 6h
         labels: { severity: info }
         annotations:
-          summary: "{{ $labels.label }} in maintenance for a day"
-          description: "{{ $labels.server }} on {{ $labels.proxy }} has been out of rotation for 24 hours."
-
-      - alert: LBCertificateExpiring
-        expr: (lb_cert_expiry_timestamp_seconds - time()) / 86400 < 14
-        for: 1h
-        labels: { severity: warning }
-        annotations:
-          summary: "Certificate {{ $labels.cn }} on {{ $labels.proxy }} expires soon"
-          description: "{{ $labels.path }} ({{ $labels.kind }}) expires in {{ $value | printf \"%.0f\" }} days. Replace it on the Certificates page."
+          summary: "Subscribed calendars can't be fetched"
+          description: "{{ $value }} subscription(s) failed their last refresh for 6 hours (the error shows in the workspace's Calendars sheet)."

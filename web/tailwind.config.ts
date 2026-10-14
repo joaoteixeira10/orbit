@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 // Colors are CSS-variable-backed so light/dark switch by toggling a class on
-// <html>. The palette is Orbit v0's (see src/styles/main.css).
+// <html>. The palette is Apple's system colours (see src/styles/main.css).
 export default {
   darkMode: 'class',
   content: ['./index.html', './src/**/*.{vue,ts,tsx}'],
@@ -9,10 +9,14 @@ export default {
     extend: {
       colors: {
         bg: 'var(--bg)',
+        grouped: 'var(--grouped)',
         surface: 'var(--surface)',
         'surface-2': 'var(--surface-2)',
         'surface-3': 'var(--surface-3)',
         'surface-hover': 'var(--surface-hover)',
+        fill: 'var(--fill)',
+        'fill-2': 'var(--fill-2)',
+        'fill-strong': 'var(--fill-strong)',
         text: 'var(--text)',
         'text-2': 'var(--text-2)',
         'text-3': 'var(--text-3)',
@@ -25,6 +29,7 @@ export default {
         'accent-soft': 'var(--accent-soft)',
         'accent-bg': 'var(--accent-bg)',
         'accent-text': 'var(--accent-text)',
+        ws: 'var(--ws)',
         side: 'var(--side)',
         'line-soft': 'var(--line-soft)',
         ok: 'var(--ok)',
@@ -45,18 +50,19 @@ export default {
         'violet-soft': 'var(--violet-soft)',
       },
       fontFamily: {
-        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'Inter', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        display: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', 'Inter', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        mono: ['ui-monospace', '"SF Mono"', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       boxShadow: {
         soft: 'var(--shadow)',
         lg2: 'var(--shadow-lg)',
       },
       borderRadius: {
-        // v0's radii: controls 7-8px, panels 10px, cards and dialogs 14px.
-        lg: '8px',
-        xl: '10px',
-        '2xl': '14px',
+        // Controls 9px, cards 12px, sheets 16px.
+        lg: '9px',
+        xl: '12px',
+        '2xl': '16px',
       },
     },
   },

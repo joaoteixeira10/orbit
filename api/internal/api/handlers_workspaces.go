@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -719,5 +718,3 @@ func releaseWorkspaces(tx *gorm.DB, userID string) error {
 func canCreateWorkspaces(e rbac.Effective) bool {
 	return e.HasGlobal(rbac.PWorkspacesCreate) && !e.ReadOnly
 }
-
-var errNotFound = errors.New("not found")

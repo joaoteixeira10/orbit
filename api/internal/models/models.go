@@ -301,6 +301,7 @@ func AllModels() []any {
 		&PageFavorite{},
 		&TaskList{},
 		&Task{},
+		&Note{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

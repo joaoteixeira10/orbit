@@ -59,13 +59,14 @@ var (
 	descWorkspaces = prometheus.NewDesc("orbit_workspaces", "Workspaces, archived ones included.", nil, nil)
 	descPages      = prometheus.NewDesc("orbit_pages", "Pages not in the trash.", nil, nil)
 	descOpenTasks  = prometheus.NewDesc("orbit_tasks_open", "Tasks not completed.", nil, nil)
+	descNotes      = prometheus.NewDesc("orbit_notes", "Quick notes.", nil, nil)
 	descSubsFailed = prometheus.NewDesc("orbit_calendar_subscriptions_failing", "Calendar subscriptions whose last refresh failed.", nil, nil)
 )
 
 type domainCollector struct{}
 
 func (domainCollector) Describe(ch chan<- *prometheus.Desc) {
-	for _, d := range []*prometheus.Desc{descUsers, descWorkspaces, descPages, descOpenTasks, descSubsFailed} {
+	for _, d := range []*prometheus.Desc{descUsers, descWorkspaces, descPages, descOpenTasks, descNotes, descSubsFailed} {
 		ch <- d
 	}
 }
@@ -85,6 +86,7 @@ func (domainCollector) Collect(ch chan<- prometheus.Metric) {
 	count(descWorkspaces, db.Model(&models.Workspace{}))
 	count(descPages, db.Model(&models.Page{}).Where("trashed_at IS NULL"))
 	count(descOpenTasks, db.Model(&models.Task{}).Where("completed_at IS NULL"))
+	count(descNotes, db.Model(&models.Note{}))
 	count(descSubsFailed, db.Model(&models.CalendarSubscription{}).Where("last_error <> ''"))
 }
 

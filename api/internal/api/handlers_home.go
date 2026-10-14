@@ -14,13 +14,15 @@ import (
 )
 
 // homeResponse is the overview: what's late, due today and coming up, the
-// next events and recently edited pages, across workspaces (or one).
+// next events, recently edited pages and pinned notes, across workspaces (or
+// one).
 type homeResponse struct {
 	Overdue  []taskResponse `json:"overdue"`
 	Today    []taskResponse `json:"today"`
 	Upcoming []taskResponse `json:"upcoming"`
 	Events   []occurrence   `json:"events"`
 	Pages    []pageSummary  `json:"pages"`
+	Notes    []noteResponse `json:"notes"` // pinned quick notes
 }
 
 // home returns the overview. The browser sends its local date (?today=) and
@@ -54,7 +56,7 @@ func (h *Handlers) home(c *gin.Context) {
 		}
 		wsIDs = []string{ws}
 	}
-	resp := homeResponse{Overdue: []taskResponse{}, Today: []taskResponse{}, Upcoming: []taskResponse{}, Events: []occurrence{}, Pages: []pageSummary{}}
+	resp := homeResponse{Overdue: []taskResponse{}, Today: []taskResponse{}, Upcoming: []taskResponse{}, Events: []occurrence{}, Pages: []pageSummary{}, Notes: []noteResponse{}}
 	if len(wsIDs) == 0 {
 		c.JSON(http.StatusOK, resp)
 		return
@@ -79,12 +81,17 @@ func (h *Handlers) home(c *gin.Context) {
 	for _, p := range pages {
 		resp.Pages = append(resp.Pages, summarize(p, fav))
 	}
+	var notes []models.Note
+	h.db.Where("workspace_id IN ? AND pinned", wsIDs).Order("updated_at DESC").Limit(12).Find(&notes)
+	for _, n := range notes {
+		resp.Notes = append(resp.Notes, toNoteResponse(n))
+	}
 	c.JSON(http.StatusOK, resp)
 }
 
 // searchHit is one search result.
 type searchHit struct {
-	Kind        string     `json:"kind"` // page | task | event
+	Kind        string     `json:"kind"` // page | task | event | note
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
 	Title       string     `json:"title"`
@@ -101,8 +108,9 @@ func likeEscape(s string) string {
 	return strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(s)
 }
 
-// search finds pages (title and text), tasks (title and notes) and events
-// (title) across my workspaces, or one (?ws=).
+// search finds pages (title and text), tasks (title and notes), quick notes
+// (title, text and checklist) and events (title) across my workspaces, or
+// one (?ws=).
 //
 //	@Summary	Search
 //	@Tags		home
@@ -146,6 +154,12 @@ func (h *Handlers) search(c *gin.Context) {
 		Order("completed_at IS NOT NULL, updated_at DESC").Limit(12).Find(&tasks)
 	for _, t := range tasks {
 		out = append(out, searchHit{Kind: "task", ID: t.ID, WorkspaceID: t.WorkspaceID, Title: t.Title, Snippet: planner.Snippet(t.Notes, q, 100), Due: t.Due, Done: t.CompletedAt != nil, ListID: t.ListID})
+	}
+	var notes []models.Note
+	h.db.Where(`workspace_id IN ? AND (LOWER(title) LIKE ? ESCAPE '\' OR LOWER(plain_text) LIKE ? ESCAPE '\')`, wsIDs, pat, pat).
+		Order("updated_at DESC").Limit(8).Find(&notes)
+	for _, n := range notes {
+		out = append(out, searchHit{Kind: "note", ID: n.ID, WorkspaceID: n.WorkspaceID, Title: n.Title, Snippet: planner.Snippet(n.PlainText, q, 100)})
 	}
 	var events []models.Event
 	h.db.Where(`workspace_id IN ? AND LOWER(title) LIKE ? ESCAPE '\'`, wsIDs, pat).Order("starts_at DESC").Limit(8).Find(&events)

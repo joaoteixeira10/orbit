@@ -1948,6 +1948,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/notes/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Update a quick note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Note id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.noteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.noteResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Delete a quick note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Note id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/notifications/channels": {
             "get": {
                 "security": [
@@ -3997,6 +4067,124 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/notes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Quick notes of a workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.noteResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Create a quick note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Note",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.noteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.noteResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/notes/order": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Reorder quick notes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Note ids in order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.orderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/pages": {
             "get": {
                 "security": [
@@ -4745,6 +4933,13 @@ const docTemplate = `{
                         "$ref": "#/definitions/api.occurrence"
                     }
                 },
+                "notes": {
+                    "description": "pinned quick notes",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.noteResponse"
+                    }
+                },
                 "overdue": {
                     "type": "array",
                     "items": {
@@ -4918,6 +5113,96 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "list_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.noteItem": {
+            "type": "object",
+            "properties": {
+                "done": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.noteRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "maxLength": 20000
+                },
+                "checklist": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.noteItem"
+                    }
+                },
+                "pinned": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 300
+                }
+            }
+        },
+        "api.noteResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "checklist": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "description": "a colour key (yellow, green, …); \"\" = plain",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.noteItem"
+                    }
+                },
+                "pinned": {
+                    "type": "boolean"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "workspace_id": {
                     "type": "string"
                 }
             }
@@ -5252,7 +5537,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "description": "page | task | event",
+                    "description": "page | task | event | note",
                     "type": "string"
                 },
                 "list_id": {
@@ -5353,6 +5638,10 @@ const docTemplate = `{
                     "description": "RRULE, \"\" clears",
                     "type": "string"
                 },
+                "start": {
+                    "description": "YYYY-MM-DD, \"\" clears",
+                    "type": "string"
+                },
                 "tags": {
                     "type": "array",
                     "items": {
@@ -5415,6 +5704,10 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "repeat": {
+                    "type": "string"
+                },
+                "start": {
+                    "description": "YYYY-MM-DD, on or before Due",
                     "type": "string"
                 },
                 "tags": {

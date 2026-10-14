@@ -4,7 +4,7 @@
 import { api } from '@/lib/api'
 
 export type WSRole = 'owner' | 'editor' | 'viewer'
-export type ModuleKey = 'home' | 'pages' | 'tasks' | 'board' | 'calendar' | string
+export type ModuleKey = 'home' | 'notes' | 'pages' | 'tasks' | 'board' | 'timeline' | 'charts' | 'calendar' | string
 export type WorkspaceKind = 'school' | 'work' | 'personal' | 'shared' | 'custom'
 
 export interface CatalogModule {
@@ -93,6 +93,7 @@ export interface Task {
   notes: string
   priority: 0 | 1 | 2 | 3
   tags: string[]
+  start: string | null // YYYY-MM-DD (floating), on or before due: the timeline bar's left end
   due: string | null // YYYY-MM-DD (floating)
   due_time: string | null // HH:MM
   repeat: string // RRULE
@@ -112,12 +113,44 @@ export interface TaskInput {
   notes?: string
   priority?: number
   tags?: string[]
+  start?: string // "" clears
   due?: string // "" clears
   due_time?: string
   repeat?: string
   assignee_id?: string
   completed?: boolean
   after_id?: string
+}
+
+// A quick note: a short text, or a checklist (items) when checklist is set.
+export type NoteColor = '' | 'yellow' | 'orange' | 'red' | 'pink' | 'purple' | 'blue' | 'teal' | 'green' | 'brown' | 'gray'
+export interface NoteItem {
+  id: string // "" for a new item; the server gives it one
+  text: string
+  done: boolean
+}
+export interface Note {
+  id: string
+  workspace_id: string
+  title: string
+  body: string
+  checklist: boolean
+  items: NoteItem[]
+  color: NoteColor
+  pinned: boolean
+  rank: number
+  created_by: string
+  updated_by: string
+  created_at: string
+  updated_at: string
+}
+export interface NoteInput {
+  title?: string
+  body?: string
+  checklist?: boolean // switching converts the lines (text ↔ items)
+  items?: NoteItem[]
+  color?: NoteColor
+  pinned?: boolean
 }
 
 export interface Occurrence {
@@ -192,9 +225,10 @@ export interface Home {
   upcoming: Task[]
   events: Occurrence[]
   pages: PageSummary[]
+  notes: Note[] // pinned
 }
 export interface SearchHit {
-  kind: 'page' | 'task' | 'event'
+  kind: 'page' | 'task' | 'event' | 'note'
   id: string
   workspace_id: string
   title: string
@@ -262,6 +296,14 @@ export const tasksApi = {
   update: (id: string, b: TaskInput) => api<{ task: Task; repeated: boolean }>(`/tasks/${id}`, { method: 'PUT', body: j(b) }),
   move: (id: string, b: { column_id: string; list_id?: string; after_id?: string }) => api<Task>(`/tasks/${id}/move`, { method: 'POST', body: j(b) }),
   remove: (id: string) => api<void>(`/tasks/${id}`, { method: 'DELETE' }),
+}
+
+export const notesApi = {
+  list: (ws: string) => api<Note[]>(`/workspaces/${ws}/notes`),
+  create: (ws: string, b: NoteInput) => api<Note>(`/workspaces/${ws}/notes`, { method: 'POST', body: j(b) }),
+  update: (id: string, b: NoteInput) => api<Note>(`/notes/${id}`, { method: 'PUT', body: j(b) }),
+  remove: (id: string) => api<void>(`/notes/${id}`, { method: 'DELETE' }),
+  order: (ws: string, ids: string[]) => api<void>(`/workspaces/${ws}/notes/order`, { method: 'PUT', body: j({ ids }) }),
 }
 
 export const calendarApi = {

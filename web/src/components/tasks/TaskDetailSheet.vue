@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List } from 'lucide-vue-next'
+import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -10,9 +10,9 @@ import { useToastStore } from '@/stores/toast'
 import type { TaskInput } from '@/api/planner'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
-// Everything about one task, Reminders' "Details": notes, date and time,
-// repeat, priority, tags, list and column, who it's for, sub-tasks. Each
-// field saves when it changes.
+// Everything about one task, Reminders' "Details": notes, start, date and
+// time, repeat, priority, tags, list and column, who it's for, sub-tasks.
+// Each field saves when it changes.
 const props = defineProps<{ open: boolean; ws: string; taskId: string }>()
 const emit = defineEmits<{ close: [] }>()
 const tasks = useTasksStore()
@@ -79,6 +79,12 @@ const quick = computed(() => [
 ])
 function setDate(on: boolean) {
   void save(on ? { due: task.value?.due || todayStr() } : { due: '', repeat: '' })
+}
+// The start (the timeline bar's left end) defaults to the due date, else today.
+const hasStart = computed(() => !!task.value?.start)
+function setStart(on: boolean) {
+  const due = task.value?.due
+  void save({ start: on ? (due && due < todayStr() ? due : todayStr()) : '' })
 }
 function setTime(on: boolean) {
   void save({ due_time: on ? task.value?.due_time || '09:00' : '' })
@@ -171,6 +177,15 @@ async function remove() {
 
       <!-- When -->
       <div class="group mt-4">
+        <div class="group-row">
+          <span class="tile h-7 w-7" style="--tile: #ff9500"><CalendarArrowUp class="h-4 w-4" /></span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-[14px]">{{ t('tasks.start') }}</span>
+            <input v-if="hasStart" type="date" class="mt-0.5 bg-transparent text-[13px] text-accent-text outline-none" :value="task.start ?? ''" :max="task.due ?? undefined" :disabled="!editable" @change="save({ start: ($event.target as HTMLInputElement).value })" />
+            <span v-else class="block text-[12px] text-text-3">{{ t('tasks.startHint') }}</span>
+          </span>
+          <Toggle :model-value="hasStart" :disabled="!editable" @update:model-value="setStart" />
+        </div>
         <div class="group-row">
           <span class="tile h-7 w-7" style="--tile: #ff3b30"><Calendar class="h-4 w-4" /></span>
           <span class="min-w-0 flex-1">

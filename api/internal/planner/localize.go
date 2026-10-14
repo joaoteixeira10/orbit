@@ -14,8 +14,13 @@ var pt = map[string]string{
 	"To buy": "Comprar", "Bought": "Comprado",
 	"Class notes": "Apontamentos", "Meeting notes": "Notas de reuniões",
 	"Journal": "Diário", "House notes": "Notas da casa",
-	"Welcome": "Bem-vindo",
+	"Welcome":     "Bem-vindo",
+	"Quick notes": "Notas rápidas",
+	NoteTip:       "Aponte aqui o que não pode esquecer. Fixe o que importa, dê cores por tema e converta uma nota numa página ou em tarefas.",
 }
+
+// NoteTip is the text of the note a new workspace with quick notes starts with.
+const NoteTip = "Jot down what you can't forget. Pin what matters, colour notes by topic, and turn a note into a page or into tasks."
 
 // Localize returns name in locale (en when there is no translation).
 func Localize(name, locale string) string {

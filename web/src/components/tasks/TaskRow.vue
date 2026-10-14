@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, Info, Repeat, Flag, ListTree } from 'lucide-vue-next'
 import Avatar from '@/components/ui/Avatar.vue'
 import type { Task, Member } from '@/api/planner'
-import { dueLabel, isOverdue, repeatLabel } from '@/lib/dates'
+import { dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
 
 // One task, Reminders-style: a round check in its list's colour, the title
 // (click to edit in place), and a line of details — when it's due (red when
@@ -27,7 +27,13 @@ const emit = defineEmits<{ toggle: []; open: []; rename: [title: string] }>()
 const { t } = useI18n()
 
 const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, props.task.done))
-const due = computed(() => dueLabel(props.task.due, props.task.due_time))
+// With a start before the due date it reads as a span: "Mon – Friday, 9:00".
+const due = computed(() => {
+  const d = dueLabel(props.task.due, props.task.due_time)
+  const s = props.task.start
+  if (!s || s === props.task.due) return d
+  return d ? `${relDay(s)} – ${d}` : `${t('tasks.startsOn')} ${relDay(s)}`
+})
 const prio = computed(() => '!'.repeat(props.task.priority))
 
 const editing = ref(false)

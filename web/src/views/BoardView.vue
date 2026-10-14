@@ -6,6 +6,7 @@ import { Plus, SlidersHorizontal, Columns3, X, Eye } from 'lucide-vue-next'
 import BoardColumn from '@/components/board/BoardColumn.vue'
 import ListSheet from '@/components/tasks/ListSheet.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
+import TaskFilter from '@/components/tasks/TaskFilter.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { tasksApi, type Column, type Member, type Task, type TaskList } from '@/api/planner'
 import type { SortMove } from '@/lib/sortable'
+import { useTaskFilter } from '@/lib/taskFilter'
 
 // The Board: one list's tasks as kanban columns (its statuses). The lists
 // are a segmented strip at the top; the active one is in the URL. Cards are
@@ -69,6 +71,11 @@ function switchTo(id: string) {
   if (id !== list.value?.id) void router.replace({ name: 'ws-board', params: { ws: ws.value, list: id } })
 }
 
+// The workspace's filter (shared with Tasks, Timeline and Charts) hides
+// cards that don't match.
+const me = computed(() => auth.user?.id ?? '')
+const { matches } = useTaskFilter(ws, lists, me)
+
 // The cards of each column: top-level tasks by rank. A task whose column
 // is gone (mid-update) shows in the first one.
 const byColumn = computed<Record<string, Task[]>>(() => {
@@ -77,7 +84,7 @@ const byColumn = computed<Record<string, Task[]>>(() => {
   const out: Record<string, Task[]> = Object.fromEntries(l.columns.map((c) => [c.id, [] as Task[]]))
   const first = l.columns[0]?.id
   for (const tk of tasks.tasksOf(ws.value)) {
-    if (tk.list_id !== l.id || tk.parent_id !== null) continue
+    if (tk.list_id !== l.id || tk.parent_id !== null || !matches(tk)) continue
     const col = out[tk.column_id] ? tk.column_id : first
     if (col) out[col].push(tk)
   }
@@ -259,6 +266,7 @@ watch(
           <h1 class="large-title truncate" :style="list ? { color: list.color } : {}">{{ list?.name ?? t('modules.board') }}</h1>
           <p v-if="list" class="subhead mt-0.5 tabular-nums">{{ t('board.openCount', { n: list.open_count }) }}</p>
         </div>
+        <div v-if="loaded && list" class="mb-1 flex shrink-0 items-center gap-1"><TaskFilter :ws="ws" /></div>
         <span v-if="readonly && loaded" class="pill mb-1 shrink-0"><Eye class="h-3 w-3" />{{ t('board.readOnly') }}</span>
         <template v-else-if="loaded">
           <button v-if="list" class="btn btn-sm mb-1 shrink-0 !px-2 sm:!px-2.5" :title="t('board.editList')" :aria-label="t('board.editList')" @click="openSheet(list.id)">

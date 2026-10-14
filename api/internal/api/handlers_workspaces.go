@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -310,6 +311,16 @@ func seedWorkspace(tx *gorm.DB, ws models.Workspace, tpl planner.Template, uid, 
 			return err
 		}
 	}
+	if slices.Contains(decodeList(ws.Modules), planner.ModNotes) {
+		tip := planner.Localize(planner.NoteTip, locale)
+		n := models.Note{
+			WorkspaceID: ws.ID, Title: planner.Localize("Quick notes", locale), Body: tip, PlainText: tip,
+			Color: "yellow", Pinned: true, Items: "[]", Rank: 1024, CreatedBy: uid, UpdatedBy: uid,
+		}
+		if err := tx.Create(&n).Error; err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -453,6 +464,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Task{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskList{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Page{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Note{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceMember{}).Error },
 		func() error { return tx.Where("id = ?", wsID).Delete(&models.Workspace{}).Error },
 	}

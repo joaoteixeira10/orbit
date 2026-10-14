@@ -203,3 +203,23 @@ func ValidClock(s string) bool {
 	_, err := time.Parse("15:04", s)
 	return err == nil && len(s) == 5
 }
+
+// DaysBetween is the number of days from date a to date b (both
+// YYYY-MM-DD; 0 when either is invalid).
+func DaysBetween(a, b string) int {
+	da, err1 := time.Parse(DateLayout, a)
+	db, err2 := time.Parse(DateLayout, b)
+	if err1 != nil || err2 != nil {
+		return 0
+	}
+	return int(db.Sub(da).Hours() / 24)
+}
+
+// ShiftDate moves a date by n days.
+func ShiftDate(d string, n int) (string, bool) {
+	t, err := time.Parse(DateLayout, d)
+	if err != nil {
+		return "", false
+	}
+	return t.AddDate(0, 0, n).Format(DateLayout), true
+}

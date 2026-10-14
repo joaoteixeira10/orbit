@@ -12,6 +12,9 @@ const (
 	ModTasks    = "tasks"    // task lists (Reminders-style)
 	ModBoard    = "board"    // the same tasks as kanban boards
 	ModCalendar = "calendar" // events, due tasks, subscribed calendars
+	ModNotes    = "notes"    // quick notes (sticky notes)
+	ModTimeline = "timeline" // the tasks on a timeline (Gantt)
+	ModCharts   = "charts"   // the tasks in charts (status, lists, priority, people)
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -25,9 +28,12 @@ type Module struct {
 // Catalog is every module, in the default sidebar order.
 var Catalog = []Module{
 	{Key: ModHome, Icon: "house"},
+	{Key: ModNotes, Icon: "sticky-note"},
 	{Key: ModPages, Icon: "file-text"},
 	{Key: ModTasks, Icon: "list-checks"},
 	{Key: ModBoard, Icon: "columns-3"},
+	{Key: ModTimeline, Icon: "chart-gantt"},
+	{Key: ModCharts, Icon: "chart-pie"},
 	{Key: ModCalendar, Icon: "calendar"},
 	{Key: "habits", Icon: "repeat", Soon: true},
 	{Key: "journal", Icon: "notebook-pen", Soon: true},
@@ -92,7 +98,7 @@ type TemplateList struct {
 var Templates = []Template{
 	{
 		Kind: "school", Icon: "graduation-cap", Color: "#007AFF",
-		Modules: []string{ModHome, ModCalendar, ModTasks, ModBoard, ModPages},
+		Modules: []string{ModHome, ModCalendar, ModTasks, ModBoard, ModNotes, ModPages},
 		Lists: []TemplateList{
 			{Name: "Assignments", Color: "#007AFF", Icon: "pencil", Columns: Columns("To do", "Doing", "Handed in")},
 			{Name: "Exams", Color: "#FF3B30", Icon: "file-check", Columns: Columns("Upcoming", "Studying", "Done")},
@@ -101,7 +107,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "work", Icon: "briefcase", Color: "#5856D6",
-		Modules: []string{ModHome, ModBoard, ModTasks, ModCalendar, ModPages},
+		Modules: []string{ModHome, ModBoard, ModTasks, ModTimeline, ModCharts, ModCalendar, ModNotes, ModPages},
 		Lists: []TemplateList{
 			{Name: "Projects", Color: "#5856D6", Icon: "folder-kanban", Columns: Columns("Backlog", "In progress", "Review", "Done")},
 		},
@@ -109,7 +115,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "personal", Icon: "heart", Color: "#FF2D55",
-		Modules: []string{ModHome, ModTasks, ModCalendar, ModPages},
+		Modules: []string{ModHome, ModTasks, ModCalendar, ModNotes, ModPages},
 		Lists: []TemplateList{
 			{Name: "Reminders", Color: "#FF9500", Icon: "bell", Columns: Columns("To do", "Done")},
 		},
@@ -117,7 +123,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "shared", Icon: "users", Color: "#34C759",
-		Modules: []string{ModHome, ModTasks, ModBoard, ModCalendar, ModPages},
+		Modules: []string{ModHome, ModTasks, ModBoard, ModCalendar, ModNotes, ModPages},
 		Lists: []TemplateList{
 			{Name: "Shopping", Color: "#34C759", Icon: "shopping-cart", Columns: Columns("To buy", "Bought")},
 			{Name: "Chores", Color: "#FF9500", Icon: "sparkles", Columns: Columns("To do", "Doing", "Done")},
@@ -126,7 +132,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "custom", Icon: "sparkles", Color: "#AF52DE",
-		Modules: []string{ModHome, ModPages},
+		Modules: []string{ModHome, ModNotes, ModPages},
 	},
 }
 

@@ -16,6 +16,7 @@ and alert rules ready to load.
 | `orbit_workspaces` | — | workspaces, archived ones included |
 | `orbit_pages` | — | pages not in the trash |
 | `orbit_tasks_open` | — | tasks not completed |
+| `orbit_notes` | — | quick notes |
 | `orbit_calendar_subscriptions_failing` | — | subscribed calendars whose last refresh failed |
 
 The `orbit_users` … `orbit_calendar_subscriptions_failing` gauges are counted

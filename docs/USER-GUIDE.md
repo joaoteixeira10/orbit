@@ -1,8 +1,8 @@
 # Orbit user guide
 
 Orbit is a planner you host yourself: one **workspace** per part of your life
-— school, work, home, a group — each with only the modules it needs (pages,
-tasks, a board, a calendar), shared with the people you choose. This guide
+— school, work, home, a group — each with only the modules it needs (notes,
+pages, tasks, a board, a timeline, charts, a calendar), shared with the people you choose. This guide
 covers the app, task by task. To install or configure Orbit, see the
 [README](../README.md) and [CONFIGURATION](CONFIGURATION.md). For scripts, see
 the [API](API.md).
@@ -14,14 +14,17 @@ the [API](API.md).
 3. [Workspaces](#3-workspaces)
 4. [Today and the overview](#4-today-and-the-overview)
 5. [Pages](#5-pages)
-6. [Tasks](#6-tasks)
-7. [Boards](#7-boards)
-8. [Calendar](#8-calendar)
-9. [Reminders](#9-reminders)
-10. [Your settings](#10-your-settings)
-11. [Administration](#11-administration)
-12. [Owner controls](#12-owner-controls)
-13. [On a phone](#13-on-a-phone)
+6. [Notes](#6-notes)
+7. [Tasks](#7-tasks)
+8. [Boards](#8-boards)
+9. [Timeline](#9-timeline)
+10. [Charts](#10-charts)
+11. [Calendar](#11-calendar)
+12. [Reminders](#12-reminders)
+13. [Your settings](#13-your-settings)
+14. [Administration](#14-administration)
+15. [Owner controls](#15-owner-controls)
+16. [On a phone](#16-on-a-phone)
 
 ---
 
@@ -134,9 +137,9 @@ feature flags, ownership transfer and impersonation.
 The **sidebar** on the left (a drawer behind the ☰ button on narrow screens):
 
 - **Search ⌘K** (Ctrl+K on Windows and Linux) opens the **command palette**:
-  type to find pages, tasks and events in all your workspaces, jump to a
-  workspace, or run an action (new page, new task, new workspace, light or
-  dark appearance, settings). Arrows move, Enter opens, Esc closes.
+  type to find pages, tasks, notes and events in all your workspaces, jump
+  to a workspace, or run an action (new page, new task, new note, new
+  workspace, light or dark appearance, settings). Arrows move, Enter opens, Esc closes.
 - **Today** and **Calendar**: across every workspace.
 - **Favorites**: pages you starred.
 - **Workspaces**: each with its icon and colour. The chevron shows its modules
@@ -159,12 +162,12 @@ it without reloading.
    (projects on a board, meetings), **Personal** (reminders, appointments, a
    journal), **Shared** (shopping, chores, a common calendar) or **Blank**.
 2. Name it, pick a **colour** and an **icon**.
-3. Choose its **modules**: **Overview**, **Pages**, **Tasks**, **Board**,
-   **Calendar**. Modules marked **Coming soon** (habits, journal, goals,
+3. Choose its **modules**: **Overview**, **Notes**, **Pages**, **Tasks**,
+   **Board**, **Timeline**, **Charts**, **Calendar**. Modules marked **Coming soon** (habits, journal, goals,
    courses, grades, bookmarks, focus timer) are on the [roadmap](ROADMAP.md).
 4. **Start with examples** creates the template's lists (with their board
-   columns, e.g. *To do / Doing / Handed in*) and a welcome page, in the
-   language you use Orbit in.
+   columns, e.g. *To do / Doing / Handed in*), a welcome page and a first
+   pinned note, in the language you use Orbit in.
 5. **Create**.
 
 You need the **Create workspaces** privilege (the `member` role has it). Without
@@ -202,6 +205,7 @@ workspace:
 - **Up Next** — this week's events by day (the one happening **now** is
   highlighted), including subscribed calendars;
 - **This Week** — tasks due in the next seven days;
+- **Pinned Notes** — your pinned quick notes (click one to open it);
 - **Recent Pages** — the last pages edited.
 
 Tasks show only when they're assigned to you or to nobody. A workspace's own
@@ -235,7 +239,27 @@ sorted by **Recently edited** or **Title**, with a filter. **Trash** keeps
 deleted pages (and the pages inside them) for **30 days**: **Restore**, or
 **Delete for good**.
 
-## 6. Tasks
+## 6. Notes
+
+**Notes** are quick sticky notes: a few lines or a checklist on a coloured
+card, for what you'd jot on a Post-it. Longer writing belongs in a page.
+
+- **Take a note…** at the top: type a title and text, or click ☑ for a
+  checklist. A click outside, **Close**, Esc or ⌘↵ adds it.
+- In a **checklist**, Enter adds an item, Backspace on an empty one removes
+  it, and ticked items move under *N checked items*. Tick items right on the
+  card.
+- Hover a card for its tools: **pin** (pinned notes come first, and show on
+  Today), **colour**, **checkboxes on / off** (a text becomes a checklist line
+  by line, and back), and `⋯` → **Turn into page**, **Turn into tasks** (each
+  open item or line becomes a task in the first list), **Copy text**,
+  **Delete** (with **Undo** for a few seconds).
+- Click a card to open it larger; it saves as you type. Emptying a note and
+  closing it deletes it.
+- **Drag** cards to reorder them (between Pinned and Others to pin or unpin).
+- **Search notes** and the colour dots at the top narrow the wall.
+
+## 7. Tasks
 
 The **Tasks** screen has two panes (two screens on a phone):
 
@@ -259,7 +283,7 @@ priority, tagged maths.
 
 **Complete** with the round checkbox (it fades after a moment; the eye button
 shows or hides completed tasks). Click a title to rename it in place. **ⓘ**
-opens the details: notes, **Date** and **Time**, **Repeat** (every day,
+opens the details: notes, **Start date**, **Date** and **Time**, **Repeat** (every day,
 weekday, week, 2 weeks, month, year), **Priority**, **List**, **Status** (its
 board column), **For** (a member, in shared workspaces), **tags** and
 **Sub-tasks**. **Delete** is at the bottom.
@@ -268,9 +292,26 @@ board column), **For** (a member, in shared workspaces), **tags** and
 its due date, like Apple Reminders) instead of closing it.
 
 Inside a list, tasks are grouped by status (the list's open columns); drag
-them to reorder or move between statuses.
+them to reorder or move between statuses. **Group by** at the top groups a
+list (or All) by **due date** (overdue, today, this week, next week, later,
+no date), **priority** or **person** instead; a task added under a group gets
+its priority, person or date.
 
-## 7. Boards
+**Filter** (at the top of Tasks, Board, Timeline and Charts) narrows the tasks
+by keyword, **due** (overdue, today, this week, next week, later, no date),
+**progress** (not started, in progress, completed), **priority**, **assigned
+to** (me, unassigned, a member), **tags** and **lists**. Choices of one kind
+are "any of"; kinds combine. A workspace has one filter, kept in your browser
+and shared by the four views; the badge shows how many kinds are on and ✕
+clears it.
+
+**Start date.** Besides its due date a task can have a **Start date** (in its
+details): when work on it begins. Lists then show it as a span (*Mon –
+Friday*), and the Timeline draws a bar from start to due. A start after the
+due date moves the due date along (and the other way round); a repeating
+task's start moves with it.
+
+## 8. Boards
 
 The **Board** shows a list's tasks as columns — the list's **statuses**. The
 strip at the top switches lists; **Edit list** changes the list; **New list**
@@ -288,7 +329,42 @@ adds one.
 A list needs at least one open and one done column. The Board and Tasks show
 the same tasks: completing a task in one moves it in the other.
 
-## 8. Calendar
+## 9. Timeline
+
+The **Timeline** is a Gantt chart of the workspace's tasks, grouped by list
+(the list's row shows its overall span; its chevron folds it). Each task is a
+bar from its start to its due date in its list's colour; a task with only a
+due date is a one-day bar. Late tasks are ringed in red, completed ones
+striped, and sub-task progress is a line along the bottom of the bar.
+
+- **Weeks / Months / Quarters** zoom; **Today** scrolls back to today (the
+  red line). The chart grows as you scroll past either end.
+- **Drag a bar** to move the task (start and due move together); drag its
+  **left or right edge** to change the start or the due date. A label shows
+  the dates while you drag. On a touch screen, hold a bar a moment first.
+  With the keyboard: ← → move a focused bar a day, ⇧← ⇧→ change its length.
+- Click a bar or a title for the task's details; the round checkbox completes
+  it; **New Task** adds one starting today.
+- A task with **no dates** has an empty row: hover it and click a day to
+  schedule it there.
+- The eye button shows or hides completed tasks; **Filter** applies.
+
+## 10. Charts
+
+**Charts** shows how the work is going, like Microsoft Planner:
+
+- **Open**, **Late**, **Due this week** and **Completed** (last 7 days);
+- **Status**: not started (in a list's first column), in progress (in a later
+  open column), late (past its due date) and completed;
+- **By list**, **By priority**, **By tag** and, in shared workspaces, **By
+  person** — bars split by status;
+- **Trend**: tasks created and completed per week over the last 12 weeks.
+
+Hover (or focus) any part for the numbers. Click a part to open Tasks
+filtered to it — e.g. a list's *Late* segment shows that list's overdue
+tasks. **Filter** applies to every chart.
+
+## 11. Calendar
 
 **Calendar** in a workspace shows its events, its subscribed calendars and
 its tasks with a due date. **Calendar** at the top of the sidebar shows every
@@ -326,7 +402,7 @@ events.
 **See Orbit in your phone's calendar**: Settings → [Calendar
 feeds](#calendar-feeds).
 
-## 9. Reminders
+## 12. Reminders
 
 - A **task with a due time** reminds whoever it's for (else whoever created it)
   at that time. A date alone doesn't remind.
@@ -339,7 +415,7 @@ through the channels you chose there (email, ntfy, Telegram, … — whatever th
 owner set up). Task times are read in your **time zone** (Settings → Language &
 time).
 
-## 10. Your settings
+## 13. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -367,7 +443,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 11. Administration
+## 14. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -462,7 +538,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 12. Owner controls
+## 15. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -568,7 +644,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 13. On a phone
+## 16. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:
@@ -578,6 +654,7 @@ Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
   and Calendar);
 - the calendar's Month shows dots, with the chosen day's list underneath;
 - Tasks show the lists first, then a list;
+- the Timeline keeps a narrow column of names; hold a bar to drag it;
 - boards scroll sideways one column at a time; long-press a card to drag it.
 
 Orbit needs a connection: it doesn't work offline yet ([roadmap](ROADMAP.md)).

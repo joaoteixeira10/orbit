@@ -528,6 +528,26 @@ code,
     color: var(--text-2);
   }
 
+  /* Toggle chips (filters): a pill that turns accent when on. */
+  .chip {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap;
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--fill-2);
+    color: var(--text);
+    transition: background 0.12s var(--ease), color 0.12s var(--ease);
+  }
+  .chip:hover {
+    background: var(--fill);
+  }
+  .chip.on {
+    background: var(--accent);
+    color: #fff;
+  }
+
   /* Sidebar rows. */
   .side-item {
     @apply flex w-full items-center gap-2 text-left;

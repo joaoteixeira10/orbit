@@ -13,9 +13,10 @@ import { useToastStore } from '@/stores/toast'
 import { useWorkspacesStore, wireWorkspaceLive } from '@/stores/workspaces'
 import { usePagesStore, wirePagesLive } from '@/stores/pages'
 import { wireTasksLive } from '@/stores/tasks'
+import { wireNotesLive } from '@/stores/notes'
 import { pagesApi, type Workspace } from '@/api/planner'
 import { onLiveEvent } from '@/lib/live'
-import { ICONS } from '@/lib/icons'
+import { ICONS, MODULE_ROUTES } from '@/lib/icons'
 import { P } from '@/lib/privileges'
 import ServerStatus from '@/components/ServerStatus.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
@@ -47,6 +48,7 @@ watch(
     wireWorkspaceLive()
     wirePagesLive()
     wireTasksLive()
+    wireNotesLive()
     try {
       await Promise.all([wss.load(), wss.loadFavorites(), wss.loadCatalog()])
     } catch (e: any) {
@@ -109,7 +111,7 @@ watch(
 )
 
 // ---- Module navigation ----
-const moduleRoute: Record<string, string> = { home: 'ws', pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board', calendar: 'ws-calendar' }
+const moduleRoute: Record<string, string> = MODULE_ROUTES
 function moduleIcon(key: string) {
   return ICONS[wss.modules.find((m) => m.key === key)?.icon ?? ''] ?? FileText
 }

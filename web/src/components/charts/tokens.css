@@ -1,0 +1,23 @@
+/* Chart colours, defined once: Apple's system colours for the four task
+   statuses (a step brighter in dark mode, like iOS), the trend's two series,
+   and the recessive grid. Text never wears these; marks do. */
+:root {
+  --c-done: #34c759;
+  --c-progress: #007aff;
+  --c-not-started: #8e8e93;
+  --c-late: #ff3b30;
+  --c-created: #5856d6;
+  --c-grid: rgba(60, 60, 67, 0.1);
+  --c-axis: rgba(60, 60, 67, 0.22);
+  --c-track: rgba(120, 120, 128, 0.12);
+}
+html.dark {
+  --c-done: #30d158;
+  --c-progress: #0a84ff;
+  --c-not-started: #98989d;
+  --c-late: #ff453a;
+  --c-created: #5e5ce6;
+  --c-grid: rgba(84, 84, 88, 0.4);
+  --c-axis: rgba(84, 84, 88, 0.8);
+  --c-track: rgba(118, 118, 128, 0.24);
+}

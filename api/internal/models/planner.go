@@ -89,6 +89,8 @@ type TaskList struct {
 
 // Task is one to-do. Due and DueTime are floating (no time zone, like Apple
 // Reminders): "2026-10-20" and optionally "14:30", read in the viewer's zone.
+// Start (floating too, optional) is when work on it begins: the left end of
+// its bar on the timeline.
 // Repeat is an RRULE; completing a repeating task moves it to its next date
 // instead of closing it. Rank orders tasks inside their column.
 type Task struct {
@@ -101,6 +103,7 @@ type Task struct {
 	Notes       string     `gorm:"type:text" json:"notes"`
 	Priority    int        `gorm:"not null;default:0" json:"priority"` // 0 none, 1 low, 2 medium, 3 high
 	Tags        string     `gorm:"type:text" json:"-"`                 // JSON []string
+	Start       *string    `gorm:"size:10" json:"start"`               // YYYY-MM-DD, on or before Due
 	Due         *string    `gorm:"size:10;index" json:"due"`           // YYYY-MM-DD
 	DueTime     *string    `gorm:"size:5" json:"due_time"`             // HH:MM
 	Repeat      string     `gorm:"size:200" json:"repeat"`
@@ -110,6 +113,27 @@ type Task struct {
 	// nil = to whoever created it).
 	AssigneeID *string `gorm:"size:36;index" json:"assignee_id"`
 	CreatedBy  string  `gorm:"size:36" json:"created_by"`
+}
+
+// ---- Quick notes ------------------------------------------------------------
+
+// Note is a quick note (a sticky note): a short text or a checklist on a
+// coloured card. Items (JSON [{id, text, done}]) is set for a checklist note,
+// which then has no Body. Pinned notes come first; Rank orders the rest.
+// Longer writing belongs in a Page.
+type Note struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	Title       string  `gorm:"size:300" json:"title"`
+	Body        string  `gorm:"type:text" json:"body"`
+	Items       string  `gorm:"type:text" json:"-"`
+	Checklist   bool    `gorm:"not null;default:false" json:"checklist"`
+	PlainText   string  `gorm:"type:text" json:"-"`   // body or items as text, for search
+	Color       string  `gorm:"size:16" json:"color"` // a colour key (yellow, green, …); "" = plain
+	Pinned      bool    `gorm:"not null;default:false" json:"pinned"`
+	Rank        float64 `gorm:"not null;default:0" json:"rank"`
+	CreatedBy   string  `gorm:"size:36" json:"created_by"`
+	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
 }
 
 // ---- Calendar ---------------------------------------------------------------

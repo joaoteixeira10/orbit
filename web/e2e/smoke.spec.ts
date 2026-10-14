@@ -83,6 +83,55 @@ test('a calendar event is added and shown', async ({ page }) => {
   await expect(page.getByText('Maths class').first()).toBeVisible()
 })
 
+test('quick notes: a checklist note is kept, then turned into tasks', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.locator('.ws-row').first().click()
+  await page.getByRole('link', { name: /^Notes/ }).first().click()
+  // A new School workspace starts with a pinned tip.
+  await expect(page.locator('.note-card').first()).toBeVisible()
+
+  await page.getByRole('button', { name: 'New checklist' }).click()
+  await page.keyboard.type('Buy milk')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Buy eggs')
+  await page.keyboard.press('Escape')
+  const card = page.locator('.note-card', { hasText: 'Buy milk' })
+  await expect(card).toContainText('Buy eggs')
+  await page.reload()
+  await expect(card).toBeVisible()
+
+  await card.hover()
+  await card.getByRole('button', { name: 'More options' }).click()
+  await page.getByRole('button', { name: 'Turn into tasks' }).click()
+  await expect(page.getByText('2 tasks added')).toBeVisible()
+})
+
+test('timeline and charts show the tasks, and the filter narrows them', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.locator('.ws-row').first().click()
+  await page.waitForURL(/\/w\/[^/]+$/)
+  const ws = new URL(page.url()).pathname
+
+  // "Essay" (due today) is a one-day bar on the timeline.
+  await page.goto(ws + '/timeline')
+  await expect(page.locator('.tl-row', { hasText: 'Essay' })).toBeVisible()
+  await expect(page.locator('.bar').first()).toBeVisible()
+
+  await page.goto(ws + '/charts')
+  await expect(page.getByRole('heading', { name: 'Status' })).toBeVisible()
+
+  // Tasks → All: "Essay" is medium priority; filtering by High hides it.
+  await page.goto(ws + '/tasks/all')
+  const essay = page.locator('.task-row', { hasText: 'Essay' })
+  await expect(essay).toBeVisible()
+  await page.getByRole('button', { name: /^Filter/ }).click()
+  await page.locator('.popover .chip', { hasText: 'High' }).click()
+  await expect(essay).toBeHidden()
+  await page.locator('.popover .chip', { hasText: 'Medium' }).click()
+  await expect(essay).toBeVisible()
+  await page.getByRole('button', { name: 'Clear filter' }).last().click()
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

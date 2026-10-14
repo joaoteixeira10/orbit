@@ -9,6 +9,7 @@ import {
   Home, House, Landmark, Laptop, Leaf, Lightbulb, ListChecks, Mountain, Music, NotebookPen, Palette, PawPrint, Pencil,
   Plane, Repeat, Rocket, ShoppingCart, Sparkles, Star, Stethoscope, Sun, Target, Timer, Trophy, Users, Wallet, Wrench,
   Bell, Baby, Bike, Brush, Building2, Clapperboard, Languages, Microscope, PiggyBank, Shirt, Sprout, Tent, Ticket,
+  StickyNote, ChartGantt, ChartPie,
 } from 'lucide-vue-next'
 
 export const ICONS: Record<string, Component> = {
@@ -23,10 +24,17 @@ export const ICONS: Record<string, Component> = {
   'shopping-cart': ShoppingCart, shirt: Shirt, gift: Gift, wallet: Wallet, 'piggy-bank': PiggyBank, music: Music,
   film: Film, clapperboard: Clapperboard, 'gamepad-2': Gamepad2, camera: Camera, palette: Palette, brush: Brush,
   ticket: Ticket, bell: Bell, timer: Timer, repeat: Repeat, bookmark: Bookmark,
+  'sticky-note': StickyNote, 'chart-gantt': ChartGantt, 'chart-pie': ChartPie,
 }
 
 // The picker's order: a few rows by theme.
 export const ICON_CHOICES = Object.keys(ICONS).filter((k) => k !== 'home')
+
+// The route of each module of a workspace (the overview is the workspace itself).
+export const MODULE_ROUTES: Record<string, string> = {
+  home: 'ws', notes: 'ws-notes', pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board',
+  timeline: 'ws-timeline', charts: 'ws-charts', calendar: 'ws-calendar',
+}
 
 // Apple's system colours (light values; tiles keep them in dark mode too).
 export const COLORS = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#30B0C7', '#5AC8FA', '#A2845E', '#8E8E93']

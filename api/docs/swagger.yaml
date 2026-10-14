@@ -328,6 +328,11 @@ definitions:
         items:
           $ref: '#/definitions/api.occurrence'
         type: array
+      notes:
+        description: pinned quick notes
+        items:
+          $ref: '#/definitions/api.noteResponse'
+        type: array
       overdue:
         items:
           $ref: '#/definitions/api.taskResponse'
@@ -445,6 +450,66 @@ definitions:
         type: string
     required:
     - column_id
+    type: object
+  api.noteItem:
+    properties:
+      done:
+        type: boolean
+      id:
+        type: string
+      text:
+        type: string
+    type: object
+  api.noteRequest:
+    properties:
+      body:
+        maxLength: 20000
+        type: string
+      checklist:
+        type: boolean
+      color:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/api.noteItem'
+        type: array
+      pinned:
+        type: boolean
+      title:
+        maxLength: 300
+        type: string
+    type: object
+  api.noteResponse:
+    properties:
+      body:
+        type: string
+      checklist:
+        type: boolean
+      color:
+        description: a colour key (yellow, green, …); "" = plain
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/api.noteItem'
+        type: array
+      pinned:
+        type: boolean
+      rank:
+        type: number
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      workspace_id:
+        type: string
     type: object
   api.occurrence:
     properties:
@@ -672,7 +737,7 @@ definitions:
       id:
         type: string
       kind:
-        description: page | task | event
+        description: page | task | event | note
         type: string
       list_id:
         type: string
@@ -742,6 +807,9 @@ definitions:
       repeat:
         description: RRULE, "" clears
         type: string
+      start:
+        description: YYYY-MM-DD, "" clears
+        type: string
       tags:
         items:
           type: string
@@ -787,6 +855,9 @@ definitions:
       rank:
         type: number
       repeat:
+        type: string
+      start:
+        description: YYYY-MM-DD, on or before Due
         type: string
       tags:
         items:
@@ -2540,6 +2611,49 @@ paths:
       summary: Reorder my workspaces
       tags:
       - workspaces
+  /notes/{id}:
+    delete:
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a quick note
+      tags:
+      - notes
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.noteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.noteResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a quick note
+      tags:
+      - notes
   /notifications/channels:
     get:
       produces:
@@ -3799,6 +3913,79 @@ paths:
       summary: Change a member's role
       tags:
       - workspaces
+  /workspaces/{ws}/notes:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.noteResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Quick notes of a workspace
+      tags:
+      - notes
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Note
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.noteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.noteResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a quick note
+      tags:
+      - notes
+  /workspaces/{ws}/notes/order:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Note ids in order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.orderRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reorder quick notes
+      tags:
+      - notes
   /workspaces/{ws}/pages:
     get:
       parameters:

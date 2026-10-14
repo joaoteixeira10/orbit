@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Settings, UserPlus, FileText, ChevronRight, Sparkles, MapPin } from 'lucide-vue-next'
+import { Plus, Settings, UserPlus, FileText, ChevronRight, Sparkles, MapPin, Check } from 'lucide-vue-next'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
@@ -14,12 +14,15 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
-import { ICONS } from '@/lib/icons'
+import { ICONS, MODULE_ROUTES } from '@/lib/icons'
+import { ensureNoteColorStyles } from '@/components/notes/noteColors'
+import { orderedItems } from '@/components/notes/noteModel'
 import { todayStr, dateStr, startOfDay, addDays, fmtDate, fmtTime, relDay, sameDay, allDayDate, parseDate } from '@/lib/dates'
 
 // Home. At / it is Today across every workspace: what's late and due, the
-// week's events and recently edited pages. At /w/:ws it is that workspace's
-// overview, with its modules and members.
+// week's events, recently edited pages and pinned notes. At /w/:ws it is
+// that workspace's overview, with its modules and members.
+ensureNoteColorStyles()
 const route = useRoute()
 const wss = useWorkspacesStore()
 const tasks = useTasksStore()
@@ -138,7 +141,7 @@ onUnmounted(() => clearInterval(tick))
 const isNow = (e: Occurrence) => !e.all_day && new Date(e.start).getTime() <= now.value && new Date(e.end).getTime() > now.value
 
 // ---- Workspace overview ----
-const moduleRoute: Record<string, string> = { pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board', calendar: 'ws-calendar' }
+const moduleRoute: Record<string, string> = MODULE_ROUTES
 const modules = computed(() => (workspace.value?.modules ?? []).filter((m) => m !== 'home'))
 const moduleIcon = (key: string) => ICONS[wss.modules.find((m) => m.key === key)?.icon ?? ''] ?? FileText
 const members = computed(() => wss.members[wsId.value] ?? [])
@@ -176,7 +179,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
     <p v-if="workspace?.archived_at" class="mb-6 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
 
     <!-- Module shortcuts (workspace overview) -->
-    <div v-if="workspace && modules.length" class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div v-if="workspace && modules.length" class="mods mb-8">
       <RouterLink v-for="m in modules" :key="m" :to="{ name: moduleRoute[m] ?? 'ws', params: { ws: workspace.id } }" class="mod card">
         <span class="tile h-9 w-9 rounded-[10px]" :style="{ '--tile': workspace.color }"><component :is="moduleIcon(m)" class="h-5 w-5" :stroke-width="2.2" /></span>
         <span class="mt-3 block text-[15px] font-semibold">{{ t(`modules.${m}`) }}</span>
@@ -271,6 +274,30 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
           </RouterLink>
         </div>
         <p v-if="!eventsByDay.length" class="empty-line">{{ t('home.noEvents') }}</p>
+      </section>
+
+      <!-- Pinned notes -->
+      <section v-if="data.notes?.length" class="widget card p-5">
+        <h2 class="widget-title" style="color: #d9a400">{{ t('home.pinnedNotes') }}</h2>
+        <div class="mini-notes">
+          <RouterLink
+            v-for="n in data.notes"
+            :key="n.id"
+            :to="{ name: 'ws-notes', params: { ws: n.workspace_id }, query: { note: n.id } }"
+            class="mini-note"
+            :data-note="n.color"
+          >
+            <span v-if="n.title" class="block truncate text-[13.5px] font-semibold">{{ n.title }}</span>
+            <span v-if="!n.checklist" class="mini-body">{{ n.body }}</span>
+            <span v-else class="mt-0.5 block">
+              <span v-for="it in orderedItems(n.items).slice(0, 4)" :key="it.id" class="flex items-center gap-1.5 text-[12.5px]" :class="{ 'text-text-3 line-through': it.done }">
+                <span class="mini-check" :class="{ on: it.done }"><Check v-if="it.done" class="h-2 w-2" :stroke-width="4" /></span>
+                <span class="truncate">{{ it.text }}</span>
+              </span>
+            </span>
+            <span v-if="!wsId" class="mt-1.5 block truncate text-[11px] text-text-3">{{ wss.byId(n.workspace_id)?.name }}</span>
+          </RouterLink>
+        </div>
       </section>
 
       <!-- Recent pages -->
@@ -368,6 +395,48 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 .event.now {
   background: var(--crit-bg);
 }
+.mini-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.mini-note {
+  display: block;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--note-bg);
+  box-shadow: 0 0 0 0.5px var(--note-line);
+  transition: transform 0.18s var(--spring), box-shadow 0.18s;
+}
+.mini-note:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 0.5px var(--note-line), var(--shadow);
+}
+.mini-body {
+  display: -webkit-box;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.4;
+  white-space: pre-line;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.mini-check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.2px var(--text-3);
+}
+.mini-check.on {
+  background: var(--note-ink);
+  box-shadow: none;
+  color: #fff;
+}
 .page-link {
   display: flex;
   align-items: center;
@@ -377,6 +446,12 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 }
 .page-link:hover {
   background: var(--surface-hover);
+}
+/* As many module tiles per row as fit (two on phones). */
+.mods {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, calc(50% - 6px)), 1fr));
 }
 .mod {
   padding: 14px;

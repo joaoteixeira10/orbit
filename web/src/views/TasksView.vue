@@ -2,10 +2,12 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Eye, EyeOff, Pencil, CalendarClock, Inbox, CheckCircle2, CalendarDays, ChevronLeft, ListPlus } from 'lucide-vue-next'
+import { Plus, Eye, EyeOff, Pencil, CalendarClock, Inbox, CheckCircle2, CalendarDays, ChevronLeft, ListPlus, Rows3, Check, ListFilter } from 'lucide-vue-next'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import ListSheet from '@/components/tasks/ListSheet.vue'
+import TaskFilter from '@/components/tasks/TaskFilter.vue'
+import Popover from '@/components/ui/Popover.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -14,12 +16,14 @@ import { useToastStore } from '@/stores/toast'
 import { useSortable } from '@/lib/sortable'
 import { parseQuick } from '@/lib/quickadd'
 import { todayStr, relDay } from '@/lib/dates'
-import { tasksApi, type Task, type TaskList } from '@/api/planner'
+import { tasksApi, type Task, type TaskList, type TaskInput } from '@/api/planner'
+import { useTaskFilter, dueBucket, dueEdges, DUE_BUCKETS, type DueBucket } from '@/lib/taskFilter'
 
 // Tasks, Reminders-style: smart lists (Today, Scheduled, All, Completed) and
 // the workspace's own lists on the left; the chosen one on the right, its open
-// tasks grouped by status column, completed ones on demand. On phones the two
-// panes are two screens.
+// tasks grouped by status column (or, Planner-style, by due date, priority or
+// person), completed ones on demand, narrowed by the workspace's filter. On
+// phones the two panes are two screens.
 const route = useRoute()
 const router = useRouter()
 const tasks = useTasksStore()
@@ -82,7 +86,22 @@ watch(showDone, (v) => localStorage.setItem('orbit_show_done', v ? '1' : '0'))
 // Tasks ticked a moment ago stay visible briefly, so ticking feels done.
 const justDone = ref(new Set<string>())
 
-const visible = (x: Task) => !x.parent_id && (!x.done || showDone.value || justDone.value.has(x.id))
+// The workspace's filter (shared with the Board, Timeline and Charts).
+const me = computed(() => auth.user?.id ?? '')
+const { active: filterOn, matches, clear: clearFilter } = useTaskFilter(ws, lists, me)
+const visible = (x: Task) => !x.parent_id && (!x.done || showDone.value || justDone.value.has(x.id)) && matches(x)
+
+// Grouping of a list (and of All): its natural one (status columns, or
+// lists) or by due date, priority or person. Remembered per browser.
+type GroupBy = 'default' | 'due' | 'priority' | 'assignee'
+const groupBy = ref<GroupBy>((localStorage.getItem('orbit_tasks_group') as GroupBy) || 'default')
+watch(groupBy, (v) => localStorage.setItem('orbit_tasks_group', v))
+const canGroup = computed(() => !!list.value || sel.value === 'all')
+const grouping = computed<GroupBy>(() => (!canGroup.value || (groupBy.value === 'assignee' && members.value.length < 2) ? 'default' : groupBy.value))
+const groupOptions = computed<GroupBy[]>(() => ['default', 'due', 'priority', ...(members.value.length > 1 ? (['assignee'] as GroupBy[]) : [])])
+const groupLabel = (g: GroupBy) => t(`tasks.group.${g === 'default' ? (list.value ? 'status' : 'list') : g}`)
+const groupAnchor = ref<HTMLElement | null>(null)
+const groupOpen = ref(false)
 
 interface Section {
   key: string
@@ -92,10 +111,37 @@ interface Section {
   listId?: string
   tasks: Task[]
   overdue?: boolean
+  preset?: TaskInput // what a task added here gets (its group's priority, person, date)
+  noAdd?: boolean
 }
 const sections = computed<Section[]>(() => {
   const byRank = (a: Task, b: Task) => a.rank - b.rank
   const byDue = (a: Task, b: Task) => (a.due ?? '').localeCompare(b.due ?? '') || (a.due_time ?? '').localeCompare(b.due_time ?? '') || a.rank - b.rank
+  if (grouping.value !== 'default') {
+    const pool = all.value.filter((x) => visible(x) && (!list.value || x.list_id === list.value.id))
+    const base = { listId: list.value?.id }
+    switch (grouping.value) {
+      case 'due': {
+        const e = dueEdges(today)
+        const dueOf: Partial<Record<DueBucket, string>> = { today, none: '' }
+        return DUE_BUCKETS.map((b) => ({
+          ...base, key: 'due-' + b, title: t(`filter.dueB.${b}`), overdue: b === 'overdue',
+          tasks: pool.filter((x) => dueBucket(x, e) === b).sort(byDue),
+          preset: b in dueOf ? { due: dueOf[b] || undefined } : undefined, noAdd: !(b in dueOf),
+        })).filter((s) => s.tasks.length)
+      }
+      case 'priority':
+        return [3, 2, 1, 0].map((p) => ({
+          ...base, key: 'prio-' + p, title: t(`tasks.prio.${p}`), color: ['', '#34C759', '#FF9500', '#FF3B30'][p] || undefined,
+          tasks: pool.filter((x) => x.priority === p).sort(byDue), preset: { priority: p },
+        })).filter((s) => s.tasks.length)
+      case 'assignee':
+        return [...members.value.map((m) => ({ id: m.user_id, name: m.display_name || m.username })), { id: '', name: t('tasks.unassigned') }].map((m) => ({
+          ...base, key: 'who-' + (m.id || 'none'), title: m.name,
+          tasks: pool.filter((x) => (x.assignee_id ?? '') === m.id).sort(byDue), preset: m.id ? { assignee_id: m.id } : undefined,
+        })).filter((s) => s.tasks.length)
+    }
+  }
   if (list.value) {
     const l = list.value
     const mine = all.value.filter((x) => x.list_id === l.id && visible(x))
@@ -140,6 +186,8 @@ const heading = computed(() => {
   const m = meta[sel.value as Smart] ?? meta.all
   return { title: t(`tasks.smart.${sel.value || 'all'}`), color: m.color, icon: m.icon }
 })
+// The filter hides everything here (rather than there being nothing).
+const filteredOut = computed(() => filterOn.value && !sections.value.some((x) => x.tasks.length))
 const total = computed(() => sections.value.reduce((n, s) => n + s.tasks.filter((x) => !x.done).length, 0))
 
 // ---- Actions ----
@@ -198,6 +246,9 @@ async function commitAdd(s: Section) {
       // In Today and Scheduled a new task needs a date to show up there.
       due: q.due ?? (sel.value === 'today' ? today : sel.value === 'scheduled' ? (/^\d{4}-\d{2}-\d{2}$/.test(s.key) && s.key >= today ? s.key : today) : undefined),
       due_time: q.due_time, priority: q.priority, tags: q.tags.length ? q.tags : undefined,
+      ...s.preset,
+      // What was typed wins over the group's preset.
+      ...(q.due ? { due: q.due } : {}), ...(q.priority ? { priority: q.priority } : {}),
     })
     draft.value = ''
   } catch (e: any) {
@@ -218,7 +269,7 @@ function onDrop(m: { id: string; toGroup: string; beforeId: string }) {
 const container = ref<HTMLElement | null>(null)
 // One Sortable per section (a list has at most 12 columns); each follows
 // its element as sections come and go. Only a real list is reorderable.
-const sortEls = computed(() => (list.value && editable.value ? sectionEls.value : []))
+const sortEls = computed(() => (list.value && editable.value && grouping.value === 'default' ? sectionEls.value : []))
 for (let i = 0; i < 12; i++) {
   const r = computed(() => sortEls.value[i] ?? null)
   useSortable(r, onDrop, { group: 'task-rows', handle: '.task-row', filter: 'input,button.check,button.info', preventOnFilter: false, draggable: '[data-id]' })
@@ -268,6 +319,12 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
       <header class="mb-1 flex items-center gap-2">
         <button v-if="narrow" class="btn-plain -ml-2" @click="router.push({ name: 'ws-tasks', params: { ws } })"><ChevronLeft class="h-5 w-5" />{{ t('tasks.lists') }}</button>
         <div class="flex-1" />
+        <template v-if="sel !== 'completed'">
+          <button v-if="canGroup" ref="groupAnchor" class="btn btn-sm shrink-0" :aria-expanded="groupOpen" @click="groupOpen = !groupOpen">
+            <Rows3 class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('tasks.groupBy') }}:</span> {{ groupLabel(grouping) }}
+          </button>
+          <TaskFilter :ws="ws" :show-lists="!list" />
+        </template>
         <button v-if="sel !== 'completed'" class="icon-btn" :title="showDone ? t('tasks.hideDone') : t('tasks.showDone')" @click="showDone = !showDone">
           <component :is="showDone ? EyeOff : Eye" class="h-[18px] w-[18px]" />
         </button>
@@ -278,10 +335,19 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         <span class="text-[28px] font-semibold tabular-nums" :style="{ color: heading.color }">{{ total }}</span>
       </div>
 
+      <Popover v-if="groupOpen" :anchor="groupAnchor" placement="bottom-end" :width="220" @close="groupOpen = false">
+        <div class="p-1.5">
+          <div class="cap px-2.5 pb-1 pt-1.5">{{ t('tasks.groupBy') }}</div>
+          <button v-for="g in groupOptions" :key="g" class="menu-item w-full" @click="(groupBy = g), (groupOpen = false)">
+            <Check class="h-4 w-4" :class="grouping === g ? 'text-accent' : 'opacity-0'" />{{ groupLabel(g) }}
+          </button>
+        </div>
+      </Popover>
+
       <p v-if="workspace?.archived_at" class="mb-4 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
 
-      <div v-for="(s, i) in sections" :key="s.key" class="mb-6">
-        <h3 v-if="sections.length > 1 || !list" class="sec-head" :class="{ 'text-crit-text': s.overdue }">
+      <div v-for="(s, i) in filteredOut ? [] : sections" :key="s.key" class="mb-6">
+        <h3 v-if="sections.length > 1 || !list || grouping !== 'default'" class="sec-head" :class="{ 'text-crit-text': s.overdue }">
           <span v-if="s.color" class="h-2.5 w-2.5 rounded-full" :style="{ background: s.color }" />
           {{ s.title }}
           <span class="font-normal text-text-3">{{ s.tasks.filter((x) => !x.done).length || '' }}</span>
@@ -304,7 +370,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
             </div>
           </div>
         </div>
-        <div v-if="editable && sel !== 'completed'" class="add-row">
+        <div v-if="editable && sel !== 'completed' && !s.noAdd" class="add-row">
           <template v-if="adding === s.key">
             <span class="check pointer-events-none" :style="{ '--check': s.color || heading.color }" />
             <input
@@ -324,7 +390,13 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         </div>
       </div>
 
-      <div v-if="!sections.length" class="empty">
+      <div v-if="filteredOut" class="empty">
+        <ListFilter class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
+        <p class="title-3">{{ t('tasks.noMatch') }}</p>
+        <p class="subhead mt-1">{{ t('tasks.noMatchHint') }}</p>
+        <button class="btn mt-4" @click="clearFilter">{{ t('filter.clear') }}</button>
+      </div>
+      <div v-else-if="!sections.length" class="empty">
         <CheckCircle2 class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
         <p class="title-3">{{ lists.length ? t('tasks.allDone') : t('tasks.noLists') }}</p>
         <p class="subhead mt-1">{{ lists.length ? t('tasks.allDoneHint') : t('tasks.noListsHint') }}</p>

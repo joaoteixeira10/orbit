@@ -8,6 +8,9 @@ import { plEn, plPt } from './planner'
 import { boardEn, boardPt } from './board'
 import { edEn, edPt } from './editor'
 import { calEn, calPt } from './calendar'
+import { notesEn, notesPt } from './notes'
+import { tlEn, tlPt } from './timeline'
+import { chEn, chPt } from './charts'
 
 export const SUPPORTED_LOCALES = [
   { code: 'en', label: 'English' },
@@ -21,6 +24,9 @@ const en = {
   ...boardEn,
   ...edEn,
   ...calEn,
+  ...notesEn,
+  ...tlEn,
+  ...chEn,
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -282,6 +288,9 @@ const pt: typeof en = {
   ...boardPt,
   ...edPt,
   ...calPt,
+  ...notesPt,
+  ...tlPt,
+  ...chPt,
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',

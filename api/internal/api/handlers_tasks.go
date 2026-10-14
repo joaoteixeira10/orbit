@@ -336,6 +336,7 @@ type taskRequest struct {
 	Notes      *string   `json:"notes" binding:"omitempty,max=20000"`
 	Priority   *int      `json:"priority" binding:"omitempty,min=0,max=3"`
 	Tags       *[]string `json:"tags"`
+	Start      *string   `json:"start"`    // YYYY-MM-DD, "" clears
 	Due        *string   `json:"due"`      // YYYY-MM-DD, "" clears
 	DueTime    *string   `json:"due_time"` // HH:MM, "" clears
 	Repeat     *string   `json:"repeat"`   // RRULE, "" clears
@@ -401,6 +402,30 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 	}
 	if t.Due == nil {
 		t.DueTime = nil
+	}
+	if req.Start != nil {
+		if *req.Start == "" {
+			t.Start = nil
+		} else if !planner.ValidDate(*req.Start) {
+			return "start must be a date (YYYY-MM-DD)"
+		} else {
+			d := *req.Start
+			t.Start = &d
+		}
+	}
+	// Keep the start on or before the due date: moving one past the other
+	// takes the other along.
+	if t.Start != nil && t.Due != nil && *t.Start > *t.Due {
+		switch {
+		case req.Start != nil && req.Due != nil:
+			return "the start can't be after the due date"
+		case req.Start != nil:
+			d := *t.Start
+			t.Due = &d
+		default:
+			d := *t.Due
+			t.Start = &d
+		}
 	}
 	if req.Repeat != nil {
 		r, err := planner.CleanRRule(*req.Repeat)
@@ -589,6 +614,12 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	case done && t.CompletedAt == nil && t.Repeat != "" && t.Due != nil:
 		// A repeating task moves on to its next date and stays open.
 		if next, ok := planner.NextDue(*t.Due, t.Repeat); ok {
+			// The start keeps its distance from the due date.
+			if t.Start != nil {
+				if st, ok := planner.ShiftDate(*t.Start, planner.DaysBetween(*t.Due, next)); ok {
+					t.Start = &st
+				}
+			}
 			t.Due, repeated = &next, true
 			col = planner.FirstOpen(cols)
 		} else {

@@ -34,6 +34,13 @@ What Orbit could do next, roughly in the order it would pay off. The
 - **Bookmarks** — links with a preview, tags and a read-later state.
 - **Focus timer** — Pomodoro tied to a task, with time logged on it.
 
+## Notes
+
+- Reminders on a note ("remind me tomorrow at 9").
+- Images and drawings on a note (with the upload store below).
+- Quick capture from anywhere: a global shortcut and the phone share sheet
+  landing in a workspace's notes.
+
 ## Calendar
 
 - Editing one occurrence of a series ("this and following").
@@ -53,7 +60,11 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Tasks and boards
 
-- Smart lists you define (by tag, priority, due window, assignee).
+- Saved filters as smart lists in the sidebar (the filter exists; naming
+  and keeping several is what's missing).
+- Dependencies on the timeline (finish-to-start arrows, moving a task moves
+  what waits on it) and a critical path.
+- Exporting the charts (PNG / CSV) and a per-person workload view.
 - Natural-language repeat ("every other Tuesday") in quick add.
 - Swimlanes on boards (by assignee or priority); WIP limits per column.
 - Time estimates and a weekly planner view that fits tasks into free time.

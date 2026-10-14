@@ -10,8 +10,9 @@ merge, not at release time.
 
 - **Workspaces with their own modules** — create one from a template
   (School, Work, Personal, Shared, Blank), choose its modules (Overview,
-  Pages, Tasks, Board, Calendar), colour and icon; start with localised
-  example lists and a welcome page. Archive or delete it; reorder the sidebar.
+  Notes, Pages, Tasks, Board, Timeline, Charts, Calendar), colour and icon;
+  start with localised example lists, a welcome page and a first note.
+  Archive or delete it; reorder the sidebar.
 - **Sharing** — owners invite accounts by username or email as owner, editor
   or viewer. Content is private to members (others, admins included, get
   404). The last owner can't leave; deleting an account hands shared
@@ -39,13 +40,28 @@ merge, not at release time.
   instance's channels (email, ntfy, Telegram, …).
 - **Today** and per-workspace **Overview**; **search** and a **⌘K command
   palette** across workspaces.
+- **Quick notes** — a Notes module of sticky notes: jot a text or a
+  checklist on a coloured card, pin what matters, reorder by dragging, tick
+  items on the card, turn a note into a page or into tasks; undo a delete.
+  Pinned notes show on Today and on the overview; notes are searchable.
+- **Timeline** — a Gantt chart of a workspace's tasks, by list: tasks have
+  a **start date** now, bars run from start to due; drag a bar to move it or
+  its ends to change the dates, click an empty row to schedule a task;
+  weeks, months or quarters.
+- **Charts** — Microsoft Planner-style: status (not started, in progress,
+  late, completed), tasks by list, priority and person, and completed vs
+  created per week.
+- **Task filters and grouping** — filter by keyword, due (overdue, today,
+  this week, next week, later, no date), progress, priority, person, tags
+  and list; one filter per workspace, shared by Tasks, Board, Timeline and
+  Charts. Tasks group by status, due date, priority or person.
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,
   with a bottom tab bar on phones. English and European Portuguese.
 - **Metrics** — `orbit_users`, `orbit_workspaces`, `orbit_pages`,
-  `orbit_tasks_open`, `orbit_calendar_subscriptions_failing`; a Grafana
-  dashboard and alert rules in `deploy/`.
+  `orbit_tasks_open`, `orbit_notes`, `orbit_calendar_subscriptions_failing`;
+  a Grafana dashboard and alert rules in `deploy/`.
 
 ### Changed
 

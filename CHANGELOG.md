@@ -55,6 +55,10 @@ merge, not at release time.
   only instance privileges (`workspaces.create` is new); the server-scoped
   grants and scope rules are gone. See [docs/BLUEPRINT-FIT.md](docs/BLUEPRINT-FIT.md).
 
+- **The integration webhook carries the audit events** (`X-Orbit-Event:
+  audit.<action>`): accounts, roles, workspaces and their members, settings —
+  never workspace content. See [docs/API.md](docs/API.md#live-updates-and-the-webhook).
+
 ### Removed
 
 - LB Admin's proxy domain (proxies, lb-agent, lbctl, certificates, the lab)

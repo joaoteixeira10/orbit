@@ -320,6 +320,8 @@ func AllModels() []any {
 		&Note{},
 		&Notification{},
 		&PushSubscription{},
+		&GitAccount{},
+		&GitLink{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

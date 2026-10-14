@@ -115,6 +115,18 @@ type Task struct {
 	// nil = to whoever created it).
 	AssigneeID *string `gorm:"size:36;index" json:"assignee_id"`
 	CreatedBy  string  `gorm:"size:36" json:"created_by"`
+	// The git issue (or pull request) this task is, when it is one: a task
+	// of a git-linked list, or a task linked by hand. GitIssueID is the
+	// server's global id; GitRepo is "owner/repo" on GitHost (a base URL).
+	GitHost     string     `gorm:"size:255" json:"git_host,omitempty"`
+	GitRepo     string     `gorm:"size:255" json:"git_repo,omitempty"`
+	GitNumber   int64      `gorm:"not null;default:0" json:"git_number,omitempty"`
+	GitIssueID  int64      `gorm:"not null;default:0;index" json:"-"`
+	GitURL      string     `gorm:"size:500" json:"git_url,omitempty"`
+	GitState    string     `gorm:"size:16" json:"git_state,omitempty"` // open | closed | merged
+	GitPull     bool       `gorm:"not null;default:false" json:"git_pull,omitempty"`
+	GitSyncedAt *time.Time `json:"-"`
+	GitDirty    bool       `gorm:"not null;default:false" json:"git_dirty,omitempty"` // a change didn't reach git yet (retried by the sync)
 }
 
 // ---- Quick notes ------------------------------------------------------------
@@ -244,4 +256,42 @@ type PushSubscription struct {
 	Auth       string     `gorm:"size:100;not null" json:"-"`
 	UserAgent  string     `gorm:"size:300" json:"user_agent"`
 	LastUsedAt *time.Time `json:"last_used_at"`
+}
+
+// ---- Git ------------------------------------------------------------------------
+
+// GitAccount is one user's access to a git server (Gitea / Forgejo): its
+// base URL, their login there and a personal access token, sealed. Orbit
+// acts on git as that user.
+type GitAccount struct {
+	Base
+	UserID      string     `gorm:"size:36;not null;uniqueIndex:idx_git_account" json:"-"`
+	Kind        string     `gorm:"size:16;not null;default:gitea" json:"kind"` // gitea (github later)
+	BaseURL     string     `gorm:"size:255;not null;uniqueIndex:idx_git_account" json:"base_url"`
+	Login       string     `gorm:"size:255" json:"login"`
+	TokenSealed []byte     `json:"-"`
+	LastError   string     `gorm:"size:500" json:"last_error,omitempty"`
+	CheckedAt   *time.Time `json:"checked_at,omitempty"`
+}
+
+// GitLink ties a task list to a repository: its issues are the list's
+// tasks, both ways. Mode "issues" puts open issues in the first open column
+// and closed ones in the done column; "labels" picks the column by a label
+// (ColumnMap: column id → label name); "project" mirrors a project board
+// (ColumnMap: column id → project column id). LinkedBy's account syncs it
+// in the background; changes made in Orbit go out as whoever made them.
+type GitLink struct {
+	Base
+	ListID      string     `gorm:"size:36;not null;uniqueIndex" json:"list_id"`
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	Host        string     `gorm:"size:255;not null" json:"host"`
+	Owner       string     `gorm:"size:255;not null" json:"owner"`
+	Repo        string     `gorm:"size:255;not null" json:"repo"`
+	Mode        string     `gorm:"size:16;not null" json:"mode"` // issues | labels | project
+	ProjectID   int64      `gorm:"not null;default:0" json:"project_id,omitempty"`
+	ColumnMap   string     `gorm:"type:text" json:"-"`
+	IgnoreIDs   string     `gorm:"type:text" json:"-"` // JSON []int64: issues whose task was deleted here
+	LinkedBy    string     `gorm:"size:36;not null" json:"linked_by"`
+	SyncedAt    *time.Time `json:"synced_at,omitempty"`
+	LastError   string     `gorm:"size:500" json:"last_error,omitempty"`
 }

@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, Plus, X, Check, Trash2 } from 'lucide-vue-next'
+import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import Popover from '@/components/ui/Popover.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import IconColorPicker from '@/components/ui/IconColorPicker.vue'
 import ColorDots from '@/components/board/ColorDots.vue'
+import GitListSheet from './GitListSheet.vue'
+import { ago } from '@/components/notes/noteModel'
+import { locale } from '@/lib/dates'
 import { useSortable } from '@/lib/sortable'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
-import { tasksApi, type Column, type TaskList } from '@/api/planner'
+import { tasksApi, gitApi, type Column, type TaskList } from '@/api/planner'
 
 // Creates or edits a task list, as Reminders' list sheet: its name, colour
 // and icon, plus the board columns (statuses) its tasks move through.
@@ -52,6 +55,9 @@ const color = ref('#007AFF')
 const columns = ref<DraftColumn[]>([])
 const busy = ref(false)
 const tried = ref(false)
+// Creating from a git repository instead (its own sheet).
+const fromGit = ref(false)
+const gitOn = computed(() => auth.features.git_integration !== false)
 let seq = 0
 const draft = (c: Partial<Column> & { name: string }): DraftColumn => ({
   key: `c${++seq}`,
@@ -67,6 +73,7 @@ watch(
     if (!o) return
     tried.value = false
     busy.value = false
+    fromGit.value = false
     if (list.value) {
       name.value = list.value.name
       icon.value = list.value.icon
@@ -163,6 +170,38 @@ async function save() {
   }
 }
 
+// ---- Git ----
+const git = computed(() => list.value?.git)
+const syncing = ref(false)
+const confirmUnlink = ref(false)
+const gitMode = computed(() => {
+  const m = git.value?.mode
+  return m === 'labels' ? t('git.list.modeLabels') : m === 'project' ? t('git.list.modeProject') : t('git.list.modeIssues')
+})
+async function syncNow() {
+  if (!props.listId) return
+  syncing.value = true
+  try {
+    upsertList(await gitApi.syncList(props.listId))
+    void tasks.load(props.ws).catch(() => {})
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    syncing.value = false
+  }
+}
+async function unlink() {
+  if (!props.listId || !list.value) return
+  try {
+    await gitApi.unlinkList(props.listId)
+    upsertList({ ...list.value, git: undefined })
+    confirmUnlink.value = false
+    toast.success(t('git.link.unlinked'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 const confirmDelete = ref(false)
 async function destroy() {
   if (!props.listId) return
@@ -181,7 +220,8 @@ async function destroy() {
 </script>
 
 <template>
-  <Overlay :open="open && (creating || !!list)" :title="creating ? t('lists.new') : t('lists.edit')" size="md" @close="emit('close')">
+  <GitListSheet v-if="creating" :open="open && fromGit" :ws="ws" @close="emit('close')" @saved="emit('saved', $event)" />
+  <Overlay :open="open && (creating || !!list) && !fromGit" :title="creating ? t('lists.new') : t('lists.edit')" size="md" @close="emit('close')">
     <div class="space-y-5">
       <!-- Name and look -->
       <div class="flex flex-col items-center gap-3 pt-1">
@@ -199,6 +239,29 @@ async function destroy() {
           @keydown.enter.prevent="save"
         />
       </div>
+      <!-- Its repository -->
+      <section v-if="git">
+        <h3 class="cap mb-1.5 px-1">{{ t('git.link.section') }}</h3>
+        <div class="group">
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #f05032"><GitBranch class="h-4 w-4" /></span>
+            <div class="min-w-0 flex-1">
+              <a :href="git.url" target="_blank" rel="noopener noreferrer" class="block truncate text-[14px] font-medium hover:underline" :title="t('git.link.open')">{{ git.owner }}/{{ git.repo }}</a>
+              <div class="truncate text-[12px] text-text-3">
+                {{ gitMode }} · {{ git.synced_at ? t('git.link.synced', { when: ago(git.synced_at, locale()) }) : t('git.link.never') }}
+              </div>
+            </div>
+            <button type="button" class="btn-plain shrink-0" :disabled="syncing" @click="syncNow">
+              <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': syncing }" />{{ t('git.link.syncNow') }}
+            </button>
+          </div>
+          <div v-if="git.last_error" class="group-row !min-h-0 !py-2 text-[12.5px] text-crit-text">
+            <TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.link.syncFailed', { error: git.last_error }) }}
+          </div>
+        </div>
+        <button v-if="editable" type="button" class="btn-plain mt-1.5 !text-danger" @click="confirmUnlink = true">{{ t('git.link.unlink') }}</button>
+      </section>
+
       <div v-if="editable" class="rounded-xl bg-fill-2 p-4">
         <IconColorPicker v-model:icon="icon" v-model:color="color" compact />
       </div>
@@ -259,11 +322,14 @@ async function destroy() {
           <Plus class="h-4 w-4" />{{ t('lists.addColumn') }}
         </button>
         <p v-if="problem" class="mt-1 px-1 text-[12.5px] text-crit-text">{{ problem }}</p>
-        <p v-else class="footnote mt-1 px-1 leading-snug">{{ t('lists.columnsHint') }}</p>
+        <p v-else class="footnote mt-1 px-1 leading-snug">{{ git ? t('git.link.columnsHint') : t('lists.columnsHint') }}</p>
       </section>
     </div>
 
     <template #footer>
+      <button v-if="creating && editable && gitOn" type="button" class="btn-ghost mr-auto !px-2.5" @click="fromGit = true">
+        <GitBranch class="h-4 w-4" />{{ t('git.list.fromGit') }}
+      </button>
       <button v-if="!creating && editable" type="button" class="btn-ghost mr-auto !px-2.5 !text-danger" @click="confirmDelete = true">
         <Trash2 class="h-4 w-4" />{{ t('lists.delete') }}
       </button>
@@ -278,6 +344,16 @@ async function destroy() {
   <Popover v-if="colorFor" :anchor="colorAnchor" placement="bottom-start" @close="colorFor = null">
     <ColorDots :model-value="colorFor.color" @update:model-value="setColor" />
   </Popover>
+
+  <Confirm
+    :open="confirmUnlink"
+    :title="t('git.link.unlinkTitle', { repo: git ? `${git.owner}/${git.repo}` : '' })"
+    :message="t('git.link.unlinkBody')"
+    :confirm-label="t('git.link.unlink')"
+    danger
+    @confirm="unlink"
+    @close="confirmUnlink = false"
+  />
 
   <Confirm
     :open="confirmDelete"

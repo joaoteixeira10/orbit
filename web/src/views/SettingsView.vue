@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import NotificationSettings from '@/components/settings/NotificationSettings.vue'
-import { ref, computed, onMounted } from 'vue'
+import GitSettings from '@/components/settings/GitSettings.vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n, I18nT } from 'vue-i18n'
 import { setLocale, currentLocale, SUPPORTED_LOCALES, type LocaleCode } from '@/i18n'
 import { usePrefsStore, type Theme } from '@/stores/prefs'
@@ -17,7 +19,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink } from 'lucide-vue-next'
+import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch } from 'lucide-vue-next'
 import { calendarApi, type Feed } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import type { APIToken } from '@/api/types'
@@ -43,6 +45,7 @@ const sections = computed(() => [
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
     { id: 'language', label: t('settings.languageTime'), icon: Globe },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
+    ...(auth.features.git_integration !== false ? [{ id: 'git', label: t('git.settings.title'), icon: GitBranch }] : []),
     ...(auth.features.calendar_feeds !== false ? [{ id: 'feeds', label: t('settings.feeds'), icon: CalendarRange }] : []),
   ] },
   { group: t('settings.security'), items: [
@@ -59,6 +62,13 @@ function go(id: string) {
   active.value = id
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+// /settings#git opens at that section (links from elsewhere in the app).
+const route = useRoute()
+onMounted(() => {
+  const id = route.hash.slice(1)
+  // After the router's own scroll to the top.
+  if (id) void nextTick(() => setTimeout(() => go(id), 150))
+})
 
 // ---- Account ----
 const displayName = ref(auth.user?.display_name ?? '')
@@ -552,6 +562,12 @@ onMounted(loadSessions)
         <section id="notifications" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Bell class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.notifications') }}</h2></div>
           <div class="p-5"><NotificationSettings /></div>
+        </section>
+
+        <!-- Git accounts -->
+        <section v-if="auth.features.git_integration !== false" id="git" class="card overflow-hidden scroll-mt-4">
+          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><GitBranch class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('git.settings.title') }}</h2></div>
+          <div class="p-5"><GitSettings /></div>
         </section>
 
         <!-- Calendar feeds -->

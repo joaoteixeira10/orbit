@@ -29,7 +29,7 @@ Orbit. Every setting named here is in [CONFIGURATION.md](CONFIGURATION.md).
 | Browser → Orbit | Sign-in, the app, the API | TLS (at your proxy or in the app), short access tokens in memory, `HttpOnly` refresh cookie, CSRF check, CSP, rate limits |
 | Script → Orbit | API calls | Personal API tokens (`orb_…`), hashed, optionally limited or read-only |
 | Calendar app → Orbit | `GET /ical/<token>.ics` | A long random token per feed, stored hashed, revocable; its own rate limit |
-| Orbit → the internet | Subscribed calendars, SSO discovery, notifications, update check | An SSRF-guarded HTTP client, size and time limits |
+| Orbit → the internet | Subscribed calendars, SSO discovery, notifications, update check, git servers | An SSRF-guarded HTTP client, size and time limits (git servers named in `GIT_SERVERS` may be on your network) |
 | Anyone with the host | Database file, environment | `ORBIT_MASTER_KEY` seals secrets at rest; the rest is your host's security |
 
 **Who is trusted.** The **owner** and holders of `users.manage` and
@@ -228,6 +228,7 @@ stopped, never an upload. Keep the archives and `ORBIT_MASTER_KEY` apart.
 | TOTP secrets | Sealed, AES-256-GCM | |
 | SSO client secret | Sealed, AES-256-GCM | Never returned to the page |
 | Subscribed calendar addresses | Sealed, AES-256-GCM | Only the host is ever shown; errors never echo the address |
+| Git access tokens | Sealed, AES-256-GCM | Never returned to the page; each user's own, used only for what they do (and the sync of lists they linked) |
 | Notification channel secrets (SMTP password, webhook URLs, bot tokens, the webhook signing secret) | The whole configuration sealed in the `settings` table | Masked when read back (write-only on the page) |
 | Short-lived login state (SSO state, passkey challenges, SSO codes, live-update tickets) | In the database, keyed by a SHA-256 of a random id | Single-use, expire in minutes, swept every 15 minutes |
 | Workspace content | Plain, in the database | Protected by access control and your host; encrypt the disk / volume if the host is shared |

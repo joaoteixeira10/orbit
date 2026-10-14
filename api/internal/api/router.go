@@ -15,6 +15,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
@@ -43,6 +44,7 @@ type Deps struct {
 	Events   *events.Hub
 	CalSync  *calsync.Syncer // nil: built here
 	Inbox    *inbox.Service  // nil: built here
+	Git      *gitsync.Engine // nil: built here
 }
 
 // Handlers holds the wired dependencies and implements the route handlers.
@@ -63,17 +65,22 @@ type Handlers struct {
 	ephemeral *ephemeral.Store
 	calsync   *calsync.Syncer
 	inbox     *inbox.Service
+	git       *gitsync.Engine
 }
 
 // New builds the configured *gin.Engine.
 func New(d Deps) *gin.Engine {
 	gin.SetMode(d.Cfg.GinMode)
-	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox}
+	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git}
 	if h.calsync == nil {
 		h.calsync = calsync.New(d.DB, d.Sealer, d.Log)
 	}
 	if h.inbox == nil {
 		h.inbox = inbox.New(d.DB, d.Events, d.Notify, d.Sealer, d.Log, d.Cfg.PublicURL)
+	}
+	if h.git == nil {
+		h.git = gitsync.New(d.DB, d.Sealer, d.Cfg.GitServers, d.Log)
+		h.git.NotifyHub(d.Events)
 	}
 	migratePagesToMarkdown(d.DB, d.Log)
 	exportDomainMetrics(d.DB)
@@ -276,6 +283,17 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/tasks/:id", h.updateTask)
 			authed.POST("/tasks/:id/move", h.moveTask)
 			authed.DELETE("/tasks/:id", h.deleteTask)
+
+			authed.GET("/me/git", h.listGitAccounts)
+			authed.POST("/me/git", h.connectGit)
+			authed.DELETE("/me/git/:id", h.disconnectGit)
+			authed.GET("/me/git/:id/repos", h.gitRepos)
+			authed.GET("/me/git/:id/boards", h.gitBoards)
+			authed.POST("/workspaces/:ws/lists/git", h.createGitList)
+			authed.DELETE("/lists/:id/git", h.unlinkGitList)
+			authed.POST("/lists/:id/git/sync", h.syncGitList)
+			authed.POST("/tasks/:id/git", h.linkGitTask)
+			authed.DELETE("/tasks/:id/git", h.unlinkGitTask)
 
 			authed.GET("/workspaces/:ws/calendar", h.workspaceCalendar)
 			authed.POST("/workspaces/:ws/events", h.createEvent)

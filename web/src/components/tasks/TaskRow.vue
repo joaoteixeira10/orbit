@@ -3,6 +3,7 @@ import { computed, ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Info, Repeat, Flag, ListTree } from 'lucide-vue-next'
 import Avatar from '@/components/ui/Avatar.vue'
+import GitBadge from './GitBadge.vue'
 import type { Task, Member } from '@/api/planner'
 import { dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
 
@@ -81,7 +82,8 @@ function commit() {
       <div v-else class="title" @click="startEdit">
         <span v-if="prio" class="mr-1 font-semibold" :style="{ color }">{{ prio }}</span>{{ task.title }}
       </div>
-      <div v-if="!compact || due" class="meta">
+      <div v-if="!compact || due || task.git_number" class="meta">
+        <GitBadge :task="task" />
         <span v-if="due" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
         <span v-if="listName">{{ listName }}</span>

@@ -37,6 +37,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/db"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/jobs"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
@@ -218,6 +219,9 @@ func main() {
 	hub := events.New().UseTicketStore(ephemeral.New(gdb))
 	// Notifications: the inbox, Web Push and the user's channels.
 	notes := inbox.New(gdb, hub, notifier, sealer, log, cfg.PublicURL)
+	// Git: lists that hold a repository's issues, kept in step both ways.
+	git := gitsync.New(gdb, sealer, cfg.GitServers, log)
+	git.NotifyHub(hub)
 	router := api.New(api.Deps{
 		Cfg:      cfg,
 		DB:       gdb,
@@ -231,11 +235,12 @@ func main() {
 		WebAuthn: waMgr,
 		Events:   hub,
 		Inbox:    notes,
+		Git:      git,
 	})
 
 	// Background scheduler: update checks, token sweeps, backups, calendar
 	// subscriptions and reminders.
-	scheduler := jobs.NewScheduler(gdb, notifier, updates, log).UseBackups(sealer).UsePlanner(sealer, hub).UseInbox(notes)
+	scheduler := jobs.NewScheduler(gdb, notifier, updates, log).UseBackups(sealer).UsePlanner(sealer, hub).UseInbox(notes).UseGit(git)
 	scheduler.Start()
 	defer scheduler.Stop()
 

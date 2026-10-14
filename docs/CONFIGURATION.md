@@ -117,6 +117,17 @@ the audit log and the runtime settings below. Back up the file and
 | `WEBAUTHN_RP_ORIGINS` | – | empty; dev: `http://localhost:5173`, `http://localhost:8080` (the dev compose file sets `:5180` and `:8090`) | Comma list of full origins, e.g. `https://orbit.example.org`. |
 | `WEBAUTHN_RP_DISPLAY_NAME` | – | `Orbit` | Name shown in the browser's passkey prompt. |
 
+## Git
+
+| Variable | Req | Default | Notes |
+|---|---|---|---|
+| `GIT_SERVERS` | – | | Comma list of Gitea / Forgejo base URLs (e.g. `https://gitea.lan,http://git.home:3000`) that users may connect **even on a private network** — your own server. They are also suggested in Settings → Git, and may use plain `http://`. Any other server must be public and use `https`; Orbit's SSRF guard refuses private and loopback addresses. |
+
+Each person connects their own account (Settings → Git) with a personal
+access token with the permissions *issue: read and write*, *repository:
+read*, *user: read*. Tokens are sealed with `ORBIT_MASTER_KEY`. Linked lists
+sync every 3 minutes; the `git_integration` feature flag turns all of it off.
+
 ## Observability and updates
 
 | Variable | Req | Default | Notes |
@@ -214,7 +225,7 @@ the `step_up_auth` feature flag is on.
 |---|---|---|---|
 | **Security policy**: `otp_enforced` (every local user needs two-factor), `hide_local_login` (hide the password form when SSO is on; `/login?local=1` still shows it), `passwordless_enabled` (the "Sign in with a passkey" button), `auto_sso` (start SSO right away on the sign-in page; needs SSO on) | Owner → Security | Owner (step-up) | off, off, **on**, off |
 | **SSO (OIDC)**: on/off, issuer, client id, client secret (stored sealed, never shown again), redirect URL, extra scopes, role claim, default role for new users, whether the identity provider may grant admin | Owner → SSO | Owner (step-up) | off; default role `none` |
-| **Feature flags**: `sessions` (users see and end their sessions), `impersonation`, `step_up_auth`, `calendar_subscriptions` (workspaces subscribe to ICS calendars), `calendar_feeds` (users publish private ICS feeds) | Owner → Owner | Owner (step-up) | off, off, off, **on**, **on** |
+| **Feature flags**: `sessions` (users see and end their sessions), `impersonation`, `step_up_auth`, `calendar_subscriptions` (workspaces subscribe to ICS calendars), `calendar_feeds` (users publish private ICS feeds), `git_integration` (Gitea / Forgejo accounts, linked lists and issues) | Owner → Owner | Owner (step-up) | off, off, off, **on**, **on**, **on** |
 | **Security alerts**: which events alert (impersonation, owner transfer, admin role granted, security/SSO config changed, session token reuse), which channels, which email | Owner → Owner, **Security alerts** | Owner | all off |
 | **Owner transfer** | Owner → Owner, danger zone | Owner (step-up) | the first admin |
 | **Branding**: app name, accent colour, logo, favicon, show name, show logo, sign-in message | Owner → Branding | Owner, or a role with `settings.branding` | "Orbit" |
@@ -225,6 +236,7 @@ the `step_up_auth` feature flag is on.
 | Per user: **notifications** — per kind (reminders, assigned, workspaces, activity, summary) to devices (Web Push) and/or channels; which channels; the daily summary and its time; push devices | Settings → Notifications | the user | about you → devices; activity → bell only; summary off |
 | Per user and workspace: **mute activity** | the workspace's `⋯` | the user | off |
 | Per user: **calendar feeds** | Settings → Calendar feeds | the user | none |
+| Per user: **git accounts** (server and token) | Settings → Git | the user | none |
 | Per workspace: name, icon, colour, modules and their order, members and their roles, archived | the workspace's settings (`⋯`) | the workspace's owners | from the template |
 
 The owner and delegated roles are explained in [SECURITY.md](SECURITY.md#authorization).

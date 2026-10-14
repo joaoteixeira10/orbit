@@ -179,6 +179,52 @@ test('timeline and charts show the tasks, and the filter narrows them', async ({
   await page.getByRole('button', { name: 'Clear filter' }).last().click()
 })
 
+// Git. With E2E_GIT_URL and E2E_GIT_TOKEN (a Gitea the server may reach —
+// named in its GIT_SERVERS — whose account has a repository named
+// E2E_GIT_REPO, default "website", with open issues) the whole round trip;
+// without them, that a server Orbit can't reach is refused.
+const GIT_URL = process.env.E2E_GIT_URL
+const GIT_TOKEN = process.env.E2E_GIT_TOKEN
+const GIT_REPO = process.env.E2E_GIT_REPO || 'website'
+
+test('git: connect an account, make a list from a repository, a new task opens an issue', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/settings#git')
+  const git = page.locator('#git')
+  await expect(git.getByRole('heading', { name: 'Git' })).toBeVisible()
+  if (!GIT_URL || !GIT_TOKEN) {
+    await git.locator('input[type="url"]').fill('https://gitea.invalid')
+    await git.locator('input[type="password"]').fill('not-a-token')
+    await git.getByRole('button', { name: 'Connect' }).click()
+    await expect(page.getByText(/couldn.t reach https:\/\/gitea\.invalid/)).toBeVisible()
+    return
+  }
+  await git.locator('input[type="url"]').fill(GIT_URL)
+  await git.locator('input[type="password"]').fill(GIT_TOKEN)
+  await git.getByRole('button', { name: 'Connect' }).click()
+  await expect(git.locator('.group-row', { hasText: new URL(GIT_URL).host })).toBeVisible()
+
+  // A list from the repository: its open issues come in, with their numbers.
+  await page.goto('/')
+  await page.locator('.ws-row').first().click()
+  await page.waitForURL(/\/w\/[^/]+$/)
+  await page.goto(new URL(page.url()).pathname + '/tasks')
+  await page.getByRole('button', { name: 'Add List' }).first().click()
+  await page.getByRole('button', { name: 'From a Git repository…' }).click()
+  await page.getByPlaceholder('Search repositories').fill(GIT_REPO)
+  await page.getByRole('button', { name: new RegExp(`/${GIT_REPO}`) }).first().click()
+  await page.getByRole('button', { name: 'Create list' }).click()
+  await expect(page.getByRole('heading', { name: GIT_REPO })).toBeVisible()
+  await expect(page.locator('.task-row .git-badge').first()).toBeVisible()
+
+  // A new task becomes an issue: it gets a number.
+  await page.getByRole('button', { name: 'New Task' }).first().click()
+  const title = `From Orbit ${Date.now()}`
+  await page.getByPlaceholder(/New task/).fill(title)
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.task-row', { hasText: title }).locator('.git-badge')).toHaveText(/#\d+/)
+})
+
 test('notifications: a task someone gives you rings the bell and opens', async ({ page, request }) => {
   // Another member (made through the API) gives the admin a task.
   const json = async (r: { json: () => Promise<any> }) => r.json()

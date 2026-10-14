@@ -308,6 +308,119 @@ definitions:
           type: string
         type: array
     type: object
+  api.gitAccountResponse:
+    properties:
+      base_url:
+        type: string
+      checked_at:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      last_error:
+        type: string
+      login:
+        type: string
+    type: object
+  api.gitAccountsResponse:
+    properties:
+      accounts:
+        items:
+          $ref: '#/definitions/api.gitAccountResponse'
+        type: array
+      servers:
+        description: suggested (GIT_SERVERS)
+        items:
+          type: string
+        type: array
+    type: object
+  api.gitBoardsResponse:
+    properties:
+      labels:
+        items:
+          $ref: '#/definitions/gitsync.Label'
+        type: array
+      projects:
+        items:
+          $ref: '#/definitions/gitsync.Project'
+        type: array
+      supported:
+        description: the server has the projects API
+        type: boolean
+    type: object
+  api.gitConnectRequest:
+    properties:
+      base_url:
+        maxLength: 255
+        type: string
+      token:
+        maxLength: 255
+        type: string
+    required:
+    - base_url
+    - token
+    type: object
+  api.gitLinkResponse:
+    properties:
+      host:
+        type: string
+      last_error:
+        type: string
+      linked_by:
+        type: string
+      mode:
+        type: string
+      owner:
+        type: string
+      repo:
+        type: string
+      synced_at:
+        type: string
+      url:
+        type: string
+    type: object
+  api.gitListRequest:
+    properties:
+      account_id:
+        type: string
+      labels:
+        description: 'mode labels: one column each, in order'
+        items:
+          type: string
+        type: array
+      mode:
+        enum:
+        - issues
+        - labels
+        - project
+        type: string
+      name:
+        description: 'default: the repository''s name'
+        type: string
+      owner:
+        maxLength: 100
+        type: string
+      project_id:
+        description: mode project
+        type: integer
+      repo:
+        maxLength: 100
+        type: string
+    required:
+    - account_id
+    - mode
+    - owner
+    - repo
+    type: object
+  api.gitTaskRequest:
+    properties:
+      url:
+        maxLength: 500
+        type: string
+    required:
+    - url
+    type: object
   api.homeResponse:
     properties:
       events:
@@ -380,6 +493,8 @@ definitions:
         type: array
       created_at:
         type: string
+      git:
+        $ref: '#/definitions/api.gitLinkResponse'
       icon:
         type: string
       id:
@@ -694,6 +809,9 @@ definitions:
         description: NotifyPrefs is where each kind of notification goes besides the
           inbox.
         type: object
+      page_editor:
+        description: visual | markdown
+        type: string
       theme:
         $ref: '#/definitions/models.Theme'
       time_format:
@@ -916,6 +1034,31 @@ definitions:
       due_time:
         description: HH:MM
         type: string
+      git_dirty:
+        description: a change didn't reach git yet (retried by the sync)
+        type: boolean
+      git_error:
+        description: |-
+          GitError: the change is saved but didn't reach the linked issue (the
+          sync tries again).
+        type: string
+      git_host:
+        description: |-
+          The git issue (or pull request) this task is, when it is one: a task
+          of a git-linked list, or a task linked by hand. GitIssueID is the
+          server's global id; GitRepo is "owner/repo" on GitHost (a base URL).
+        type: string
+      git_number:
+        type: integer
+      git_pull:
+        type: boolean
+      git_repo:
+        type: string
+      git_state:
+        description: open | closed | merged
+        type: string
+      git_url:
+        type: string
       id:
         type: string
       list_id:
@@ -1018,6 +1161,11 @@ definitions:
           Per kind (reminder, assigned, workspace, activity, digest): also to my
           devices (push) and/or my channels.
         type: object
+      page_editor:
+        enum:
+        - visual
+        - markdown
+        type: string
       theme:
         allOf:
         - $ref: '#/definitions/models.Theme'
@@ -1194,6 +1342,48 @@ definitions:
       s3_prefix:
         type: string
       s3_region:
+        type: string
+    type: object
+  gitsync.Label:
+    properties:
+      color:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  gitsync.Project:
+    properties:
+      id:
+        type: integer
+      state:
+        type: string
+      title:
+        type: string
+    type: object
+  gitsync.Repo:
+    properties:
+      description:
+        type: string
+      full_name:
+        type: string
+      html_url:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      owner:
+        $ref: '#/definitions/gitsync.User'
+      private:
+        type: boolean
+    type: object
+  gitsync.User:
+    properties:
+      id:
+        type: integer
+      login:
         type: string
     type: object
   inbox.Delivery:
@@ -1424,6 +1614,11 @@ definitions:
           + chosen channel keys (JSON []string), restricted to the channels the
           admin has enabled.
         type: boolean
+      page_editor:
+        description: |-
+          PageEditor is how this user edits pages: "visual" (blocks, the default)
+          or "markdown" (the source). Pages are Markdown either way.
+        type: string
       theme:
         $ref: '#/definitions/models.Theme'
       time_format:
@@ -2279,6 +2474,42 @@ paths:
       summary: Update a task list
       tags:
       - tasks
+  /lists/{id}/git:
+    delete:
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Unlink a list from git
+      tags:
+      - git
+  /lists/{id}/git/sync:
+    post:
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.listResponse'
+      security:
+      - BearerAuth: []
+      summary: Sync a list with git now
+      tags:
+      - git
   /me/api-tokens:
     get:
       produces:
@@ -2405,6 +2636,114 @@ paths:
       summary: Revoke a calendar feed
       tags:
       - calendar
+  /me/git:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.gitAccountsResponse'
+      security:
+      - BearerAuth: []
+      summary: My git accounts
+      tags:
+      - git
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Server and token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gitConnectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.gitAccountResponse'
+      security:
+      - BearerAuth: []
+      summary: Connect a git account
+      tags:
+      - git
+  /me/git/{id}:
+    delete:
+      parameters:
+      - description: Account id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Disconnect a git account
+      tags:
+      - git
+  /me/git/{id}/boards:
+    get:
+      parameters:
+      - description: Account id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Owner
+        in: query
+        name: owner
+        required: true
+        type: string
+      - description: Repository
+        in: query
+        name: repo
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.gitBoardsResponse'
+      security:
+      - BearerAuth: []
+      summary: A repository's labels and projects
+      tags:
+      - git
+  /me/git/{id}/repos:
+    get:
+      parameters:
+      - description: Account id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Search
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/gitsync.Repo'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Search repositories
+      tags:
+      - git
   /me/notes:
     get:
       produces:
@@ -3604,6 +3943,53 @@ paths:
       summary: Update a task
       tags:
       - tasks
+  /tasks/{id}/git:
+    delete:
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.taskResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlink a task from its issue
+      tags:
+      - git
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Issue address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gitTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.taskResponse'
+      security:
+      - BearerAuth: []
+      summary: Link a task to an issue
+      tags:
+      - git
   /tasks/{id}/move:
     post:
       consumes:
@@ -4071,6 +4457,26 @@ paths:
       summary: Create an event
       tags:
       - calendar
+  /workspaces/{ws}/export:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export pages as Markdown (zip)
+      tags:
+      - pages
   /workspaces/{ws}/lists:
     get:
       parameters:
@@ -4120,6 +4526,34 @@ paths:
       summary: Create a task list
       tags:
       - tasks
+  /workspaces/{ws}/lists/git:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Repository and layout
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gitListRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.listResponse'
+      security:
+      - BearerAuth: []
+      summary: New list from a git repository
+      tags:
+      - git
   /workspaces/{ws}/lists/order:
     put:
       consumes:

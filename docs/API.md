@@ -114,6 +114,7 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/search?q=essay" | jq -r '.[] | "\(.kind)\t\(
 | Calendar | `GET /calendar`, `GET /workspaces/{ws}/calendar`, `POST /workspaces/{ws}/events`, `GET/PUT/DELETE /events/{id}` (`?occurrence=` removes one) |
 | Subscriptions | `GET/POST /workspaces/{ws}/subscriptions`, `PUT/DELETE /subscriptions/{id}`, `POST /subscriptions/{id}/refresh` |
 | Feeds | `GET/POST /me/feeds`, `DELETE /me/feeds/{id}`; the feed itself is `GET /ical/<token>.ics` (no header: the token is in the address) |
+| Git | `GET/POST /me/git` (connect: `base_url`, `token`), `DELETE /me/git/{id}`, `GET /me/git/{id}/repos?q=`, `GET /me/git/{id}/boards?owner=&repo=` (labels, project boards); `POST /workspaces/{ws}/lists/git` (`account_id`, `owner`, `repo`, `mode`: `issues`, `labels` with `labels`, or `project` with `project_id`), `DELETE /lists/{id}/git`, `POST /lists/{id}/git/sync`; `POST/DELETE /tasks/{id}/git` (`url` of an issue or pull request). A task change that git refuses still saves and answers `git_error`. |
 
 All under `/api/v1` except the feed. Accounts and administration (users,
 roles, audit, settings, two-factor, passkeys, sessions) are in the reference.

@@ -82,6 +82,10 @@ type Config struct {
 	// trailing slash). Used to build calendar-feed addresses; empty = taken
 	// from the request.
 	PublicURL string // PUBLIC_URL
+	// GitServers are the git servers (Gitea / Forgejo base URLs) users may
+	// connect even when they resolve to a private address — your own server
+	// on the LAN. Any other server must be public (https, not private IPs).
+	GitServers []string // GIT_SERVERS (comma list of base URLs)
 
 	// Optional app-terminated HTTPS for the MAIN listener. When both are set the
 	// app serves HTTPS on HTTPAddr itself (run with nothing in front, or encrypt
@@ -146,6 +150,7 @@ func Load() (*Config, error) {
 		AdminPassword:  adminPassword,
 		CORSOrigins:    splitNonEmpty(env("CORS_ORIGINS", "")),
 		TrustedProxies: splitNonEmpty(env("TRUSTED_PROXIES", "")),
+		GitServers:     splitNonEmpty(env("GIT_SERVERS", "")),
 		MaxBodyBytes:   int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
 
 		WebAuthnRPID:          env("WEBAUTHN_RP_ID", ""),

@@ -28,12 +28,15 @@ const (
 	// CalendarFeeds lets users publish a private ICS address of their own
 	// events and tasks for other calendar apps. On by default.
 	CalendarFeeds = "calendar_feeds"
+	// GitIntegration lets users connect their Gitea / Forgejo accounts and
+	// sync repositories' issues with task lists. On by default.
+	GitIntegration = "git_integration"
 )
 
 const settingKey = "features"
 
 // Defaults is the canonical set of flags and their default values (off,
-// except the calendar integrations, which shipped on). The
+// except the calendar and git integrations, which shipped on). The
 // stored map is merged over this, so unknown stored keys are ignored and new
 // flags appear automatically (off) without a migration.
 var Defaults = map[string]bool{
@@ -42,6 +45,7 @@ var Defaults = map[string]bool{
 	StepUp:                false,
 	CalendarSubscriptions: true,
 	CalendarFeeds:         true,
+	GitIntegration:        true,
 }
 
 // All returns every known flag with its effective value (stored value, else

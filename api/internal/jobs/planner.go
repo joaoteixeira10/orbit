@@ -41,6 +41,7 @@ func (s *Scheduler) startPlanner() {
 		{"* * * * *", s.digests, "daily summaries"},
 		{"@daily", s.emptyTrash, "trash"},
 		{"@daily", s.inbox.Cleanup, "old notifications"},
+		{"@every 3m", s.syncGit, "git-linked lists"},
 	}
 	for _, j := range jobs {
 		if _, err := s.cron.AddFunc(j.spec, j.fn); err != nil {

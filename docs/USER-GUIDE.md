@@ -357,6 +357,42 @@ Friday*), and the Timeline draws a bar from start to due. A start after the
 due date moves the due date along (and the other way round); a repeating
 task's start moves with it.
 
+### Git: issues as tasks
+
+Connect your account on a **Gitea** or **Forgejo** server first, in
+**Settings → Git**: the server's address and a personal access token (make
+one in the server's *Settings → Applications* with the permissions *issue:
+read and write*, *repository: read*, *user: read*). Orbit acts as you, with
+your token; everyone connects their own.
+
+**A list from a repository.** **Add List → From a Git repository…**, pick
+the repository and how its issues are laid out:
+
+- **Open and closed** — open issues in one column; closed ones are done.
+- **Labels as columns** — pick labels (in order) that are steps, like
+  *Doing* and *Review*; an issue sits in its label's column (or **Open**
+  with none of them), and moving the task changes its label.
+- **Project board** — one of the repository's boards, with its columns
+  (servers whose API has project boards; the sheet tells you otherwise).
+
+Then it goes both ways. Title, description, due date, labels (shown as
+tags; tags that aren't labels stay Orbit's own), who it's for (a member who
+connected the same server) and the column reach the issue as soon as you
+change them; completing a task closes its issue. Changes made on git come
+back every few minutes, or at once with **Sync now** in **Edit list**,
+which also shows when it last synced and why it failed, if it did. A **new
+task** in the list opens an issue. **Deleting** a task leaves its issue
+alone (and it doesn't come back). Each task shows its issue's number in
+green (open) or purple (closed): click it to open the issue. If git refuses
+a change (the server is down, the token expired), the change is kept, you're
+told, and it is sent again by the next sync. **Stop syncing** in **Edit
+list** keeps the tasks.
+
+**One task, one issue.** In any other list, a task's details have an
+**Issue** field: paste the address of an issue or pull request. Closing the
+issue — or merging the pull request — completes the task, and completing
+the task closes the issue.
+
 ## 8. Boards
 
 The **Board** shows a list's tasks as columns — the list's **statuses**. The
@@ -499,6 +535,10 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
   **Time format** 13:00 or 1:00 PM.
 - **Reminders** — notifications on this device; **Also send reminders**
   through the channels you tick.
+- **Git** — your accounts on Gitea or Forgejo servers: the server's address
+  and a personal access token (see [Git: issues as tasks](#git-issues-as-tasks)).
+  Connecting the same server again replaces the token; the bin icon
+  disconnects.
 - <a id="calendar-feeds"></a>**Calendar feeds** — **New feed**: a private
   address with your events (and tasks with a due date, unless you untick it)
   from all your workspaces or the ones you pick. The address is shown **once**:

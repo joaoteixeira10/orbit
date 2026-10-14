@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Calendar, Check, ListTree, Repeat } from 'lucide-vue-next'
 import Avatar from '@/components/ui/Avatar.vue'
+import GitBadge from '@/components/tasks/GitBadge.vue'
 import type { Member, Task } from '@/api/planner'
 import { dueLabel, isOverdue, repeatLabel } from '@/lib/dates'
 
@@ -24,7 +25,7 @@ const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, pr
 const prio = computed(() => '!'.repeat(props.task.priority))
 const note = computed(() => props.task.notes.trim().split('\n')[0]?.trim() ?? '')
 const who = computed(() => (props.assignee ? props.assignee.display_name || props.assignee.username : ''))
-const hasMeta = computed(() => !!due.value || !!props.task.repeat || props.task.tags.length > 0 || props.subtasks.total > 0 || !!who.value)
+const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props.task.repeat || props.task.tags.length > 0 || props.subtasks.total > 0 || !!who.value)
 </script>
 
 <template>
@@ -47,6 +48,7 @@ const hasMeta = computed(() => !!due.value || !!props.task.repeat || props.task.
       >
         <ListTree class="h-3.5 w-3.5" />{{ subtasks.done }}/{{ subtasks.total }}
       </span>
+      <GitBadge :task="task" />
       <span v-for="tag in task.tags" :key="tag" class="tag">#{{ tag }}</span>
       <Avatar v-if="assignee" :name="who" :src="assignee.avatar_url" :size="20" class="avatar" :title="t('board.assignedTo', { name: who })" />
     </div>

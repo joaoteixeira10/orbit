@@ -9,7 +9,7 @@ import {
   Home, House, Landmark, Laptop, Leaf, Lightbulb, ListChecks, Mountain, Music, NotebookPen, Palette, PawPrint, Pencil,
   Plane, Repeat, Rocket, ShoppingCart, Sparkles, Star, Stethoscope, Sun, Target, Timer, Trophy, Users, Wallet, Wrench,
   Bell, Baby, Bike, Brush, Building2, Clapperboard, Languages, Microscope, PiggyBank, Shirt, Sprout, Tent, Ticket,
-  StickyNote, ChartGantt, ChartPie,
+  StickyNote, ChartGantt, ChartPie, GitBranch,
 } from 'lucide-vue-next'
 
 export const ICONS: Record<string, Component> = {
@@ -24,7 +24,7 @@ export const ICONS: Record<string, Component> = {
   'shopping-cart': ShoppingCart, shirt: Shirt, gift: Gift, wallet: Wallet, 'piggy-bank': PiggyBank, music: Music,
   film: Film, clapperboard: Clapperboard, 'gamepad-2': Gamepad2, camera: Camera, palette: Palette, brush: Brush,
   ticket: Ticket, bell: Bell, timer: Timer, repeat: Repeat, bookmark: Bookmark,
-  'sticky-note': StickyNote, 'chart-gantt': ChartGantt, 'chart-pie': ChartPie,
+  'sticky-note': StickyNote, 'chart-gantt': ChartGantt, 'chart-pie': ChartPie, 'git-branch': GitBranch,
 }
 
 // The picker's order: a few rows by theme.

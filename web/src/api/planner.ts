@@ -83,6 +83,18 @@ export interface TaskList {
   columns: Column[]
   rank: number
   open_count: number
+  git?: GitLink // the list holds a repository's issues
+}
+// A list's link to a repository on Gitea / Forgejo.
+export interface GitLink {
+  host: string
+  owner: string
+  repo: string
+  mode: 'issues' | 'labels' | 'project'
+  url: string
+  synced_at?: string
+  last_error?: string
+  linked_by: string
 }
 export interface Task {
   id: string
@@ -105,6 +117,15 @@ export interface Task {
   created_by: string
   created_at: string
   updated_at: string
+  // Its issue or pull request on git (a task of a linked list, or linked by hand).
+  git_host?: string
+  git_repo?: string // owner/repo
+  git_number?: number
+  git_url?: string
+  git_state?: 'open' | 'closed' | 'merged'
+  git_pull?: boolean
+  git_dirty?: boolean // a change didn't reach git yet
+  git_error?: string // in a change's answer: saved, but git refused it
 }
 export interface TaskInput {
   list_id?: string
@@ -310,6 +331,51 @@ export const pagesApi = {
   duplicate: (id: string) => api<Page>(`/pages/${id}/duplicate`, { method: 'POST' }),
   favorite: (id: string, on: boolean) => api<void>(`/pages/${id}/favorite`, { method: on ? 'POST' : 'DELETE' }),
   favorites: () => api<PageSummary[]>('/me/favorites'),
+}
+
+export interface GitAccount {
+  id: string
+  kind: 'gitea'
+  base_url: string
+  login: string
+  last_error?: string
+  checked_at?: string
+}
+export interface GitRepo {
+  id: number
+  full_name: string
+  name: string
+  description: string
+  private: boolean
+  html_url: string
+  owner: { login: string }
+}
+export interface GitBoards {
+  supported: boolean // the server's API has project boards
+  projects: { id: number; title: string }[]
+  labels: { id: number; name: string; color: string }[]
+}
+export interface GitListInput {
+  account_id: string
+  owner: string
+  repo: string
+  mode: GitLink['mode']
+  project_id?: number
+  labels?: string[]
+  name?: string
+}
+
+export const gitApi = {
+  accounts: () => api<{ accounts: GitAccount[]; servers: string[] }>('/me/git'),
+  connect: (base_url: string, token: string) => api<GitAccount>('/me/git', { method: 'POST', body: j({ base_url, token }) }),
+  disconnect: (id: string) => api<void>(`/me/git/${id}`, { method: 'DELETE' }),
+  repos: (id: string, q: string) => api<GitRepo[]>(`/me/git/${id}/repos?${qs({ q })}`),
+  boards: (id: string, owner: string, repo: string) => api<GitBoards>(`/me/git/${id}/boards?${qs({ owner, repo })}`),
+  createList: (ws: string, b: GitListInput) => api<TaskList>(`/workspaces/${ws}/lists/git`, { method: 'POST', body: j(b) }),
+  unlinkList: (id: string) => api<void>(`/lists/${id}/git`, { method: 'DELETE' }),
+  syncList: (id: string) => api<TaskList>(`/lists/${id}/git/sync`, { method: 'POST' }),
+  linkTask: (id: string, url: string) => api<Task>(`/tasks/${id}/git`, { method: 'POST', body: j({ url }) }),
+  unlinkTask: (id: string) => api<Task>(`/tasks/${id}/git`, { method: 'DELETE' }),
 }
 
 export const tasksApi = {

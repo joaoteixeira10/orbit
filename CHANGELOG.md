@@ -67,6 +67,19 @@ merge, not at release time.
   this week, next week, later, no date), progress, priority, person, tags
   and list; one filter per workspace, shared by Tasks, Board, Timeline and
   Charts. Tasks group by status, due date, priority or person.
+- **Git (Gitea / Forgejo)** — connect your account on a server with a
+  personal access token (Settings → Git; sealed at rest, each person their
+  own). Make a task list from a repository: its issues as open / closed, with
+  labels as columns, or one of its project boards (servers whose API has
+  them) — kept in step both ways. Titles, descriptions, due dates, labels
+  (as tags), the assignee and the column reach the issue at once, as you;
+  changes on git come back every few minutes or with **Sync now**. New tasks
+  open issues; deleting a task leaves its issue alone. Any task can also be
+  linked to one issue or pull request by its address: closing the issue (or
+  merging the pull request) completes the task, and completing it closes the
+  issue. A change git refuses is kept and sent again. The `git_integration`
+  feature flag turns it off; `GIT_SERVERS` allows servers on your own
+  network. GitHub is planned.
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,

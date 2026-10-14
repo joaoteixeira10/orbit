@@ -2,6 +2,14 @@ import { defineStore } from 'pinia'
 import { tasksApi, type Task, type TaskList, type TaskInput } from '@/api/planner'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
+import { i18n } from '@/i18n'
+import { useToastStore } from './toast'
+
+// gitWarn tells that a change was saved but didn't reach the linked issue
+// (the background sync sends it again).
+function gitWarn(t: Task) {
+  if (t.git_error) useToastStore().error(i18n.global.t('git.task.failed', { error: t.git_error }))
+}
 
 // Task lists and tasks per workspace. The Tasks and Board views share it, so
 // a change on one shows on the other at once. Updates are applied locally
@@ -40,6 +48,7 @@ export const useTasksStore = defineStore('tasks', {
     },
     async create(ws: string, body: TaskInput) {
       const t = await tasksApi.create(ws, body)
+      gitWarn(t)
       this.put(ws, t)
       void this.loadLists(ws) // counts
       return t
@@ -57,6 +66,7 @@ export const useTasksStore = defineStore('tasks', {
       }
       try {
         const r = await tasksApi.update(id, body)
+        gitWarn(r.task)
         this.put(ws, r.task)
         if (body.completed !== undefined || body.list_id !== undefined || body.column_id !== undefined) void this.loadLists(ws)
         return r
@@ -67,6 +77,7 @@ export const useTasksStore = defineStore('tasks', {
     },
     async move(ws: string, id: string, column_id: string, after_id: string, list_id?: string) {
       const t = await tasksApi.move(id, { column_id, after_id, list_id })
+      gitWarn(t)
       this.put(ws, t)
       // Sub-tasks follow; refresh them from the server.
       void this.load(ws)

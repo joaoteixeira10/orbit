@@ -23,12 +23,13 @@ type listResponse struct {
 	models.TaskList
 	Columns   []planner.Column `json:"columns"`
 	OpenCount int64            `json:"open_count"`
+	Git       *gitLinkResponse `json:"git,omitempty"`
 }
 
 func (h *Handlers) toListResponse(l models.TaskList) listResponse {
 	var n int64
 	h.db.Model(&models.Task{}).Where("list_id = ? AND completed_at IS NULL AND parent_id IS NULL", l.ID).Count(&n)
-	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: n}
+	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: n, Git: h.gitLinkOf(l.ID)}
 }
 
 func (h *Handlers) listAccess(c *gin.Context, need string) (models.TaskList, bool) {
@@ -229,6 +230,9 @@ func (h *Handlers) deleteList(c *gin.Context) {
 		if err := tx.Where("list_id = ?", l.ID).Delete(&models.Task{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("list_id = ?", l.ID).Delete(&models.GitLink{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&l).Error
 	}); err != nil {
 		h.internalError(c, err, "could not delete the list")
@@ -270,6 +274,9 @@ type taskResponse struct {
 	models.Task
 	Tags []string `json:"tags"`
 	Done bool     `json:"done"`
+	// GitError: the change is saved but didn't reach the linked issue (the
+	// sync tries again).
+	GitError string `json:"git_error,omitempty"`
 }
 
 func toTaskResponse(t models.Task) taskResponse {
@@ -284,13 +291,14 @@ func toTaskResponses(ts []models.Task) []taskResponse {
 	return out
 }
 
-func (h *Handlers) taskAccess(c *gin.Context, need string) (models.Task, bool) {
+// taskAccess loads the task in the path for a change (editors).
+func (h *Handlers) taskAccess(c *gin.Context) (models.Task, bool) {
 	var t models.Task
 	if err := h.db.First(&t, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return t, false
 	}
-	_, _, ok := h.wsAccess(c, t.WorkspaceID, need)
+	_, _, ok := h.wsAccess(c, t.WorkspaceID, models.WSEditor)
 	return t, ok
 }
 
@@ -561,7 +569,12 @@ func (h *Handlers) createTask(c *gin.Context) {
 		}
 		h.notifyActivity(c, ws, "task_added", t.Title, taskLink(t), assignee...)
 	}
-	c.JSON(http.StatusCreated, toTaskResponse(t))
+	resp := toTaskResponse(t)
+	if resp.GitError = h.gitAfter(c, nil, &t); resp.GitError == "" && t.GitIssueID != 0 {
+		resp = toTaskResponse(t)
+		h.publishWS(c, ws.ID, "tasks")
+	}
+	c.JSON(http.StatusCreated, resp)
 }
 
 // updateTask changes a task (editors). Completing a repeating task with a due
@@ -578,7 +591,7 @@ func (h *Handlers) createTask(c *gin.Context) {
 //	@Success	200		{object}	taskResponse
 //	@Router		/tasks/{id} [put]
 func (h *Handlers) updateTask(c *gin.Context) {
-	t, ok := h.taskAccess(c, models.WSEditor)
+	t, ok := h.taskAccess(c)
 	if !ok {
 		return
 	}
@@ -586,7 +599,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	wasDone, prevAssignee := t.CompletedAt != nil, t.AssigneeID
+	wasDone, prevAssignee, before := t.CompletedAt != nil, t.AssigneeID, t
 	if msg := h.applyTaskFields(req, &t); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -673,7 +686,9 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	if !wasDone && (t.CompletedAt != nil || repeated) && t.ParentID == nil {
 		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
 	}
+	gitErr := h.gitAfter(c, &before, &t)
 	resp := toTaskResponse(t)
+	resp.GitError = gitErr
 	c.JSON(http.StatusOK, gin.H{"task": resp, "repeated": repeated})
 }
 
@@ -696,7 +711,7 @@ type moveTaskRequest struct {
 //	@Success	200		{object}	taskResponse
 //	@Router		/tasks/{id}/move [post]
 func (h *Handlers) moveTask(c *gin.Context) {
-	t, ok := h.taskAccess(c, models.WSEditor)
+	t, ok := h.taskAccess(c)
 	if !ok {
 		return
 	}
@@ -739,12 +754,16 @@ func (h *Handlers) moveTask(c *gin.Context) {
 		h.internalError(c, err, "could not move the task")
 		return
 	}
+	before := t
 	t = reloadTask(h, t.ID)
 	h.publishWS(c, t.WorkspaceID, "tasks")
 	if completing && t.ParentID == nil {
 		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
 	}
-	c.JSON(http.StatusOK, toTaskResponse(t))
+	gitErr := h.gitAfter(c, &before, &t)
+	resp := toTaskResponse(t)
+	resp.GitError = gitErr
+	c.JSON(http.StatusOK, resp)
 }
 
 // deleteTask deletes a task and its sub-tasks (editors).
@@ -756,11 +775,15 @@ func (h *Handlers) moveTask(c *gin.Context) {
 //	@Success	204
 //	@Router		/tasks/{id} [delete]
 func (h *Handlers) deleteTask(c *gin.Context) {
-	t, ok := h.taskAccess(c, models.WSEditor)
+	t, ok := h.taskAccess(c)
 	if !ok {
 		return
 	}
 	h.db.Where("id = ? OR parent_id = ?", t.ID, t.ID).Delete(&models.Task{})
+	if h.git != nil {
+		// Its issue stays on git, and mustn't come back as a new task.
+		h.git.Ignore(t.ListID, t.GitIssueID)
+	}
 	h.publishWS(c, t.WorkspaceID, "tasks")
 	c.Status(http.StatusNoContent)
 }

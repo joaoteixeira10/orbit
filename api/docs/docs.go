@@ -1160,6 +1160,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/lists/{id}/git": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Unlink a list from git",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "List id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/lists/{id}/git/sync": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Sync a list with git now",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "List id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.listResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/me/api-tokens": {
             "get": {
                 "security": [
@@ -1365,6 +1425,182 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/me/git": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "My git accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.gitAccountsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Connect a git account",
+                "parameters": [
+                    {
+                        "description": "Server and token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gitConnectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.gitAccountResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/git/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Disconnect a git account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/me/git/{id}/boards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "A repository's labels and projects",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner",
+                        "name": "owner",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Repository",
+                        "name": "repo",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.gitBoardsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/git/{id}/repos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Search repositories",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/gitsync.Repo"
+                            }
+                        }
                     }
                 }
             }
@@ -3345,6 +3581,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/tasks/{id}/git": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Link a task to an issue",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Issue address",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gitTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.taskResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Unlink a task from its issue",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.taskResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tasks/{id}/move": {
             "post": {
                 "security": [
@@ -4103,6 +4415,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "Export pages as Markdown (zip)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/lists": {
             "get": {
                 "security": [
@@ -4169,6 +4514,51 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/api.listRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.listResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/lists/git": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "New list from a git repository",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Repository and layout",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gitListRequest"
                         }
                     }
                 ],
@@ -5267,6 +5657,171 @@ const docTemplate = `{
                 }
             }
         },
+        "api.gitAccountResponse": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string"
+                },
+                "checked_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "login": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.gitAccountsResponse": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.gitAccountResponse"
+                    }
+                },
+                "servers": {
+                    "description": "suggested (GIT_SERVERS)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "api.gitBoardsResponse": {
+            "type": "object",
+            "properties": {
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gitsync.Label"
+                    }
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gitsync.Project"
+                    }
+                },
+                "supported": {
+                    "description": "the server has the projects API",
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.gitConnectRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "token"
+            ],
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "token": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "api.gitLinkResponse": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "linked_by": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "repo": {
+                    "type": "string"
+                },
+                "synced_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.gitListRequest": {
+            "type": "object",
+            "required": [
+                "account_id",
+                "mode",
+                "owner",
+                "repo"
+            ],
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "labels": {
+                    "description": "mode labels: one column each, in order",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "issues",
+                        "labels",
+                        "project"
+                    ]
+                },
+                "name": {
+                    "description": "default: the repository's name",
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "project_id": {
+                    "description": "mode project",
+                    "type": "integer"
+                },
+                "repo": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "api.gitTaskRequest": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
         "api.homeResponse": {
             "type": "object",
             "properties": {
@@ -5372,6 +5927,9 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "git": {
+                    "$ref": "#/definitions/api.gitLinkResponse"
                 },
                 "icon": {
                     "type": "string"
@@ -5840,6 +6398,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/inbox.Delivery"
                     }
                 },
+                "page_editor": {
+                    "description": "visual | markdown",
+                    "type": "string"
+                },
                 "theme": {
                     "$ref": "#/definitions/models.Theme"
                 },
@@ -6158,6 +6720,34 @@ const docTemplate = `{
                     "description": "HH:MM",
                     "type": "string"
                 },
+                "git_dirty": {
+                    "description": "a change didn't reach git yet (retried by the sync)",
+                    "type": "boolean"
+                },
+                "git_error": {
+                    "description": "GitError: the change is saved but didn't reach the linked issue (the\nsync tries again).",
+                    "type": "string"
+                },
+                "git_host": {
+                    "description": "The git issue (or pull request) this task is, when it is one: a task\nof a git-linked list, or a task linked by hand. GitIssueID is the\nserver's global id; GitRepo is \"owner/repo\" on GitHost (a base URL).",
+                    "type": "string"
+                },
+                "git_number": {
+                    "type": "integer"
+                },
+                "git_pull": {
+                    "type": "boolean"
+                },
+                "git_repo": {
+                    "type": "string"
+                },
+                "git_state": {
+                    "description": "open | closed | merged",
+                    "type": "string"
+                },
+                "git_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -6299,6 +6889,13 @@ const docTemplate = `{
                     "additionalProperties": {
                         "$ref": "#/definitions/inbox.Delivery"
                     }
+                },
+                "page_editor": {
+                    "type": "string",
+                    "enum": [
+                        "visual",
+                        "markdown"
+                    ]
                 },
                 "theme": {
                     "enum": [
@@ -6559,6 +7156,71 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "s3_region": {
+                    "type": "string"
+                }
+            }
+        },
+        "gitsync.Label": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "gitsync.Project": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "gitsync.Repo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "html_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner": {
+                    "$ref": "#/definitions/gitsync.User"
+                },
+                "private": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "gitsync.User": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "login": {
                     "type": "string"
                 }
             }
@@ -6861,6 +7523,10 @@ const docTemplate = `{
                 "notify_events": {
                     "description": "Notifications: master toggle for reminders (tasks due, events starting)\n+ chosen channel keys (JSON []string), restricted to the channels the\nadmin has enabled.",
                     "type": "boolean"
+                },
+                "page_editor": {
+                    "description": "PageEditor is how this user edits pages: \"visual\" (blocks, the default)\nor \"markdown\" (the source). Pages are Markdown either way.",
+                    "type": "string"
                 },
                 "theme": {
                     "$ref": "#/definitions/models.Theme"

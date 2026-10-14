@@ -12,6 +12,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
@@ -33,6 +34,7 @@ type Scheduler struct {
 	calsync  *calsync.Syncer // planner jobs (nil: off)
 	hub      *events.Hub     // reminders to open sessions
 	inbox    *inbox.Service  // notifications (nil-safe)
+	git      *gitsync.Engine // git-linked lists (nil: off)
 }
 
 // NewScheduler builds a Scheduler.

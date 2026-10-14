@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List } from 'lucide-vue-next'
+import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
-import type { TaskInput } from '@/api/planner'
+import { gitApi, type TaskInput } from '@/api/planner'
+import { useAuthStore } from '@/stores/auth'
+import GitBadge from './GitBadge.vue'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
 // Everything about one task, Reminders' "Details": notes, start, date and
@@ -27,6 +29,7 @@ const subtasks = computed(() => (task.value ? tasks.subtasksOf(props.ws, task.va
 const workspace = computed(() => wss.byId(props.ws))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at)
 const members = computed(() => wss.members[props.ws] ?? [])
+const auth = useAuthStore()
 
 const title = ref('')
 const notes = ref('')
@@ -127,6 +130,32 @@ async function toggleSub(id: string, done: boolean) {
 }
 async function removeSub(id: string) {
   await tasks.remove(props.ws, id).catch((e) => toast.error(e.message))
+}
+
+// Git: the task's issue, or linking one by its address.
+const gitOn = computed(() => auth.features.git_integration !== false)
+const gitDraft = ref('')
+const linking = ref(false)
+async function linkGit() {
+  const url = gitDraft.value.trim()
+  if (!url || !task.value) return
+  linking.value = true
+  try {
+    tasks.put(props.ws, await gitApi.linkTask(task.value.id, url))
+    gitDraft.value = ''
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    linking.value = false
+  }
+}
+async function unlinkGit() {
+  if (!task.value) return
+  try {
+    tasks.put(props.ws, await gitApi.unlinkTask(task.value.id))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
 }
 
 async function remove() {
@@ -264,6 +293,29 @@ async function remove() {
             <input v-if="editable" v-model="tagDraft" class="min-w-[90px] flex-1 bg-transparent py-1 text-[14px] outline-none" :placeholder="t('tasks.addTag')" @keydown.enter="addTag" @blur="addTag" />
           </div>
         </div>
+      </div>
+
+      <!-- Its issue -->
+      <div v-if="gitOn && !task.parent_id && (task.git_number || list?.git || editable)" class="mt-4">
+        <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1"><GitBranch class="h-3.5 w-3.5" />{{ t('git.task.title') }}</h3>
+        <div class="group">
+          <div v-if="task.git_number" class="group-row">
+            <div class="min-w-0 flex-1 text-[13.5px]">
+              <span class="text-text-2">{{ task.git_repo }}</span>
+              <GitBadge :task="task" class="ml-1.5" />
+              <span class="ml-1.5 text-[12.5px] text-text-3">{{ t(`git.task.state.${task.git_state || 'open'}`) }}</span>
+            </div>
+            <button v-if="editable" class="btn-plain shrink-0 !text-danger" @click="unlinkGit">{{ t('git.task.unlink') }}</button>
+          </div>
+          <form v-else-if="editable && !list?.git" class="group-row" @submit.prevent="linkGit">
+            <input v-model="gitDraft" type="url" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('git.task.placeholder')" :aria-label="t('git.task.placeholder')" />
+            <button type="submit" class="btn-plain shrink-0" :disabled="!gitDraft.trim() || linking">{{ t('git.task.link') }}</button>
+          </form>
+          <div v-if="task.git_dirty" class="group-row !min-h-0 !py-2 text-[12.5px] text-warn-text"><TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.task.pending') }}</div>
+        </div>
+        <p class="footnote mt-1 px-1 leading-snug">
+          {{ list?.git ? t('git.task.inList', { repo: `${list.git.owner}/${list.git.repo}` }) : t('git.task.hint') }}
+        </p>
       </div>
 
       <!-- Sub-tasks -->

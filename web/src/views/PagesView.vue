@@ -78,7 +78,7 @@ async function create() {
       <RouterLink :to="{ name: 'ws-trash', params: { ws } }" class="btn btn-ghost ml-auto"><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink>
     </div>
 
-    <div v-if="list.length && layout === 'grid'" class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+    <div v-if="list.length && layout === 'grid'" class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
       <RouterLink v-for="p in list" :key="p.id" :to="{ name: 'ws-page', params: { ws, page: p.id } }" class="tile-card card">
         <div class="thumb">
           <span v-if="p.icon" class="text-[34px]">{{ p.icon }}</span>
@@ -115,7 +115,6 @@ async function create() {
 <style scoped>
 .pages-view {
   padding: 32px clamp(16px, 4vw, 48px) 64px;
-  max-width: 1180px;
 }
 .tile-card {
   overflow: hidden;

@@ -388,7 +388,6 @@ html.dark .lists-pane {
 }
 .tasks-pane {
   padding: 22px clamp(16px, 4vw, 48px) 80px;
-  max-width: 900px;
   width: 100%;
 }
 .sec-head {

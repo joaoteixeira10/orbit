@@ -193,10 +193,10 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       <p v-else class="footnote mt-6">{{ t('home.askInvite') }}</p>
     </div>
 
-    <div v-else-if="data" class="grid items-start gap-6 lg:grid-cols-2">
-      <div class="flex min-w-0 flex-col gap-6">
+    <template v-else-if="data">
+    <div class="widgets">
       <!-- Today -->
-      <section class="card p-5">
+      <section class="widget card p-5">
         <h2 class="widget-title" style="color: var(--accent-text)">{{ t('home.today') }}<span class="count">{{ data.overdue.length + data.today.length || '' }}</span></h2>
         <template v-if="data.overdue.length">
           <h3 class="sub text-crit-text">{{ t('tasks.overdue') }}</h3>
@@ -229,7 +229,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
 
       <!-- This week -->
-      <section v-if="upcomingByDay.length" class="card p-5">
+      <section v-if="upcomingByDay.length" class="widget card p-5">
         <h2 class="widget-title" style="color: #ff9500">{{ t('home.thisWeek') }}</h2>
         <div v-for="[day, list] in upcomingByDay" :key="day" class="mb-2">
           <h3 class="sub">{{ relDay(day) }}</h3>
@@ -246,11 +246,8 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
           />
         </div>
       </section>
-      </div>
-
-      <div class="flex min-w-0 flex-col gap-6">
       <!-- Up next: events -->
-      <section class="card p-5">
+      <section class="widget card p-5">
         <h2 class="widget-title" style="color: #ff3b30">{{ t('home.upNext') }}</h2>
         <div v-for="g in eventsByDay" :key="dateStr(g.day)" class="mb-3">
           <h3 class="sub">{{ relDay(dateStr(g.day)) }}</h3>
@@ -277,7 +274,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
 
       <!-- Recent pages -->
-      <section v-if="data.pages.length" class="card p-5">
+      <section v-if="data.pages.length" class="widget card p-5">
         <h2 class="widget-title" style="color: #5856d6">{{ t('home.recentPages') }}</h2>
         <div class="grid grid-cols-1 gap-1">
           <RouterLink v-for="p in data.pages" :key="p.id" :to="{ name: 'ws-page', params: { ws: p.workspace_id, page: p.id } }" class="page-link">
@@ -292,10 +289,10 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
           </RouterLink>
         </div>
       </section>
-      </div>
 
-      <p v-if="nothing" class="footnote lg:col-span-2">{{ t('home.allClear') }}</p>
     </div>
+      <p v-if="nothing" class="footnote mt-2">{{ t('home.allClear') }}</p>
+    </template>
 
     <div v-else-if="loading" class="grid gap-6 lg:grid-cols-2">
       <div v-for="i in 2" :key="i" class="card h-48 animate-pulse" />
@@ -308,7 +305,25 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 <style scoped>
 .home {
   padding: 32px clamp(16px, 4vw, 48px) 64px;
-  max-width: 1180px;
+}
+/* Cards flow into balanced columns: one on phones, two on laptops, three on
+   wide screens, so the page uses the width it has. */
+.widgets {
+  column-gap: 24px;
+}
+@media (min-width: 1024px) {
+  .widgets {
+    columns: 2;
+  }
+}
+@media (min-width: 1800px) {
+  .widgets {
+    columns: 3;
+  }
+}
+.widget {
+  break-inside: avoid;
+  margin-bottom: 24px;
 }
 .widget-title {
   display: flex;

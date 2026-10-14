@@ -433,7 +433,7 @@ Settings live in the DB (`settings.certlogin_config`) and are owner-only. The fi
    - `POST /auth/cert/test` is a **pure dry run**. It returns `would_provision: true` instead of creating the user.
 4. Split-origin (prompt on click, not on page load): `login_url` = the cert host,
    `COOKIE_DOMAIN` = the parent domain, main origin added to `CORS_ORIGINS`. The CSP `connect-src` picks up the origin automatically.
-- The proxy must **strip client-supplied copies** of the header. Snippets are in PKI Management's CERT-LOGIN.md (LB Admin has no certificate login).
+- The proxy must **strip client-supplied copies** of the header. Snippets are in `reference/CERT-LOGIN.md` in the blueprint folder (from PKI Management; LB Admin and Orbit have no certificate login).
 
 ### 5.5 API tokens
 `pkim_` + base64url(32B). The plaintext is shown once, the sha256 is stored, and the display

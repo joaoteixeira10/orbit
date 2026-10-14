@@ -24,7 +24,7 @@ perl -0pi -e 's/("name":\s*"orbit-web",\s*"version":\s*")[^"]+(")/${1}'"$V"'${2}
 perl -pi -e 's/(Version\s*=\s*")[^"]+(")/${1}'"$V"'${2}/' api/internal/version/version.go
 # Compose image-tag default.
 perl -pi -e 's/^(ORBIT_VERSION=v).*/${1}'"$V"'/' .env.example
-# Swagger API-doc version: the source annotation…
+# OpenAPI document version (swag): the source annotation…
 perl -pi -e 's/(\@version\s+).*/${1}'"$V"'/' api/cmd/server/main.go
 # …and the committed generated docs (version field only).
 perl -pi -e 's/(Version:\s*")[^"]+(",)/${1}'"$V"'${2}/' api/docs/docs.go

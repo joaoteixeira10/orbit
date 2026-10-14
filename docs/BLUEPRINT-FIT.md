@@ -1,8 +1,9 @@
 # How the blueprints apply to Orbit
 
 [PROJECT-BLUEPRINT.md](PROJECT-BLUEPRINT.md) and [AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md)
-are copied verbatim from LB Admin (`../proxy_manager`, 2026-10-13); they
-describe PKI Management, the reference implementation. This page records what
+come from the canonical copy in `../blueprint` (first copied from LB Admin,
+2026-10-13; synced with `../blueprint/sync.sh docs`); they describe PKI
+Management, the reference implementation. This page records what
 Orbit **adopts** (the code was ported), **adapts** (same design, Orbit's
 domain), **skips**, and what it **adds**.
 

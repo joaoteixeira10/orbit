@@ -9,8 +9,9 @@ Each section gives the **principle** (portable), then **how it's done here**
 (the reference implementation, with file paths), and, where the choice is
 language-specific, **equivalents** for other stacks.
 
-Reference stack: Go 1.25 · Gin · GORM (SQLite/MySQL/PostgreSQL) · Vue 3 + Vite +
-Pinia + Tailwind 3 · Docker · Gitea Actions. Snapshot 2026-09 (v2.1.x).
+Reference stack: Go 1.26 · Gin · GORM (SQLite/MySQL/PostgreSQL) · Vue 3 + Vite +
+Pinia + Tailwind 3 · Docker · Gitea Actions. Snapshot 2026-09 (v2.1.x); consolidated
+2026-10-14 from the copies in PKI Management, LB Admin and Orbit (the canonical copy lives in the `blueprint` folder next to the projects).
 
 ---
 
@@ -69,7 +70,7 @@ Pinia + Tailwind 3 · Docker · Gitea Actions. Snapshot 2026-09 (v2.1.x).
 ```
 .
 ├── api/                         # backend (Go module)
-│   ├── cmd/server/main.go       # entrypoint + `healthcheck` subcommand + swagger general annotations
+│   ├── cmd/server/main.go       # entrypoint + `healthcheck` subcommand + OpenAPI general annotations
 │   ├── cmd/migrator/            # one-off data migration tool (separate Docker target)
 │   ├── cmd/<cli>/               # optional: a stdlib CLI over the API (API tokens), in the image + releases
 │   ├── cmd/<agent>/             # optional: a companion daemon on other hosts (same module, own binary)
@@ -127,7 +128,7 @@ Backend packages (`api/internal/`), one concern each. Service packages never imp
 
 | Service | Image | Command | Key points |
 |---|---|---|---|
-| `api` | `golang:1.25.11` | `go install github.com/air-verse/air@latest && exec air` | bind-mount `.:/src`; named volumes for build cache, module cache, `/go/bin` (keeps `air` between restarts) and `/data` (dev DB); dev env with insecure throwaway secrets and `CORS_ORIGINS=http://localhost:5173`; port 8080 |
+| `api` | `golang:1.26.9` | `go install github.com/air-verse/air@latest && exec air` | bind-mount `.:/src`; named volumes for build cache, module cache, `/go/bin` (keeps `air` between restarts) and `/data` (dev DB); dev env with insecure throwaway secrets and `CORS_ORIGINS=http://localhost:5173`; port 8080 |
 | `web` | `node:22-alpine` | `npm install && npm run dev` | bind-mount `.:/src`; **`node_modules` in a named volume** so the container's Linux/musl native binaries (esbuild, rollup) never mix with the host's; `VITE_PROXY_TARGET=http://api:8080`; `VITE_POLL=1`; port 5173 |
 
 **Why polling.** Bind mounts on Docker Desktop (macOS/Windows) don't deliver inotify events,
@@ -157,7 +158,7 @@ Nothing on the host. The Makefile runs Go in a pinned container with named cache
 ```make
 DOCKER_GO = docker run --rm -v "$(CURDIR)":/src \
   -v pki-go-cache:/root/.cache/go-build -v pki-go-modcache:/go/pkg/mod \
-  -w /src/api -e GOFLAGS=-buildvcs=false golang:1.25.11
+  -w /src/api -e GOFLAGS=-buildvcs=false golang:1.26.9
 ```
 Targets: `go ARGS=…`, `tidy`, `build`, `test`, `vet`, `lint` (golangci-lint pinned, installed once
 into a `/go/bin` volume), `fmt`, `swag`, `db-smoke DB=postgres|mysql`, `set-version VERSION=x.y.z`,
@@ -170,7 +171,7 @@ compose's `web` service (`docker compose -f docker-compose.dev.yml run --rm --no
 ### 3.3 Production image (`Dockerfile`)
 ```
 stage web      FROM --platform=$BUILDPLATFORM node:22-alpine   → npm build (arch-independent, never emulated)
-stage api      FROM --platform=$BUILDPLATFORM golang:1.25.11   → COPY web dist → internal/webui/dist
+stage api      FROM --platform=$BUILDPLATFORM golang:1.26.9   → COPY web dist → internal/webui/dist
                CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-s -w -X …version.Version=$VERSION …"
 stage migrator FROM distroless/static:nonroot                  → optional: `docker build --target migrator`
 final          FROM gcr.io/distroless/static-debian12:nonroot  → /pki-management binary, USER nonroot, VOLUME /data, EXPOSE 8080
@@ -329,7 +330,10 @@ only masked, not sealed**. Seal them too in a new project.
   from the same origin (`/scalar/standalone.js`), so the CSP stays `script-src 'self'` and
   nothing loads from a CDN; external fonts and Scalar's hosted features (AI agent, MCP, the
   developer toolbar) are off, and it uses the app's colours.
-  `/api/v1/swagger/*` redirects to `/api/docs`.
+  `/api/v1/swagger/*` redirects to `/api/docs`. **Never Swagger UI.** "swag" / `swagger.json`
+  are only the generator's name and output (a Swagger 2.0 document, which Scalar reads).
+  *Variant (PKI Management):* a second Vite entry (`web/api-docs.html`) at `/api/v1/docs`, so
+  Scalar's styles never touch the SPA; same rules (bundled, strict CSP, hosted features off).
 
 ### 6.2 Middleware stack (order matters)
 `Recovery → requestID (honour inbound X-Request-Id) → requestLogger (method, path, status, latency,
@@ -697,7 +701,7 @@ rewritten by **`make set-version VERSION=x.y.z`** (`scripts/set-version.sh`: val
 | `web/package.json` | `"version"` |
 | `api/internal/version/version.go` | `Version = "…"` (fallback when no ldflags) |
 | `.env.example` | `PKI_VERSION=v…` (compose image tag) |
-| `api/cmd/server/main.go` | swagger `@version` |
+| `api/cmd/server/main.go` | OpenAPI `@version` |
 | `api/docs/{docs.go,swagger.json,swagger.yaml}` | generated spec version |
 
 ### 13.2 CHANGELOG (Keep a Changelog)
@@ -779,6 +783,8 @@ are updated in the same PR.
 - **Dockerfile uses `npm install`**. Use `npm ci` for reproducible images.
 - **Unpinned tools**: `air`, `swag` and `govulncheck` are `@latest` and gitleaks resolves the latest release,
   while golangci-lint is pinned. Pin all of them, or document why `@latest` is intentional.
+  `@latest` can also outgrow your toolchain: govulncheck v1.8+ needs Go 1.26 to build, which
+  silently broke the scan on Go 1.25 (now installed with `GOTOOLCHAIN=auto`).
 - **`make run`** passes `--env-file ../.env.example`, which resolves outside the repo.
 - **Host npm in the `web-*` Make targets** (§3.2).
 - **Update check isn't semver-ordered** (§8).

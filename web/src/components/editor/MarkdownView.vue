@@ -1,17 +1,66 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { renderMarkdown } from '@/lib/markdown'
 
 // A page as it reads: its Markdown rendered like a README on GitHub, with
 // the app's type. Task boxes can be ticked without editing (when allowed);
-// a double click asks to edit.
+// a double click asks to edit. Code blocks get a copy button, as on GitHub.
 const props = defineProps<{ content: string; editable: boolean }>()
 const emit = defineEmits<{ toggle: [index: number]; edit: [] }>()
+const { t } = useI18n()
 
 const html = computed(() => renderMarkdown(props.content))
+const root = ref<HTMLElement | null>(null)
+
+// Lucide's copy and check icons, drawn into each button (the HTML is rendered
+// outside Vue, so the buttons are added to the DOM after each render).
+const svg = (d: string) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+const COPY = svg('<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>')
+const CHECK = svg('<path d="M20 6 9 17l-5-5"/>')
+
+function addCopyButtons() {
+  for (const pre of root.value?.querySelectorAll('pre') ?? []) {
+    if (pre.querySelector(':scope > .code-copy')) continue
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'code-copy'
+    b.title = t('editor.copyCode')
+    b.setAttribute('aria-label', t('editor.copyCode'))
+    b.innerHTML = COPY
+    pre.appendChild(b)
+  }
+}
+onMounted(addCopyButtons)
+watch(html, () => nextTick(addCopyButtons))
+
+async function copyCode(b: HTMLElement) {
+  const code = b.closest('pre')?.querySelector('code') ?? b.closest('pre')
+  try {
+    await navigator.clipboard.writeText(code?.textContent ?? '')
+  } catch {
+    return // clipboard blocked (insecure context / permission)
+  }
+  b.innerHTML = CHECK
+  b.classList.add('done')
+  b.title = t('editor.codeCopied')
+  setTimeout(() => {
+    b.innerHTML = COPY
+    b.classList.remove('done')
+    b.title = t('editor.copyCode')
+  }, 1500)
+}
 
 function onClick(e: MouseEvent) {
-  const box = (e.target as HTMLElement).closest('input[data-task]') as HTMLInputElement | null
+  const target = e.target as HTMLElement
+  const copy = target.closest('.code-copy') as HTMLElement | null
+  if (copy) {
+    e.preventDefault()
+    void copyCode(copy)
+    return
+  }
+  const box = target.closest('input[data-task]') as HTMLInputElement | null
   if (!box) return
   if (!props.editable) {
     e.preventDefault()
@@ -20,13 +69,13 @@ function onClick(e: MouseEvent) {
   emit('toggle', Number(box.dataset.task))
 }
 function onDblClick(e: MouseEvent) {
-  if (props.editable && !(e.target as HTMLElement).closest('a, input')) emit('edit')
+  if (props.editable && !(e.target as HTMLElement).closest('a, input, pre')) emit('edit')
 }
 </script>
 
 <template>
   <!-- eslint-disable-next-line vue/no-v-html -- sanitised by renderMarkdown -->
-  <article class="md-view" :class="{ editable }" @click="onClick" @dblclick="onDblClick" v-html="html" />
+  <article ref="root" class="md-view" :class="{ editable }" @click="onClick" @dblclick="onDblClick" v-html="html" />
 </template>
 
 <style scoped>
@@ -141,6 +190,42 @@ function onDblClick(e: MouseEvent) {
   background: var(--fill-2);
   overflow-x: auto;
   line-height: 1.5;
+}
+.md-view :deep(pre) {
+  position: relative;
+}
+/* The copy button: top right of a code block, shown on hover (always on touch). */
+.md-view :deep(.code-copy) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: var(--text-2);
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border-2), var(--shadow-sm);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--speed) var(--ease), color var(--speed);
+}
+.md-view :deep(pre:hover .code-copy),
+.md-view :deep(.code-copy:focus-visible),
+.md-view :deep(.code-copy.done) {
+  opacity: 1;
+}
+.md-view :deep(.code-copy:hover) {
+  color: var(--text);
+}
+.md-view :deep(.code-copy.done) {
+  color: var(--ok-text);
+}
+@media (hover: none) {
+  .md-view :deep(.code-copy) {
+    opacity: 0.8;
+  }
 }
 .md-view :deep(pre code) {
   padding: 0;

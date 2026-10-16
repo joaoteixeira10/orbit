@@ -96,3 +96,17 @@ func reloadWorkspace(h *Handlers, id string) (ws models.Workspace) {
 	h.db.First(&ws, "id = ?", id)
 	return ws
 }
+
+// notImpersonating refuses what would outlast an impersonation (its token
+// expires in minutes): new sessions or API tokens, password and two-factor
+// changes, passkeys, git accounts, push devices, calendar feeds — all made as
+// the impersonated user and theirs to keep.
+func notImpersonating() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if auth.ImpersonatorID(c) != "" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "not while acting as another user"})
+			return
+		}
+		c.Next()
+	}
+}

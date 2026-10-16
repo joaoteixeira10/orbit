@@ -332,6 +332,7 @@ func (h *Handlers) resetUserPassword(c *gin.Context) {
 		return
 	}
 	_ = h.auth.RevokeAllSessions(user.ID)
+	h.db.Where("user_id = ?", user.ID).Delete(&models.APIToken{}) // signed out everywhere, scripts too
 	h.recordCtx(c, "user.password_reset", "user", user.ID, gin.H{"must_change_password": mustChange, "generated": generated != ""})
 	if generated != "" {
 		// The generated password is returned exactly once.
@@ -498,6 +499,8 @@ func (h *Handlers) forceLogout(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not sign the user out"})
 		return
 	}
+	// API tokens don't carry the token version: "everywhere" includes them.
+	h.db.Where("user_id = ?", user.ID).Delete(&models.APIToken{})
 	h.recordCtx(c, "user.force_logout", "user", user.ID, nil)
 	c.Status(http.StatusNoContent)
 }

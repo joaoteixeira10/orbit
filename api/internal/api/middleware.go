@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,15 @@ func requestID() gin.HandlerFunc {
 	}
 }
 
+// logPath is a request path as logged: a calendar feed's address is its
+// secret (/ical/<token>.ics), so only its prefix is kept.
+func logPath(p string) string {
+	if strings.HasPrefix(p, "/ical/") {
+		return "/ical/…"
+	}
+	return p
+}
+
 // requestLogger logs each request with method, path, status, latency, and the
 // correlation id. Runs after requestID().
 func requestLogger(log *zap.Logger) gin.HandlerFunc {
@@ -38,7 +48,7 @@ func requestLogger(log *zap.Logger) gin.HandlerFunc {
 		c.Next()
 		log.Info("http",
 			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path),
+			zap.String("path", logPath(c.Request.URL.Path)),
 			zap.Int("status", c.Writer.Status()),
 			zap.Duration("latency", time.Since(start)),
 			zap.String("ip", c.ClientIP()),

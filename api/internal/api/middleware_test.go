@@ -90,3 +90,14 @@ func TestRateLimitMiddlewareReturns429(t *testing.T) {
 		t.Fatalf("second request: got %d, want 429", code)
 	}
 }
+
+// TestLogPathHidesFeedTokens: a calendar feed's address is a secret and
+// doesn't reach the request log.
+func TestLogPathHidesFeedTokens(t *testing.T) {
+	if got := logPath("/ical/0123456789abcdef.ics"); got != "/ical/…" {
+		t.Errorf("feed path logged as %q", got)
+	}
+	if got := logPath("/api/v1/workspaces"); got != "/api/v1/workspaces" {
+		t.Errorf("ordinary path changed: %q", got)
+	}
+}

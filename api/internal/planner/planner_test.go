@@ -232,3 +232,56 @@ func TestRank(t *testing.T) {
 		t.Error("edges")
 	}
 }
+
+// TestParseFeedHostileRules: a series every second (or hour) since 2000 can't
+// keep the refresh busy — sub-hourly series are skipped, every series shares
+// one step budget — and the ordinary events of the feed still come through.
+func TestParseFeedHostileRules(t *testing.T) {
+	feed := strings.ReplaceAll(`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//EN
+BEGIN:VEVENT
+UID:every-second
+DTSTART:20000101T000000Z
+DTEND:20000101T000001Z
+RRULE:FREQ=SECONDLY
+SUMMARY:Spin
+END:VEVENT
+BEGIN:VEVENT
+UID:every-hour
+DTSTART:20000101T000000Z
+DTEND:20000101T003000Z
+RRULE:FREQ=HOURLY
+SUMMARY:Hourly since 2000
+END:VEVENT
+BEGIN:VEVENT
+UID:weekly
+DTSTART:20261005T090000Z
+DTEND:20261005T100000Z
+RRULE:FREQ=WEEKLY
+SUMMARY:Standup
+END:VEVENT
+END:VCALENDAR
+`, "\n", "\r\n")
+	from := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	start := time.Now()
+	got, err := ParseFeed(strings.NewReader(feed), from, from.AddDate(0, 1, 0), time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Fatalf("took %s", d)
+	}
+	weekly := 0
+	for _, o := range got {
+		switch o.UID {
+		case "every-second":
+			t.Fatal("a per-second series was expanded")
+		case "weekly":
+			weekly++
+		}
+	}
+	if weekly < 4 {
+		t.Fatalf("the weekly event is missing: %d occurrences", weekly)
+	}
+}

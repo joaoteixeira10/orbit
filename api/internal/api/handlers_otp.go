@@ -84,6 +84,12 @@ func (h *Handlers) setupOTP(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
+	// While two-factor is on, a new setup would silently turn it off: it's
+	// turned off first, with a code (disableOTP).
+	if user.OTPEnabled {
+		c.JSON(http.StatusConflict, gin.H{"error": "two-factor is already on; turn it off first (with a code) to set up a new authenticator"})
+		return
+	}
 	secret, url, err := auth.GenerateTOTP("Orbit", user.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not generate secret"})

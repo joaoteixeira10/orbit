@@ -250,8 +250,7 @@ func (h *Handlers) changePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "password is managed by your identity provider"})
 		return
 	}
-	if !auth.CheckPassword(user.PasswordHash, req.OldPassword) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "current password is incorrect"})
+	if !h.recheckPassword(c, &user, req.OldPassword, http.StatusBadRequest, "current password is incorrect") {
 		return
 	}
 	hash, err := auth.HashPassword(req.NewPassword)

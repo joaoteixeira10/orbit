@@ -117,6 +117,15 @@ func (m *Manager) RecordLoginSuccess(u *models.User) {
 	m.db.Model(u).Updates(map[string]any{"failed_login_count": 0, "locked_until": nil, "last_login_at": now})
 }
 
+// ClearFailures resets the failed-attempt counter after a correct password
+// re-check (a signed-in user confirming it's them).
+func (m *Manager) ClearFailures(u *models.User) {
+	if u.FailedLoginCount != 0 {
+		u.FailedLoginCount = 0
+		m.db.Model(u).Update("failed_login_count", 0)
+	}
+}
+
 // Unlock clears a lockout (admin action).
 func (m *Manager) Unlock(userID string) error {
 	return m.db.Model(&models.User{}).Where("id = ?", userID).

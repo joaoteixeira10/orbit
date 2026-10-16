@@ -110,6 +110,22 @@ merge, not at release time.
   audit.<action>`): accounts, roles, workspaces and their members, settings —
   never workspace content. See [docs/API.md](docs/API.md#live-updates-and-the-webhook).
 
+### Security
+
+- **Calendar subscriptions can't stall the background jobs**: a feed's
+  repeating events are expanded within a step budget (per series and per
+  feed), and series repeating every minute or second are skipped.
+- **Calendar-feed addresses stay out of the request log** (`/ical/…`).
+- **Two-factor can't be removed by setting it up again**: setup is refused
+  while it's on; turning it off still needs a code.
+- **Impersonation leaves nothing behind**: while acting as someone, new
+  sessions, API tokens, password and two-factor changes, passkeys, git
+  accounts, push devices and calendar feeds are refused.
+- **Password re-checks are throttled**: "confirm it's you" and changing your
+  password go through the sign-in rate limit and count toward the account
+  lockout, which they respect.
+- **"Sign out everywhere" and an admin password reset revoke API tokens** too.
+
 ### Removed
 
 - LB Admin's proxy domain (proxies, lb-agent, lbctl, certificates, the lab)

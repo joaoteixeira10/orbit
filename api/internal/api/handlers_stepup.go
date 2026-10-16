@@ -60,8 +60,7 @@ func (h *Handlers) stepUp(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "this account has no password; use a passkey to confirm"})
 		return
 	}
-	if !auth.CheckPassword(user.PasswordHash, req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+	if !h.recheckPassword(c, &user, req.Password, http.StatusUnauthorized, "incorrect password") {
 		return
 	}
 	h.issueStepUp(c, &user)
@@ -127,4 +126,24 @@ func (h *Handlers) issueStepUp(c *gin.Context, user *models.User) {
 	}
 	h.recordCtx(c, "auth.step_up", "user", user.ID, nil)
 	c.JSON(http.StatusOK, tokenResponse{AccessToken: tok, ExpiresIn: int(time.Until(exp).Seconds())})
+}
+
+// recheckPassword checks a signed-in user's password again (step-up, a
+// password change) the way sign-in does: refused while the account is locked,
+// and a wrong one counts toward the lockout — so a stolen session can't be
+// used to guess the password. It answers the request when it fails.
+func (h *Handlers) recheckPassword(c *gin.Context, user *models.User, password string, status int, msg string) bool {
+	if h.auth.IsLocked(user) {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many attempts; try again later"})
+		return false
+	}
+	if !auth.CheckPassword(user.PasswordHash, password) {
+		if h.auth.RecordFailure(user) {
+			h.audit.Record(user.ID, "auth.lockout", "user", user.ID, c.ClientIP(), gin.H{"reason": "too many failed password confirmations"})
+		}
+		c.JSON(status, gin.H{"error": msg})
+		return false
+	}
+	h.auth.ClearFailures(user)
+	return true
 }

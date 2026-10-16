@@ -27,6 +27,17 @@ type ExternalOccurrence struct {
 // MaxFeedOccurrences bounds what one subscription stores.
 const MaxFeedOccurrences = 5000
 
+// The work of expanding a feed's repeating events is bounded: every step
+// counts, also those before the window (a series from years ago is walked
+// from its start). One series gets seriesSteps (a daily series for over a
+// century; anything denser that old is dropped), the whole feed feedSteps,
+// so one file can't keep the refresh busy however its rules are written,
+// and one bad series doesn't starve the rest.
+const (
+	seriesSteps = 50_000
+	feedSteps   = 1_000_000
+)
+
 // windowsZones maps the Windows time-zone names Outlook / Exchange put in
 // TZID to IANA names (the common ones; others fall back to the default zone).
 var windowsZones = map[string]string{
@@ -117,6 +128,7 @@ func ParseFeed(r io.Reader, from, to time.Time, loc *time.Location) ([]ExternalO
 	}
 
 	var out []ExternalOccurrence
+	budget := feedSteps
 	for _, ev := range cal.Events() {
 		if st, _ := ev.Status(); st == ical.EventCancelled {
 			continue
@@ -161,8 +173,10 @@ func ParseFeed(r io.Reader, from, to time.Time, loc *time.Location) ([]ExternalO
 			if Overlaps(start, end, from, to) {
 				starts = []time.Time{start}
 			}
+		} else if subHourly(set) {
+			continue // every minute / second: no calendar means it, and it would eat the budget
 		} else {
-			starts = expand(set, dur, from, to)
+			starts = expand(set, dur, from, to, &budget)
 		}
 		for _, s := range starts {
 			if overridden[base.UID][s.Unix()] && ev.Props.Get(ical.PropRecurrenceID) == nil {
@@ -179,10 +193,14 @@ func ParseFeed(r io.Reader, from, to time.Time, loc *time.Location) ([]ExternalO
 	return sortOccurrences(out), nil
 }
 
-func expand(set *rrule.Set, dur time.Duration, from, to time.Time) []time.Time {
+func expand(set *rrule.Set, dur time.Duration, from, to time.Time, budget *int) []time.Time {
 	var out []time.Time
 	it := set.Iterator()
-	for {
+	for steps := 0; ; steps++ {
+		if *budget <= 0 || steps >= seriesSteps {
+			return out
+		}
+		*budget--
 		t, ok := it()
 		if !ok || !t.Before(to) || len(out) >= maxExpand {
 			return out
@@ -191,6 +209,12 @@ func expand(set *rrule.Set, dur time.Duration, from, to time.Time) []time.Time {
 			out = append(out, t)
 		}
 	}
+}
+
+// subHourly reports a series that repeats every minute or second.
+func subHourly(set *rrule.Set) bool {
+	r := set.GetRRule()
+	return r != nil && (r.OrigOptions.Freq == rrule.MINUTELY || r.OrigOptions.Freq == rrule.SECONDLY)
 }
 
 func sortOccurrences(o []ExternalOccurrence) []ExternalOccurrence {

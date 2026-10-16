@@ -106,3 +106,27 @@ func TestForceLogoutRevokesAPITokens(t *testing.T) {
 		t.Fatalf("token after sign-out everywhere: %d", w.Code)
 	}
 }
+
+// TestReadOnlyTokenWritesNothing: a read-only token is refused on every
+// write, admin routes included, and still reads.
+func TestReadOnlyTokenWritesNothing(t *testing.T) {
+	r := newTestRouter(t)
+	owner := loginTok(t, r, "admin", "adminpass")
+	w := authdo(r, "POST", "/api/v1/me/api-tokens", `{"name":"ro","read_only":true}`, owner)
+	var tok struct {
+		Token string `json:"token"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &tok)
+	if w := authdo(r, "GET", "/api/v1/users", "", tok.Token); w.Code != 200 {
+		t.Fatalf("read with a read-only token: %d", w.Code)
+	}
+	for _, c := range []struct{ method, path, body string }{
+		{"POST", "/api/v1/users", `{"username":"x","password":"xpassword123","role_ids":[]}`},
+		{"POST", "/api/v1/me/git", `{"base_url":"https://git.example.org","token":"x"}`},
+		{"PUT", "/api/v1/me/prefs", `{"theme":"dark"}`},
+	} {
+		if w := authdo(r, c.method, c.path, c.body, tok.Token); w.Code != http.StatusForbidden {
+			t.Errorf("%s %s with a read-only token: %d", c.method, c.path, w.Code)
+		}
+	}
+}

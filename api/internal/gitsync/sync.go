@@ -67,7 +67,7 @@ func New(db *gorm.DB, sealer *keystore.Sealer, allowed []string, log *zap.Logger
 		if e.allowed[base] {
 			return &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 		}
-		return safedial.GuardedClient(20 * time.Second)
+		return safedial.PublicClient(20 * time.Second)
 	}
 	return e
 }
@@ -176,9 +176,29 @@ func (e *Engine) clientAs(actor string, link *models.GitLink, host string) (*Cli
 		return c, nil
 	}
 	if link != nil {
-		return e.ClientFor(link.LinkedBy, host)
+		return e.linkerClient(*link)
 	}
 	return nil, fmt.Errorf("connect your account on %s first (Settings → Git)", host)
+}
+
+// errLinkerLeft: the person who linked a list left its workspace, so their
+// token isn't used for it any more.
+var errLinkerLeft = errors.New("whoever linked this list has left the workspace: link it again with your own account")
+
+// member reports whether a user still belongs to a workspace.
+func (e *Engine) member(wsID, userID string) bool {
+	var n int64
+	e.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ? AND user_id = ?", wsID, userID).Count(&n)
+	return n > 0
+}
+
+// linkerClient acts as whoever linked a list — only while they're still a
+// member of its workspace.
+func (e *Engine) linkerClient(link models.GitLink) (*Client, error) {
+	if !e.member(link.WorkspaceID, link.LinkedBy) {
+		return nil, errLinkerLeft
+	}
+	return e.ClientFor(link.LinkedBy, link.Host)
 }
 
 // ColumnMap is a list column → a label name ("labels" mode) or a project
@@ -327,7 +347,7 @@ func truncate(s string, n int) string {
 }
 
 func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
-	c, err := e.ClientFor(link.LinkedBy, link.Host)
+	c, err := e.linkerClient(link)
 	if err != nil {
 		return err
 	}
@@ -491,6 +511,9 @@ func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
 // retry sends the changes of a list's tasks that didn't reach git, as whoever
 // linked the list.
 func (e *Engine) retry(ctx context.Context, link models.GitLink) {
+	if !e.member(link.WorkspaceID, link.LinkedBy) {
+		return // their token isn't used any more (errLinkerLeft)
+	}
 	var dirty []models.Task
 	e.db.Where("list_id = ? AND git_dirty = ? AND parent_id IS NULL", link.ListID, true).Limit(50).Find(&dirty)
 	for i := range dirty {
@@ -808,8 +831,12 @@ func (e *Engine) refreshLinked(ctx context.Context) {
 		if !ok {
 			continue
 		}
-		// Whoever can: the task's creator, else any member with an account.
+		// Whoever can: the task's creator while still a member, else any
+		// member with an account there.
 		c, err := e.ClientFor(t.CreatedBy, t.GitHost)
+		if err == nil && !e.member(t.WorkspaceID, t.CreatedBy) {
+			err = errLinkerLeft
+		}
 		if err != nil {
 			_, byUser := e.workspaceLogins(t.WorkspaceID, t.GitHost)
 			for uid := range byUser {
@@ -822,7 +849,9 @@ func (e *Engine) refreshLinked(ctx context.Context) {
 			continue
 		}
 		if t.GitDirty {
-			_ = e.dirtyOn(t, e.push(ctx, t.CreatedBy, nil, t, Change{State: true}))
+			if e.member(t.WorkspaceID, t.CreatedBy) {
+				_ = e.dirtyOn(t, e.push(ctx, t.CreatedBy, nil, t, Change{State: true}))
+			}
 			continue
 		}
 		is, err := c.Issue(ctx, owner, repo, t.GitNumber)

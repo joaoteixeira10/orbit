@@ -73,7 +73,7 @@ type Service struct {
 // New builds the service and loads (or, the first time, creates) the Web
 // Push keys. publicURL identifies the instance to push services.
 func New(db *gorm.DB, hub *events.Hub, channels *notify.Service, sealer *keystore.Sealer, log *zap.Logger, publicURL string) *Service {
-	s := &Service{db: db, hub: hub, channels: channels, log: log, client: safedial.GuardedClient(15 * time.Second)}
+	s := &Service{db: db, hub: hub, channels: channels, log: log, client: safedial.PublicClient(15 * time.Second)}
 	s.subscriber = "mailto:orbit@localhost"
 	if strings.HasPrefix(publicURL, "https://") {
 		s.subscriber = strings.TrimRight(publicURL, "/")

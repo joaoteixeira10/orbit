@@ -486,3 +486,25 @@ func TestParseIssueURL(t *testing.T) {
 		}
 	}
 }
+
+// TestLinkerLeft: once whoever linked a list leaves its workspace, their
+// token isn't used for it any more.
+func TestLinkerLeft(t *testing.T) {
+	f := setup(t)
+	f.fake.add("One")
+	f.sync(t)
+	f.db.Where("workspace_id = ? AND user_id = ?", f.link.WorkspaceID, f.ana).Delete(&models.WorkspaceMember{})
+	f.fake.edit(1, func(is *Issue) { is.Title = "Changed on git" })
+	var link models.GitLink
+	f.db.First(&link, "id = ?", f.link.ID)
+	if err := f.e.SyncLink(context.Background(), link); err == nil {
+		t.Fatal("synced with a departed member's token")
+	}
+	if got := f.task(t); got.Title != "One" {
+		t.Fatalf("pulled with a departed member's token: %q", got.Title)
+	}
+	f.db.First(&link, "id = ?", f.link.ID)
+	if link.LastError == "" {
+		t.Fatal("the list doesn't say why it stopped")
+	}
+}

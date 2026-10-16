@@ -18,7 +18,8 @@ domain), **skips**, and what it **adds**.
 - **Workspace content is private to its members.** Instance roles (admin,
   member) manage accounts, never content: an admin can't open someone's
   workspace. This replaces LB Admin's server-scoped grants.
-- **Notion-style block pages** (TipTap / ProseMirror JSON), **Reminders-style
+- **Pages in GitHub-flavoured Markdown** (read like a README, edited visually or
+  as source), **Reminders-style
   tasks**, **kanban boards** over the same tasks, **calendars** with ICS
   subscriptions in and private ICS feeds out.
 - **Installable now, offline later**: the blueprint's "no service worker" holds

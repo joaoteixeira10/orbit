@@ -50,13 +50,14 @@ the next sign-in.
 **Lockout and throttling.**
 
 - **Per account:** after `LOGIN_LOCKOUT_THRESHOLD` (5) wrong passwords or codes
-  in a row, the account is locked for `LOGIN_LOCKOUT_MINUTES` (15). The lock is
+  in a row — at sign-in, in "confirm it's you" or when changing the password —
+  the account is locked for `LOGIN_LOCKOUT_MINUTES` (15). The lock is
   stored in the database and audited (`auth.lockout`). A locked account gets the
   same generic "invalid credentials" answer, so the lock isn't disclosed. An
   admin can unlock early.
 - **Per IP:** a token bucket (`AUTH_RATE_BURST` 8, `AUTH_RATE_PER_MINUTE` 12)
-  guards sign-in, the SSO code exchange, passkey sign-in and the two-factor
-  routes, and answers `429`. The client IP is the socket peer unless the request
+  guards sign-in, the SSO code exchange, passkey sign-in, the two-factor
+  routes, "confirm it's you" and the password change, and answers `429`. The client IP is the socket peer unless the request
   comes through a proxy listed in `TRUSTED_PROXIES`, so a forged
   `X-Forwarded-For` can't dodge the limit or fake the audit IP.
 
@@ -115,9 +116,12 @@ anyone with `users.manage` (Admin → API tokens). A token acts as its user, wit
 two limits:
 
 - It can be **limited** to some instance privileges and/or made
-  **read-only** (it can read the user's workspaces but not change anything in
-  them, nor create workspaces). The limit only ever narrows: a token never has
-  more than its user has today.
+  **read-only** (every request other than `GET` is refused, admin routes
+  included). The limit only ever narrows: a token never has more than its
+  user has today.
+- Tokens don't carry the token version, so an admin's **sign out everywhere**
+  and an **admin password reset** delete the user's API tokens too (changing
+  your own password doesn't).
 - It **never carries owner status**, so owner-only routes refuse it, even for
   the owner's own tokens.
 
@@ -133,8 +137,11 @@ starting an impersonation.
 `users.impersonate` can act as another user to see what they see. The owner
 can never be impersonated; only the owner can impersonate an admin; nobody can
 impersonate themselves or a disabled account. The session is one 15-minute
-access token with no refresh. Everything done meanwhile is audited under the
-target **and** the real admin (`impersonator_id`).
+access token with no refresh, and nothing that would outlast it can be made
+meanwhile: new sessions (`rotate-token`), API tokens, password, two-factor and
+passkey changes, git accounts, push devices and calendar feeds are refused.
+Everything done meanwhile is audited under the target **and** the real admin
+(`impersonator_id`).
 
 ## Authorization
 
@@ -287,8 +294,8 @@ user. Release mode refuses either secret under 32 characters.
 - **API reference** (`/api/docs`): Scalar's script is bundled and served from
   Orbit's own origin, so the CSP stays `script-src 'self'`; its hosted
   extras are turned off.
-- **Limits:** request bodies up to `MAX_BODY_BYTES` (4 MiB), a page document
-  up to 2 MiB (and it must be an editor document — `{"type":"doc",…}`),
+- **Limits:** request bodies up to `MAX_BODY_BYTES` (4 MiB), a page up to
+  2 MiB of Markdown (valid UTF-8),
   calendar ranges up to 120 days; header read timeout 10 s, read timeout 30 s,
   idle timeout 120 s.
 - **Calendar feeds** (`/ical/<token>.ics`) are public by design — the token is
@@ -300,6 +307,13 @@ user. Release mode refuses either secret under 32 characters.
   SSRF-guarded client: it won't connect to loopback, link-local (including the
   cloud metadata address) or unspecified addresses, checks the IP it actually
   dials, and never follows redirects. Private LAN addresses stay reachable.
+- **Web Push and git servers** — addresses any user can name — use the
+  **public-only** variant, which also refuses private networks (RFC 1918,
+  carrier-grade NAT, IPv6 unique-local), so they can't be used to probe the
+  LAN. A git server on your network is allowed only when the operator lists it
+  in `GIT_SERVERS` (then dialed directly, no redirects). Git tokens are sealed;
+  a list linked to a repository stops syncing when whoever linked it leaves the
+  workspace (their token isn't used any more).
 - **Subscribed calendars** are fetched through the same guarded dialer, with
   three differences: up to **three redirects** (calendar hosts use them), each
   hop dialed through the guard and limited to `http`/`https`; at most
@@ -341,7 +355,7 @@ user. Release mode refuses either secret under 32 characters.
 | A07 Authentication failures | Memory access token + rotating `HttpOnly` refresh cookie with reuse detection; CSRF double submit; lockout + per-IP limit; constant-cost unknown-user check; TOTP and passkeys; OIDC with PKCE, state and nonce. |
 | A08 Integrity failures | Hash-chained audit log with a verify endpoint and an external syslog copy. |
 | A09 Logging and monitoring | Security-relevant actions audited; secrets never logged (`json:"-"` on sensitive fields); optional syslog, Prometheus and owner security alerts. |
-| A10 SSRF | Calendar subscriptions, SSO, notifications and the update check go through the guarded dialer (loopback, link-local and metadata refused, the dialed IP checked, redirects re-checked hop by hop for calendars only). |
+| A10 SSRF | Calendar subscriptions, SSO, notifications and the update check go through the guarded dialer (loopback, link-local and metadata refused, the dialed IP checked, redirects re-checked hop by hop for calendars only); Web Push and git servers through the public-only one (private networks refused too, except git servers in `GIT_SERVERS`). Calendar feeds are expanded within a step budget, so a hostile ICS file can't stall the refresh. |
 
 ## Accepted risks and known gaps
 

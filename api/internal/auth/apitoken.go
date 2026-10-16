@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"net/http"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
@@ -63,6 +64,16 @@ func (m *Manager) requireAPIToken(c *gin.Context, raw string) {
 	if u.Disabled {
 		abort(c, 401, "account disabled")
 		return
+	}
+	// A read-only token reads, everywhere: any other method is refused here,
+	// before a handler (workspace content checks it too, admin routes didn't).
+	if t.ReadOnly {
+		switch c.Request.Method {
+		case http.MethodGet, http.MethodHead, http.MethodOptions:
+		default:
+			abort(c, 403, "this API token is read-only")
+			return
+		}
 	}
 	c.Set(ctxUserID, u.ID)
 	c.Set(ctxViaKey, true)

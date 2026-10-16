@@ -45,3 +45,25 @@ func TestGuardedClientDoesNotFollowRedirects(t *testing.T) {
 		t.Error("CheckRedirect returned nil (would follow redirects), want ErrUseLastResponse")
 	}
 }
+
+// TestPublicDialRefusesPrivate: the public-only dialer refuses private
+// networks (and still everything the guarded one does); the guarded one
+// allows the LAN.
+func TestPublicDialRefusesPrivate(t *testing.T) {
+	for _, ip := range []string{"10.1.2.3", "172.16.0.9", "192.168.1.10", "100.64.0.1", "fd00::1"} {
+		if !Private(net.ParseIP(ip)) {
+			t.Errorf("%s not private", ip)
+		}
+		if _, err := PublicDialContext(context.Background(), "tcp", net.JoinHostPort(ip, "443")); err == nil {
+			t.Errorf("public dial reached %s", ip)
+		}
+	}
+	for _, ip := range []string{"8.8.8.8", "2606:4700:4700::1111"} {
+		if Private(net.ParseIP(ip)) {
+			t.Errorf("%s counted as private", ip)
+		}
+	}
+	if _, err := PublicDialContext(context.Background(), "tcp", "127.0.0.1:80"); err == nil {
+		t.Error("public dial reached loopback")
+	}
+}

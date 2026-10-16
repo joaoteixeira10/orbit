@@ -121,7 +121,7 @@ the audit log and the runtime settings below. Back up the file and
 
 | Variable | Req | Default | Notes |
 |---|---|---|---|
-| `GIT_SERVERS` | – | | Comma list of Gitea / Forgejo base URLs (e.g. `https://gitea.lan,http://git.home:3000`) that users may connect **even on a private network** — your own server. They are also suggested in Settings → Git, and may use plain `http://`. Any other server must be public and use `https`; Orbit's SSRF guard refuses private and loopback addresses. |
+| `GIT_SERVERS` | – | | Comma list of Gitea / Forgejo base URLs (e.g. `https://gitea.lan,http://git.home:3000`) that users may connect **even on a private network** — your own server. They are also suggested in Settings → Git, and may use plain `http://`. Any other server must be public and use `https`: for those Orbit's public-only guard refuses private, loopback and link-local addresses (Web Push uses the same guard). |
 
 Each person connects their own account (Settings → Git) with a personal
 access token with the permissions *issue: read and write*, *repository:

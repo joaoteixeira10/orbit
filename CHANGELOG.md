@@ -125,6 +125,13 @@ merge, not at release time.
   password go through the sign-in rate limit and count toward the account
   lockout, which they respect.
 - **"Sign out everywhere" and an admin password reset revoke API tokens** too.
+- **Read-only API tokens are read-only everywhere** (every write is refused,
+  admin routes included).
+- **Web Push and git servers can't be used to probe the LAN**: they go through
+  a public-only guard (private networks refused; git servers on your network
+  only when listed in `GIT_SERVERS`).
+- **A linked git list stops using a departed member's token**: when whoever
+  linked it leaves the workspace, it stops syncing and says why.
 
 ### Removed
 

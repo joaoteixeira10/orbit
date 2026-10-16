@@ -6,6 +6,7 @@ import { Marked, type Tokens } from 'marked'
 import markedFootnote from 'marked-footnote'
 import DOMPurify from 'dompurify'
 import { i18n } from '@/i18n'
+import { highlightCode, labelOf } from './syntax'
 
 // ---- Normalising ----------------------------------------------------------
 
@@ -76,6 +77,13 @@ function reader(): Marked {
       checkbox({ checked }: Tokens.Checkbox) {
         return `<input type="checkbox" data-task="${task++}"${checked ? ' checked' : ''}> `
       },
+      // Code blocks are highlighted: in their fence's language, else in the
+      // one detected (lib/syntax.ts), which also labels the block.
+      code({ text, lang }: Tokens.Code) {
+        const { html, language } = highlightCode(text, (lang ?? '').split(/\s/)[0])
+        const label = language ? ` data-lang="${labelOf(language)}"` : ''
+        return `<pre${label}><code class="hljs${language ? ` language-${language}` : ''}">${html}</code></pre>\n`
+      },
       // Links leave the app in a new tab.
       link({ href, title, tokens }: Tokens.Link) {
         const text = this.parser.parseInline(tokens)
@@ -95,7 +103,7 @@ export function renderMarkdown(md: string): string {
   cached ??= reader()
   const html = cached.parse(md, { async: false }) as string
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'data-task', 'data-kind'],
+    ADD_ATTR: ['target', 'data-task', 'data-kind', 'data-lang'],
     FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'iframe'],
   })
 }

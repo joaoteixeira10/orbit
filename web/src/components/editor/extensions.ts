@@ -15,6 +15,7 @@ import { Underline } from '@tiptap/extension-underline'
 import { Markdown, MarkdownManager } from '@tiptap/markdown'
 import { Image } from '@tiptap/extension-image'
 import { Callout } from './callout'
+import { CodeBlock } from './codeblock'
 import { RawBlock, RawInline, FootnoteDef } from './raw'
 import { ALERTS, alertOf, type AlertType } from './alerts'
 
@@ -110,9 +111,11 @@ export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, 
       heading: { levels: [1, 2, 3] },
       dropcursor: { color: 'var(--ws)', width: 2 },
       underline: false,
+      codeBlock: false, // highlighted: ./codeblock
       link: { openOnClick: false, autolink: true, linkOnPaste: true, defaultProtocol: 'https', ...link },
     }),
     MarkdownUnderline,
+    CodeBlock,
     TaskList,
     TaskItem.configure({ nested: true }),
     TableKit.configure({ table: { resizable: false, renderWrapper: true } }),

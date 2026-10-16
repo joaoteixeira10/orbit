@@ -1,0 +1,94 @@
+/* Code highlighting (lib/syntax.ts: highlight.js in the reading view, lowlight
+   in the visual editor — the same token classes). Xcode's colours, light and
+   dark. */
+:root {
+  --code-keyword: #9b2393;
+  --code-string: #c41a16;
+  --code-number: #1c00cf;
+  --code-comment: #5d6c79;
+  --code-type: #0b4f79;
+  --code-function: #326d74;
+  --code-attr: #815f03;
+  --code-meta: #643820;
+  --code-tag: #3900a0;
+  --code-add: #1f7a35;
+  --code-del: #c41a16;
+}
+html.dark {
+  --code-keyword: #ff7ab2;
+  --code-string: #ff8170;
+  --code-number: #d9c97c;
+  --code-comment: #7f8c98;
+  --code-type: #5dd8ff;
+  --code-function: #67b7a4;
+  --code-attr: #bf8555;
+  --code-meta: #fd8f3f;
+  --code-tag: #a167e6;
+  --code-add: #30d158;
+  --code-del: #ff6961;
+}
+.hljs-keyword,
+.hljs-literal,
+.hljs-selector-tag,
+.hljs-built_in.hljs-keyword {
+  color: var(--code-keyword);
+  font-weight: 600;
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-char.escape_,
+.hljs-template-tag {
+  color: var(--code-string);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--code-number);
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-doctag {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-title.class_,
+.hljs-built_in {
+  color: var(--code-type);
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: var(--code-function);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params {
+  color: var(--code-attr);
+}
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: var(--code-meta);
+}
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--code-tag);
+}
+.hljs-addition {
+  color: var(--code-add);
+}
+.hljs-deletion {
+  color: var(--code-del);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 700;
+}

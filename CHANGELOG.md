@@ -21,7 +21,9 @@ merge, not at release time.
   (tick checkboxes while reading), edited in a Notion-like visual editor
   (`/` commands, checklists, tables, quotes, code, callouts as GitHub alerts,
   a selection toolbar) or as Markdown source — each person's choice, on the
-  same page. Download or copy a page as `.md`, import `.md` files, export a
+  same page. Code blocks are highlighted (in their fence's language, or one
+  detected among about 30), with a language picker in the visual editor and a
+  copy button in the reading view. Download or copy a page as `.md`, import `.md` files, export a
   workspace as a zip of `.md` files in its page tree. Nested pages,
   favourites, duplicate, move, trash (emptied after 30 days). Saves carry a version, so a stale
   editor gets a 409 with the newer page instead of overwriting it.

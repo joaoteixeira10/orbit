@@ -1,5 +1,7 @@
 /* The developer themes (shared with the other projects; see the file). */
 @import "./dev-themes.css";
+/* Code highlighting colours. */
+@import "./syntax.css";
 
 @tailwind base;
 @tailwind components;

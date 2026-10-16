@@ -211,6 +211,21 @@ function onDblClick(e: MouseEvent) {
   cursor: pointer;
   transition: opacity var(--speed) var(--ease), color var(--speed);
 }
+/* The language, left of the copy button, also on hover. */
+.md-view :deep(pre[data-lang])::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 14px;
+  right: 46px;
+  font: 500 11px var(--font-sans);
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity var(--speed) var(--ease);
+  pointer-events: none;
+}
+.md-view :deep(pre[data-lang]:hover)::before {
+  opacity: 1;
+}
 .md-view :deep(pre:hover .code-copy),
 .md-view :deep(.code-copy:focus-visible),
 .md-view :deep(.code-copy.done) {

@@ -271,6 +271,31 @@ html.dark .page-editor {
   border-radius: 0;
 }
 
+/* The language picker (CodeBlockView.vue), top right on hover or focus. */
+.page-editor .ProseMirror .code-block {
+  position: relative;
+}
+.page-editor .ProseMirror .code-lang {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border-2);
+  color: var(--text-2);
+  font: 500 11.5px var(--font-sans);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--speed) var(--ease);
+}
+.page-editor .ProseMirror .code-block:hover .code-lang,
+.page-editor .ProseMirror .code-lang:focus {
+  opacity: 1;
+}
+
 /* ---- Divider ---- */
 .page-editor .ProseMirror hr {
   margin: 1.1em 0;

@@ -132,6 +132,9 @@ merge, not at release time.
   only when listed in `GIT_SERVERS`).
 - **A linked git list stops using a departed member's token**: when whoever
   linked it leaves the workspace, it stops syncing and says why.
+- Sign-in tokens are accepted only as HS256; HSTS is sent when Orbit serves
+  TLS itself; the user lookup (adding members) is rate-limited; `go.mod`
+  pins the Go toolchain (1.26.9).
 
 ### Removed
 

@@ -232,7 +232,7 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/home", h.home)
 			authed.GET("/search", h.search)
 			authed.GET("/calendar", h.myCalendar)
-			authed.GET("/users/lookup", h.lookupUser)
+			authed.GET("/users/lookup", authLimit, h.lookupUser) // tells whether a name exists: throttled
 			authed.GET("/me/favorites", h.listFavorites)
 			authed.PUT("/me/workspace-order", h.orderWorkspaces)
 			authed.GET("/me/feeds", h.listFeeds)

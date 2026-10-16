@@ -290,7 +290,8 @@ user. Release mode refuses either secret under 32 characters.
   `manifest-src 'self' blob:` (the page builds its branded install manifest
   in the browser), `frame-ancestors 'none'`, `object-src 'none'`; `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
-  `Cross-Origin-Opener-Policy: same-origin`.
+  `Cross-Origin-Opener-Policy: same-origin`; `Strict-Transport-Security` when
+  Orbit serves TLS itself (behind a proxy, set it there).
 - **API reference** (`/api/docs`): Scalar's script is bundled and served from
   Orbit's own origin, so the CSP stays `script-src 'self'`; its hosted
   extras are turned off.

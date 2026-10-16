@@ -85,6 +85,11 @@ func securityHeaders(extraConnectSrc func() string) gin.HandlerFunc {
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		h.Set("Content-Security-Policy", build())
+		// Serving TLS itself (TLS_CERT_FILE): browsers keep to https. Behind a
+		// proxy that terminates TLS, set it there.
+		if c.Request.TLS != nil {
+			h.Set("Strict-Transport-Security", "max-age=31536000")
+		}
 		c.Next()
 	}
 }

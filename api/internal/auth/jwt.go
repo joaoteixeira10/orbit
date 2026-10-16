@@ -101,7 +101,7 @@ func (m *Manager) ParseAccessToken(tokenStr string) (*Claims, error) {
 			return nil, ErrInvalidToken
 		}
 		return m.jwtSecret, nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"})) // what Orbit signs with, nothing else
 	if err != nil || !tok.Valid {
 		return nil, ErrInvalidToken
 	}

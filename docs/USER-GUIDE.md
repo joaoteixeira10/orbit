@@ -532,6 +532,10 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
   colour**.
   When the owner lets each person choose, **Developer theme**: as the
   instance (the default), none, or one of the five themes — for you only.
+  **Images from other sites** in pages: **Ask first** (the default — they
+  show as "Image from example.org — show" until you click; one click shows
+  that site's images for the rest of the session) or **Always show**. Such an
+  image tells its site who reads the page, and when.
 - **Language & time** — **English** or **Português**; **Time zone** (for
   reminders; "This device" by default); **Week starts on** Monday or Sunday;
   **Time format** 13:00 or 1:00 PM.

@@ -131,6 +131,11 @@ merge, not at release time.
   password go through the sign-in rate limit and count toward the account
   lockout, which they respect.
 - **"Sign out everywhere" and an admin password reset revoke API tokens** too.
+- **Images from other sites wait for a click** in pages (reading view and
+  visual editor): they'd tell their site who reads the page, and when.
+  Settings → Appearance → Images from other sites: Ask first / Always show.
+  Fixed on the way: a page with an image on a line of its own couldn't be
+  opened in the visual editor.
 - **Read-only API tokens are read-only everywhere** (every write is refused,
   admin routes included).
 - **Web Push and git servers can't be used to probe the LAN**: they go through

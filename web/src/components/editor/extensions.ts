@@ -13,12 +13,24 @@ import { TableKit } from '@tiptap/extension-table'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Underline } from '@tiptap/extension-underline'
 import { Markdown, MarkdownManager } from '@tiptap/markdown'
-import { Image } from '@tiptap/extension-image'
+import { PageImage } from './image'
+import { Paragraph } from '@tiptap/extension-paragraph'
 import { Callout } from './callout'
 import { CodeBlock } from './codeblock'
 import { RawBlock, RawInline, FootnoteDef } from './raw'
 import { ALERTS, alertOf, type AlertType } from './alerts'
 
+
+// A paragraph holding only an image: TipTap unwraps it to a bare image, which
+// only fits block images — pages' images are inline (in a line of text, or
+// alone), so the image stays in its paragraph. Same Markdown either way.
+const MarkdownParagraph = Paragraph.extend({
+  parseMarkdown: (token: any, helpers: any) => {
+    const tokens = token.tokens || []
+    if (tokens.length === 1 && tokens[0].type === 'image') return helpers.createNode('paragraph', undefined, helpers.parseInline(tokens))
+    return Paragraph.config.parseMarkdown!.call(Paragraph as any, token, helpers)
+  },
+})
 
 const MarkdownHighlight = Highlight.extend({
   renderMarkdown: (node, h) => `<mark>${h.renderChildren(node)}</mark>`,
@@ -112,8 +124,10 @@ export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, 
       dropcursor: { color: 'var(--ws)', width: 2 },
       underline: false,
       codeBlock: false, // highlighted: ./codeblock
+      paragraph: false, // MarkdownParagraph
       link: { openOnClick: false, autolink: true, linkOnPaste: true, defaultProtocol: 'https', ...link },
     }),
+    MarkdownParagraph,
     MarkdownUnderline,
     CodeBlock,
     TaskList,
@@ -121,7 +135,7 @@ export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, 
     TableKit.configure({ table: { resizable: false, renderWrapper: true } }),
     MarkdownHighlight,
     MarkdownCallout,
-    Image.configure({ inline: true }),
+    PageImage.configure({ inline: true }),
     RawBlock,
     FootnoteDef,
     RawInline,

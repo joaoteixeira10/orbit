@@ -602,3 +602,25 @@ html.dark .bubble {
 .bubble-input::placeholder {
   color: var(--text-faint);
 }
+
+/* An image from another site, until shown (image.ts; as in the reading view). */
+.page-editor .ProseMirror .md-remote-img {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border-2);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.page-editor .ProseMirror .md-remote-img:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.page-editor .ProseMirror .pm-image img {
+  max-width: 100%;
+  border-radius: 10px;
+}

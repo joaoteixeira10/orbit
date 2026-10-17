@@ -515,6 +515,13 @@ onMounted(loadSessions)
                 </div>
               </div>
             </div>
+            <div class="flex items-center justify-between gap-4 border-t border-border pt-5">
+              <div><div class="text-[13px] font-semibold">{{ t('acct.appearance.remoteImages') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.remoteImagesHint') }}</div></div>
+              <div class="seg">
+                <button type="button" :class="{ on: prefs.remoteImages === 'ask' }" @click="prefs.setRemoteImages('ask')">{{ t('acct.appearance.remoteAsk') }}</button>
+                <button type="button" :class="{ on: prefs.remoteImages === 'always' }" @click="prefs.setRemoteImages('always')">{{ t('acct.appearance.remoteAlways') }}</button>
+              </div>
+            </div>
             <!-- Own developer theme, when the owner lets each person choose. -->
             <div v-if="branding.devThemesPersonal" class="border-t border-border pt-5">
               <div class="mb-3"><div class="text-[13px] font-semibold">{{ t('acct.appearance.devTheme') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.devThemeHint') }}</div></div>

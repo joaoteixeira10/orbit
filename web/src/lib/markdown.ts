@@ -7,6 +7,7 @@ import markedFootnote from 'marked-footnote'
 import DOMPurify from 'dompurify'
 import { i18n } from '@/i18n'
 import { highlightCode, labelOf } from './syntax'
+import { remoteHost } from './media'
 
 // ---- Normalising ----------------------------------------------------------
 
@@ -83,6 +84,17 @@ function reader(): Marked {
         const { html, language } = highlightCode(text, (lang ?? '').split(/\s/)[0])
         const label = language ? ` data-lang="${labelOf(language)}"` : ''
         return `<pre${label}><code class="hljs${language ? ` language-${language}` : ''}">${html}</code></pre>\n`
+      },
+      // An image from another site waits behind a placeholder (lib/media.ts);
+      // the reading view shows it on a click, or at once when the reader
+      // chose to always show them.
+      image({ href, title, text }: Tokens.Image) {
+        const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+        const host = remoteHost(href)
+        const t = title ? ` title="${esc(title)}"` : ''
+        if (!host) return `<img src="${esc(href)}" alt="${esc(text)}"${t} loading="lazy">`
+        const label = i18n.global.t('editor.remoteImage', { host })
+        return `<span class="md-remote-img" role="button" tabindex="0" data-src="${esc(href)}" data-alt="${esc(text)}"${t}>${esc(label)}</span>`
       },
       // Links leave the app in a new tab.
       link({ href, title, tokens }: Tokens.Link) {

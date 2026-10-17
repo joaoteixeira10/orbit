@@ -321,6 +321,10 @@ user. Release mode refuses either secret under 32 characters.
   **8 MiB**; a **30 s** timeout. A failure is shown to the editors without the
   address. The scheduler refreshes each subscription at its interval (at least
   every 15 minutes, by default hourly).
+- **Images from other sites** in pages are shown only after a click (or always,
+  if the reader chooses so): the CSP allows `https:` images so that pages can
+  show them, and a remote image would otherwise tell its site who reads a page
+  and when. A clicked image is fetched without a referrer.
 - **CORS** is off unless `CORS_ORIGINS` is set (dev only).
 
 ## Operator checklist

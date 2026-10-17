@@ -26,8 +26,9 @@ type prefsResponse struct {
 	DigestEnabled bool                      `json:"digest_enabled"`
 	DigestTime    string                    `json:"digest_time"`
 	Locale        string                    `json:"locale"`
-	PageEditor    string                    `json:"page_editor"` // visual | markdown
-	DevTheme      string                    `json:"dev_theme"`   // "" (as the instance) | none | a theme id
+	PageEditor    string                    `json:"page_editor"`   // visual | markdown
+	DevTheme      string                    `json:"dev_theme"`     // "" (as the instance) | none | a theme id
+	RemoteImages  string                    `json:"remote_images"` // ask | always
 }
 
 func toPrefsResponse(p models.UserPrefs) prefsResponse {
@@ -49,6 +50,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		Locale:         p.Locale,
 		PageEditor:     orDefault(p.PageEditor, "visual"),
 		DevTheme:       p.DevTheme,
+		RemoteImages:   orDefault(p.RemoteImages, "ask"),
 	}
 }
 
@@ -145,6 +147,9 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.PageEditor != nil {
 		updates["page_editor"] = *req.PageEditor
+	}
+	if req.RemoteImages != nil {
+		updates["remote_images"] = *req.RemoteImages
 	}
 	if req.DevTheme != nil {
 		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {

@@ -90,4 +90,5 @@ type updatePrefsRequest struct {
 	Locale        *string                    `json:"locale" binding:"omitempty,max=8"`
 	PageEditor    *string                    `json:"page_editor" binding:"omitempty,oneof=visual markdown"`
 	DevTheme      *string                    `json:"dev_theme" binding:"omitempty,max=10"`
+	RemoteImages  *string                    `json:"remote_images" binding:"omitempty,oneof=ask always"`
 }

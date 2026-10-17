@@ -181,6 +181,10 @@ type UserPrefs struct {
 	// DevTheme is this user's own developer theme, when the owner lets each
 	// person choose: "" = as the instance, "none", or a theme id.
 	DevTheme string `gorm:"size:10" json:"dev_theme"`
+	// RemoteImages is whether pages show images from other sites at once
+	// ("always") or only after a click ("ask", the default): such an image
+	// tells its site who reads the page, and when.
+	RemoteImages string `gorm:"size:8" json:"remote_images"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.

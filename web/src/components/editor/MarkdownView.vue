@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderMarkdown } from '@/lib/markdown'
+import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
 
 // A page as it reads: its Markdown rendered like a README on GitHub, with
 // the app's type. Task boxes can be ticked without editing (when allowed);
@@ -32,8 +33,38 @@ function addCopyButtons() {
     pre.appendChild(b)
   }
 }
-onMounted(addCopyButtons)
-watch(html, () => nextTick(addCopyButtons))
+// Images from other sites (lib/media.ts): shown at once when the reader
+// allows it or already showed one from that site, else on a click.
+function showImage(ph: HTMLElement) {
+  const src = safeImageSrc(ph.dataset.src ?? '')
+  if (!src) return
+  const img = document.createElement('img')
+  img.src = src
+  img.alt = ph.dataset.alt ?? ''
+  if (ph.title) img.title = ph.title
+  img.loading = 'lazy'
+  img.referrerPolicy = 'no-referrer'
+  ph.replaceWith(img)
+}
+function showImages() {
+  for (const ph of root.value?.querySelectorAll<HTMLElement>('.md-remote-img') ?? []) {
+    if (showsAtOnce(ph.dataset.src ?? '')) showImage(ph)
+  }
+}
+function revealFrom(ph: HTMLElement) {
+  reveal(ph.dataset.src ?? '')
+  const host = remoteHost(ph.dataset.src ?? '')
+  for (const other of root.value?.querySelectorAll<HTMLElement>('.md-remote-img') ?? []) {
+    if (remoteHost(other.dataset.src ?? '') === host) showImage(other)
+  }
+}
+function afterRender() {
+  addCopyButtons()
+  showImages()
+}
+onMounted(afterRender)
+watch(html, () => nextTick(afterRender))
+watch(() => mediaPrefs.remoteImages, () => nextTick(showImages))
 
 async function copyCode(b: HTMLElement) {
   const code = b.closest('pre')?.querySelector('code') ?? b.closest('pre')
@@ -54,6 +85,11 @@ async function copyCode(b: HTMLElement) {
 
 function onClick(e: MouseEvent) {
   const target = e.target as HTMLElement
+  const ph = target.closest('.md-remote-img') as HTMLElement | null
+  if (ph) {
+    revealFrom(ph)
+    return
+  }
   const copy = target.closest('.code-copy') as HTMLElement | null
   if (copy) {
     e.preventDefault()
@@ -75,7 +111,15 @@ function onDblClick(e: MouseEvent) {
 
 <template>
   <!-- eslint-disable-next-line vue/no-v-html -- sanitised by renderMarkdown -->
-  <article ref="root" class="md-view" :class="{ editable }" @click="onClick" @dblclick="onDblClick" v-html="html" />
+  <article
+    ref="root"
+    class="md-view"
+    :class="{ editable }"
+    @click="onClick"
+    @dblclick="onDblClick"
+    @keydown.enter.space="(e: KeyboardEvent) => { const ph = (e.target as HTMLElement).closest('.md-remote-img') as HTMLElement | null; if (ph) { e.preventDefault(); revealFrom(ph) } }"
+    v-html="html"
+  />
 </template>
 
 <style scoped>
@@ -271,6 +315,30 @@ function onDblClick(e: MouseEvent) {
 }
 .md-view :deep(tr:nth-child(2n) td) {
   background: color-mix(in srgb, var(--fill-2) 50%, transparent);
+}
+.md-view :deep(.md-remote-img) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border-2);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.md-view :deep(.md-remote-img::before) {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.md-view :deep(.md-remote-img:hover) {
+  color: var(--text);
+  border-color: var(--accent);
 }
 .md-view :deep(img) {
   max-width: 100%;

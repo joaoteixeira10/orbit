@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { currentLocale } from '@/i18n'
 import { api } from '@/lib/api'
+import { mediaPrefs } from '@/lib/media'
 
 export type Theme = 'light' | 'dark' | 'system'
 export type TimeFormat = '24h' | '12h'
@@ -17,6 +18,7 @@ interface ServerPrefs {
   locale?: string
   page_editor?: PageEditorMode
   dev_theme?: string // "" = as the instance | none | a developer theme id
+  remote_images?: 'ask' | 'always'
 }
 
 function browserTZ(): string {
@@ -71,6 +73,8 @@ export const usePrefsStore = defineStore('prefs', {
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
     // Own developer theme ("" = as the instance), when the owner allows it.
     devTheme: localStorage.getItem('orbit_dev_theme') || '',
+    // Images from other sites in pages: after a click (ask) or at once.
+    remoteImages: (localStorage.getItem('orbit_remote_images') === 'always' ? 'always' : 'ask') as 'ask' | 'always',
   }),
   actions: {
     isDark(): boolean {
@@ -106,6 +110,9 @@ export const usePrefsStore = defineStore('prefs', {
       pushAccent(this.accentColor)
       this.devTheme = p.dev_theme || ''
       pushDevTheme(this.devTheme)
+      this.remoteImages = p.remote_images === 'always' ? 'always' : 'ask'
+      mediaPrefs.remoteImages = this.remoteImages
+      localStorage.setItem('orbit_remote_images', this.remoteImages)
       this.applyTheme()
       // Reminders need the zone this browser is in (while the setting is "local").
       const tz = browserTZ()
@@ -140,6 +147,12 @@ export const usePrefsStore = defineStore('prefs', {
       this.timeFormat = v
       localStorage.setItem('orbit_time_format', v)
       await this.persist({ time_format: v })
+    },
+    async setRemoteImages(v: 'ask' | 'always') {
+      this.remoteImages = v
+      mediaPrefs.remoteImages = v
+      localStorage.setItem('orbit_remote_images', v)
+      await this.persist({ remote_images: v })
     },
     // Pick this person's developer theme ("" = as the instance, "none").
     async setDevTheme(choice: string) {

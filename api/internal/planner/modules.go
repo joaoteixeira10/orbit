@@ -35,11 +35,11 @@ var Catalog = []Module{
 	{Key: ModTimeline, Icon: "chart-gantt"},
 	{Key: ModCharts, Icon: "chart-pie"},
 	{Key: ModCalendar, Icon: "calendar"},
+	{Key: ModCourses, Icon: "graduation-cap"},
+	{Key: ModGrades, Icon: "award"},
 	{Key: "habits", Icon: "repeat", Soon: true},
 	{Key: "journal", Icon: "notebook-pen", Soon: true},
 	{Key: "goals", Icon: "target", Soon: true},
-	{Key: "courses", Icon: "graduation-cap", Soon: true},
-	{Key: "grades", Icon: "award", Soon: true},
 	{Key: "bookmarks", Icon: "bookmark", Soon: true},
 	{Key: "focus", Icon: "timer", Soon: true},
 }
@@ -98,7 +98,7 @@ type TemplateList struct {
 var Templates = []Template{
 	{
 		Kind: "school", Icon: "graduation-cap", Color: "#007AFF",
-		Modules: []string{ModHome, ModCalendar, ModTasks, ModBoard, ModNotes, ModPages},
+		Modules: []string{ModHome, ModCourses, ModCalendar, ModTasks, ModBoard, ModGrades, ModNotes, ModPages},
 		Lists: []TemplateList{
 			{Name: "Assignments", Color: "#007AFF", Icon: "pencil", Columns: Columns("To do", "Doing", "Handed in")},
 			{Name: "Exams", Color: "#FF3B30", Icon: "file-check", Columns: Columns("Upcoming", "Studying", "Done")},

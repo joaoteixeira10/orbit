@@ -20,11 +20,13 @@ the [API](API.md).
 9. [Timeline](#9-timeline)
 10. [Charts](#10-charts)
 11. [Calendar](#11-calendar)
-12. [Notifications](#12-notifications)
-13. [Your settings](#13-your-settings)
-14. [Administration](#14-administration)
-15. [Owner controls](#15-owner-controls)
-16. [On a phone](#16-on-a-phone)
+12. [Courses](#12-courses)
+13. [Grades](#13-grades)
+14. [Notifications](#14-notifications)
+15. [Your settings](#15-your-settings)
+16. [Administration](#16-administration)
+17. [Owner controls](#17-owner-controls)
+18. [On a phone](#18-on-a-phone)
 
 ---
 
@@ -509,7 +511,51 @@ events.
 **See Orbit in your phone's calendar**: Settings → [Calendar
 feeds](#calendar-feeds).
 
-## 12. Notifications
+## 12. Courses
+
+**Courses** (a module; on in the School template) is your subjects: each with
+its teacher, room, colour, and its **weekly classes**.
+
+- **New course**: a name (and a short name for the timetable, like *MAT*),
+  teacher, room, colour. **Add a class** for each weekly class: the day, the
+  times, a room when it isn't the course's, and a type if you like (*Lab*).
+- **Term**: the classes repeat every week from **From** to **Until** (leave
+  them empty: from today, for good).
+- The page shows the **timetable** of the week (today's column is tinted)
+  and a card per course. Click a class or a card to open the course.
+- **Every class is on the calendar** — the workspace's, the merged one, Today
+  and your calendar feeds — and alerts can't be set on them. A class opens
+  read-only there: **Open the course** to change it; editors can **Cancel this
+  class** (only that one — a holiday, a sick teacher). Changing a class's day
+  or time brings cancelled ones back.
+- **Task tag**: tasks tagged **#tag** (the short name in lower case, unless
+  you choose another) belong to the course. Its card shows the next ones and
+  how many are open; quick add takes the tag too (*Exercises friday #mat*).
+- **Weight in the overall average** — credits or a coefficient (Grades).
+- **Delete course** removes its classes from the calendar and everyone's
+  grades in it; its tasks stay.
+
+Editors change courses; viewers see them.
+
+## 13. Grades
+
+**Grades** (a module; on in the School template) keeps **your** marks in each
+course. They are yours alone: in a shared workspace the other members, owners
+included, don't see them. Viewers keep their own too.
+
+- **Add a grade** under a course: what it was (*Test 1*), the date, the mark
+  and what it's out of (the workspace's scale by default — you can enter
+  78 / 100 in a course marked out of 20), and its **weight** (×2 counts twice).
+  Click a grade to change it; **×** removes it.
+- Each course shows its **weighted average** on the workspace's scale, in red
+  below half. **Overall average** weighs each course by its weight.
+- **Goal**: the average you aim at in a course. **What do I need?** tells
+  what the next mark (of the weight you give) must be to reach it — or that
+  any mark will do, or that it's out of reach (and what full marks would give).
+- **Marks out of** — 20 (Portugal), 100, 10 or 5. The workspace's owners set
+  it; averages and goals follow.
+
+## 14. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -548,7 +594,7 @@ all as read** clears the count. What you get:
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 13. Your settings
+## 15. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -586,7 +632,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 14. Administration
+## 16. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -681,7 +727,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 15. Owner controls
+## 17. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -818,7 +864,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 16. On a phone
+## 18. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

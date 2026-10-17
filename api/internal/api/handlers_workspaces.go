@@ -350,6 +350,7 @@ type updateWorkspaceRequest struct {
 	Description *string   `json:"description" binding:"omitempty,max=500"`
 	Modules     *[]string `json:"modules"`
 	Archived    *bool     `json:"archived"`
+	GradeScale  *int      `json:"grade_scale"` // 20, 100, 10 or 5
 }
 
 // updateWorkspace changes a workspace's settings (owners).
@@ -408,6 +409,22 @@ func (h *Handlers) updateWorkspace(c *gin.Context) {
 			up["archived_at"] = &now
 		} else {
 			up["archived_at"] = nil
+		}
+	}
+	if req.GradeScale != nil && *req.GradeScale != ws.GradeScale {
+		if !planner.ValidScale(*req.GradeScale) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "grade_scale is 20, 100, 10 or 5"})
+			return
+		}
+		up["grade_scale"] = *req.GradeScale
+		// Goals are on the scale: keep them where they were.
+		if old := ws.GradeScale; old > 0 {
+			var ids []string
+			h.db.Model(&models.Course{}).Where("workspace_id = ?", ws.ID).Pluck("id", &ids)
+			if len(ids) > 0 {
+				h.db.Model(&models.CourseGoal{}).Where("course_id IN ?", ids).
+					Update("target", gorm.Expr("target * ? / ?", *req.GradeScale, old))
+			}
 		}
 	}
 	if len(up) > 0 {
@@ -471,6 +488,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Note{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Notification{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceInvite{}).Error },
+		func() error { return deleteCourses(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceMember{}).Error },
 		func() error { return tx.Where("id = ?", wsID).Delete(&models.Workspace{}).Error },
 	}

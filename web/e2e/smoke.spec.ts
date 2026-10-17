@@ -242,6 +242,37 @@ test('attachments: an image on a task shows as a thumbnail, and goes when remove
   await expect(thumb).toHaveCount(0)
 })
 
+test('courses and grades: a course with a weekly class, a grade, a goal and what is needed', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.locator('.ws-row').first().click()
+  await page.waitForURL(/\/w\/[^/]+$/)
+  const base = new URL(page.url()).pathname
+  await page.locator('#sidebar').getByRole('button', { name: 'Courses', exact: true }).click()
+  await page.getByRole('button', { name: 'New course' }).first().click()
+  await page.getByPlaceholder('Maths', { exact: true }).fill('Maths')
+  await page.getByPlaceholder('MAT', { exact: true }).fill('MAT')
+  await page.getByRole('button', { name: 'Add a class' }).click()
+  await expect(page.getByTestId('class-row')).toHaveCount(1)
+  await page.getByTestId('course-save').click()
+  // The class is on the timetable; the card says so.
+  await expect(page.locator('.tt-block', { hasText: 'MAT' })).toBeVisible()
+  await expect(page.locator('.course', { hasText: 'Maths' })).toContainText('1 class a week')
+
+  await page.goto(base + '/grades')
+  const maths = page.getByTestId('grades-Maths')
+  await maths.getByPlaceholder('Test 1').fill('Test 1')
+  await maths.getByPlaceholder('Mark').fill('15')
+  await maths.getByRole('button', { name: 'Add a grade' }).click()
+  await expect(maths.locator('.avg')).toHaveText('15')
+  await expect(page.getByTestId('overall')).toHaveText('15')
+  // Aiming at 16 with a next mark as heavy as this one: 17 is needed.
+  await maths.getByLabel('Goal').fill('16')
+  await maths.getByLabel('Goal').press('Enter')
+  await expect(maths.getByTestId('need')).toHaveText('You need 17/20 on it to reach 16.')
+  await page.reload()
+  await expect(page.getByTestId('grades-Maths').getByLabel('Goal')).toHaveValue('16')
+})
+
 test('invite links: an owner makes one; a newcomer opens it, makes an account and is in', async ({ page, browser }) => {
   await signIn(page, NEW_PASSWORD)
   const row = page.locator('.ws-row').first()

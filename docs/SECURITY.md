@@ -187,6 +187,12 @@ workspaces).
   deletes the workspaces it was alone in and hands the others to a remaining
   member (an editor first) — content is never orphaned or exposed.
 - **Assignees** must be members of the workspace.
+- **Grades are personal.** Courses and their timetable belong to the
+  workspace, but a grade or a goal is its owner's alone: every query filters
+  by the caller, so other members — owners included — get `404` for someone
+  else's. Viewers may keep their own grades (not through a read-only token,
+  nor in an archived workspace). Live updates about grades go only to their
+  owner's sessions. Deleting an account deletes its grades and goals.
 - **Invite links** (flag `workspace_invites`, on by default). Only owners
   make them, with role editor or viewer (never owner), up to 30 days and 100
   uses. The token is 24 random bytes, shown once and stored as a SHA-256

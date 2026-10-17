@@ -42,6 +42,7 @@ export interface Workspace {
   muted: boolean // I muted others' activity in it
   created_by: string
   archived_at?: string | null
+  grade_scale: number // what marks are out of (Grades): 20, 100, 10, 5
   created_at: string
   updated_at: string
 }
@@ -213,6 +214,7 @@ export interface Occurrence {
   all_day: boolean
   color: string
   recurring: boolean
+  course_id?: string // a class of a course (changed in Courses)
 }
 export interface CalendarData {
   events: Occurrence[]
@@ -304,7 +306,7 @@ export const workspacesApi = {
   get: (id: string) => api<{ workspace: Workspace; members: Member[] }>(`/workspaces/${id}`),
   create: (b: { name: string; icon?: string; color?: string; kind?: WorkspaceKind; description?: string; modules?: ModuleKey[]; starter?: boolean; locale?: string }) =>
     api<Workspace>('/workspaces', { method: 'POST', body: j(b) }),
-  update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean }>) =>
+  update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean; grade_scale: number }>) =>
     api<Workspace>(`/workspaces/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/workspaces/${id}`, { method: 'DELETE' }),
   order: (ids: string[]) => api<void>('/me/workspace-order', { method: 'PUT', body: j({ ids }) }),
@@ -471,4 +473,69 @@ export const calendarApi = {
   createFeed: (b: { name?: string; workspace_ids?: string[]; include_tasks?: boolean }) =>
     api<{ feed: Feed; url: string; webcal: string }>('/me/feeds', { method: 'POST', body: j(b) }),
   removeFeed: (id: string) => api<void>(`/me/feeds/${id}`, { method: 'DELETE' }),
+}
+
+// School: courses (shared by the workspace, with a weekly timetable that
+// fills the calendar) and grades (each person's own).
+export interface CourseSlot {
+  id: string
+  course_id: string
+  weekday: number // 1 Monday … 7 Sunday
+  start: string // HH:MM
+  end: string
+  room: string
+  kind: string
+  event_id: string
+}
+export interface Course {
+  id: string
+  workspace_id: string
+  name: string
+  code: string
+  teacher: string
+  room: string
+  color: string
+  tag: string
+  term_start: string | null
+  term_end: string | null
+  tz: string
+  weight: number
+  notes: string
+  rank: number
+  slots: CourseSlot[]
+  open_tasks: number
+  average: number | null // mine, on the workspace's scale
+  grade_count: number
+  target: number | null // my goal
+}
+export type SlotInput = Pick<CourseSlot, 'weekday' | 'start' | 'end' | 'room' | 'kind'> & { id?: string }
+export type CourseInput = Partial<Pick<Course, 'name' | 'code' | 'teacher' | 'room' | 'color' | 'tag' | 'tz' | 'weight' | 'notes'>> & {
+  term_start?: string
+  term_end?: string
+  slots?: SlotInput[]
+}
+export interface Grade {
+  id: string
+  workspace_id: string
+  course_id: string
+  owner_id: string
+  title: string
+  score: number
+  out_of: number
+  weight: number
+  date: string | null
+  created_at: string
+}
+export type GradeInput = Partial<Pick<Grade, 'title' | 'score' | 'out_of' | 'weight'>> & { date?: string }
+
+export const coursesApi = {
+  list: (ws: string) => api<Course[]>(`/workspaces/${ws}/courses`),
+  create: (ws: string, b: CourseInput) => api<Course>(`/workspaces/${ws}/courses`, { method: 'POST', body: j(b) }),
+  update: (id: string, b: CourseInput) => api<Course>(`/courses/${id}`, { method: 'PUT', body: j(b) }),
+  remove: (id: string) => api<void>(`/courses/${id}`, { method: 'DELETE' }),
+  setGoal: (id: string, target: number | null) => api<void>(`/courses/${id}/goal`, { method: 'PUT', body: j({ target }) }),
+  grades: (ws: string) => api<Grade[]>(`/workspaces/${ws}/grades`),
+  addGrade: (course: string, b: GradeInput) => api<Grade>(`/courses/${course}/grades`, { method: 'POST', body: j(b) }),
+  updateGrade: (id: string, b: GradeInput) => api<Grade>(`/grades/${id}`, { method: 'PUT', body: j(b) }),
+  removeGrade: (id: string) => api<void>(`/grades/${id}`, { method: 'DELETE' }),
 }

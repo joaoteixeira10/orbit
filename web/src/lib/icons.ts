@@ -33,7 +33,7 @@ export const ICON_CHOICES = Object.keys(ICONS).filter((k) => k !== 'home')
 // The route of each module of a workspace (the overview is the workspace itself).
 export const MODULE_ROUTES: Record<string, string> = {
   home: 'ws', notes: 'ws-notes', pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board',
-  timeline: 'ws-timeline', charts: 'ws-charts', calendar: 'ws-calendar',
+  timeline: 'ws-timeline', charts: 'ws-charts', calendar: 'ws-calendar', courses: 'ws-courses', grades: 'ws-grades',
 }
 
 // Apple's system colours (light values; tiles keep them in dark mode too).

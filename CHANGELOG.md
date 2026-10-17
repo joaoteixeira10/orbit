@@ -102,6 +102,15 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Courses** (module) — subjects with teacher, room, colour and their
+  weekly classes, shown as the week's timetable. Every class is a repeating
+  event on the calendar (and in Today and calendar feeds) for the term;
+  cancel one class from the calendar, change the rest in the course. Tasks
+  tagged with the course's tag are its tasks.
+- **Grades** (module) — your own marks per course (nobody else sees them),
+  out of anything, with weights; weighted course and overall averages on the
+  workspace's scale (20, 100, 10, 5); a goal per course and **What do I
+  need?** for the next mark. Both modules are on in the School template.
 - **Invite links** — a workspace's owners make a link (editor or viewer, 1
   to 30 days, one or more uses), shown once; whoever opens it joins with one
   click, or makes an account right there (not when the instance signs people

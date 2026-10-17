@@ -839,6 +839,160 @@ const docTemplate = `{
                 }
             }
         },
+        "/courses/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Update a course",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Course id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.courseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.courseResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Delete a course",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Course id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/courses/{id}/goal": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Set your goal in a course",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Course id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Target",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.goalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/courses/{id}/grades": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Add a grade",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Course id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Grade",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gradeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Grade"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{id}": {
             "get": {
                 "security": [
@@ -1011,6 +1165,76 @@ const docTemplate = `{
                                 "type": "boolean"
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/grades/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Update a grade",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Grade id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gradeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Grade"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Delete a grade",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Grade id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -4627,6 +4851,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/courses": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Courses of a workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.courseResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Create a course",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Course",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.courseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.courseResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/events": {
             "post": {
                 "security": [
@@ -4667,6 +4970,42 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/api.eventResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/grades": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "Your grades in a workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Grade"
+                            }
                         }
                     }
                 }
@@ -5728,6 +6067,142 @@ const docTemplate = `{
                 }
             }
         },
+        "api.courseRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 16
+                },
+                "color": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 20000
+                },
+                "room": {
+                    "type": "string",
+                    "maxLength": 60
+                },
+                "slots": {
+                    "type": "array",
+                    "maxItems": 40,
+                    "items": {
+                        "$ref": "#/definitions/api.slotRequest"
+                    }
+                },
+                "tag": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "teacher": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "term_end": {
+                    "type": "string"
+                },
+                "term_start": {
+                    "description": "\"\" clears",
+                    "type": "string"
+                },
+                "tz": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                }
+            }
+        },
+        "api.courseResponse": {
+            "type": "object",
+            "properties": {
+                "average": {
+                    "description": "the caller's, on the workspace's scale",
+                    "type": "number"
+                },
+                "code": {
+                    "description": "short name for the timetable (MAT)",
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "grade_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "open_tasks": {
+                    "description": "not done, tagged #tag",
+                    "type": "integer"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "room": {
+                    "type": "string"
+                },
+                "slots": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CourseSlot"
+                    }
+                },
+                "tag": {
+                    "description": "its tasks carry #tag",
+                    "type": "string"
+                },
+                "target": {
+                    "description": "the caller's goal, on the scale",
+                    "type": "number"
+                },
+                "teacher": {
+                    "type": "string"
+                },
+                "term_end": {
+                    "description": "YYYY-MM-DD: classes until (inclusive)",
+                    "type": "string"
+                },
+                "term_start": {
+                    "description": "YYYY-MM-DD: classes from",
+                    "type": "string"
+                },
+                "tz": {
+                    "description": "the zone its class times are in",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "number"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "api.createAPITokenRequest": {
             "type": "object",
             "required": [
@@ -5928,6 +6403,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "color": {
+                    "type": "string"
+                },
+                "course_id": {
+                    "description": "CourseID: a class of a course's timetable. The course owns it (its\nslots make and change it); only single classes can be cancelled here.",
                     "type": "string"
                 },
                 "created_at": {
@@ -6178,6 +6657,42 @@ const docTemplate = `{
                 "url": {
                     "type": "string",
                     "maxLength": 500
+                }
+            }
+        },
+        "api.goalRequest": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "description": "null clears",
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "api.gradeRequest": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "description": "\"\" clears",
+                    "type": "string"
+                },
+                "out_of": {
+                    "type": "number",
+                    "maximum": 10000
+                },
+                "score": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "weight": {
+                    "type": "number",
+                    "maximum": 1000,
+                    "minimum": 0
                 }
             }
         },
@@ -6645,6 +7160,10 @@ const docTemplate = `{
                 "color": {
                     "type": "string"
                 },
+                "course_id": {
+                    "description": "a class of a course",
+                    "type": "string"
+                },
                 "end": {
                     "type": "string"
                 },
@@ -7101,6 +7620,38 @@ const docTemplate = `{
                 }
             }
         },
+        "api.slotRequest": {
+            "type": "object",
+            "required": [
+                "end",
+                "start"
+            ],
+            "properties": {
+                "end": {
+                    "type": "string"
+                },
+                "id": {
+                    "description": "an existing class, kept (with its cancelled dates)",
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "room": {
+                    "type": "string",
+                    "maxLength": 60
+                },
+                "start": {
+                    "type": "string"
+                },
+                "weekday": {
+                    "type": "integer",
+                    "maximum": 7,
+                    "minimum": 1
+                }
+            }
+        },
         "api.subscriptionRequest": {
             "type": "object",
             "properties": {
@@ -7524,6 +8075,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
+                "grade_scale": {
+                    "description": "20, 100, 10 or 5",
+                    "type": "integer"
+                },
                 "icon": {
                     "type": "string",
                     "maxLength": 64
@@ -7615,6 +8170,10 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "grade_scale": {
+                    "description": "GradeScale is what marks are out of in the Grades module (20 in\nPortugal, 100 for percentages, 10, 5).",
+                    "type": "integer"
                 },
                 "icon": {
                     "description": "an icon key (lucide name) or an emoji",
@@ -7922,6 +8481,85 @@ const docTemplate = `{
                 "url_host": {
                     "description": "shown instead of the URL",
                     "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CourseSlot": {
+            "type": "object",
+            "properties": {
+                "course_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "end": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "Lab, Tutorial… (optional)",
+                    "type": "string"
+                },
+                "room": {
+                    "description": "when not the course's",
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weekday": {
+                    "type": "integer"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Grade": {
+            "type": "object",
+            "properties": {
+                "course_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "out_of": {
+                    "type": "number"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "number"
                 },
                 "workspace_id": {
                     "type": "string"

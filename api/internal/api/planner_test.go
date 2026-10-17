@@ -61,7 +61,7 @@ func createWS(t *testing.T, r *gin.Engine, tok, body string) wsResp {
 func TestWorkspaceFromTemplate(t *testing.T) {
 	r, _, alice, _ := plannerSetup(t)
 	ws := createWS(t, r, alice, `{"name":"Escola","kind":"school","locale":"pt-PT"}`)
-	if ws.Role != "owner" || ws.Kind != "school" || len(ws.Modules) != 6 {
+	if ws.Role != "owner" || ws.Kind != "school" || len(ws.Modules) != 8 {
 		t.Fatalf("workspace: %+v", ws)
 	}
 	var lists []struct {

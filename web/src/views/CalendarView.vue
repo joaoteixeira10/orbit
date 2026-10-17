@@ -428,7 +428,14 @@ const views: CalView[] = ['day', 'week', 'month']
     </div>
 
     <EventSheet :open="sheetOpen" :occurrence="sheetOcc" :draft="sheetDraft" :ws="sheetWs" :choices="choices" @close="sheetOpen = false" @saved="load" />
-    <EventDetail :open="detailOpen" :entry="detail" :calendar-name="detailName" @close="detailOpen = false" />
+    <EventDetail
+      :open="detailOpen"
+      :entry="detail"
+      :calendar-name="detailName"
+      :can-cancel="!!detail?.occ.course_id && canEditWs(wss.byId(detail.occ.workspace_id))"
+      @close="detailOpen = false"
+      @cancelled="(detailOpen = false), load()"
+    />
     <TaskDetailSheet :open="!!taskOpen" :ws="taskOpen?.ws ?? ''" :task-id="taskOpen?.id ?? ''" @close="closeTask" />
     <SubscriptionsSheet v-if="showSubs" :open="subsOpen" :ws="wsId" @close="subsOpen = false" @changed="onSubsChanged" />
   </div>

@@ -27,6 +27,9 @@ type Workspace struct {
 	Modules    string     `gorm:"type:text" json:"-"`
 	CreatedBy  string     `gorm:"size:36" json:"created_by"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	// GradeScale is what marks are out of in the Grades module (20 in
+	// Portugal, 100 for percentages, 10, 5).
+	GradeScale int `gorm:"not null;default:20" json:"grade_scale"`
 }
 
 // WorkspaceMember gives one user a role in one workspace. Position is that
@@ -178,6 +181,9 @@ type Event struct {
 	// each occurrence (nil = no reminder).
 	RemindMinutes *int   `json:"remind_minutes"`
 	CreatedBy     string `gorm:"size:36" json:"created_by"`
+	// CourseID: a class of a course's timetable. The course owns it (its
+	// slots make and change it); only single classes can be cancelled here.
+	CourseID string `gorm:"size:36;index" json:"course_id,omitempty"`
 }
 
 // CalendarSubscription is a read-only ICS calendar shown in a workspace
@@ -334,4 +340,66 @@ type WorkspaceInvite struct {
 	MaxUses     int        `gorm:"not null;default:1" json:"max_uses"`
 	Uses        int        `gorm:"not null;default:0" json:"uses"`
 	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
+}
+
+// ---- School: courses and grades ----------------------------------------------
+
+// Course is a subject (Maths, Physics…) in a workspace with the Courses
+// module: who teaches it, where, its weekly timetable (CourseSlot), the
+// tasks tagged with Tag, and — with the Grades module — its marks. Weight
+// is its share of the overall average (credits, a coefficient).
+type Course struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	Name        string  `gorm:"size:120;not null" json:"name"`
+	Code        string  `gorm:"size:16" json:"code"` // short name for the timetable (MAT)
+	Teacher     string  `gorm:"size:120" json:"teacher"`
+	Room        string  `gorm:"size:60" json:"room"`
+	Color       string  `gorm:"size:9" json:"color"`
+	Tag         string  `gorm:"size:40" json:"tag"`        // its tasks carry #tag
+	TermStart   *string `gorm:"size:10" json:"term_start"` // YYYY-MM-DD: classes from
+	TermEnd     *string `gorm:"size:10" json:"term_end"`   // YYYY-MM-DD: classes until (inclusive)
+	TZ          string  `gorm:"size:64" json:"tz"`         // the zone its class times are in
+	Weight      float64 `gorm:"not null;default:1" json:"weight"`
+	Notes       string  `gorm:"type:text" json:"notes"`
+	Rank        float64 `gorm:"not null;default:0" json:"rank"`
+	CreatedBy   string  `gorm:"size:36" json:"created_by"`
+}
+
+// CourseSlot is one weekly class: a weekday (1 Monday … 7 Sunday) and times
+// (HH:MM, in the course's zone). EventID is the repeating event it keeps on
+// the calendar.
+type CourseSlot struct {
+	Base
+	CourseID    string `gorm:"size:36;not null;index" json:"course_id"`
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	Weekday     int    `gorm:"not null" json:"weekday"`
+	Start       string `gorm:"size:5;not null" json:"start"`
+	End         string `gorm:"size:5;not null" json:"end"`
+	Room        string `gorm:"size:60" json:"room"` // when not the course's
+	Kind        string `gorm:"size:40" json:"kind"` // Lab, Tutorial… (optional)
+	EventID     string `gorm:"size:36" json:"event_id"`
+}
+
+// Grade is one mark someone got in a course: Score out of OutOf, counting
+// Weight in the course's average. Grades are their owner's alone — in a
+// shared workspace, each member sees only their own.
+type Grade struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	CourseID    string  `gorm:"size:36;not null;index" json:"course_id"`
+	OwnerID     string  `gorm:"size:36;not null;index" json:"owner_id"`
+	Title       string  `gorm:"size:200;not null" json:"title"`
+	Score       float64 `gorm:"not null" json:"score"`
+	OutOf       float64 `gorm:"not null" json:"out_of"`
+	Weight      float64 `gorm:"not null;default:1" json:"weight"`
+	Date        *string `gorm:"size:10" json:"date"` // YYYY-MM-DD
+}
+
+// CourseGoal is the average someone aims at in a course (on the workspace's
+// scale) — personal, like their grades.
+type CourseGoal struct {
+	CourseID string  `gorm:"primaryKey;size:36" json:"course_id"`
+	UserID   string  `gorm:"primaryKey;size:36" json:"user_id"`
+	Target   float64 `gorm:"not null" json:"target"`
 }

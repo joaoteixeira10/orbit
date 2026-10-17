@@ -50,8 +50,9 @@ export function toEntry(o: Occurrence, editable: boolean): Entry {
     allDay: o.all_day,
     first,
     last,
-    editable: isOrbit && editable,
-    movable: isOrbit && editable && !o.recurring,
+    // A course's class is changed in Courses (it opens read-only).
+    editable: isOrbit && editable && !o.course_id,
+    movable: isOrbit && editable && !o.recurring && !o.course_id,
   }
 }
 

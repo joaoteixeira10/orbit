@@ -16,6 +16,7 @@ import { inboxEn, inboxPt } from './inbox'
 import { gitEn, gitPt } from './git'
 import { filesEn, filesPt } from './files'
 import { invitesEn, invitesPt } from './invites'
+import { schoolEn, schoolPt } from './school'
 import { accountUiEn, accountUiPt } from './accountui'
 import { adminUiEn, adminUiPt } from './adminui'
 
@@ -39,6 +40,7 @@ const en = {
   ...gitEn,
   ...filesEn,
   ...invitesEn,
+  ...schoolEn,
   ...accountUiEn,
   ...adminUiEn,
   common: {
@@ -310,6 +312,7 @@ const pt: typeof en = {
   ...gitPt,
   ...filesPt,
   ...invitesPt,
+  ...schoolPt,
   ...accountUiPt,
   ...adminUiPt,
   common: {

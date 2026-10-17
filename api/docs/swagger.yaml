@@ -120,6 +120,102 @@ definitions:
     - new_password
     - old_password
     type: object
+  api.courseRequest:
+    properties:
+      code:
+        maxLength: 16
+        type: string
+      color:
+        type: string
+      name:
+        maxLength: 120
+        type: string
+      notes:
+        maxLength: 20000
+        type: string
+      room:
+        maxLength: 60
+        type: string
+      slots:
+        items:
+          $ref: '#/definitions/api.slotRequest'
+        maxItems: 40
+        type: array
+      tag:
+        maxLength: 40
+        type: string
+      teacher:
+        maxLength: 120
+        type: string
+      term_end:
+        type: string
+      term_start:
+        description: '"" clears'
+        type: string
+      tz:
+        type: string
+      weight:
+        maximum: 100
+        minimum: 0
+        type: number
+    type: object
+  api.courseResponse:
+    properties:
+      average:
+        description: the caller's, on the workspace's scale
+        type: number
+      code:
+        description: short name for the timetable (MAT)
+        type: string
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      grade_count:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      open_tasks:
+        description: 'not done, tagged #tag'
+        type: integer
+      rank:
+        type: number
+      room:
+        type: string
+      slots:
+        items:
+          $ref: '#/definitions/models.CourseSlot'
+        type: array
+      tag:
+        description: 'its tasks carry #tag'
+        type: string
+      target:
+        description: the caller's goal, on the scale
+        type: number
+      teacher:
+        type: string
+      term_end:
+        description: 'YYYY-MM-DD: classes until (inclusive)'
+        type: string
+      term_start:
+        description: 'YYYY-MM-DD: classes from'
+        type: string
+      tz:
+        description: the zone its class times are in
+        type: string
+      updated_at:
+        type: string
+      weight:
+        type: number
+      workspace_id:
+        type: string
+    type: object
   api.createAPITokenRequest:
     properties:
       expires_in_days:
@@ -264,6 +360,11 @@ definitions:
       all_day:
         type: boolean
       color:
+        type: string
+      course_id:
+        description: |-
+          CourseID: a class of a course's timetable. The course owns it (its
+          slots make and change it); only single classes can be cancelled here.
         type: string
       created_at:
         type: string
@@ -436,6 +537,32 @@ definitions:
         type: string
     required:
     - url
+    type: object
+  api.goalRequest:
+    properties:
+      target:
+        description: null clears
+        minimum: 0
+        type: number
+    type: object
+  api.gradeRequest:
+    properties:
+      date:
+        description: '"" clears'
+        type: string
+      out_of:
+        maximum: 10000
+        type: number
+      score:
+        minimum: 0
+        type: number
+      title:
+        maxLength: 200
+        type: string
+      weight:
+        maximum: 1000
+        minimum: 0
+        type: number
     type: object
   api.homeResponse:
     properties:
@@ -753,6 +880,9 @@ definitions:
         type: boolean
       color:
         type: string
+      course_id:
+        description: a class of a course
+        type: string
       end:
         type: string
       id:
@@ -1064,6 +1194,29 @@ definitions:
       passwordless_enabled:
         type: boolean
     type: object
+  api.slotRequest:
+    properties:
+      end:
+        type: string
+      id:
+        description: an existing class, kept (with its cancelled dates)
+        type: string
+      kind:
+        maxLength: 40
+        type: string
+      room:
+        maxLength: 60
+        type: string
+      start:
+        type: string
+      weekday:
+        maximum: 7
+        minimum: 1
+        type: integer
+    required:
+    - end
+    - start
+    type: object
   api.subscriptionRequest:
     properties:
       color:
@@ -1366,6 +1519,9 @@ definitions:
       description:
         maxLength: 500
         type: string
+      grade_scale:
+        description: 20, 100, 10 or 5
+        type: integer
       icon:
         maxLength: 64
         type: string
@@ -1429,6 +1585,11 @@ definitions:
         type: string
       description:
         type: string
+      grade_scale:
+        description: |-
+          GradeScale is what marks are out of in the Grades module (20 in
+          Portugal, 100 for percentages, 10, 5).
+        type: integer
       icon:
         description: an icon key (lucide name) or an emoji
         type: string
@@ -1637,6 +1798,59 @@ definitions:
       url_host:
         description: shown instead of the URL
         type: string
+      workspace_id:
+        type: string
+    type: object
+  models.CourseSlot:
+    properties:
+      course_id:
+        type: string
+      created_at:
+        type: string
+      end:
+        type: string
+      event_id:
+        type: string
+      id:
+        type: string
+      kind:
+        description: Lab, Tutorial… (optional)
+        type: string
+      room:
+        description: when not the course's
+        type: string
+      start:
+        type: string
+      updated_at:
+        type: string
+      weekday:
+        type: integer
+      workspace_id:
+        type: string
+    type: object
+  models.Grade:
+    properties:
+      course_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        description: YYYY-MM-DD
+        type: string
+      id:
+        type: string
+      out_of:
+        type: number
+      owner_id:
+        type: string
+      score:
+        type: number
+      title:
+        type: string
+      updated_at:
+        type: string
+      weight:
+        type: number
       workspace_id:
         type: string
     type: object
@@ -2475,6 +2689,101 @@ paths:
       summary: Modules and workspace templates
       tags:
       - workspaces
+  /courses/{id}:
+    delete:
+      parameters:
+      - description: Course id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a course
+      tags:
+      - school
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Course id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.courseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.courseResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a course
+      tags:
+      - school
+  /courses/{id}/goal:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Course id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.goalRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Set your goal in a course
+      tags:
+      - school
+  /courses/{id}/grades:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Course id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Grade
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gradeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Grade'
+      security:
+      - BearerAuth: []
+      summary: Add a grade
+      tags:
+      - school
   /events/{id}:
     delete:
       parameters:
@@ -2583,6 +2892,49 @@ paths:
       summary: Update feature flags
       tags:
       - owner
+  /grades/{id}:
+    delete:
+      parameters:
+      - description: Grade id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a grade
+      tags:
+      - school
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Grade id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gradeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Grade'
+      security:
+      - BearerAuth: []
+      summary: Update a grade
+      tags:
+      - school
   /healthz:
     get:
       produces:
@@ -4791,6 +5143,55 @@ paths:
       summary: A workspace's calendar
       tags:
       - calendar
+  /workspaces/{ws}/courses:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.courseResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Courses of a workspace
+      tags:
+      - school
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Course
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.courseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.courseResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a course
+      tags:
+      - school
   /workspaces/{ws}/events:
     post:
       consumes:
@@ -4819,6 +5220,28 @@ paths:
       summary: Create an event
       tags:
       - calendar
+  /workspaces/{ws}/grades:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Grade'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Your grades in a workspace
+      tags:
+      - school
   /workspaces/{ws}/invites:
     get:
       parameters:

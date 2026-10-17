@@ -26,10 +26,7 @@ What Orbit could do next, roughly in the order it would pay off. The
 - **Habits** — daily or weekly check-ins with streaks and a year grid.
 - **Journal** — one page per day, with mood and a "this day last year".
 - **Goals** — goals with progress from linked tasks, and a target date.
-- **Courses** (school) — subjects with a timetable that fills the calendar,
-  each with its pages, assignments and exams.
-- **Grades** (school) — marks per subject with weights, the average, and
-  "what do I need in the exam".
+- **Courses**, more: a page per course, exams as their own kind of task.
 - **Bookmarks** — links with a preview, tags and a read-later state.
 - **Focus timer** — Pomodoro tied to a task, with time logged on it.
 

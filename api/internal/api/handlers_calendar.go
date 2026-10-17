@@ -35,6 +35,7 @@ type occurrence struct {
 	AllDay         bool      `json:"all_day"`
 	Color          string    `json:"color"`
 	Recurring      bool      `json:"recurring"`
+	CourseID       string    `json:"course_id,omitempty"` // a class of a course
 }
 
 type calendarResponse struct {
@@ -90,7 +91,7 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 		for _, s := range planner.Occurrences(ev, from, to) {
 			resp.Events = append(resp.Events, occurrence{
 				Kind: "event", ID: ev.ID, WorkspaceID: ev.WorkspaceID, Title: ev.Title, Location: ev.Location, Notes: ev.Notes,
-				Start: s, End: s.Add(dur), AllDay: ev.AllDay, Color: color, Recurring: ev.RRule != "",
+				Start: s, End: s.Add(dur), AllDay: ev.AllDay, Color: color, Recurring: ev.RRule != "", CourseID: ev.CourseID,
 			})
 		}
 	}
@@ -365,6 +366,10 @@ func (h *Handlers) updateEvent(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if ev.CourseID != "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "this is a class of a course: change it in Courses"})
+		return
+	}
 	var req eventRequest
 	if !bindJSON(c, &req) {
 		return
@@ -404,6 +409,9 @@ func (h *Handlers) deleteEvent(c *gin.Context) {
 		}
 		x := append(planner.DecodeExDates(ev.ExDates), t.UTC())
 		h.db.Model(&ev).Update("ex_dates", planner.EncodeExDates(x))
+	} else if ev.CourseID != "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "this is a class of a course: remove it in Courses (or cancel just this one)"})
+		return
 	} else {
 		h.db.Delete(&ev)
 	}

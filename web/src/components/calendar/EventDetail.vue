@@ -1,18 +1,41 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MapPin, Repeat, CalendarDays, Lock } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { MapPin, Repeat, CalendarDays, Lock, GraduationCap, CalendarX } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
+import { calendarApi } from '@/api/planner'
+import { useToastStore } from '@/stores/toast'
 import { whenLines, eventColor, type Entry } from './model'
 
 // A read-only look at an event: one from a subscribed calendar (changed
-// where it comes from), or one in a workspace the user can only view.
-const props = defineProps<{ open: boolean; entry: Entry | null; calendarName: string }>()
-const emit = defineEmits<{ close: [] }>()
+// where it comes from), one in a workspace the user can only view, or a
+// course's class (changed in Courses; an editor can cancel this one).
+const props = defineProps<{ open: boolean; entry: Entry | null; calendarName: string; canCancel?: boolean }>()
+const emit = defineEmits<{ close: []; cancelled: [] }>()
 const { t } = useI18n()
+const router = useRouter()
+const toast = useToastStore()
 
 const when = computed(() => (props.entry ? whenLines(props.entry) : []))
 const external = computed(() => props.entry?.occ.kind === 'external')
+const course = computed(() => props.entry?.occ.course_id ?? '')
+
+function openCourse() {
+  if (!props.entry) return
+  emit('close')
+  router.push({ name: 'ws-courses', params: { ws: props.entry.occ.workspace_id }, query: { course: course.value } })
+}
+async function cancelClass() {
+  if (!props.entry) return
+  try {
+    await calendarApi.removeEvent(props.entry.occ.id, props.entry.occ.start)
+    toast.success(t('school.cancelled'))
+    emit('cancelled')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 </script>
 
 <template>
@@ -44,8 +67,13 @@ const external = computed(() => props.entry?.occ.kind === 'external')
 
       <p v-if="entry.occ.notes" class="mt-4 whitespace-pre-wrap break-words rounded-xl bg-fill-2 px-3 py-2.5 text-[14px]">{{ entry.occ.notes }}</p>
 
+      <div v-if="course" class="mt-4 grid gap-2">
+        <button class="btn justify-start" @click="openCourse"><GraduationCap class="h-4 w-4" />{{ t('school.openCourse') }}</button>
+        <button v-if="canCancel" class="btn justify-start !text-danger" @click="cancelClass"><CalendarX class="h-4 w-4" />{{ t('school.cancelClass') }}</button>
+      </div>
+
       <p class="footnote mt-4 flex items-start gap-1.5 px-1">
-        <Lock class="mt-0.5 h-3 w-3 shrink-0" />{{ external ? t('cal.externalReadOnly') : t('cal.viewOnlyEvent') }}
+        <Lock class="mt-0.5 h-3 w-3 shrink-0" />{{ course ? t('school.classHint') : external ? t('cal.externalReadOnly') : t('cal.viewOnlyEvent') }}
       </p>
     </template>
     <template #footer>

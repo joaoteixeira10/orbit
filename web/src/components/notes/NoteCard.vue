@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput } from 'lucide-vue-next'
+import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip } from 'lucide-vue-next'
+import { uploadBlobUrl } from '@/lib/uploads'
 import Popover from '@/components/ui/Popover.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
 import { orderedItems } from './noteModel'
@@ -30,7 +31,21 @@ const MAX_ROWS = 8
 const items = computed(() => orderedItems(props.note.items))
 const shown = computed(() => items.value.slice(0, MAX_ROWS))
 const hidden = computed(() => items.value.length - shown.value.length)
-const empty = computed(() => !props.note.title && !props.note.body && !props.note.items.length)
+const empty = computed(() => !props.note.title && !props.note.body && !props.note.items.length && !props.note.attachments?.length)
+
+// The note's first image, on top of the card (fetched with the sign-in
+// token); other files are counted at the bottom.
+const cover = ref('')
+const firstImage = computed(() => props.note.attachments?.find((a) => a.image))
+const otherFiles = computed(() => props.note.attachments?.filter((a) => !a.image).length ?? 0)
+watch(
+  firstImage,
+  (f) => {
+    cover.value = ''
+    if (f) void uploadBlobUrl(f.url).then((u) => (cover.value = u)).catch(() => {})
+  },
+  { immediate: true },
+)
 
 // The text is clamped; the fade only shows when something is cut off.
 const bodyEl = ref<HTMLElement | null>(null)
@@ -78,6 +93,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
       <Pin class="h-4 w-4" :fill="note.pinned ? 'currentColor' : 'none'" />
     </button>
 
+    <img v-if="cover" :src="cover" alt="" class="n-cover" />
     <h3 v-if="note.title" class="n-title" :class="{ 'pr-7': editable }">{{ note.title }}</h3>
 
     <div v-if="!note.checklist && note.body" ref="bodyEl" class="n-body" :class="{ clamped, big: !note.title && note.body.length < 80 }">{{ note.body }}</div>
@@ -102,6 +118,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     </ul>
 
     <p v-else-if="empty" class="n-body text-text-3">…</p>
+    <p v-if="otherFiles" class="n-files"><Paperclip class="h-3 w-3" />{{ otherFiles }}</p>
 
     <footer v-if="editable" class="bar" @click.stop>
       <button ref="colorBtn" class="tb" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">
@@ -131,6 +148,23 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
 </template>
 
 <style scoped>
+.n-cover {
+  display: block;
+  width: calc(100% + 32px);
+  max-width: none;
+  max-height: 180px;
+  margin: -14px -16px 4px;
+  object-fit: cover;
+  border-radius: 14px 14px 0 0;
+}
+.n-files {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
 .note-card {
   position: relative;
   display: flex;

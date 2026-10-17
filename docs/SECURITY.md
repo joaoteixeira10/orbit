@@ -239,6 +239,7 @@ stopped, never an upload. Keep the archives and `ORBIT_MASTER_KEY` apart.
 | Notification channel secrets (SMTP password, webhook URLs, bot tokens, the webhook signing secret) | The whole configuration sealed in the `settings` table | Masked when read back (write-only on the page) |
 | Short-lived login state (SSO state, passkey challenges, SSO codes, live-update tickets) | In the database, keyed by a SHA-256 of a random id | Single-use, expire in minutes, swept every 15 minutes |
 | Workspace content | Plain, in the database | Protected by access control and your host; encrypt the disk / volume if the host is shared |
+| Uploads (files on pages, tasks, notes) | Plain, in the database (their own table) | Only those who can see what a file is on can fetch it (bearer token, so never by a bare link); the type is sniffed, not taken from the browser; only PNG / JPEG / GIF / WebP are served inline, everything else (SVG and HTML included) as a download, with `nosniff` and a `sandbox` CSP; names are cleaned; size and quota limits |
 
 **Sealing.** `ORBIT_MASTER_KEY` goes through **Argon2id** (1 pass, 64 MiB, 4
 lanes) with a random 16-byte salt kept in the `settings` table (`kek_salt`,

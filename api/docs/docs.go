@@ -3702,6 +3702,161 @@ const docTemplate = `{
                 }
             }
         },
+        "/uploads": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "uploads"
+                ],
+                "summary": "Files on a page, task or note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page, task or note",
+                        "name": "target",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "target_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.uploadResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "uploads"
+                ],
+                "summary": "Upload a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page, task or note",
+                        "name": "target",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "target_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "The file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.uploadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/uploads/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "uploads"
+                ],
+                "summary": "Delete a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Upload id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/uploads/{id}/{name}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "uploads"
+                ],
+                "summary": "Download a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Upload id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File name (ignored)",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -4410,39 +4565,6 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/api.eventResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/workspaces/{ws}/export": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/zip"
-                ],
-                "tags": [
-                    "pages"
-                ],
-                "summary": "Export pages as Markdown (zip)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Workspace id",
-                        "name": "ws",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "file"
                         }
                     }
                 }
@@ -5319,10 +5441,13 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "developer_theme": {
-                    "description": "blue | gold | red | ink",
+                    "description": "blue | gold | red | ink | green",
                     "type": "string"
                 },
                 "developer_themes_enabled": {
+                    "type": "boolean"
+                },
+                "developer_themes_personal": {
                     "type": "boolean"
                 },
                 "favicon_data_url": {
@@ -6123,6 +6248,13 @@ const docTemplate = `{
         "api.noteResponse": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "description": "Files on the note (images show on its card), in lists.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.uploadResponse"
+                    }
+                },
                 "body": {
                     "type": "string"
                 },
@@ -6392,6 +6524,10 @@ const docTemplate = `{
                 "accent_color": {
                     "type": "string"
                 },
+                "dev_theme": {
+                    "description": "\"\" (as the instance) | none | a theme id",
+                    "type": "string"
+                },
                 "digest_enabled": {
                     "type": "boolean"
                 },
@@ -6419,6 +6555,10 @@ const docTemplate = `{
                 },
                 "page_editor": {
                     "description": "visual | markdown",
+                    "type": "string"
+                },
+                "remote_images": {
+                    "description": "ask | always",
                     "type": "string"
                 },
                 "theme": {
@@ -6878,6 +7018,10 @@ const docTemplate = `{
                     "description": "#rrggbb or \"\" (validated in the handler)",
                     "type": "string"
                 },
+                "dev_theme": {
+                    "type": "string",
+                    "maxLength": 10
+                },
                 "device_tz": {
                     "type": "string",
                     "maxLength": 64
@@ -6914,6 +7058,13 @@ const docTemplate = `{
                     "enum": [
                         "visual",
                         "markdown"
+                    ]
+                },
+                "remote_images": {
+                    "type": "string",
+                    "enum": [
+                        "ask",
+                        "always"
                     ]
                 },
                 "theme": {
@@ -6985,6 +7136,9 @@ const docTemplate = `{
                 "developer_themes_enabled": {
                     "type": "boolean"
                 },
+                "developer_themes_personal": {
+                    "type": "boolean"
+                },
                 "favicon_data_url": {
                     "type": "string"
                 },
@@ -7051,6 +7205,52 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "maxLength": 120
+                }
+            }
+        },
+        "api.uploadResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "description": "shown in the page (a raster image)",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "description": "who uploaded it",
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "target": {
+                    "description": "page | task | note",
+                    "type": "string"
+                },
+                "target_id": {
+                    "description": "the page, task or note",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "sniffed, not the browser's word",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
                 }
             }
         },
@@ -7536,6 +7736,10 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "dev_theme": {
+                    "description": "DevTheme is this user's own developer theme, when the owner lets each\nperson choose: \"\" = as the instance, \"none\", or a theme id.",
+                    "type": "string"
+                },
                 "device_tz": {
                     "description": "DeviceTZ is the zone the browser last reported, used for reminders\nwhile Timezone is \"local\".",
                     "type": "string"
@@ -7560,6 +7764,10 @@ const docTemplate = `{
                 },
                 "page_editor": {
                     "description": "PageEditor is how this user edits pages: \"visual\" (blocks, the default)\nor \"markdown\" (the source). Pages are Markdown either way.",
+                    "type": "string"
+                },
+                "remote_images": {
+                    "description": "RemoteImages is whether pages show images from other sites at once\n(\"always\") or only after a click (\"ask\", the default): such an image\ntells its site who reads the page, and when.",
                     "type": "string"
                 },
                 "theme": {

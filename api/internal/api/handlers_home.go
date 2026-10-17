@@ -75,6 +75,7 @@ func (h *Handlers) home(c *gin.Context) {
 		for _, n := range pinned {
 			resp.Notes = append(resp.Notes, toNoteResponse(n))
 		}
+		resp.Notes, resp.Mine = h.withAttachments(resp.Notes), h.withAttachments(resp.Mine)
 		c.JSON(http.StatusOK, resp)
 		return
 	}
@@ -106,6 +107,7 @@ func (h *Handlers) home(c *gin.Context) {
 	for _, n := range notes {
 		resp.Notes = append(resp.Notes, toNoteResponse(n))
 	}
+	resp.Notes, resp.Mine = h.withAttachments(resp.Notes), h.withAttachments(resp.Mine)
 	c.JSON(http.StatusOK, resp)
 }
 

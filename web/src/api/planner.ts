@@ -2,6 +2,7 @@
 // tasks, the calendar (events, subscriptions, feeds), Home and search.
 // Shapes mirror the Go handlers (api/internal/api/handlers_*.go).
 import { api } from '@/lib/api'
+import type { Upload } from '@/lib/uploads'
 
 export type WSRole = 'owner' | 'editor' | 'viewer'
 export type ModuleKey = 'home' | 'notes' | 'pages' | 'tasks' | 'board' | 'timeline' | 'charts' | 'calendar' | string
@@ -166,6 +167,7 @@ export interface Note {
   updated_by: string
   created_at: string
   updated_at: string
+  attachments?: Upload[] // files on the note (in lists)
 }
 export interface NoteInput {
   title?: string

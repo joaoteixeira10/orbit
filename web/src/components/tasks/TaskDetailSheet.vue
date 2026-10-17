@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert } from 'lucide-vue-next'
+import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -10,6 +10,7 @@ import { useToastStore } from '@/stores/toast'
 import { gitApi, type TaskInput } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
 import GitBadge from './GitBadge.vue'
+import Attachments from '@/components/ui/Attachments.vue'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
 // Everything about one task, Reminders' "Details": notes, start, date and
@@ -316,6 +317,14 @@ async function remove() {
         <p class="footnote mt-1 px-1 leading-snug">
           {{ list?.git ? t('git.task.inList', { repo: `${list.git.owner}/${list.git.repo}` }) : t('git.task.hint') }}
         </p>
+      </div>
+
+      <!-- Files -->
+      <div v-if="!task.parent_id" class="mt-4">
+        <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1"><Paperclip class="h-3.5 w-3.5" />{{ t('files.title') }}</h3>
+        <div class="group px-3 py-1.5">
+          <Attachments target="task" :target-id="task.id" :editable="editable" />
+        </div>
       </div>
 
       <!-- Sub-tasks -->

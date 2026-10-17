@@ -1,6 +1,7 @@
 import { Image } from '@tiptap/extension-image'
 import { i18n } from '@/i18n'
 import { remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
+import { isUploadSrc, uploadBlobUrl } from '@/lib/uploads'
 
 // A page's image in the visual editor. One from another site waits behind
 // the same placeholder as in the reading view (lib/media.ts) until clicked;
@@ -14,6 +15,14 @@ export const PageImage = Image.extend({
       const render = () => {
         dom.replaceChildren()
         const src = String(current.attrs.src ?? '')
+        if (isUploadSrc(src)) {
+          // Uploaded to Orbit: fetched with the sign-in token.
+          const img = document.createElement('img')
+          img.alt = current.attrs.alt ?? ''
+          void uploadBlobUrl(src).then((url) => (img.src = url)).catch(() => img.classList.add('broken'))
+          dom.append(img)
+          return
+        }
         if (showsAtOnce(src)) {
           const img = document.createElement('img')
           img.src = safeImageSrc(src)

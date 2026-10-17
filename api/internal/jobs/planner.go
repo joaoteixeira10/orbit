@@ -12,6 +12,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"go.uber.org/zap"
 )
@@ -69,6 +70,7 @@ func (s *Scheduler) emptyTrash() {
 		return
 	}
 	s.db.Where("page_id IN ?", ids).Delete(&models.PageFavorite{})
+	_ = uploads.DeleteFor(s.db, uploads.Page, ids)
 	res := s.db.Where("id IN ?", ids).Delete(&models.Page{})
 	s.log.Info("emptied old trash", zap.Int64("pages", res.RowsAffected))
 }

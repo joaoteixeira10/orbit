@@ -295,3 +295,27 @@ type GitLink struct {
 	SyncedAt    *time.Time `json:"synced_at,omitempty"`
 	LastError   string     `gorm:"size:500" json:"last_error,omitempty"`
 }
+
+// ---- Uploads ---------------------------------------------------------------------
+
+// Upload is a file someone added to a page, a task or a note: an image in a
+// page, an attachment. It belongs to the workspace of what it's on ("" with
+// OwnerID: a personal Quick Note). Its bytes are in UploadBlob (apart, so
+// listings stay light), in the database, so backups carry them.
+type Upload struct {
+	Base
+	WorkspaceID string `gorm:"size:36;index" json:"workspace_id"`
+	OwnerID     string `gorm:"size:36;not null" json:"owner_id"`        // who uploaded it
+	Target      string `gorm:"size:8;not null" json:"target"`           // page | task | note
+	TargetID    string `gorm:"size:36;not null;index" json:"target_id"` // the page, task or note
+	Name        string `gorm:"size:255;not null" json:"name"`
+	Type        string `gorm:"size:100;not null" json:"type"` // sniffed, not the browser's word
+	Size        int64  `gorm:"not null" json:"size"`
+	SHA256      string `gorm:"size:64" json:"-"`
+}
+
+// UploadBlob holds an upload's bytes (ID = the upload's).
+type UploadBlob struct {
+	ID   string `gorm:"primaryKey;size:36"`
+	Data []byte `gorm:"not null"`
+}

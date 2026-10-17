@@ -9,6 +9,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -227,6 +228,11 @@ func (h *Handlers) deleteList(c *gin.Context) {
 		return
 	}
 	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		var taskIDs []string
+		tx.Model(&models.Task{}).Where("list_id = ?", l.ID).Pluck("id", &taskIDs)
+		if err := uploads.DeleteFor(tx, uploads.Task, taskIDs); err != nil {
+			return err
+		}
 		if err := tx.Where("list_id = ?", l.ID).Delete(&models.Task{}).Error; err != nil {
 			return err
 		}
@@ -779,6 +785,9 @@ func (h *Handlers) deleteTask(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var ids []string
+	h.db.Model(&models.Task{}).Where("id = ? OR parent_id = ?", t.ID, t.ID).Pluck("id", &ids)
+	_ = uploads.DeleteFor(h.db, uploads.Task, ids) // its attachments go with it
 	h.db.Where("id = ? OR parent_id = ?", t.ID, t.ID).Delete(&models.Task{})
 	if h.git != nil {
 		// Its issue stays on git, and mustn't come back as a new task.

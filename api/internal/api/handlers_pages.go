@@ -4,13 +4,16 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -418,6 +421,7 @@ func (h *Handlers) trashPage(c *gin.Context) {
 			return
 		}
 		h.db.Where("page_id IN ?", ids).Delete(&models.PageFavorite{})
+		_ = uploads.DeleteFor(h.db, uploads.Page, ids)
 		h.db.Where("id IN ?", ids).Delete(&models.Page{})
 	} else {
 		now := time.Now()
@@ -575,6 +579,10 @@ func migratePagesToMarkdown(db *gorm.DB, log *zap.Logger) {
 //	@Param		ws	path	string	true	"Workspace id"
 //	@Success	200	{file}	file
 //	@Router		/workspaces/{ws}/export [get]
+//
+// uploadLink is a link to an Orbit upload in a page's Markdown.
+var uploadLink = regexp.MustCompile(`/api/v1/uploads/([0-9a-f-]{36})/[^)\s"]*`)
+
 func (h *Handlers) exportPages(c *gin.Context) {
 	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSViewer)
 	if !ok {
@@ -589,6 +597,26 @@ func (h *Handlers) exportPages(c *gin.Context) {
 			parent = *p.ParentID
 		}
 		children[parent] = append(children[parent], p)
+	}
+	// The pages' files go in attachments/, and their links point there.
+	var files []models.Upload
+	h.db.Where("workspace_id = ? AND target = ?", ws.ID, uploads.Page).Find(&files)
+	byID := map[string]models.Upload{}
+	for _, u := range files {
+		byID[u.ID] = u
+	}
+	attachment := func(u models.Upload) string { return "attachments/" + u.ID[len(u.ID)-8:] + "-" + u.Name } // UUIDv7: the end is the random part
+	used := map[string]bool{}
+	localLinks := func(md, dir string) string {
+		up := strings.Repeat("../", strings.Count(dir, "/"))
+		return uploadLink.ReplaceAllStringFunc(md, func(m string) string {
+			u, ok := byID[uploadLink.FindStringSubmatch(m)[1]]
+			if !ok {
+				return m
+			}
+			used[u.ID] = true
+			return up + strings.ReplaceAll(attachment(u), " ", "%20")
+		})
 	}
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
@@ -607,7 +635,7 @@ func (h *Handlers) exportPages(c *gin.Context) {
 			}
 			body := "# " + planner.Escape(title) + "\n"
 			if md := strings.TrimSpace(planner.PageMarkdown(p.Content)); md != "" {
-				body += "\n" + md + "\n"
+				body += "\n" + localLinks(md, dir) + "\n"
 			}
 			f, err := zw.CreateHeader(&zip.FileHeader{Name: dir + name + ".md", Method: zip.Deflate, Modified: p.UpdatedAt})
 			if err != nil {
@@ -622,7 +650,21 @@ func (h *Handlers) exportPages(c *gin.Context) {
 		}
 		return nil
 	}
-	if err := walk("", ""); err != nil || zw.Close() != nil {
+	err := walk("", "")
+	for id := range used {
+		if err != nil {
+			break
+		}
+		var blob models.UploadBlob
+		if h.db.First(&blob, "id = ?", id).Error != nil {
+			continue
+		}
+		var f io.Writer
+		if f, err = zw.CreateHeader(&zip.FileHeader{Name: attachment(byID[id]), Method: zip.Store, Modified: byID[id].CreatedAt}); err == nil {
+			_, err = f.Write(blob.Data)
+		}
+	}
+	if err != nil || zw.Close() != nil {
 		h.internalError(c, err, "could not export the pages")
 		return
 	}

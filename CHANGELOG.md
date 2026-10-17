@@ -96,6 +96,12 @@ merge, not at release time.
   light and dark). The **sign-in page** takes the theme's dark background. The
   crests come as a full icon set: a square one for the iPhone / iPad home
   screen (no black corners) and 192 / 512 / maskable icons for installing.
+- **Images and files** in pages (paste, drop, or **/ Image or file** in either
+  editor), **attachments on tasks** and **images and files on notes** (the
+  first image on the card). Kept in the database, so backups carry them; only
+  the workspace's members can open them; images show inline, other files
+  download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
+  and `UPLOAD_QUOTA_MB` (2048).
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,

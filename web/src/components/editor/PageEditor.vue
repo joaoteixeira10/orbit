@@ -9,6 +9,9 @@ import { Placeholder } from '@tiptap/extensions'
 import { pageExtensions } from './extensions'
 import { normalizeMarkdown } from '@/lib/markdown'
 import { SlashCommand, slashItems, filterItems, type SlashState } from './slash'
+import { FileUpload } from './upload'
+import { downloadUpload, isUploadSrc, uploadFile } from '@/lib/uploads'
+import { useToastStore } from '@/stores/toast'
 import SlashMenu from './SlashMenu.vue'
 import BubbleToolbar from './BubbleToolbar.vue'
 import './editor.css'
@@ -16,7 +19,8 @@ import './editor.css'
 // The page body, edited visually: a TipTap editor that reads and writes the
 // page's Markdown (extensions.ts). The parent owns saving; this reports
 // changes and hands out the Markdown on request ("" = empty page).
-const props = defineProps<{ content: string; editable: boolean }>()
+const props = defineProps<{ content: string; editable: boolean; pageId?: string }>()
+const toast = useToastStore()
 const emit = defineEmits<{ change: []; invalid: [] }>()
 const { t } = useI18n()
 
@@ -61,6 +65,10 @@ const editor = useEditor({
     [
       Placeholder.configure({ placeholder, includeChildren: true }),
       SlashCommand.configure({ state: slash, items: (q: string) => filterItems(slashItems(t), q) }),
+      FileUpload.configure({
+        upload: props.pageId ? (f: File) => (toast.info(t('editor.uploading', { name: f.name })), uploadFile('page', props.pageId!, f)) : null,
+        onError: (e: any) => toast.error(e?.message ?? String(e)),
+      }),
     ],
     // ⌘/Ctrl-click opens a link (handleClick below); a plain click edits.
     { HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } },
@@ -71,7 +79,8 @@ const editor = useEditor({
       if (!(event.metaKey || event.ctrlKey)) return false
       const a = (event.target as HTMLElement | null)?.closest('a')
       if (!a?.href) return false
-      window.open(a.href, '_blank', 'noopener,noreferrer')
+      if (isUploadSrc(a.href)) void downloadUpload(a.href, a.textContent || 'file') // needs the sign-in token
+      else window.open(a.href, '_blank', 'noopener,noreferrer')
       return true
     },
     handleKeyDown: (view, event) => {

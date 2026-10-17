@@ -52,6 +52,12 @@ type Config struct {
 	// memory-exhaustion via oversized JSON/data-URL payloads.
 	MaxBodyBytes int64 // MAX_BODY_BYTES
 
+	// Uploads (images and files in pages, notes and tasks) are stored in the
+	// database. UploadMaxBytes caps one file, UploadQuotaBytes all of them
+	// (0 = no limit).
+	UploadMaxBytes   int64 // UPLOAD_MAX_MB
+	UploadQuotaBytes int64 // UPLOAD_QUOTA_MB
+
 	// WebAuthn / passkeys. RPID must be a registrable-domain suffix of every
 	// origin's host (exactly the public hostname behind the TLS proxy in prod;
 	// "localhost" in dev). Empty RPID disables passkeys (handlers return 501).
@@ -140,18 +146,20 @@ func Load() (*Config, error) {
 		dbURL = "orbit.db"
 	}
 	c := &Config{
-		HTTPAddr:       env("HTTP_ADDR", ":8080"),
-		GinMode:        env("GIN_MODE", "debug"),
-		DBDriver:       env("DB_DRIVER", "sqlite"),
-		DBURL:          dbURL,
-		JWTSecret:      jwtSecret,
-		MasterKey:      masterKey,
-		AdminUser:      env("ADMIN_USER", "admin"),
-		AdminPassword:  adminPassword,
-		CORSOrigins:    splitNonEmpty(env("CORS_ORIGINS", "")),
-		TrustedProxies: splitNonEmpty(env("TRUSTED_PROXIES", "")),
-		GitServers:     splitNonEmpty(env("GIT_SERVERS", "")),
-		MaxBodyBytes:   int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
+		HTTPAddr:         env("HTTP_ADDR", ":8080"),
+		GinMode:          env("GIN_MODE", "debug"),
+		DBDriver:         env("DB_DRIVER", "sqlite"),
+		DBURL:            dbURL,
+		JWTSecret:        jwtSecret,
+		MasterKey:        masterKey,
+		AdminUser:        env("ADMIN_USER", "admin"),
+		AdminPassword:    adminPassword,
+		CORSOrigins:      splitNonEmpty(env("CORS_ORIGINS", "")),
+		TrustedProxies:   splitNonEmpty(env("TRUSTED_PROXIES", "")),
+		GitServers:       splitNonEmpty(env("GIT_SERVERS", "")),
+		MaxBodyBytes:     int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
+		UploadMaxBytes:   int64(envInt("UPLOAD_MAX_MB", 25)) << 20,
+		UploadQuotaBytes: int64(envInt("UPLOAD_QUOTA_MB", 2048)) << 20,
 
 		WebAuthnRPID:          env("WEBAUTHN_RP_ID", ""),
 		WebAuthnRPOrigins:     splitNonEmpty(env("WEBAUTHN_RP_ORIGINS", "")),

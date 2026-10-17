@@ -329,6 +329,8 @@ func AllModels() []any {
 		&PushSubscription{},
 		&GitAccount{},
 		&GitLink{},
+		&Upload{},
+		&UploadBlob{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

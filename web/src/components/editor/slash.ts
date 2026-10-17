@@ -3,7 +3,7 @@ import { Extension, type Editor, type Range } from '@tiptap/core'
 import { PluginKey } from '@tiptap/pm/state'
 import Suggestion from '@tiptap/suggestion'
 import {
-  Type, Heading1, Heading2, Heading3, ListTodo, List, ListOrdered, Quote, SquareCode, Minus, Table, MessageSquareQuote,
+  Type, Heading1, Heading2, Heading3, ListTodo, List, ListOrdered, Quote, SquareCode, Minus, Table, MessageSquareQuote, Paperclip,
 } from 'lucide-vue-next'
 
 export interface SlashItem {
@@ -45,6 +45,13 @@ export function slashItems(t: T): SlashItem[] {
     { key: 'divider', ...b('divider'), icon: Minus, aliases: ['divider', 'hr', 'line', 'separator', '---'], run: (e, r) => chain(e, r).setHorizontalRule().run() },
     { key: 'table', ...b('table'), icon: Table, aliases: ['table', 'grid'], run: (e, r) => chain(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
     { key: 'callout', ...b('callout'), icon: MessageSquareQuote, aliases: ['callout', 'note', 'info', 'tip'], run: (e, r) => chain(e, r).setCallout().run() },
+    {
+      key: 'file', ...b('file'), icon: Paperclip, aliases: ['image', 'picture', 'photo', 'file', 'attachment', 'upload'],
+      run: (e, r) => {
+        chain(e, r).run()
+        ;(e.storage as any).fileUpload?.pick()
+      },
+    },
   ]
   // Icons are components: keep them out of the reactive menu state.
   return list.map((it) => ({ ...it, icon: markRaw(it.icon) }))

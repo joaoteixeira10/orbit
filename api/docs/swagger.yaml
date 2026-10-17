@@ -71,9 +71,11 @@ definitions:
         description: login page auto-starts SSO (unless ?local=1)
         type: boolean
       developer_theme:
-        description: blue | gold | red | ink
+        description: blue | gold | red | ink | green
         type: string
       developer_themes_enabled:
+        type: boolean
+      developer_themes_personal:
         type: boolean
       favicon_data_url:
         type: string
@@ -624,6 +626,11 @@ definitions:
     type: object
   api.noteResponse:
     properties:
+      attachments:
+        description: Files on the note (images show on its card), in lists.
+        items:
+          $ref: '#/definitions/api.uploadResponse'
+        type: array
       body:
         type: string
       checklist:
@@ -805,6 +812,9 @@ definitions:
     properties:
       accent_color:
         type: string
+      dev_theme:
+        description: '"" (as the instance) | none | a theme id'
+        type: string
       digest_enabled:
         type: boolean
       digest_time:
@@ -825,6 +835,9 @@ definitions:
         type: object
       page_editor:
         description: visual | markdown
+        type: string
+      remote_images:
+        description: ask | always
         type: string
       theme:
         $ref: '#/definitions/models.Theme'
@@ -1151,6 +1164,9 @@ definitions:
       accent_color:
         description: '#rrggbb or "" (validated in the handler)'
         type: string
+      dev_theme:
+        maxLength: 10
+        type: string
       device_tz:
         maxLength: 64
         type: string
@@ -1179,6 +1195,11 @@ definitions:
         enum:
         - visual
         - markdown
+        type: string
+      remote_images:
+        enum:
+        - ask
+        - always
         type: string
       theme:
         allOf:
@@ -1225,6 +1246,8 @@ definitions:
         type: string
       developer_themes_enabled:
         type: boolean
+      developer_themes_personal:
+        type: boolean
       favicon_data_url:
         type: string
       login_message:
@@ -1269,6 +1292,38 @@ definitions:
         type: array
       name:
         maxLength: 120
+        type: string
+    type: object
+  api.uploadResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      image:
+        description: shown in the page (a raster image)
+        type: boolean
+      name:
+        type: string
+      owner_id:
+        description: who uploaded it
+        type: string
+      size:
+        type: integer
+      target:
+        description: page | task | note
+        type: string
+      target_id:
+        description: the page, task or note
+        type: string
+      type:
+        description: sniffed, not the browser's word
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      workspace_id:
         type: string
     type: object
   api.webauthnRenameRequest:
@@ -1613,6 +1668,11 @@ definitions:
         type: string
       created_at:
         type: string
+      dev_theme:
+        description: |-
+          DevTheme is this user's own developer theme, when the owner lets each
+          person choose: "" = as the instance, "none", or a theme id.
+        type: string
       device_tz:
         description: |-
           DeviceTZ is the zone the browser last reported, used for reminders
@@ -1642,6 +1702,12 @@ definitions:
         description: |-
           PageEditor is how this user edits pages: "visual" (blocks, the default)
           or "markdown" (the source). Pages are Markdown either way.
+        type: string
+      remote_images:
+        description: |-
+          RemoteImages is whether pages show images from other sites at once
+          ("always") or only after a click ("ask", the default): such an image
+          tells its site who reads the page, and when.
         type: string
       theme:
         $ref: '#/definitions/models.Theme'
@@ -4042,6 +4108,103 @@ paths:
       summary: Move a task on a board
       tags:
       - tasks
+  /uploads:
+    get:
+      parameters:
+      - description: page, task or note
+        in: query
+        name: target
+        required: true
+        type: string
+      - description: Its id
+        in: query
+        name: target_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.uploadResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Files on a page, task or note
+      tags:
+      - uploads
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: page, task or note
+        in: query
+        name: target
+        required: true
+        type: string
+      - description: Its id
+        in: query
+        name: target_id
+        required: true
+        type: string
+      - description: The file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.uploadResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload a file
+      tags:
+      - uploads
+  /uploads/{id}:
+    delete:
+      parameters:
+      - description: Upload id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a file
+      tags:
+      - uploads
+  /uploads/{id}/{name}:
+    get:
+      parameters:
+      - description: Upload id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: File name (ignored)
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Download a file
+      tags:
+      - uploads
   /users:
     get:
       produces:
@@ -4481,26 +4644,6 @@ paths:
       summary: Create an event
       tags:
       - calendar
-  /workspaces/{ws}/export:
-    get:
-      parameters:
-      - description: Workspace id
-        in: path
-        name: ws
-        required: true
-        type: string
-      produces:
-      - application/zip
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: file
-      security:
-      - BearerAuth: []
-      summary: Export pages as Markdown (zip)
-      tags:
-      - pages
   /workspaces/{ws}/lists:
     get:
       parameters:

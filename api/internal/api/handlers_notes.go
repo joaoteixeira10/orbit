@@ -7,6 +7,7 @@ import (
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -37,6 +38,26 @@ type noteItem struct {
 type noteResponse struct {
 	models.Note
 	Items []noteItem `json:"items"`
+	// Files on the note (images show on its card), in lists.
+	Attachments []uploadResponse `json:"attachments,omitempty"`
+}
+
+// withAttachments fills in the files of listed notes, in one query.
+func (h *Handlers) withAttachments(out []noteResponse) []noteResponse {
+	if len(out) == 0 {
+		return out
+	}
+	ids := make([]string, len(out))
+	at := map[string]int{}
+	for i, n := range out {
+		ids[i], at[n.ID] = n.ID, i
+	}
+	var files []models.Upload
+	h.db.Where("target = ? AND target_id IN ?", uploads.Note, ids).Order("created_at").Find(&files)
+	for _, f := range files {
+		out[at[f.TargetID]].Attachments = append(out[at[f.TargetID]].Attachments, toUploadResponse(f))
+	}
+	return out
 }
 
 func decodeItems(s string) []noteItem {
@@ -171,7 +192,7 @@ func (h *Handlers) listNotes(c *gin.Context) {
 	for _, n := range notes {
 		out = append(out, toNoteResponse(n))
 	}
-	c.JSON(http.StatusOK, out)
+	c.JSON(http.StatusOK, h.withAttachments(out))
 }
 
 type noteRequest struct {
@@ -271,7 +292,7 @@ func (h *Handlers) listMyNotes(c *gin.Context) {
 	for _, n := range notes {
 		out = append(out, toNoteResponse(n))
 	}
-	c.JSON(http.StatusOK, out)
+	c.JSON(http.StatusOK, h.withAttachments(out))
 }
 
 // createMyNote jots a personal note, in no workspace.
@@ -377,6 +398,7 @@ func (h *Handlers) deleteNote(c *gin.Context) {
 	if !ok {
 		return
 	}
+	_ = uploads.DeleteFor(h.db, uploads.Note, []string{n.ID})
 	if err := h.db.Delete(&models.Note{}, "id = ?", n.ID).Error; err != nil {
 		h.internalError(c, err, "could not delete the note")
 		return
@@ -490,6 +512,13 @@ func (h *Handlers) moveNote(c *gin.Context) {
 		h.internalError(c, err, "could not move the note")
 		return
 	}
+	// Its files follow it (they belong to the note's workspace; in Quick Notes,
+	// to its owner).
+	moved := map[string]any{"workspace_id": n.WorkspaceID}
+	if n.WorkspaceID == "" {
+		moved["owner_id"] = n.OwnerID
+	}
+	h.db.Model(&models.Upload{}).Where("target = ? AND target_id = ?", uploads.Note, n.ID).Updates(moved)
 	h.publishNotes(c, from)
 	h.publishNotes(c, n)
 	if target.ID != "" {

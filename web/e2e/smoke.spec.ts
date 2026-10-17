@@ -225,6 +225,23 @@ test('git: connect an account, make a list from a repository, a new task opens a
   await expect(page.locator('.task-row', { hasText: title }).locator('.git-badge')).toHaveText(/#\d+/)
 })
 
+test('attachments: an image on a task shows as a thumbnail, and goes when removed', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.locator('.ws-row').first().click()
+  await page.waitForURL(/\/w\/[^/]+$/)
+  await page.goto(new URL(page.url()).pathname + '/tasks/all')
+  const row = page.locator('.task-row', { hasText: 'Essay' })
+  await row.hover()
+  await row.getByTitle('Details').click()
+  // A 1×1 PNG, uploaded through the sheet's file input.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  await page.locator('.attachments input[type=file]').setInputFiles({ name: 'diagram.png', mimeType: 'image/png', buffer: png })
+  const thumb = page.locator('.attachments .thumb-img img')
+  await expect(thumb).toHaveAttribute('src', /^blob:/)
+  await page.locator('.attachments .thumb-x').click()
+  await expect(thumb).toHaveCount(0)
+})
+
 test('notifications: a task someone gives you rings the bell and opens', async ({ page, request }) => {
   // Another member (made through the API) gives the admin a task.
   const json = async (r: { json: () => Promise<any> }) => r.json()

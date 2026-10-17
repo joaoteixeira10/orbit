@@ -113,6 +113,7 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/search?q=essay" | jq -r '.[] | "\(.kind)\t\(
 | Tasks | `GET/POST /workspaces/{ws}/tasks`, `PUT/DELETE /tasks/{id}`, `POST /tasks/{id}/move` (board: `column_id`, `after_id`) |
 | Calendar | `GET /calendar`, `GET /workspaces/{ws}/calendar`, `POST /workspaces/{ws}/events`, `GET/PUT/DELETE /events/{id}` (`?occurrence=` removes one) |
 | Subscriptions | `GET/POST /workspaces/{ws}/subscriptions`, `PUT/DELETE /subscriptions/{id}`, `POST /subscriptions/{id}/refresh` |
+| Uploads | `POST /uploads?target=page|task|note&target_id=` (multipart field `file`), `GET /uploads?target=&target_id=`, `GET /uploads/{id}/{name}` (raster images inline, anything else as a download), `DELETE /uploads/{id}` |
 | Feeds | `GET/POST /me/feeds`, `DELETE /me/feeds/{id}`; the feed itself is `GET /ical/<token>.ics` (no header: the token is in the address) |
 | Git | `GET/POST /me/git` (connect: `base_url`, `token`), `DELETE /me/git/{id}`, `GET /me/git/{id}/repos?q=`, `GET /me/git/{id}/boards?owner=&repo=` (labels, project boards); `POST /workspaces/{ws}/lists/git` (`account_id`, `owner`, `repo`, `mode`: `issues`, `labels` with `labels`, or `project` with `project_id`), `DELETE /lists/{id}/git`, `POST /lists/{id}/git/sync`; `POST/DELETE /tasks/{id}/git` (`url` of an issue or pull request). A task change that git refuses still saves and answers `git_error`. |
 

@@ -117,6 +117,16 @@ the audit log and the runtime settings below. Back up the file and
 | `WEBAUTHN_RP_ORIGINS` | – | empty; dev: `http://localhost:5173`, `http://localhost:8080` (the dev compose file sets `:5180` and `:8090`) | Comma list of full origins, e.g. `https://orbit.example.org`. |
 | `WEBAUTHN_RP_DISPLAY_NAME` | – | `Orbit` | Name shown in the browser's passkey prompt. |
 
+## Uploads
+
+| Variable | Req | Default | Notes |
+|---|---|---|---|
+| `UPLOAD_MAX_MB` | – | `25` | Largest file someone can add to a page, task or note. |
+| `UPLOAD_QUOTA_MB` | – | `2048` | All uploads together, for the instance; `0` = no limit. Past it, uploads answer `507`. |
+
+Uploads are kept **in the database** (a table of their own), so backups and
+restores carry them with everything else. Plan the disk accordingly.
+
 ## Git
 
 | Variable | Req | Default | Notes |

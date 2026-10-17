@@ -692,6 +692,7 @@ onUnmounted(() => {
             ref="editorRef"
             :content="draft"
             :editable="editable"
+            :page-id="page.id"
             @change="onEditorChange"
             @invalid="onInvalid"
           />

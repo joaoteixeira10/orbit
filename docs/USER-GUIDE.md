@@ -262,6 +262,13 @@ in folders that follow the page tree — ready to keep in git.
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
 
+**Images and files.** Paste or drop an image or a file into a page (in
+either editor), or type **/** → **Image or file**. An image shows in the page;
+any other file becomes a link (📎) that downloads it. They're kept by Orbit
+with the page — only the workspace's members can open them — and the page's
+Markdown links to them; **Export** puts them in the zip next to the pages.
+At most 25 MB a file (the owner can change it).
+
 **Pages inside** a page are listed under it, with **Add a page inside**.
 
 **Pages screen** (Pages in the sidebar): every page as a grid or a list,
@@ -276,6 +283,9 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
 
 - **Take a note…** at the top: type a title and text, or click ☑ for a
   checklist. A click outside, **Close**, Esc or ⌘↵ adds it.
+- **Images and files on a note:** open the note and use 📎 (or drop files on
+  it). The first image shows on top of the card; other files are counted at
+  its bottom.
 - In a **checklist**, Enter adds an item, Backspace on an empty one removes
   it, and ticked items move under *N checked items*. Tick items right on the
   card.
@@ -331,8 +341,10 @@ priority, tagged maths.
 shows or hides completed tasks). Click a title to rename it in place. **ⓘ**
 opens the details: notes, **Start date**, **Date** and **Time**, **Repeat** (every day,
 weekday, week, 2 weeks, month, year), **Priority**, **List**, **Status** (its
-board column), **For** (a member, in shared workspaces), **tags** and
-**Sub-tasks**. **Delete** is at the bottom.
+board column), **For** (a member, in shared workspaces), **tags**,
+**Attachments** (add files or drop them; images show as thumbnails — click to
+open, other files download) and **Sub-tasks**. **Delete** is at the bottom
+(it deletes the task's attachments too).
 
 **Repeating tasks**: completing one moves it to its next date (counted from
 its due date, like Apple Reminders) instead of closing it.

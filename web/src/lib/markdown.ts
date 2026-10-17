@@ -8,6 +8,7 @@ import DOMPurify from 'dompurify'
 import { i18n } from '@/i18n'
 import { highlightCode, labelOf } from './syntax'
 import { remoteHost } from './media'
+import { isUploadSrc } from './uploads'
 
 // ---- Normalising ----------------------------------------------------------
 
@@ -92,6 +93,9 @@ function reader(): Marked {
         const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
         const host = remoteHost(href)
         const t = title ? ` title="${esc(title)}"` : ''
+        // An upload is fetched with the sign-in token (lib/uploads.ts): the view
+        // fills in its src.
+        if (isUploadSrc(href)) return `<img data-upload="${esc(href)}" alt="${esc(text)}"${t} class="md-upload">`
         if (!host) return `<img src="${esc(href)}" alt="${esc(text)}"${t} loading="lazy">`
         const label = i18n.global.t('editor.remoteImage', { host })
         return `<span class="md-remote-img" role="button" tabindex="0" data-src="${esc(href)}" data-alt="${esc(text)}"${t}>${esc(label)}</span>`
@@ -100,6 +104,13 @@ function reader(): Marked {
       link({ href, title, tokens }: Tokens.Link) {
         const text = this.parser.parseInline(tokens)
         const t = title ? ` title="${title}"` : ''
+        // A file uploaded to Orbit downloads through the app (it needs the
+        // sign-in token); the view handles the click.
+        if (isUploadSrc(href)) {
+          const attr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+          const name = attr(this.parser.parseInline(tokens, this.parser.textRenderer))
+          return `<a href="${attr(href)}"${t} data-upload="${attr(href)}" data-name="${name}" class="md-file">${text}</a>`
+        }
         return `<a href="${href}"${t} target="_blank" rel="noopener noreferrer nofollow">${text}</a>`
       },
     },
@@ -115,7 +126,7 @@ export function renderMarkdown(md: string): string {
   cached ??= reader()
   const html = cached.parse(md, { async: false }) as string
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'data-task', 'data-kind', 'data-lang'],
+    ADD_ATTR: ['target', 'data-task', 'data-kind', 'data-lang', 'data-upload', 'data-name'],
     FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'iframe'],
   })
 }

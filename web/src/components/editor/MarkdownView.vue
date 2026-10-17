@@ -3,6 +3,7 @@ import { computed, ref, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderMarkdown } from '@/lib/markdown'
 import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
+import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
 
 // A page as it reads: its Markdown rendered like a README on GitHub, with
 // the app's type. Task boxes can be ticked without editing (when allowed);
@@ -58,9 +59,18 @@ function revealFrom(ph: HTMLElement) {
     if (remoteHost(other.dataset.src ?? '') === host) showImage(other)
   }
 }
+// Uploaded images: fetched with the sign-in token, shown from a blob: URL.
+function loadUploads() {
+  for (const img of root.value?.querySelectorAll<HTMLImageElement>('img[data-upload]') ?? []) {
+    const src = img.dataset.upload ?? ''
+    img.removeAttribute('data-upload')
+    uploadBlobUrl(src).then((url) => (img.src = url)).catch(() => img.classList.add('broken'))
+  }
+}
 function afterRender() {
   addCopyButtons()
   showImages()
+  loadUploads()
 }
 onMounted(afterRender)
 watch(html, () => nextTick(afterRender))
@@ -88,6 +98,12 @@ function onClick(e: MouseEvent) {
   const ph = target.closest('.md-remote-img') as HTMLElement | null
   if (ph) {
     revealFrom(ph)
+    return
+  }
+  const file = target.closest('a[data-upload]') as HTMLAnchorElement | null
+  if (file) {
+    e.preventDefault()
+    void downloadUpload(file.dataset.upload ?? '', file.dataset.name || 'file')
     return
   }
   const copy = target.closest('.code-copy') as HTMLElement | null
@@ -339,6 +355,14 @@ function onDblClick(e: MouseEvent) {
 .md-view :deep(.md-remote-img:hover) {
   color: var(--text);
   border-color: var(--accent);
+}
+.md-view :deep(img.broken) {
+  min-width: 120px;
+  min-height: 60px;
+  background: var(--fill-2);
+}
+.md-view :deep(a.md-file)::before {
+  content: '📎 ';
 }
 .md-view :deep(img) {
   max-width: 100%;

@@ -202,6 +202,17 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
   return (await res.json()) as T
 }
 
+// fetchAuthedBlob fetches a (bearer-protected) endpoint's body as a Blob —
+// files the browser can't load by URL (an <img> sends no bearer token).
+export async function fetchAuthedBlob(path: string): Promise<Blob> {
+  let res = await rawFetch(path, { method: 'GET' })
+  if (res.status === 401 && (await tryRefresh())) {
+    res = await rawFetch(path, { method: 'GET' })
+  }
+  if (!res.ok) throw new ApiError(res.status, res.statusText)
+  return res.blob()
+}
+
 // downloadAuthed fetches a (bearer-protected) endpoint and saves the body as a
 // file. Used for PEM/key/CRL downloads that the browser can't link directly.
 export async function downloadAuthed(path: string, filename: string): Promise<void> {

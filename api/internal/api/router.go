@@ -100,7 +100,8 @@ func New(d Deps) *gin.Engine {
 	r.Use(requestLogger(d.Log))
 	r.Use(securityHeaders(nil))
 	// Cap request bodies.
-	r.Use(limitBody(d.Cfg.MaxBodyBytes, nil))
+	// Uploads have their own, larger limit (UPLOAD_MAX_MB, in the handler).
+	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool { return p == "/api/v1/uploads" }))
 	r.Use(metricsMiddleware())
 
 	// Defence-in-depth brute-force throttle for credential/second-factor
@@ -283,6 +284,11 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/tasks/:id", h.updateTask)
 			authed.POST("/tasks/:id/move", h.moveTask)
 			authed.DELETE("/tasks/:id", h.deleteTask)
+
+			authed.POST("/uploads", h.uploadFile)
+			authed.GET("/uploads", h.listUploads)
+			authed.GET("/uploads/:id/*name", h.serveUpload)
+			authed.DELETE("/uploads/:id", h.deleteUpload)
 
 			authed.GET("/me/git", h.listGitAccounts)
 			authed.POST("/me/git", notImpersonating(), h.connectGit)

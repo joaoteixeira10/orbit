@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import Attachments from '@/components/ui/Attachments.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Popover from '@/components/ui/Popover.vue'
 import NoteFields from './NoteFields.vue'
@@ -26,6 +27,7 @@ const toast = useToastStore()
 const { t } = useI18n()
 
 const note = computed(() => notes.notesOf(props.ws).find((n) => n.id === props.noteId))
+const files = ref<InstanceType<typeof Attachments> | null>(null)
 const draft = ref<Draft>(draftOf())
 const fields = ref<InstanceType<typeof NoteFields> | null>(null)
 const root = ref<HTMLElement | null>(null)
@@ -140,6 +142,17 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
     <div v-if="note" ref="root" class="note-sheet" :data-note="draft.color">
       <div class="relative">
         <NoteFields ref="fields" v-model="draft" big :readonly="!editable" @submit="close" />
+        <Attachments
+          v-if="editable || note.attachments?.length"
+          ref="files"
+          class="mt-2"
+          target="note"
+          :target-id="note.id"
+          :editable="editable"
+          :initial="note.attachments ?? []"
+          compact
+          @change="(f) => (note!.attachments = f)"
+        />
         <button
           v-if="editable"
           class="tb pin absolute -right-2 -top-1"
@@ -161,6 +174,9 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
           <button class="tb" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
             <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
             <SquareCheck v-else class="h-[18px] w-[18px]" />
+          </button>
+          <button class="tb" :aria-label="t('files.attach')" :title="t('files.attach')" @click="files?.pick()">
+            <Paperclip class="h-[18px] w-[18px]" />
           </button>
           <button ref="moreBtn" class="tb" :class="{ on: menu === 'more' }" :aria-label="t('notes.options')" :title="t('notes.options')" @click="menu = menu === 'more' ? '' : 'more'">
             <MoreHorizontal class="h-[18px] w-[18px]" />

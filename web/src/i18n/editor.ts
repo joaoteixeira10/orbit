@@ -20,6 +20,7 @@ export const edEn = {
     alert: { NOTE: 'Note', TIP: 'Tip', IMPORTANT: 'Important', WARNING: 'Warning', CAUTION: 'Caution' },
     alertPick: 'Kind of callout',
     copyCode: 'Copy code',
+    uploading: 'Uploading {name}…',
     remoteImage: 'Image from {host} — show',
     codeLanguage: 'Language',
     codeAuto: 'Auto-detect',
@@ -71,6 +72,7 @@ export const edEn = {
       divider: { title: 'Divider', desc: 'A line between sections' },
       table: { title: 'Table', desc: 'A 3 × 3 table with a header row' },
       callout: { title: 'Callout', desc: 'Make a note stand out' },
+      file: { title: 'Image or file', desc: 'Upload a picture or attach a file' },
     },
     tb: {
       turnInto: 'Turn into',
@@ -105,6 +107,7 @@ export const edPt: typeof edEn = {
     alert: { NOTE: 'Nota', TIP: 'Dica', IMPORTANT: 'Importante', WARNING: 'Aviso', CAUTION: 'Cuidado' },
     alertPick: 'Tipo de destaque',
     copyCode: 'Copiar código',
+    uploading: 'A carregar {name}…',
     remoteImage: 'Imagem de {host} — mostrar',
     codeLanguage: 'Linguagem',
     codeAuto: 'Detetar',
@@ -156,6 +159,7 @@ export const edPt: typeof edEn = {
       divider: { title: 'Divisória', desc: 'Uma linha entre secções' },
       table: { title: 'Tabela', desc: 'Uma tabela 3 × 3 com linha de cabeçalho' },
       callout: { title: 'Destaque', desc: 'Faça uma nota sobressair' },
+      file: { title: 'Imagem ou ficheiro', desc: 'Carregar uma imagem ou anexar um ficheiro' },
     },
     tb: {
       turnInto: 'Transformar em',

@@ -11,6 +11,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -462,6 +463,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("page_id IN ?", append(pages, "")).Delete(&models.PageFavorite{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.CalendarSubscription{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Event{}).Error },
+		func() error { return uploads.Delete(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Task{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskList{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.GitLink{}).Error },

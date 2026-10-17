@@ -2,15 +2,50 @@
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { normalizeMarkdown } from '@/lib/markdown'
+import { markdownFor, uploadFile } from '@/lib/uploads'
+import { useToastStore } from '@/stores/toast'
 
 // The page body, edited as Markdown source: a plain text area that grows with
 // the page, with the small helps of a Markdown editor — Enter continues a
 // list, task or quote (and ends it on an empty item), Tab / ⇧Tab indent,
 // ⌘B ⌘I ⌘E ⌘K wrap the selection in bold, italic, code, a link. Same
 // contract as PageEditor: the parent saves; this hands out the Markdown.
-const props = defineProps<{ content: string; editable: boolean }>()
+const props = defineProps<{ content: string; editable: boolean; pageId?: string }>()
 const emit = defineEmits<{ change: [] }>()
 const { t } = useI18n()
+const toast = useToastStore()
+
+// Files pasted or dropped in: uploaded to the page, their Markdown (an image
+// or a link) put where the caret is.
+async function addFiles(files: File[]) {
+  if (!props.pageId || !props.editable) return
+  for (const f of files) {
+    toast.info(t('editor.uploading', { name: f.name }))
+    try {
+      const u = await uploadFile('page', props.pageId, f)
+      const el = area.value!
+      const at = el.selectionEnd
+      const before = text.value.slice(0, at)
+      const sep = before && !before.endsWith('\n') ? '\n' : ''
+      const s = `${sep}${markdownFor(u)}\n`
+      replace(at, at, s, at + s.length)
+    } catch (e: any) {
+      toast.error(e?.message ?? String(e))
+    }
+  }
+}
+function onPaste(e: ClipboardEvent) {
+  const files = [...(e.clipboardData?.files ?? [])]
+  if (!files.length || !props.pageId) return
+  e.preventDefault()
+  void addFiles(files)
+}
+function onDrop(e: DragEvent) {
+  const files = [...(e.dataTransfer?.files ?? [])]
+  if (!files.length || !props.pageId) return
+  e.preventDefault()
+  void addFiles(files)
+}
 
 const text = ref(props.content)
 const area = ref<HTMLTextAreaElement | null>(null)
@@ -129,6 +164,8 @@ defineExpose({ getContent, setContent, focusStart })
     :aria-label="t('editor.mdLabel')"
     @input="onInput"
     @keydown="onKey"
+    @paste="onPaste"
+    @drop="onDrop"
   />
 </template>
 

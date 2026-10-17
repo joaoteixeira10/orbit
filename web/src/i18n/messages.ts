@@ -14,6 +14,7 @@ import { chEn, chPt } from './charts'
 import { sysEn, sysPt } from './system'
 import { inboxEn, inboxPt } from './inbox'
 import { gitEn, gitPt } from './git'
+import { filesEn, filesPt } from './files'
 import { accountUiEn, accountUiPt } from './accountui'
 import { adminUiEn, adminUiPt } from './adminui'
 
@@ -35,6 +36,7 @@ const en = {
   ...sysEn,
   ...inboxEn,
   ...gitEn,
+  ...filesEn,
   ...accountUiEn,
   ...adminUiEn,
   common: {
@@ -304,6 +306,7 @@ const pt: typeof en = {
   ...sysPt,
   ...inboxPt,
   ...gitPt,
+  ...filesPt,
   ...accountUiPt,
   ...adminUiPt,
   common: {

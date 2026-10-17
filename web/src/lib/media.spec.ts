@@ -8,7 +8,7 @@ describe('images from other sites', () => {
     expect(html).toContain('class="md-remote-img"')
     expect(html).toContain('data-src="https://cdn.example.org/a.png"')
     expect(html).not.toContain('<img src="https://cdn.example.org')
-    expect(html).toContain('<img src="/api/v1/uploads/1/a.png"')
+    expect(html).toContain('data-upload="/api/v1/uploads/1/a.png"') // its src comes with the token
   })
 
   it('show at once when the reader chose so, or after one from that site', () => {

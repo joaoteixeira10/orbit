@@ -502,6 +502,7 @@ func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
 		if err := e.db.Save(t).Error; err != nil {
 			return err
 		}
+		e.pullComments(ctx, c, t, byLogin)
 		changed = true
 	}
 	if changed && e.Changed != nil {
@@ -887,6 +888,8 @@ func (e *Engine) refreshLinked(ctx context.Context) {
 			}
 		}
 		e.db.Model(&models.Task{}).Where("id = ?", t.ID).Updates(up)
+		byLogin, _ := e.workspaceLogins(t.WorkspaceID, t.GitHost)
+		e.pullComments(ctx, c, t, byLogin)
 		touched[t.WorkspaceID] = true
 	}
 	if e.Changed != nil {

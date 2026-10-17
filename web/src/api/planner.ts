@@ -553,8 +553,20 @@ export interface TaskComment {
   body: string
   created_at: string
   edited_at?: string
+  git_author?: string // a git login: written on the issue by someone who isn't a member
+  git_error?: string // saved, but it didn't reach the issue
+}
+// A line of a task's activity (created, renamed, assigned, moved, done…).
+export interface TaskActivity {
+  id: string
+  kind: 'created' | 'renamed' | 'due' | 'priority' | 'assigned' | 'unassigned' | 'moved' | 'status' | 'completed' | 'reopened' | 'notes'
+  actor_id: string
+  actor_name: string
+  params: Record<string, any>
+  created_at: string
 }
 export const commentsApi = {
+  activity: (task: string) => api<TaskActivity[]>(`/tasks/${task}/activity`),
   list: (task: string) => api<TaskComment[]>(`/tasks/${task}/comments`),
   add: (task: string, body: string) => api<TaskComment>(`/tasks/${task}/comments`, { method: 'POST', body: j({ body }) }),
   update: (id: string, body: string) => api<TaskComment>(`/comments/${id}`, { method: 'PUT', body: j({ body }) }),

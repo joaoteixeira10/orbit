@@ -235,7 +235,18 @@ test('git: connect an account, make a list from a repository, a new task opens a
   const title = `From Orbit ${Date.now()}`
   await page.getByPlaceholder(/New task/).fill(title)
   await page.keyboard.press('Enter')
-  await expect(page.locator('.task-row', { hasText: title }).locator('.git-badge')).toHaveText(/#\d+/)
+  const badge = page.locator('.task-row', { hasText: title }).locator('.git-badge')
+  await expect(badge).toHaveText(/#\d+/)
+
+  // A comment on it goes to the issue.
+  const number = (await badge.innerText()).replace(/\D/g, '')
+  await page.locator('.task-row', { hasText: title }).click()
+  await page.getByTestId('comment-box').fill('Hello from **Orbit**')
+  await page.getByRole('button', { name: 'Comment', exact: true }).click()
+  await expect(page.getByTestId('comments')).toContainText('Hello from Orbit')
+  const r = await page.request.get(`${GIT_URL}/api/v1/repos/${process.env.E2E_GIT_OWNER || 'ana'}/${GIT_REPO}/issues/${number}/comments`, { headers: { Authorization: `token ${GIT_TOKEN}` } })
+  const onGit = (await r.json()) as { body: string }[]
+  expect(onGit.some((c) => c.body === 'Hello from **Orbit**')).toBeTruthy()
 })
 
 test('task notes: written in Markdown, read rendered, a box ticks, the row shows plain text', async ({ page }) => {

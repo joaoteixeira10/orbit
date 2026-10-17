@@ -1,5 +1,21 @@
 basePath: /api/v1
 definitions:
+  api.activityResponse:
+    properties:
+      actor_id:
+        type: string
+      actor_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      params:
+        additionalProperties: {}
+        type: object
+    type: object
   api.addMemberRequest:
     properties:
       role:
@@ -141,6 +157,11 @@ definitions:
       created_at:
         type: string
       edited_at:
+        type: string
+      git_author:
+        type: string
+      git_error:
+        description: saved, but not on the issue
         type: string
       id:
         type: string
@@ -4643,6 +4664,28 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a task
+      tags:
+      - tasks
+  /tasks/{id}/activity:
+    get:
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.activityResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A task's activity
       tags:
       - tasks
   /tasks/{id}/comments:

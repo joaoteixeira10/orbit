@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
+import { MessageSquare, Pencil, Trash2, History } from 'lucide-vue-next'
 import Avatar from '@/components/ui/Avatar.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
-import { commentsApi, type Member, type TaskComment } from '@/api/planner'
+import { commentsApi, type Member, type TaskActivity, type TaskComment } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
-import { locale } from '@/lib/dates'
+import { dueLabel, locale } from '@/lib/dates'
 
 // A task's comments, as in Planner: oldest first, each in Markdown with its
 // author and when; the author edits or deletes theirs, an owner deletes any.
@@ -38,16 +38,56 @@ const editText = ref('')
 const askDelete = ref<TaskComment | null>(null)
 const box = ref<HTMLTextAreaElement | null>(null)
 
-async function load() {
+// The task's changes, among the comments (as in Plane); hidden by choice.
+const activity = ref<TaskActivity[]>([])
+const showActivity = ref(readShow())
+function readShow() {
   try {
-    comments.value = await commentsApi.list(props.taskId)
+    return localStorage.getItem('orbit_task_activity') !== '0'
   } catch {
-    comments.value = []
+    return true
   }
+}
+function setShow(v: boolean) {
+  showActivity.value = v
+  try {
+    localStorage.setItem('orbit_task_activity', v ? '1' : '0')
+  } catch {
+    /* private mode */
+  }
+}
+type Item = { at: string; c?: TaskComment; a?: TaskActivity }
+const timeline = computed<Item[]>(() => {
+  const items: Item[] = comments.value.map((c) => ({ at: c.created_at, c }))
+  if (showActivity.value) items.push(...activity.value.map((a) => ({ at: a.created_at, a })))
+  return items.sort((x, y) => x.at.localeCompare(y.at))
+})
+function describe(a: TaskActivity): string {
+  const actor = a.actor_name || '?'
+  const p = a.params ?? {}
+  switch (a.kind) {
+    case 'due':
+      return p.date ? t('comments.act.due', { actor, when: dueLabel(p.date, p.time || null) }) : t('comments.act.dueNone', { actor })
+    case 'priority':
+      return t('comments.act.priority', { actor, p: t(`tasks.prio.${p.to ?? 0}`).toLowerCase() })
+    case 'assigned':
+    case 'unassigned':
+      return t(`comments.act.${a.kind}`, { actor, names: (p.names ?? []).join(', ') })
+    default:
+      return t(`comments.act.${a.kind}`, { actor, to: p.to ?? '', list: p.list ?? '' })
+  }
+}
+
+async function load() {
+  const [c, a] = await Promise.all([commentsApi.list(props.taskId).catch(() => []), commentsApi.activity(props.taskId).catch(() => [])])
+  comments.value = c
+  activity.value = a
 }
 watch(() => props.taskId, () => ((draft.value = ''), (editing.value = ''), load()), { immediate: true })
 const off = onLiveEvent('ws', (e) => {
-  if (e.origin !== CLIENT_ID && String(e.ws) === props.ws && e.what === 'comments') void load()
+  if (String(e.ws) !== props.ws) return
+  // Others' comments; anyone's change to tasks (ours too: a new line).
+  if ((e.what === 'comments' && e.origin !== CLIENT_ID) || e.what === 'tasks') void load()
 })
 onUnmounted(off)
 
@@ -66,7 +106,9 @@ async function send() {
   if (!body || sending.value) return
   sending.value = true
   try {
-    comments.value.push(await commentsApi.add(props.taskId, body))
+    const c = await commentsApi.add(props.taskId, body)
+    comments.value.push(c)
+    if (c.git_error) toast.error(t('comments.gitError', { error: c.git_error }))
     draft.value = ''
     mention.value = null
   } catch (e: any) {
@@ -159,29 +201,40 @@ function onKey(e: KeyboardEvent) {
 
 <template>
   <section class="mt-4" data-testid="comments">
-    <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1"><MessageSquare class="h-3.5 w-3.5" />{{ t('comments.title') }}<span v-if="comments.length" class="font-normal text-text-3">{{ comments.length }}</span></h3>
+    <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1">
+      <MessageSquare class="h-3.5 w-3.5" />{{ t('comments.activity') }}<span v-if="comments.length" class="font-normal text-text-3">{{ comments.length }}</span>
+      <button v-if="activity.length" type="button" class="ml-auto font-normal normal-case text-accent-text hover:underline" @click="setShow(!showActivity)">{{ showActivity ? t('comments.hideActivity') : t('comments.showActivity') }}</button>
+    </h3>
     <ol class="space-y-3">
-      <li v-for="c in comments" :key="c.id" class="flex gap-2.5">
-        <Avatar :name="c.author_name || '?'" :src="c.author_avatar" :size="26" class="mt-0.5" />
+      <template v-for="it in timeline" :key="it.c?.id ?? it.a!.id">
+      <li v-if="it.a" class="act" data-testid="activity-line">
+        <History class="h-3.5 w-3.5 shrink-0" />
+        <span class="min-w-0 flex-1">{{ describe(it.a) }}</span>
+        <span class="shrink-0" :title="new Date(it.a.created_at).toLocaleString()">{{ when(it.a.created_at) }}</span>
+      </li>
+      <li v-else-if="it.c" class="flex gap-2.5">
+        <Avatar :name="it.c!.author_name || '?'" :src="it.c!.author_avatar" :size="26" class="mt-0.5" />
         <div class="min-w-0 flex-1">
           <div class="flex items-baseline gap-2">
-            <b class="truncate text-[13.5px]">{{ c.author_name }}</b>
-            <span class="text-[12px] text-text-3" :title="new Date(c.created_at).toLocaleString()">{{ when(c.created_at) }}<template v-if="c.edited_at"> · {{ t('comments.edited') }}</template></span>
+            <b class="truncate text-[13.5px]">{{ it.c!.author_name }}</b>
+            <span v-if="it.c!.git_author" class="pill shrink-0 !py-0 text-[11px]">{{ t('comments.fromGit') }}</span>
+            <span class="text-[12px] text-text-3" :title="new Date(it.c!.created_at).toLocaleString()">{{ when(it.c!.created_at) }}<template v-if="it.c!.edited_at"> · {{ t('comments.edited') }}</template></span>
             <span class="ml-auto flex shrink-0 gap-0.5">
-              <button v-if="canWrite && c.author_id === auth.user?.id && editing !== c.id" class="icon-btn h-6 w-6" :title="t('comments.edit')" :aria-label="t('comments.edit')" @click="startEdit(c)"><Pencil class="h-3.5 w-3.5" /></button>
-              <button v-if="canWrite && (c.author_id === auth.user?.id || isOwner)" class="icon-btn h-6 w-6" :title="t('comments.delete')" :aria-label="t('comments.delete')" @click="askDelete = c"><Trash2 class="h-3.5 w-3.5" /></button>
+              <button v-if="canWrite && it.c!.author_id === auth.user?.id && editing !== it.c!.id" class="icon-btn h-6 w-6" :title="t('comments.edit')" :aria-label="t('comments.edit')" @click="startEdit(it.c!)"><Pencil class="h-3.5 w-3.5" /></button>
+              <button v-if="canWrite && (it.c!.author_id === auth.user?.id || isOwner)" class="icon-btn h-6 w-6" :title="t('comments.delete')" :aria-label="t('comments.delete')" @click="askDelete = it.c!"><Trash2 class="h-3.5 w-3.5" /></button>
             </span>
           </div>
-          <form v-if="editing === c.id" class="mt-1 space-y-1.5" @submit.prevent="saveEdit(c)">
-            <textarea v-model="editText" class="comment-box" rows="3" maxlength="10000" @keydown.meta.enter.prevent="saveEdit(c)" @keydown.ctrl.enter.prevent="saveEdit(c)" @keydown.esc.stop="editing = ''" />
+          <form v-if="editing === it.c!.id" class="mt-1 space-y-1.5" @submit.prevent="saveEdit(it.c!)">
+            <textarea v-model="editText" class="comment-box" rows="3" maxlength="10000" @keydown.meta.enter.prevent="saveEdit(it.c!)" @keydown.ctrl.enter.prevent="saveEdit(it.c!)" @keydown.esc.stop="editing = ''" />
             <div class="flex justify-end gap-2">
               <button type="button" class="btn btn-sm" @click="editing = ''">{{ t('comments.cancel') }}</button>
               <button class="btn-primary btn-sm" :disabled="!editText.trim()">{{ t('comments.save') }}</button>
             </div>
           </form>
-          <div v-else class="bubble"><MarkdownView class="comment-md" :content="c.body" :editable="false" /></div>
+          <div v-else class="bubble"><MarkdownView class="comment-md" :content="it.c!.body" :editable="false" /></div>
         </div>
       </li>
+      </template>
     </ol>
     <p v-if="!comments.length && !canWrite" class="px-1 text-[13px] text-text-3">{{ t('comments.none') }}</p>
 
@@ -231,6 +284,14 @@ function onKey(e: KeyboardEvent) {
 }
 .comment-box:focus {
   box-shadow: 0 0 0 3px var(--ring);
+}
+.act {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+  font-size: 12.5px;
+  color: var(--text-3);
 }
 .bubble {
   margin-top: 2px;

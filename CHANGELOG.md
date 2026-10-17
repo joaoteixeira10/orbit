@@ -111,6 +111,15 @@ merge, not at release time.
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
 - **Comment counts** on task rows and board cards (💬 2).
+- **Chips on task rows**, as in Plane: the date, priority and assignees at
+  the end of each row (wide screens), each changed right there.
+- **A task's activity** among its comments: created, renamed, dated,
+  prioritised, assigned, moved, status, completed, reopened, notes edited
+  (hide or show it).
+- **Comments follow the git issue** on linked tasks, both ways: an Orbit
+  comment goes to the issue (as its author with an account there, else
+  signed "Name (in Orbit)" by the linker); the issue's comments come in, also
+  edits and deletions.
 - **Comments on tasks**, as in Planner: Markdown, by any member (viewers
   too), with @mentions (suggested as you type); the assignees, the creator
   and earlier commenters are told (one inbox entry per task while unread),

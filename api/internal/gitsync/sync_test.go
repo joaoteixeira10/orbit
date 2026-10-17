@@ -27,10 +27,13 @@ type fakeGitea struct {
 	labels []Label
 	fail   bool // writes answer 500
 	writes int
+	// Comments by issue number; nextComment numbers them.
+	comments    map[int64][]Comment
+	nextComment int64
 }
 
 func newFake() *fakeGitea {
-	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{},
+	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{},
 		labels: []Label{{ID: 1, Name: "Doing"}, {ID: 2, Name: "Review"}, {ID: 3, Name: "bug"}}}
 }
 
@@ -73,6 +76,39 @@ func (f *fakeGitea) get(n int64) Issue {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return *f.issues[n]
+}
+
+// comment adds a comment to issue n (bumping the issue, as Gitea does).
+func (f *fakeGitea) comment(n int64, login, body string) Comment {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nextComment++
+	at := f.tick()
+	c := Comment{ID: f.nextComment, Body: body, User: User{Login: login}, CreatedAt: at, UpdatedAt: at}
+	f.comments[n] = append(f.comments[n], c)
+	f.issues[n].UpdatedAt = at
+	return c
+}
+
+// editComment changes a comment's text (body "" deletes it).
+func (f *fakeGitea) editComment(id int64, body string) Comment {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for n, cs := range f.comments {
+		for i := range cs {
+			if cs[i].ID != id {
+				continue
+			}
+			f.issues[n].UpdatedAt = f.tick()
+			if body == "" {
+				f.comments[n] = append(cs[:i], cs[i+1:]...)
+				return Comment{}
+			}
+			cs[i].Body, cs[i].UpdatedAt = body, f.clock
+			return cs[i]
+		}
+	}
+	return Comment{}
 }
 
 func (f *fakeGitea) handler() http.Handler {
@@ -177,6 +213,29 @@ func (f *fakeGitea) handler() http.Handler {
 			}
 		})
 		writeJSON(w, f.get(num(r)))
+	}))
+	mux.HandleFunc("GET /api/v1/repos/o/r/issues/{n}/comments", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		out := append([]Comment{}, f.comments[num(r)]...)
+		f.mu.Unlock()
+		writeJSON(w, out)
+	})
+	mux.HandleFunc("POST /api/v1/repos/o/r/issues/{n}/comments", write(func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Body string `json:"body"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		c := f.comment(num(r), "ana", in.Body) // the only token is ana's
+		w.WriteHeader(http.StatusCreated)
+		writeJSON(w, c)
+	}))
+	mux.HandleFunc("PATCH /api/v1/repos/o/r/issues/comments/{id}", write(func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Body string `json:"body"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		writeJSON(w, f.editComment(id, in.Body))
 	}))
 	mux.HandleFunc("PUT /api/v1/repos/o/r/issues/{n}/labels", write(func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
@@ -507,5 +566,51 @@ func TestLinkerLeft(t *testing.T) {
 	f.db.First(&link, "id = ?", f.link.ID)
 	if link.LastError == "" {
 		t.Fatal("the list doesn't say why it stopped")
+	}
+}
+
+// TestComments: an issue's comments come into its task (a member with an
+// account there as that member, anyone else under their login); an Orbit
+// comment by someone without an account goes to the issue signed with their
+// name; edits and deletions on git follow; nothing comes back twice.
+func TestComments(t *testing.T) {
+	f := setup(t)
+	f.fake.add("Fix login")
+	f.sync(t)
+	f.fake.comment(1, "zed", "Seen on Safari too")
+	f.fake.comment(1, "ana", "On it")
+	f.sync(t)
+	task := f.task(t)
+	var cs []models.TaskComment
+	f.db.Where("task_id = ?", task.ID).Order("created_at").Find(&cs)
+	if len(cs) != 2 || cs[0].GitAuthor != "zed" || cs[0].AuthorID != "" || cs[1].AuthorID != f.ana || cs[1].Body != "On it" {
+		t.Fatalf("pulled: %+v", cs)
+	}
+
+	// Bo has no account on the server: the comment goes as the linker, signed.
+	mine := models.TaskComment{TaskID: task.ID, WorkspaceID: task.WorkspaceID, AuthorID: f.bo, Body: "Thanks, **both**"}
+	f.db.Create(&mine)
+	if err := f.e.PushComment(context.Background(), f.bo, "Bo", &task, &mine, false); err != nil {
+		t.Fatal(err)
+	}
+	remote := f.fake.comments[1]
+	if len(remote) != 3 || remote[2].Body != "**Bo (in Orbit):**\n\nThanks, **both**" || mine.GitCommentID != remote[2].ID {
+		t.Fatalf("pushed: %+v, %+v", remote, mine)
+	}
+
+	// Back from git: no duplicate, and the signature stays off.
+	f.sync(t)
+	f.db.Where("task_id = ?", task.ID).Order("git_comment_id").Find(&cs)
+	if len(cs) != 3 || cs[2].Body != "Thanks, **both**" {
+		t.Fatalf("after the echo: %+v", cs)
+	}
+
+	// Edited and deleted on git.
+	f.fake.editComment(cs[0].GitCommentID, "Seen on Safari and Firefox")
+	f.fake.editComment(cs[1].GitCommentID, "")
+	f.sync(t)
+	f.db.Where("task_id = ?", task.ID).Order("git_comment_id").Find(&cs)
+	if len(cs) != 2 || cs[0].Body != "Seen on Safari and Firefox" || cs[0].EditedAt == nil {
+		t.Fatalf("after edits on git: %+v", cs)
 	}
 }

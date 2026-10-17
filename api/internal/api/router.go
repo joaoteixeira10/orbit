@@ -258,6 +258,7 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/invites/:token/accept", authLimit, notImpersonating(), h.acceptInvite)
 			// Comments on tasks.
 			authed.GET("/tasks/:id/comments", h.listComments)
+			authed.GET("/tasks/:id/activity", h.taskActivity)
 			authed.POST("/tasks/:id/comments", h.createComment)
 			authed.PUT("/comments/:id", h.updateComment)
 			authed.DELETE("/comments/:id", h.deleteComment)

@@ -11,6 +11,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // Comments on tasks, as in Microsoft Planner: any member writes them (viewers
@@ -22,6 +23,27 @@ type commentResponse struct {
 	models.TaskComment
 	AuthorName   string `json:"author_name"`
 	AuthorAvatar string `json:"author_avatar"`
+	GitError     string `json:"git_error,omitempty"` // saved, but not on the issue
+}
+
+// gitComment sends a comment's change to its task's issue (git-linked tasks
+// only); it returns the error to show, if any.
+func (h *Handlers) gitComment(c *gin.Context, cm *models.TaskComment, deleted bool) string {
+	if !h.gitOn() {
+		return ""
+	}
+	var t models.Task
+	if h.db.First(&t, "id = ?", cm.TaskID).Error != nil || t.GitIssueID == 0 {
+		return ""
+	}
+	ctx, cancel := gitCtx(c)
+	defer cancel()
+	uid := auth.UserID(c)
+	if err := h.git.PushComment(ctx, uid, h.actorName(uid), &t, cm, deleted); err != nil {
+		h.log.Debug("git comment failed", zap.Error(err))
+		return err.Error()
+	}
+	return ""
 }
 
 func (h *Handlers) commentResponses(cs []models.TaskComment) []commentResponse {
@@ -44,6 +66,9 @@ func (h *Handlers) commentResponses(cs []models.TaskComment) []commentResponse {
 		name := u.DisplayName
 		if name == "" {
 			name = u.Username
+		}
+		if c.AuthorID == "" && c.GitAuthor != "" {
+			name = c.GitAuthor
 		}
 		out = append(out, commentResponse{TaskComment: c, AuthorName: name, AuthorAvatar: u.AvatarURL})
 	}
@@ -120,9 +145,12 @@ func (h *Handlers) createComment(c *gin.Context) {
 		h.internalError(c, err, "could not add the comment")
 		return
 	}
+	gitErr := h.gitComment(c, &cm, false)
 	h.publishWS(c, ws.ID, "comments")
 	h.notifyComment(c, ws, t, cm)
-	c.JSON(http.StatusCreated, h.commentResponses([]models.TaskComment{cm})[0])
+	resp := h.commentResponses([]models.TaskComment{cm})[0]
+	resp.GitError = gitErr
+	c.JSON(http.StatusCreated, resp)
 }
 
 var mentionRe = regexp.MustCompile(`(?:^|[^\w@.])@([a-z0-9][a-z0-9._-]{1,31})`)
@@ -235,6 +263,7 @@ func (h *Handlers) updateComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "a comment can't be empty (delete it instead)"})
 		return
 	}
+	gitErr := ""
 	if body != cm.Body {
 		now := time.Now()
 		cm.Body, cm.EditedAt = body, &now
@@ -242,9 +271,12 @@ func (h *Handlers) updateComment(c *gin.Context) {
 			h.internalError(c, err, "could not change the comment")
 			return
 		}
+		gitErr = h.gitComment(c, &cm, false)
 		h.publishWS(c, cm.WorkspaceID, "comments")
 	}
-	c.JSON(http.StatusOK, h.commentResponses([]models.TaskComment{cm})[0])
+	resp := h.commentResponses([]models.TaskComment{cm})[0]
+	resp.GitError = gitErr
+	c.JSON(http.StatusOK, resp)
 }
 
 // deleteComment deletes a comment (its author, or an owner).
@@ -260,6 +292,7 @@ func (h *Handlers) deleteComment(c *gin.Context) {
 	if !ok {
 		return
 	}
+	_ = h.gitComment(c, &cm, true)
 	h.db.Delete(&cm)
 	if cm.AuthorID != auth.UserID(c) {
 		h.recordCtx(c, "comment.delete", "workspace", cm.WorkspaceID, gin.H{"task": cm.TaskID, "author": cm.AuthorID})

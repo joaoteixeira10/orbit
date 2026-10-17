@@ -417,6 +417,23 @@ type TaskComment struct {
 	AuthorID    string     `gorm:"size:36;not null;index" json:"author_id"`
 	Body        string     `gorm:"type:text;not null" json:"body"`
 	EditedAt    *time.Time `json:"edited_at,omitempty"`
+	// The issue comment it is, on a git-linked task; GitAuthor is the git
+	// login of someone who isn't a member (AuthorID is then empty).
+	GitCommentID int64  `gorm:"not null;default:0;index" json:"-"`
+	GitHash      string `gorm:"size:16" json:"-"`
+	GitAuthor    string `gorm:"size:100" json:"git_author,omitempty"`
+}
+
+// TaskEvent is one line of a task's activity: who did what, when (created,
+// renamed, assigned, moved, completed…). Params holds what's shown (names at
+// the time, the new date…) as JSON.
+type TaskEvent struct {
+	Base
+	TaskID      string `gorm:"size:36;not null;index" json:"task_id"`
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	ActorID     string `gorm:"size:36" json:"actor_id"`
+	Kind        string `gorm:"size:20;not null" json:"kind"`
+	Params      string `gorm:"type:text" json:"-"`
 }
 
 // AssigneeList is the task's assignees (user ids), never nil.

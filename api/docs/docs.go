@@ -3977,6 +3977,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/tasks/{id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "A task's activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.activityResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tasks/{id}/comments": {
             "get": {
                 "security": [
@@ -6049,6 +6085,30 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "api.activityResponse": {
+            "type": "object",
+            "properties": {
+                "actor_id": {
+                    "type": "string"
+                },
+                "actor_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
         "api.addMemberRequest": {
             "type": "object",
             "required": [
@@ -6247,6 +6307,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "edited_at": {
+                    "type": "string"
+                },
+                "git_author": {
+                    "type": "string"
+                },
+                "git_error": {
+                    "description": "saved, but not on the issue",
                     "type": "string"
                 },
                 "id": {

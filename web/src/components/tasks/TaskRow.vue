@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Repeat, Flag, ListTree, MessageSquare } from 'lucide-vue-next'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
+import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'
-import type { Task, Member } from '@/api/planner'
+import type { Task, Member, TaskInput } from '@/api/planner'
 import { dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
 import { firstLine } from '@/lib/markdown'
 
@@ -20,12 +21,15 @@ const props = withDefaults(
     workspaceName?: string
     subtasks?: { done: number; total: number }
     assignees?: Member[]
+    // With the workspace's members: date, priority and assignees as chips
+    // at the end, changed in place (wide screens).
+    members?: Member[]
     editable?: boolean
     compact?: boolean
   }>(),
   { color: 'var(--ws)', listName: '', workspaceName: '', editable: true, compact: false },
 )
-const emit = defineEmits<{ toggle: []; open: [] }>()
+const emit = defineEmits<{ toggle: []; open: []; update: [patch: TaskInput] }>()
 const { t } = useI18n()
 
 const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, props.task.done))
@@ -40,7 +44,7 @@ const prio = computed(() => '!'.repeat(props.task.priority))
 </script>
 
 <template>
-  <div class="task-row group/task" :class="{ done: task.done, compact }" @click="emit('open')">
+  <div class="task-row group/task" :class="{ done: task.done, compact, 'has-chips': !!members && !compact }" @click="emit('open')">
     <button
       class="check mt-[1px]"
       :class="{ on: task.done }"
@@ -55,11 +59,11 @@ const prio = computed(() => '!'.repeat(props.task.priority))
     </button>
     <button type="button" class="main min-w-0 flex-1 text-left" :title="t('tasks.details')" @click.stop="emit('open')">
       <div class="title">
-        <span v-if="prio" class="mr-1 font-semibold" :style="{ color }">{{ prio }}</span>{{ task.title }}
+        <span v-if="prio" class="prio-mark mr-1 font-semibold" :style="{ color }">{{ prio }}</span>{{ task.title }}
       </div>
       <div v-if="!compact || due || task.git_number" class="meta">
         <GitBadge :task="task" />
-        <span v-if="due" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
+        <span v-if="due" class="due-meta" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
         <span v-if="listName">{{ listName }}</span>
         <span v-if="workspaceName">{{ workspaceName }}</span>
@@ -69,8 +73,9 @@ const prio = computed(() => '!'.repeat(props.task.priority))
         <span v-if="task.notes && !compact" class="truncate">{{ firstLine(task.notes) }}</span>
       </div>
     </button>
-    <Flag v-if="task.priority === 3 && !task.done" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" />
-    <AvatarStack v-if="assignees?.length" :people="assignees" :size="20" class="mt-0.5" />
+    <Flag v-if="task.priority === 3 && !task.done" class="row-flag mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" />
+    <AvatarStack v-if="assignees?.length" :people="assignees" :size="20" class="row-people mt-0.5" />
+    <TaskChips v-if="members && !compact" class="row-chips" :task="task" :members="members" :editable="editable" @update="(p) => emit('update', p)" />
   </div>
 </template>
 
@@ -118,5 +123,22 @@ const prio = computed(() => '!'.repeat(props.task.priority))
   outline: none;
   box-shadow: 0 0 0 3px var(--ring);
   border-radius: 6px;
+}
+.row-chips {
+  display: none;
+}
+.task-row:hover .row-chips :deep(.chip.empty) {
+  opacity: 1;
+}
+@media (min-width: 640px) {
+  .has-chips .row-chips {
+    display: inline-flex;
+  }
+  .has-chips .due-meta,
+  .has-chips .row-people,
+  .has-chips .row-flag,
+  .has-chips .prio-mark {
+    display: none;
+  }
 }
 </style>

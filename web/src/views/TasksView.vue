@@ -206,6 +206,14 @@ async function toggle(x: Task) {
     toast.error(e.message)
   }
 }
+async function change(x: Task, patch: TaskInput) {
+  try {
+    const r = await tasks.update(ws.value, x.id, patch)
+    if (r.repeated) toast.success(t('tasks.repeated', { date: r.task.due }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 const peopleOf = (x: Task) => x.assignee_ids.map((id) => memberById.value.get(id)).filter((m): m is Member => !!m)
 function subCount(x: Task) {
   const subs = all.value.filter((s) => s.parent_id === x.id)
@@ -359,9 +367,11 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
               :list-name="!list && sel !== 'all' ? listById.get(x.list_id)?.name : ''"
               :subtasks="subCount(x)"
               :assignees="peopleOf(x)"
+              :members="members.length > 1 ? members : []"
               :editable="editable"
               @toggle="toggle(x)"
               @open="openTask = x.id"
+              @update="(p) => change(x, p)"
             />
             <div v-for="sub in all.filter((y) => y.parent_id === x.id && (!y.done || showDone))" :key="sub.id" class="pl-8">
               <TaskRow :task="sub" :color="listById.get(x.list_id)?.color" compact :editable="editable" @toggle="toggle(sub)" @open="openTask = sub.id" />

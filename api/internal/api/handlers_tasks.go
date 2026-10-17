@@ -236,6 +236,9 @@ func (h *Handlers) deleteList(c *gin.Context) {
 		if err := tx.Where("task_id IN ?", append(taskIDs, "")).Delete(&models.TaskComment{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("task_id IN ?", append(taskIDs, "")).Delete(&models.TaskEvent{}).Error; err != nil {
+			return err
+		}
 		if err := tx.Where("list_id = ?", l.ID).Delete(&models.Task{}).Error; err != nil {
 			return err
 		}
@@ -613,6 +616,7 @@ func (h *Handlers) createTask(c *gin.Context) {
 	}
 	h.publishWS(c, ws.ID, "tasks")
 	h.notifyAssigned(c, t, nil)
+	h.recordTask(c, nil, t)
 	if t.ParentID == nil {
 		h.notifyActivity(c, ws, "task_added", t.Title, taskLink(t), t.AssigneeList()...)
 	}
@@ -729,6 +733,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, t.WorkspaceID, "tasks")
+	h.recordTask(c, &before, t)
 	h.notifyAssigned(c, t, prevAssignees)
 	if !wasDone && (t.CompletedAt != nil || repeated) && t.ParentID == nil {
 		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
@@ -803,6 +808,7 @@ func (h *Handlers) moveTask(c *gin.Context) {
 	}
 	before := t
 	t = reloadTask(h, t.ID)
+	h.recordTask(c, &before, t)
 	h.publishWS(c, t.WorkspaceID, "tasks")
 	if completing && t.ParentID == nil {
 		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
@@ -830,6 +836,7 @@ func (h *Handlers) deleteTask(c *gin.Context) {
 	h.db.Model(&models.Task{}).Where("id = ? OR parent_id = ?", t.ID, t.ID).Pluck("id", &ids)
 	_ = uploads.DeleteFor(h.db, uploads.Task, ids) // its attachments go with it
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskComment{})
+	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskEvent{})
 	h.db.Where("id = ? OR parent_id = ?", t.ID, t.ID).Delete(&models.Task{})
 	if h.git != nil {
 		// Its issue stays on git, and mustn't come back as a new task.

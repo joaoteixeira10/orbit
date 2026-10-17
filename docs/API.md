@@ -113,6 +113,7 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/search?q=essay" | jq -r '.[] | "\(.kind)\t\(
 | Grades (the caller's own) | `GET /workspaces/{ws}/grades`, `POST /courses/{id}/grades` (`{title, score, out_of?, weight?, date?}`), `PUT/DELETE /grades/{id}`, `PUT /courses/{id}/goal` (`{target}` on the scale, `null` clears); the scale is the workspace's `grade_scale` (20, 100, 10, 5; owners change it with `PUT /workspaces/{ws}`) |
 | Pages | `GET/POST /workspaces/{ws}/pages`, `GET /workspaces/{ws}/trash`, `GET/PUT/DELETE /pages/{id}` (`?permanent=1` from the trash), `POST /pages/{id}/move`, `/restore`, `/duplicate`, `POST/DELETE /pages/{id}/favorite`, `GET /me/favorites` |
 | Lists | `GET/POST /workspaces/{ws}/lists`, `PUT /workspaces/{ws}/lists/order`, `PUT/DELETE /lists/{id}` |
+| Comments | `GET/POST /tasks/{id}/comments` (`{body}` Markdown; any member; `@username` notifies them), `PUT /comments/{id}` (the author), `DELETE /comments/{id}` (the author or an owner) |
 | Tasks | `GET/POST /workspaces/{ws}/tasks`, `PUT/DELETE /tasks/{id}`, `POST /tasks/{id}/move` (board: `column_id`, `after_id`); `assignee_ids` is the list of who it's for (`assignee_id`, one, still works) |
 | Calendar | `GET /calendar`, `GET /workspaces/{ws}/calendar`, `POST /workspaces/{ws}/events`, `GET/PUT/DELETE /events/{id}` (`?occurrence=` removes one) |
 | Subscriptions | `GET/POST /workspaces/{ws}/subscriptions`, `PUT/DELETE /subscriptions/{id}`, `POST /subscriptions/{id}/refresh` |

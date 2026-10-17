@@ -129,7 +129,7 @@ export interface NotifConfig {
   webhook: { enabled: boolean; url: string; secret: string }
 }
 
-export type NotifyKind = 'reminder' | 'assigned' | 'workspace' | 'activity' | 'digest'
+export type NotifyKind = 'reminder' | 'assigned' | 'comment' | 'workspace' | 'activity' | 'digest'
 export interface Delivery {
   push: boolean // this user's devices (Web Push)
   channels: boolean // their chosen channels (email, ntfy, …)

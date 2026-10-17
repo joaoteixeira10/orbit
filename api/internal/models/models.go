@@ -336,6 +336,7 @@ func AllModels() []any {
 		&CourseSlot{},
 		&Grade{},
 		&CourseGoal{},
+		&TaskComment{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

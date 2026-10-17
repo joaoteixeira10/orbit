@@ -21,7 +21,7 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const { t } = useI18n()
 
-const KINDS: NotifyKind[] = ['reminder', 'assigned', 'workspace', 'activity', 'digest']
+const KINDS: NotifyKind[] = ['reminder', 'assigned', 'comment', 'workspace', 'activity', 'digest']
 const prefs = ref<NotifyPrefs | null>(null)
 const enabledChannels = ref<string[]>([])
 const devices = ref<PushDevice[]>([])

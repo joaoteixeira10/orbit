@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { baseCompile } from '@intlify/message-compiler'
 import { messages } from './messages'
 
 // Flatten nested message objects to dotted key paths for set comparison.
@@ -24,6 +25,19 @@ describe('i18n message catalogs', () => {
         Object.values(o).flatMap((v) => (typeof v === 'object' && v !== null ? flat(v as Record<string, unknown>) : [String(v)]))
       for (const v of flat(msgs as Record<string, unknown>)) {
         expect(v.trim(), `empty value in ${locale}`).not.toBe('')
+      }
+    }
+  })
+
+  // A bare "@" or "|" or "{" means something to vue-i18n: a message that
+  // doesn't compile shows its key (or nothing) on screen.
+  it('every message compiles', () => {
+    for (const [locale, msgs] of Object.entries(messages)) {
+      for (const k of keys(msgs as Record<string, unknown>)) {
+        const v = k.split('.').reduce<any>((o, p) => o?.[p], msgs)
+        const errors: string[] = []
+        baseCompile(String(v), { onError: (e) => errors.push(e.message) })
+        expect(errors, `${locale}: ${k} = ${v}`).toEqual([])
       }
     }
   })

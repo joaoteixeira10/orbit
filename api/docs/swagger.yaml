@@ -120,6 +120,37 @@ definitions:
     - new_password
     - old_password
     type: object
+  api.commentRequest:
+    properties:
+      body:
+        maxLength: 10000
+        type: string
+    required:
+    - body
+    type: object
+  api.commentResponse:
+    properties:
+      author_avatar:
+        type: string
+      author_id:
+        type: string
+      author_name:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      edited_at:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   api.courseRequest:
     properties:
       code:
@@ -2698,6 +2729,49 @@ paths:
       summary: Modules and workspace templates
       tags:
       - workspaces
+  /comments/{id}:
+    delete:
+      parameters:
+      - description: Comment id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a comment
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Comment id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The new text
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.commentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.commentResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit a comment
+      tags:
+      - tasks
   /courses/{id}:
     delete:
       parameters:
@@ -4567,6 +4641,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a task
+      tags:
+      - tasks
+  /tasks/{id}/comments:
+    get:
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.commentResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Comments on a task
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The comment (Markdown)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.commentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.commentResponse'
+      security:
+      - BearerAuth: []
+      summary: Comment on a task
       tags:
       - tasks
   /tasks/{id}/git:

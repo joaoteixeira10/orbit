@@ -19,6 +19,7 @@ func defaults(p models.UserPrefs) map[string]Delivery {
 	return map[string]Delivery{
 		Reminder:  {Push: true, Channels: p.NotifyEvents},
 		Assigned:  {Push: true},
+		Comment:   {Push: true},
 		Workspace: {Push: true},
 		Activity:  {},
 		Digest:    {Push: true},

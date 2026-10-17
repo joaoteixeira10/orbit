@@ -362,6 +362,14 @@ board column), **Assignees** (one or several members, in shared workspaces — e
 open, other files download) and **Sub-tasks**. **Delete** is at the bottom
 (it deletes the task's attachments too).
 
+**Comments** (at the bottom of the details, as in Planner): any member
+writes them, viewers too — in Markdown; type **@** to mention someone (pick
+them from the list). The task's assignees, whoever made it and those who
+commented before are told of a new comment; someone you @mention is told
+they were mentioned. **✎** changes your own comment (it says *edited*); **🗑**
+deletes it — owners can delete anyone's. The notification kind **Comments
+and mentions** is in Settings → Notifications.
+
 **Notes** are Markdown, as pages are: **bold**, lists, `- [ ]` checklists,
 links, code, quotes. They read rendered — tick a checklist's boxes right
 there — and a click on the text (or a double click) shows the source to edit;

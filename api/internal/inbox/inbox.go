@@ -30,12 +30,13 @@ const (
 	Reminder  = "reminder"  // a task is due, an event starts
 	Assigned  = "assigned"  // someone gave you a task
 	Workspace = "workspace" // added to a workspace, role changed, removed
+	Comment   = "comment"   // a comment on your task (or one you follow), an @-mention
 	Activity  = "activity"  // others' changes in a shared workspace
 	Digest    = "digest"    // the daily summary
 )
 
 // Kinds lists them in the order the settings show them.
-var Kinds = []string{Reminder, Assigned, Workspace, Activity, Digest}
+var Kinds = []string{Reminder, Assigned, Comment, Workspace, Activity, Digest}
 
 // groupWindow is how long a burst of the same activity keeps updating one
 // unread entry ("Ana added 4 tasks") instead of adding new ones.

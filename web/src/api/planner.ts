@@ -540,3 +540,22 @@ export const coursesApi = {
   updateGrade: (id: string, b: GradeInput) => api<Grade>(`/grades/${id}`, { method: 'PUT', body: j(b) }),
   removeGrade: (id: string) => api<void>(`/grades/${id}`, { method: 'DELETE' }),
 }
+
+// Comments on a task (Markdown; any member, viewers too).
+export interface TaskComment {
+  id: string
+  task_id: string
+  workspace_id: string
+  author_id: string
+  author_name: string
+  author_avatar: string
+  body: string
+  created_at: string
+  edited_at?: string
+}
+export const commentsApi = {
+  list: (task: string) => api<TaskComment[]>(`/tasks/${task}/comments`),
+  add: (task: string, body: string) => api<TaskComment>(`/tasks/${task}/comments`, { method: 'POST', body: j({ body }) }),
+  update: (id: string, body: string) => api<TaskComment>(`/comments/${id}`, { method: 'PUT', body: j({ body }) }),
+  remove: (id: string) => api<void>(`/comments/${id}`, { method: 'DELETE' }),
+}

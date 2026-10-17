@@ -256,6 +256,11 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/invites", h.createInvite)
 			authed.DELETE("/workspaces/:ws/invites/:id", h.revokeInvite)
 			authed.POST("/invites/:token/accept", authLimit, notImpersonating(), h.acceptInvite)
+			// Comments on tasks.
+			authed.GET("/tasks/:id/comments", h.listComments)
+			authed.POST("/tasks/:id/comments", h.createComment)
+			authed.PUT("/comments/:id", h.updateComment)
+			authed.DELETE("/comments/:id", h.deleteComment)
 			// School: courses (shared) and grades (each person's own).
 			authed.GET("/workspaces/:ws/courses", h.listCourses)
 			authed.POST("/workspaces/:ws/courses", h.createCourse)

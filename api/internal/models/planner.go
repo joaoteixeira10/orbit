@@ -408,6 +408,17 @@ type CourseGoal struct {
 	Target   float64 `gorm:"not null" json:"target"`
 }
 
+// TaskComment is a comment on a task, in Markdown, by a member of its
+// workspace (viewers too). EditedAt is set when its author changed it.
+type TaskComment struct {
+	Base
+	TaskID      string     `gorm:"size:36;not null;index" json:"task_id"`
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	AuthorID    string     `gorm:"size:36;not null;index" json:"author_id"`
+	Body        string     `gorm:"type:text;not null" json:"body"`
+	EditedAt    *time.Time `json:"edited_at,omitempty"`
+}
+
 // AssigneeList is the task's assignees (user ids), never nil.
 func (t Task) AssigneeList() []string {
 	out := []string{}

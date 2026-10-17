@@ -24,6 +24,8 @@ export const inboxEn = {
       added: { title: '{actor} added you to {ws}', body: 'As {role}' },
       role_changed: { title: 'Your role in {ws} changed', body: '{actor} made you {role}' },
       removed: { title: 'You were removed from {ws}', body: 'By {actor}' },
+      task_comment: { title: '{actor} commented on {title}', body: '{excerpt}', titleMany: '{n} comments on {title}', bodyMany: 'The latest, by {actor}: {excerpt}' },
+      mentioned: { title: '{actor} mentioned you', body: '{title}: {excerpt}' },
       task_added: { title: '{actor} added a task', body: '{title} · {ws}', titleMany: '{actor} added {n} tasks', bodyMany: 'The latest: {title} · {ws}' },
       task_done: { title: '{actor} completed a task', body: '{title} · {ws}', titleMany: '{actor} completed {n} tasks', bodyMany: 'The latest: {title} · {ws}' },
       page_added: { title: '{actor} added a page', body: '{title} · {ws}', titleMany: '{actor} added {n} pages', bodyMany: 'The latest: {title} · {ws}' },
@@ -60,6 +62,7 @@ export const inboxEn = {
     kinds: {
       reminder: { label: 'Reminders', desc: 'Tasks with a due time, events with a reminder' },
       assigned: { label: 'Assigned to you', desc: 'When someone gives you a task' },
+      comment: { label: 'Comments and mentions', desc: "On your tasks and those you commented on; when someone {'@'}mentions you" },
       workspace: { label: 'Workspaces', desc: 'Added to one, your role changed, removed' },
       activity: { label: 'Shared workspace activity', desc: 'Others adding and completing things (mute a workspace from its ⋯ menu)' },
       digest: { label: 'Daily summary', desc: 'Your tasks and events of the day' },
@@ -100,6 +103,8 @@ export const inboxPt: typeof inboxEn = {
       added: { title: '{actor} deu-lhe acesso a {ws}', body: 'Como {role}' },
       role_changed: { title: 'O seu papel em {ws} mudou', body: 'Agora: {role} (por {actor})' },
       removed: { title: 'Já não tem acesso a {ws}', body: 'Por {actor}' },
+      task_comment: { title: '{actor} comentou {title}', body: '{excerpt}', titleMany: '{n} comentários em {title}', bodyMany: 'O mais recente, de {actor}: {excerpt}' },
+      mentioned: { title: '{actor} mencionou-o', body: '{title}: {excerpt}' },
       task_added: { title: '{actor} adicionou uma tarefa', body: '{title} · {ws}', titleMany: '{actor} adicionou {n} tarefas', bodyMany: 'A mais recente: {title} · {ws}' },
       task_done: { title: '{actor} concluiu uma tarefa', body: '{title} · {ws}', titleMany: '{actor} concluiu {n} tarefas', bodyMany: 'A mais recente: {title} · {ws}' },
       page_added: { title: '{actor} adicionou uma página', body: '{title} · {ws}', titleMany: '{actor} adicionou {n} páginas', bodyMany: 'A mais recente: {title} · {ws}' },
@@ -136,6 +141,7 @@ export const inboxPt: typeof inboxEn = {
     kinds: {
       reminder: { label: 'Lembretes', desc: 'Tarefas com hora, eventos com lembrete' },
       assigned: { label: 'Atribuídas a si', desc: 'Quando alguém lhe dá uma tarefa' },
+      comment: { label: 'Comentários e menções', desc: "Nas suas tarefas e nas que comentou; quando alguém o {'@'}menciona" },
       workspace: { label: 'Espaços', desc: 'Acesso a um espaço, mudança de papel, remoção' },
       activity: { label: 'Atividade nos espaços partilhados', desc: 'Outros a adicionar e concluir coisas (silencie um espaço no seu menu ⋯)' },
       digest: { label: 'Resumo diário', desc: 'As suas tarefas e eventos do dia' },

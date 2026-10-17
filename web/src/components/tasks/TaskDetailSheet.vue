@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import GitBadge from './GitBadge.vue'
 import Attachments from '@/components/ui/Attachments.vue'
 import Avatar from '@/components/ui/Avatar.vue'
+import TaskComments from './TaskComments.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
@@ -392,6 +393,16 @@ async function remove() {
           </div>
         </div>
       </div>
+
+      <!-- Comments: any member, viewers too -->
+      <TaskComments
+        v-if="!task.parent_id"
+        :ws="ws"
+        :task-id="task.id"
+        :can-write="!!workspace && !workspace.archived_at && !auth.privileges.read_only"
+        :is-owner="workspace?.role === 'owner'"
+        :members="members"
+      />
     </template>
     <template v-if="task && editable" #footer>
       <button class="btn-ghost mr-auto !text-danger" @click="remove"><Trash2 class="h-4 w-4" />{{ t('common.delete') }}</button>

@@ -102,6 +102,11 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Comments on tasks**, as in Planner: Markdown, by any member (viewers
+  too), with @mentions (suggested as you type); the assignees, the creator
+  and earlier commenters are told (one inbox entry per task while unread),
+  the mentioned are told they were. A new notification kind, **Comments and
+  mentions**. Authors edit theirs; owners can delete any.
 - **Several assignees on a task** ("For" is now **Assignees**): each gets
   the reminders and the "assigned you" notification; filters, grouping and
   charts count each one; git sync carries all of them. The API takes

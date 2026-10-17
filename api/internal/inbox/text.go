@@ -31,6 +31,8 @@ var phrases = map[string]map[string]phrase{
 		"note_added":    {title: "{actor} added a note", body: "{title} · {ws}", titleMany: "{actor} added {n} notes", bodyMany: "The latest: {title} · {ws}"},
 		"event_added":   {title: "{actor} added an event", body: "{title} · {ws}", titleMany: "{actor} added {n} events", bodyMany: "The latest: {title} · {ws}"},
 		"member_joined": {title: "{actor} joined {ws}", body: "As {role}"},
+		"task_comment":  {title: "{actor} commented on {title}", body: "{excerpt}", titleMany: "{n} comments on {title}", bodyMany: "The latest, by {actor}: {excerpt}"},
+		"mentioned":     {title: "{actor} mentioned you", body: "{title}: {excerpt}"},
 		"daily":         {title: "Your day: {summary}", body: "{lines}"},
 	},
 	"pt": {
@@ -48,6 +50,8 @@ var phrases = map[string]map[string]phrase{
 		"note_added":    {title: "{actor} adicionou uma nota", body: "{title} · {ws}", titleMany: "{actor} adicionou {n} notas", bodyMany: "A mais recente: {title} · {ws}"},
 		"event_added":   {title: "{actor} adicionou um evento", body: "{title} · {ws}", titleMany: "{actor} adicionou {n} eventos", bodyMany: "O mais recente: {title} · {ws}"},
 		"member_joined": {title: "{actor} entrou em {ws}", body: "Como {role}"},
+		"task_comment":  {title: "{actor} comentou {title}", body: "{excerpt}", titleMany: "{n} comentários em {title}", bodyMany: "O mais recente, de {actor}: {excerpt}"},
+		"mentioned":     {title: "{actor} mencionou-o", body: "{title}: {excerpt}"},
 		"daily":         {title: "O seu dia: {summary}", body: "{lines}"},
 	},
 }

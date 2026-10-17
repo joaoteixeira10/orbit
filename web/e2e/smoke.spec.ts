@@ -361,6 +361,18 @@ test('notifications: a task someone gives you rings the bell and opens', async (
   await expect(who.locator('.pill')).toHaveCount(1)
   await who.getByLabel('Assign someone').selectOption({ label: 'Ana' })
   await expect(who.locator('.pill')).toHaveCount(2)
+  // A comment, mentioning Ana through the suggestions.
+  const box = page.getByTestId('comment-box')
+  await box.fill('Thanks! ')
+  await box.press('End')
+  await box.pressSequentially('@an')
+  await page.getByRole('option', { name: /Ana/ }).click()
+  await box.pressSequentially('will water them **tomorrow**')
+  await page.getByRole('button', { name: 'Comment', exact: true }).click()
+  const comments = page.getByTestId('comments')
+  await expect(comments.locator('strong')).toHaveText('tomorrow')
+  await expect(comments).toContainText('Thanks! @ana will water them')
+  await expect(box).toHaveValue('')
   await page.keyboard.press('Escape')
   await expect(bell).not.toContainText('1')
 

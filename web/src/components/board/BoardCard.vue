@@ -6,6 +6,7 @@ import Avatar from '@/components/ui/Avatar.vue'
 import GitBadge from '@/components/tasks/GitBadge.vue'
 import type { Member, Task } from '@/api/planner'
 import { dueLabel, isOverdue, repeatLabel } from '@/lib/dates'
+import { firstLine } from '@/lib/markdown'
 
 // One card on the board: a raised tile with the title (and its priority),
 // the first line of the notes, then a line of details — due (red when
@@ -23,7 +24,7 @@ const { t } = useI18n()
 const due = computed(() => dueLabel(props.task.due, props.task.due_time))
 const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, props.done || props.task.done))
 const prio = computed(() => '!'.repeat(props.task.priority))
-const note = computed(() => props.task.notes.trim().split('\n')[0]?.trim() ?? '')
+const note = computed(() => firstLine(props.task.notes))
 const who = computed(() => (props.assignee ? props.assignee.display_name || props.assignee.username : ''))
 const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props.task.repeat || props.task.tags.length > 0 || props.subtasks.total > 0 || !!who.value)
 </script>

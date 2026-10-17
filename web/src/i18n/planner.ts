@@ -114,6 +114,7 @@ export const plEn = {
   tasks: {
     details: 'Details',
     notes: 'Notes',
+    notesMd: 'Notes (Markdown: **bold**, - [ ] lists, links…)',
     date: 'Date',
     time: 'Time',
     repeat: 'Repeat',
@@ -323,6 +324,7 @@ export const plPt: typeof plEn = {
   tasks: {
     details: 'Detalhes',
     notes: 'Notas',
+    notesMd: 'Notas (Markdown: **negrito**, - [ ] listas, ligações…)',
     date: 'Data',
     time: 'Hora',
     repeat: 'Repetir',

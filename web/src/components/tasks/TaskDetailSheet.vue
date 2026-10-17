@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
@@ -11,6 +11,8 @@ import { gitApi, type TaskInput } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
 import GitBadge from './GitBadge.vue'
 import Attachments from '@/components/ui/Attachments.vue'
+import MarkdownView from '@/components/editor/MarkdownView.vue'
+import { toggleTask } from '@/lib/markdown'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
 // Everything about one task, Reminders' "Details": notes, start, date and
@@ -34,6 +36,10 @@ const auth = useAuthStore()
 
 const title = ref('')
 const notes = ref('')
+// Notes are Markdown (as a linked git issue's body is): read rendered, with
+// boxes that tick; a click (not on a link or box) or the pencil edits them.
+const editingNotes = ref(false)
+const notesEl = ref<HTMLTextAreaElement | null>(null)
 const tagDraft = ref('')
 const subDraft = ref('')
 watch(
@@ -44,6 +50,7 @@ watch(
     if ((workspace.value?.member_count ?? 1) > 1 && !wss.members[props.ws]) void wss.loadMembers(props.ws).catch(() => {})
     title.value = task.value?.title ?? ''
     notes.value = task.value?.notes ?? ''
+    editingNotes.value = false
   },
   { immediate: true },
 )
@@ -70,7 +77,21 @@ function saveTitle() {
   else title.value = task.value?.title ?? ''
 }
 function saveNotes() {
+  editingNotes.value = false
   if (notes.value !== task.value?.notes) void save({ notes: notes.value })
+}
+async function editNotes() {
+  if (!editable.value) return
+  editingNotes.value = true
+  await nextTick()
+  notesEl.value?.focus()
+}
+function tickInNotes(i: number) {
+  notes.value = toggleTask(notes.value, i)
+  void save({ notes: notes.value })
+}
+function notesClick(e: MouseEvent) {
+  if (!(e.target as HTMLElement).closest('a, input, pre, button, .md-remote-img, img')) void editNotes()
 }
 
 // Date and time.
@@ -195,14 +216,20 @@ async function remove() {
           @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
         />
       </div>
+      <div v-if="notes.trim() && !editingNotes" class="notes-box mt-2" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
+        <MarkdownView class="notes-md" :content="notes" :editable="editable" @toggle="tickInNotes" @edit="editNotes" />
+      </div>
       <textarea
+        v-else-if="editable || notes.trim()"
         id="task-notes"
+        ref="notesEl"
         v-model="notes"
         rows="3"
-        class="mt-2 w-full resize-none rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
-        :placeholder="t('tasks.notes')"
+        class="notes-area mt-2 w-full resize-none rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
+        :placeholder="t('tasks.notesMd')"
         :readonly="!editable"
         @blur="saveNotes"
+        @keydown.esc.stop="($event.target as HTMLTextAreaElement).blur()"
       />
 
       <!-- When -->
@@ -355,5 +382,28 @@ async function remove() {
 <style scoped>
 .title-area {
   field-sizing: content;
+}
+.notes-area {
+  field-sizing: content;
+  min-height: 4.5em;
+  max-height: 50vh;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.notes-box {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fill-2);
+}
+.notes-box.editable {
+  cursor: text;
+}
+.notes-box .notes-md {
+  font-size: 14px;
+  line-height: 1.55;
+  padding-bottom: 0;
 }
 </style>

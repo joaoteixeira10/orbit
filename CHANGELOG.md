@@ -102,6 +102,9 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Task notes in Markdown** — rendered in the task's details, with
+  checklists that tick; a click edits the source. Lists and boards show the
+  first line as plain text.
 - **Courses** (module) — subjects with teacher, room, colour and their
   weekly classes, shown as the week's timetable. Every class is a repeating
   event on the calendar (and in Today and calendar feeds) for the term;

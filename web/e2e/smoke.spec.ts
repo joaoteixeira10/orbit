@@ -225,6 +225,29 @@ test('git: connect an account, make a list from a repository, a new task opens a
   await expect(page.locator('.task-row', { hasText: title }).locator('.git-badge')).toHaveText(/#\d+/)
 })
 
+test('task notes: written in Markdown, read rendered, a box ticks, the row shows plain text', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.locator('.ws-row').first().click()
+  await page.waitForURL(/\/w\/[^/]+$/)
+  await page.goto(new URL(page.url()).pathname + '/tasks/all')
+  const row = page.locator('.task-row', { hasText: 'Essay' })
+  await row.hover()
+  await row.getByTitle('Details').click()
+  await page.locator('#task-notes').fill('**Bring** the [rubric](https://example.org)\n\n- [ ] outline\n- [ ] draft')
+  await page.locator('#task-title').click() // leave the notes: they save and render
+  const view = page.getByTestId('task-notes-view')
+  await expect(view.locator('strong')).toHaveText('Bring')
+  await expect(view.getByRole('link', { name: 'rubric' })).toHaveAttribute('href', 'https://example.org')
+  await view.locator('input[type=checkbox]').first().check()
+  await expect(view.locator('input[type=checkbox]').first()).toBeChecked()
+  // Clicking the text edits the source, with the tick in it.
+  await view.locator('p').first().click()
+  await expect(page.locator('#task-notes')).toHaveValue(/- \[x\] outline/)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(row).toContainText('Bring the rubric')
+})
+
 test('attachments: an image on a task shows as a thumbnail, and goes when removed', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.locator('.ws-row').first().click()

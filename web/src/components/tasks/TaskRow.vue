@@ -6,6 +6,7 @@ import Avatar from '@/components/ui/Avatar.vue'
 import GitBadge from './GitBadge.vue'
 import type { Task, Member } from '@/api/planner'
 import { dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
+import { firstLine } from '@/lib/markdown'
 
 // One task, Reminders-style: a round check in its list's colour, the title
 // (click to edit in place), and a line of details — when it's due (red when
@@ -90,7 +91,7 @@ function commit() {
         <span v-if="workspaceName">{{ workspaceName }}</span>
         <span v-if="subtasks && subtasks.total" class="inline-flex items-center gap-0.5"><ListTree class="h-3 w-3" />{{ subtasks.done }}/{{ subtasks.total }}</span>
         <span v-for="tag in task.tags" :key="tag" class="text-accent-text">#{{ tag }}</span>
-        <span v-if="task.notes && !compact" class="truncate">{{ task.notes.split('\n')[0] }}</span>
+        <span v-if="task.notes && !compact" class="truncate">{{ firstLine(task.notes) }}</span>
       </div>
     </div>
     <Flag v-if="task.priority === 3 && !task.done" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" />

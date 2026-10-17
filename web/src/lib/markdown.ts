@@ -202,3 +202,28 @@ export function textToMarkdown(text: string): string {
     .map((l) => l.replace(/([\\`*_[\]~<#>|])/g, '\\$1').replace(/^(\s*)([-+]|\d+[.)])(\s)/, '$1\\$2$3'))
     .join('  \n')
 }
+
+// firstLine is a note's first line as plain text, for a one-line preview: no
+// heading, list or quote marks, no emphasis, links as their text, images
+// dropped, a fenced block skipped.
+export function firstLine(md: string): string {
+  let fence = false
+  for (const raw of md.split('\n')) {
+    const l = raw.trim()
+    if (/^(`{3,}|~{3,})/.test(l)) {
+      fence = !fence
+      continue
+    }
+    if (fence || !l || /^([-*_]\s*){3,}$/.test(l) || /^\|?\s*:?-{3,}/.test(l)) continue
+    const s = l
+      .replace(/^(#{1,6}\s+|>\s*|[-*+]\s+(\[[ xX]\]\s+)?|\d+[.)]\s+(\[[ xX]\]\s+)?)+/, '')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/(\*\*|__|~~|`)(.+?)\1/g, '$2')
+      .replace(/(^|\W)[*_](\S(?:.*?\S)?)[*_](?=\W|$)/g, '$1$2')
+      .replace(/\\([\\`*_[\]~<#>|+.!-])/g, '$1')
+      .trim()
+    if (s) return s
+  }
+  return ''
+}

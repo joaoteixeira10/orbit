@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { Editor } from '@tiptap/core'
 import { pageExtensions } from '@/components/editor/extensions'
-import { normalizeMarkdown, renderMarkdown, toggleTask, fromFile, pageFile, textToMarkdown } from './markdown'
+import { normalizeMarkdown, renderMarkdown, toggleTask, fromFile, pageFile, textToMarkdown, firstLine } from './markdown'
 
 describe('reading a page', () => {
   it('renders GitHub Markdown, alerts and footnotes', () => {
@@ -58,5 +58,17 @@ describe('rendering again and again', () => {
       expect(renderMarkdown('a[^1]\n\n> [!TIP]\n> b[^2]\n\n[^1]: one\n[^2]: two')).toContain('footnote-ref')
       expect(renderMarkdown('> [!NOTE]\n> plain')).toContain('md-alert-note')
     }
+  })
+})
+
+describe('a one-line preview', () => {
+  it('is the first line, as plain text', () => {
+    expect(firstLine('')).toBe('')
+    expect(firstLine('\n\n## Call **Ana** about [the report](https://x.org)\nmore')).toBe('Call Ana about the report')
+    expect(firstLine('- [ ] buy `milk`\n- [x] eggs')).toBe('buy milk')
+    expect(firstLine('```js\nconst a = 1\n```\n> _see_ ~~this~~ ![img](a.png)')).toBe('see this')
+    expect(firstLine('---\n1. first step')).toBe('first step')
+    expect(firstLine('snake_case_name and 2 * 3 * 4')).toBe('snake_case_name and 2 * 3 * 4')
+    expect(firstLine(textToMarkdown('# not a heading'))).toBe('# not a heading')
   })
 })

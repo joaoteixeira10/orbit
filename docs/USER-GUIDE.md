@@ -361,6 +361,13 @@ board column), **For** (a member, in shared workspaces), **tags**,
 open, other files download) and **Sub-tasks**. **Delete** is at the bottom
 (it deletes the task's attachments too).
 
+**Notes** are Markdown, as pages are: **bold**, lists, `- [ ]` checklists,
+links, code, quotes. They read rendered — tick a checklist's boxes right
+there — and a click on the text (or a double click) shows the source to edit;
+click outside, or **Esc**, to save. The task list and the board show the
+notes' first line as plain text. A task linked to a git issue keeps the
+issue's body here, so it reads the same as on the server.
+
 **Repeating tasks**: completing one moves it to its next date (counted from
 its due date, like Apple Reminders) instead of closing it.
 

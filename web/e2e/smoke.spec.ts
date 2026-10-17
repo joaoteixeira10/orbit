@@ -448,6 +448,35 @@ test('Forest Green for the instance; a person picks their own theme; sign-in sho
   await expect(page.getByText('Branding saved')).toBeVisible()
 })
 
+test('calendar: the small month, calendars to hide, and a task dragged onto a day', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = (await (await request.get('/api/v1/workspaces', { headers: H })).json())[0]
+  const r = await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Plan me' } })
+  expect(r.ok()).toBeTruthy()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1500, height: 900 })
+  await page.goto('/calendar')
+  // The left pane: a small month and the workspaces, ticked.
+  const mine = page.getByRole('checkbox', { name: ws.name, exact: true })
+  await expect(mine).toHaveAttribute('aria-checked', 'true')
+  await mine.click()
+  await expect(mine).toHaveAttribute('aria-checked', 'false')
+  await mine.click()
+
+  // The right pane: Tasks; drag "Plan me" onto the 15th.
+  await page.getByTestId('toggle-pane').click()
+  await page.getByRole('tab', { name: 'Tasks' }).click()
+  const task = page.getByTestId('pane-tasks').locator('.task', { hasText: 'Plan me' })
+  await expect(task).toBeVisible()
+  const now = new Date()
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`
+  await task.dragTo(page.locator(`.mg-cell[data-day="${day}"]`))
+  await expect(page.getByText(/^Planned for/)).toBeVisible()
+  await expect(page.locator(`.mg-cell[data-day="${day}"]`)).toContainText('Plan me')
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

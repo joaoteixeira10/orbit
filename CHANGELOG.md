@@ -102,6 +102,11 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Calendar side panes, as in Outlook**: on the left a small month to move
+  around and the calendars, each ticked to show or hide it (workspaces; in a
+  workspace its events, tasks and each subscription); on the right the
+  agenda of the next two weeks and the open tasks, which drag onto a day or
+  an hour to plan them.
 - **Comments on tasks**, as in Planner: Markdown, by any member (viewers
   too), with @mentions (suggested as you type); the assignees, the creator
   and earlier commenters are told (one inbox entry per task while unread),

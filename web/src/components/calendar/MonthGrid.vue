@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { Check, Repeat } from 'lucide-vue-next'
 import { monthGrid, weekdayNames, dateStr, sameDay, parseDate, addDays, fmtDate, fmtTime, fmtClock } from '@/lib/dates'
 import { layoutBars, isBar, onDay, sortEntries, tasksByDay, daysBetween, eventColor, type Entry, type TaskItem } from './model'
+import { startTaskDrag, isTaskDrag, readTaskDrag, type DraggedTask } from '@/lib/taskDrag'
+
 
 // The month as Calendar shows it: six weeks, today in a red circle, bars for
 // all-day and multi-day events across the days they cover, timed events as
@@ -26,6 +28,7 @@ const emit = defineEmits<{
   toggleTask: [item: TaskItem]
   create: [day: string]
   move: [entry: Entry, days: number]
+  dropTask: [task: DraggedTask, day: string]
 }>()
 const { t } = useI18n()
 
@@ -156,13 +159,21 @@ function onDragStart(ev: DragEvent, entry: Entry, from: string, span: number) {
   ev.dataTransfer.setData('text/plain', entry.key)
 }
 function onDragOver(ev: DragEvent, key: string) {
-  if (!drag.value) return
+  if (!drag.value && !isTaskDrag(ev)) return
   ev.preventDefault()
   if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move'
   dropDay.value = key
 }
 function onDrop(ev: DragEvent, key: string) {
-  if (!drag.value) return
+  if (!drag.value) {
+    const task = isTaskDrag(ev) ? readTaskDrag(ev) : null
+    if (task) {
+      ev.preventDefault()
+      emit('dropTask', task, key)
+    }
+    endDrag()
+    return
+  }
   ev.preventDefault()
   const n = daysBetween(drag.value.grab, key)
   if (n) emit('move', drag.value.entry, n)
@@ -218,6 +229,7 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
           :key="d.key"
           class="mg-cell"
           role="gridcell"
+          :data-day="d.key"
           :class="{ out: d.out, weekend: d.weekend, drop: dropDay === d.key }"
           @click="emit('select', d.key)"
           @dblclick="canCreate && emit('create', d.key)"
@@ -270,7 +282,16 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
                 <span class="min-w-0 flex-1 truncate">{{ s.entry.occ.title || t('cal.untitled') }}</span>
                 <span class="mg-time">{{ timeOf(s.entry) }}</span>
               </div>
-              <div v-else class="mg-task" :class="{ done: s.item.task.done }" @click.stop @dblclick.stop>
+              <div
+                v-else
+                class="mg-task"
+                :class="{ done: s.item.task.done }"
+                :draggable="s.item.editable && !s.item.task.done"
+                @click.stop
+                @dblclick.stop
+                @dragstart="startTaskDrag($event, s.item.task)"
+                @dragend="endDrag"
+              >
                 <button
                   class="check"
                   :class="{ on: s.item.task.done }"

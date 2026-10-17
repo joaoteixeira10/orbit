@@ -2,17 +2,20 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, PanelLeft, PanelRight } from 'lucide-vue-next'
 import MonthGrid from '@/components/calendar/MonthGrid.vue'
 import TimeGrid from '@/components/calendar/TimeGrid.vue'
 import DayAgenda from '@/components/calendar/DayAgenda.vue'
 import EventSheet from '@/components/calendar/EventSheet.vue'
 import EventDetail from '@/components/calendar/EventDetail.vue'
 import SubscriptionsSheet from '@/components/calendar/SubscriptionsSheet.vue'
+import CalendarSidebar, { type CalSource } from '@/components/calendar/CalendarSidebar.vue'
+import CalendarSidePane from '@/components/calendar/CalendarSidePane.vue'
+import type { DraggedTask } from '@/lib/taskDrag'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import { toEntry, type CalView, type Entry, type TaskItem } from '@/components/calendar/model'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
-import { calendarApi, tasksApi, type CalendarData, type EventInput, type Occurrence, type Workspace } from '@/api/planner'
+import { calendarApi, tasksApi, type CalendarData, type EventInput, type Occurrence, type Subscription, type Task, type Workspace } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useTasksStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
@@ -59,10 +62,99 @@ function defaultWs(): string {
 // The merged calendar's key: which colour is which workspace.
 const legend = computed(() => (wsId.value ? [] : wss.active.filter((w) => w.modules.includes('calendar'))))
 
-// ---- Phone or not ----
+// ---- Phone or not; wide enough for the side panes beside the grid ----
 const phoneMq = window.matchMedia('(max-width: 639px)')
 const phone = ref(phoneMq.matches)
 const onPhone = (e: MediaQueryListEvent) => (phone.value = e.matches)
+const wideMq = window.matchMedia('(min-width: 1180px)')
+const wide = ref(wideMq.matches)
+const onWide = (e: MediaQueryListEvent) => (wide.value = e.matches)
+
+// ---- The side panes, as in Outlook (each remembered; on narrower windows
+// they open over the grid) ----
+function readFlag(key: string, def: boolean) {
+  try {
+    const v = localStorage.getItem(key)
+    return v == null ? def : v === '1'
+  } catch {
+    return def
+  }
+}
+function writeFlag(key: string, v: boolean) {
+  try {
+    localStorage.setItem(key, v ? '1' : '0')
+  } catch {
+    /* private mode */
+  }
+}
+const leftOpen = ref(wide.value && readFlag('orbit_cal_left', true))
+const rightOpen = ref(wide.value && readFlag('orbit_cal_right', false))
+function toggleLeft() {
+  leftOpen.value = !leftOpen.value
+  if (wide.value) writeFlag('orbit_cal_left', leftOpen.value)
+}
+function toggleRight() {
+  rightOpen.value = !rightOpen.value
+  if (wide.value) writeFlag('orbit_cal_right', rightOpen.value)
+}
+watch(wide, (w) => {
+  leftOpen.value = w && readFlag('orbit_cal_left', true)
+  rightOpen.value = w && readFlag('orbit_cal_right', false)
+})
+
+// ---- Which calendars show: per workspace on the merged calendar; in one
+// workspace its own events, its tasks and each subscribed calendar ----
+const scope = computed(() => wsId.value || 'all')
+function readHidden(): Set<string> {
+  try {
+    const all = JSON.parse(localStorage.getItem('orbit_cal_hidden') || '{}')
+    return new Set(Array.isArray(all[scope.value]) ? all[scope.value] : [])
+  } catch {
+    return new Set()
+  }
+}
+const hidden = ref<Set<string>>(readHidden())
+watch(scope, () => (hidden.value = readHidden()))
+function toggleSource(id: string) {
+  const next = new Set(hidden.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  hidden.value = next
+  try {
+    const all = JSON.parse(localStorage.getItem('orbit_cal_hidden') || '{}')
+    all[scope.value] = [...next]
+    localStorage.setItem('orbit_cal_hidden', JSON.stringify(all))
+  } catch {
+    /* private mode */
+  }
+}
+const subs = ref<Subscription[]>([])
+async function loadSubs() {
+  subs.value = []
+  if (!wsId.value || auth.features.calendar_subscriptions === false) return
+  try {
+    subs.value = await calendarApi.subscriptions(wsId.value)
+  } catch {
+    /* none to show */
+  }
+}
+watch(wsId, loadSubs, { immediate: true })
+const sources = computed<CalSource[]>(() => {
+  if (!wsId.value) return wss.active.filter((w) => w.modules.includes('calendar')).map((w) => ({ id: w.id, name: w.name, color: w.color }))
+  const w = workspace.value
+  return [
+    { id: 'events', name: w?.name ?? t('cal.events'), color: w?.color ?? '' },
+    { id: 'tasks', name: t('cal.pane.tasks'), color: w?.color ?? '' },
+    ...subs.value.map((s) => ({ id: s.id, name: s.name, color: s.color || w?.color || '' })),
+  ]
+})
+function visible(o: { occ?: Occurrence; task?: Task }): boolean {
+  if (o.occ) return !hidden.value.has(wsId.value ? (o.occ.kind === 'external' ? o.occ.subscription_id ?? '' : 'events') : o.occ.workspace_id)
+  if (o.task) return !hidden.value.has(wsId.value ? 'tasks' : o.task.workspace_id)
+  return true
+}
+const paneWs = computed(() => (wsId.value ? [wsId.value] : wss.active.filter((w) => w.modules.includes('tasks')).map((w) => w.id)))
+const version = ref(0)
 
 // ---- The view, remembered (separately on phones, where Month is the list) ----
 const viewKey = computed(() => (phone.value ? 'orbit_cal_view_phone' : 'orbit_cal_view'))
@@ -156,7 +248,10 @@ async function load() {
   }
   try {
     const d = wsId.value ? await calendarApi.workspace(wsId.value, p) : await calendarApi.mine(p)
-    if (mine === seq) data.value = d
+    if (mine === seq) {
+      data.value = d
+      version.value++
+    }
   } catch (e: any) {
     if (mine === seq) toast.error(e.message)
   }
@@ -164,9 +259,9 @@ async function load() {
 watch(wsId, () => (data.value = { events: [], tasks: [] }))
 watch(() => `${wsId.value}|${dateStr(range.value.start)}|${dateStr(range.value.end)}`, load, { immediate: true })
 
-const entries = computed(() => data.value.events.map((o) => toEntry(o, canEditWs(wss.byId(o.workspace_id)))))
+const entries = computed(() => data.value.events.filter((occ) => visible({ occ })).map((o) => toEntry(o, canEditWs(wss.byId(o.workspace_id)))))
 const taskItems = computed<TaskItem[]>(() =>
-  data.value.tasks.map((task) => {
+  data.value.tasks.filter((task) => visible({ task })).map((task) => {
     const w = wss.byId(task.workspace_id)
     return { task, color: w?.color ?? 'var(--ws)', editable: canEditWs(w) }
   }),
@@ -294,10 +389,25 @@ async function toggleTask(x: TaskItem) {
   void load()
 }
 
+// A task dragged onto a day (or an hour): that date (and time).
+async function dropTask(d: DraggedTask, day: string, time: string | null = null) {
+  if (!canEditWs(wss.byId(d.ws))) return
+  const body = { due: day, due_time: time ?? '' }
+  try {
+    if (tasksStore.tasks[d.ws]) await tasksStore.update(d.ws, d.id, body)
+    else await tasksApi.update(d.id, body)
+    toast.success(t('cal.pane.scheduled', { when: time ? `${relDay(day)}, ${time}` : relDay(day) }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+  void load()
+}
+
 // ---- Subscribed calendars ----
 const subsOpen = ref(false)
 function onSubsChanged() {
   subsLoaded.clear()
+  void loadSubs()
   void load()
 }
 
@@ -319,13 +429,19 @@ function onKey(e: KeyboardEvent) {
 
 const fill = ref<HTMLElement | null>(null)
 useFillHeight(fill)
+const leftEl = ref<HTMLElement | null>(null)
+const rightEl = ref<HTMLElement | null>(null)
+useFillHeight(leftEl)
+useFillHeight(rightEl)
 
 onMounted(() => {
   phoneMq.addEventListener('change', onPhone)
+  wideMq.addEventListener('change', onWide)
   window.addEventListener('keydown', onKey)
 })
 onUnmounted(() => {
   phoneMq.removeEventListener('change', onPhone)
+  wideMq.removeEventListener('change', onWide)
   window.removeEventListener('keydown', onKey)
   offLive()
   if (liveTimer) clearTimeout(liveTimer)
@@ -336,9 +452,30 @@ const views: CalView[] = ['day', 'week', 'month']
 
 <template>
   <div class="cal-page px-4 pt-6 sm:px-8 sm:pt-8" :class="{ 'pb-6': agenda }">
+   <div class="cal-shell">
+    <!-- Left: the small month and the calendars -->
+    <div v-if="leftOpen && !phone" ref="leftEl" class="side left" :class="{ floating: !wide }">
+      <CalendarSidebar
+        :cursor="cursor"
+        :view="view"
+        :range-start="range.start"
+        :range-end="range.end"
+        :sources="sources"
+        :hidden="hidden"
+        :heading="wsId ? t('cal.calendars') : t('cal.myCalendars')"
+        :can-add="showSubs"
+        @go="(d) => ((cursor = d), !wide && (leftOpen = false))"
+        @toggle="toggleSource"
+        @add="subsOpen = true"
+      />
+    </div>
+    <div v-if="!wide && (leftOpen || rightOpen) && !phone" class="side-scrim" @click="(leftOpen = false), (rightOpen = false)" />
+
+   <div class="cal-main min-w-0 flex-1">
     <header class="flex flex-wrap items-center gap-x-4 gap-y-3">
       <div class="min-w-0 flex-1">
         <div class="flex min-w-0 items-center gap-2">
+          <button v-if="!phone" class="icon-btn shrink-0" :class="{ on: leftOpen }" :title="t('cal.toggleLeft')" :aria-label="t('cal.toggleLeft')" :aria-pressed="leftOpen" @click="toggleLeft"><PanelLeft class="h-[18px] w-[18px]" /></button>
           <h1 class="large-title cal-title truncate">{{ title }}</h1>
           <span v-if="readOnly" class="pill shrink-0">{{ t('cal.viewOnly') }}</span>
         </div>
@@ -370,10 +507,11 @@ const views: CalView[] = ['day', 'week', 'month']
           <button @click="goToday">{{ t('dates.today') }}</button>
           <button :aria-label="t('cal.next')" :title="t('cal.next')" @click="shift(1)"><ChevronRight class="h-4 w-4" :stroke-width="2.4" /></button>
         </div>
+        <button v-if="!phone" class="icon-btn shrink-0" :class="{ on: rightOpen }" :title="t('cal.toggleRight')" :aria-label="t('cal.toggleRight')" :aria-pressed="rightOpen" data-testid="toggle-pane" @click="toggleRight"><PanelRight class="h-[18px] w-[18px]" /></button>
       </div>
     </header>
 
-    <div v-if="legend.length > 1" class="mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-[12.5px] text-text-2">
+    <div v-if="legend.length > 1 && !leftOpen" class="mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-[12.5px] text-text-2">
       <span v-for="w in legend" :key="w.id" class="inline-flex min-w-0 items-center gap-1.5">
         <i class="h-2 w-2 shrink-0 rounded-full" :style="{ background: w.color }" />
         <span class="truncate">{{ w.name }}</span>
@@ -411,6 +549,7 @@ const views: CalView[] = ['day', 'week', 'month']
         @toggle-task="toggleTask"
         @create="createOn"
         @move="moveEntry"
+        @drop-task="dropTask"
       />
       <TimeGrid
         v-else
@@ -424,8 +563,26 @@ const views: CalView[] = ['day', 'week', 'month']
         @toggle-task="toggleTask"
         @create="create"
         @open-day="openDay"
+        @drop-task="dropTask"
       />
     </div>
+   </div>
+
+    <!-- Right: what's coming, and the tasks to drag onto the calendar -->
+    <div v-if="rightOpen && !phone" ref="rightEl" class="side right" :class="{ floating: !wide }">
+      <CalendarSidePane
+        :ws-ids="paneWs"
+        :ws="wsId"
+        :editable="(w) => canEditWs(wss.byId(w))"
+        :color="(w) => wss.byId(w)?.color ?? 'var(--ws)'"
+        :visible="visible"
+        :version="version"
+        @open="openEntry"
+        @open-task="openTask"
+        @toggle-task="toggleTask"
+      />
+    </div>
+   </div>
 
     <EventSheet :open="sheetOpen" :occurrence="sheetOcc" :draft="sheetDraft" :ws="sheetWs" :choices="choices" @close="sheetOpen = false" @saved="load" />
     <EventDetail
@@ -442,6 +599,48 @@ const views: CalView[] = ['day', 'week', 'month']
 </template>
 
 <style scoped>
+.cal-shell {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.side {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex: none;
+  min-height: 0;
+}
+.side.right :deep(.pane) {
+  height: 100%;
+}
+/* Narrower windows: the panes open over the grid. */
+.side.floating {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 40;
+  height: 100dvh !important;
+  padding: 20px 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+.side.floating.left {
+  left: 0;
+}
+.side.floating.right {
+  right: 0;
+}
+.side-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(0, 0, 0, 0.18);
+}
+.icon-btn.on {
+  color: var(--accent-text);
+  background: var(--fill-2);
+}
 .cal-page {
   --cal-bottom: 20px;
   max-width: 100%;

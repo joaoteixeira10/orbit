@@ -507,6 +507,22 @@ workspace together, in each workspace's colour (the key is under the title).
 - **Drag** an event to another day in Month to move it (not repeating ones).
 - **Tasks** appear on their due date with a checkbox; tick them right there.
 
+**The side panes**, as in Outlook (on a wide window; narrower, they open over
+the calendar):
+
+- **Left** (the button left of the month's name): a **small month** — click
+  a day to go there in the view you're in; the days on screen are shaded —
+  and the **calendars**, each with a tick to show or hide it: every
+  workspace on the merged calendar; in a workspace, its events, its tasks and
+  each subscribed calendar (**+** subscribes to another).
+- **Right** (the button at the top right): **Calendar** lists what's coming,
+  day by day for two weeks (Today and Tomorrow always); **Tasks** lists the
+  open tasks — late, today, upcoming, without a date. **Drag a task** onto a
+  day (Month) or onto an hour (Week, Day) to give it that date and time; a
+  task already on the calendar drags to another day too.
+
+Each pane remembers whether it's open, and which calendars you hid.
+
 **Subscribe to another calendar** (editors; **Calendars** in a workspace's
 calendar): **Add calendar**, paste its **address** (`https://…` or
 `webcal://…`), name it, pick a colour, **Subscribe**. Orbit fetches it at once

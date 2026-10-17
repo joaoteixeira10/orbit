@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, Repeat, MapPin } from 'lucide-vue-next'
 import { dateStr, sameDay, fmtDate, fmtTime, fmtClock } from '@/lib/dates'
 import { layoutBars, layoutDay, tasksByDay, eventColor, type Entry, type TaskItem } from './model'
+import { startTaskDrag, isTaskDrag, readTaskDrag, type DraggedTask } from '@/lib/taskDrag'
 
 // Week and Day: hours down the side, all-day events and due tasks in a
 // strip on top, timed events placed by start and end (side by side when they
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   toggleTask: [item: TaskItem]
   create: [range: { start: Date; end: Date; allDay: boolean }]
   openDay: [day: string]
+  dropTask: [task: DraggedTask, day: string, time: string | null]
 }>()
 const { t } = useI18n()
 
@@ -68,6 +70,33 @@ const span = (col: number, n: number) => ({
   left: `calc(${col} * 100% / ${cols.value} + 2px)`,
   width: `calc(${n} * 100% / ${cols.value} - 4px)`,
 })
+
+// ---- Tasks dropped here: on the strip a date, on an hour a date and time ----
+const dropAt = ref<{ col: number; min: number | null } | null>(null)
+function colAt(ev: DragEvent, el: HTMLElement) {
+  const r = el.getBoundingClientRect()
+  return Math.min(cols.value - 1, Math.max(0, Math.floor(((ev.clientX - r.left) / r.width) * cols.value)))
+}
+function overStrip(ev: DragEvent) {
+  if (!isTaskDrag(ev)) return
+  ev.preventDefault()
+  dropAt.value = { col: colAt(ev, ev.currentTarget as HTMLElement), min: null }
+}
+function overCol(ev: DragEvent, i: number) {
+  if (!isTaskDrag(ev)) return
+  ev.preventDefault()
+  const r = (ev.currentTarget as HTMLElement).getBoundingClientRect()
+  dropAt.value = { col: i, min: Math.min(1425, Math.floor((((ev.clientY - r.top) / HOUR) * 60) / 15) * 15) }
+}
+function dropTask(ev: DragEvent) {
+  const at = dropAt.value
+  dropAt.value = null
+  const task = isTaskDrag(ev) ? readTaskDrag(ev) : null
+  if (!task || !at) return
+  ev.preventDefault()
+  const time = at.min == null ? null : `${String(Math.floor(at.min / 60)).padStart(2, '0')}:${String(at.min % 60).padStart(2, '0')}`
+  emit('dropTask', task, keys.value[at.col], time)
+}
 
 function onStripClick(ev: MouseEvent) {
   if (!props.canCreate || ev.target !== ev.currentTarget) return
@@ -162,7 +191,15 @@ const selLabel = computed(() => {
     <!-- All-day strip -->
     <div class="tg-row tg-allday">
       <div class="tg-gutter lbl">{{ t('cal.allDayShort') }}</div>
-      <div class="tg-strip" :style="{ height: `${stripPx}px`, '--cols': cols }" @click="onStripClick">
+      <div
+        class="tg-strip"
+        :class="{ 'drop-on': dropAt && dropAt.min == null }"
+        :style="{ height: `${stripPx}px`, '--cols': cols, '--drop-col': dropAt?.col ?? 0 }"
+        @click="onStripClick"
+        @dragover="overStrip"
+        @dragleave="dropAt = null"
+        @drop="dropTask"
+      >
         <div
           v-for="b in strip.bars"
           :key="b.entry.key"
@@ -185,7 +222,9 @@ const selLabel = computed(() => {
           class="tg-task"
           :class="{ done: x.item.task.done }"
           :style="{ ...span(x.col, 1), top: `${x.lane * LANE + 3}px` }"
+          :draggable="x.item.editable && !x.item.task.done"
           @click.stop
+          @dragstart="startTaskDrag($event, x.item.task)"
         >
           <button
             class="check"
@@ -222,7 +261,11 @@ const selLabel = computed(() => {
             @pointermove="onMove"
             @pointerup="onUp"
             @pointercancel="onCancel"
+            @dragover="overCol($event, i)"
+            @dragleave="dropAt = null"
+            @drop="dropTask"
           >
+            <div v-if="dropAt && dropAt.col === i && dropAt.min != null" class="tg-drop" :style="{ top: `${(dropAt.min / 60) * HOUR}px`, height: `${HOUR / 2}px` }" />
             <div
               v-for="p in placed[i]"
               :key="p.entry.key"
@@ -529,5 +572,18 @@ const selLabel = computed(() => {
   .single .tg-dh {
     flex-direction: row;
   }
+}
+/* Where a dragged task will land. */
+.tg-drop {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: 6px;
+  border: 1.5px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  pointer-events: none;
+}
+.tg-strip.drop-on {
+  background-image: linear-gradient(to right, transparent calc(var(--drop-col) * 100% / var(--cols)), color-mix(in srgb, var(--accent) 12%, transparent) calc(var(--drop-col) * 100% / var(--cols)), color-mix(in srgb, var(--accent) 12%, transparent) calc((var(--drop-col) + 1) * 100% / var(--cols)), transparent calc((var(--drop-col) + 1) * 100% / var(--cols)));
 }
 </style>

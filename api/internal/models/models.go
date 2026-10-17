@@ -178,6 +178,9 @@ type UserPrefs struct {
 	// PageEditor is how this user edits pages: "visual" (blocks, the default)
 	// or "markdown" (the source). Pages are Markdown either way.
 	PageEditor string `gorm:"size:10;not null;default:visual" json:"page_editor"`
+	// DevTheme is this user's own developer theme, when the owner lets each
+	// person choose: "" = as the instance, "none", or a theme id.
+	DevTheme string `gorm:"size:10" json:"dev_theme"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.

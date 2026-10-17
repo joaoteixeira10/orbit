@@ -29,6 +29,8 @@ export const accountUiEn = {
       accent: 'Accent colour',
       accentHint: 'A personal accent just for you — overrides the organization accent',
       resetAccent: 'Reset to default',
+      devTheme: 'Developer theme',
+      devThemeHint: 'The crest, the UBonito wordmark and the colours — for you only',
     },
     password: {
       ssoManaged: 'You sign in via SSO; your password is managed by your identity provider.',
@@ -202,6 +204,8 @@ export const accountUiPt: typeof accountUiEn = {
       accent: 'Cor de destaque',
       accentHint: 'Uma cor de destaque só para si — substitui a da organização',
       resetAccent: 'Repor a predefinição',
+      devTheme: 'Tema de programador',
+      devThemeHint: 'O brasão, o logótipo UBonito e as cores — só para si',
     },
     password: {
       ssoManaged: 'Inicia sessão por SSO; a sua palavra-passe é gerida pelo seu fornecedor de identidade.',

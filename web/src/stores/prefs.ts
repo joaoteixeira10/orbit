@@ -16,6 +16,7 @@ interface ServerPrefs {
   device_tz?: string
   locale?: string
   page_editor?: PageEditorMode
+  dev_theme?: string // "" = as the instance | none | a developer theme id
 }
 
 function browserTZ(): string {
@@ -43,6 +44,19 @@ function pushAccent(color: string) {
   })
 }
 
+// Push this person's developer theme into the branding store and repaint
+// (cached for the first paint; cleared at sign-out).
+function pushDevTheme(choice: string) {
+  if (choice) localStorage.setItem('orbit_dev_theme', choice)
+  else localStorage.removeItem('orbit_dev_theme')
+  void import('@/stores/branding').then((m) => {
+    const b = m.useBrandingStore()
+    b.userDevTheme = choice
+    b.applyAccent()
+    b.applyFavicon()
+  })
+}
+
 // Per-user UI preferences. Backed by the server (UserPrefs) so they follow the
 // user across devices; localStorage is a cache for instant first paint.
 export const usePrefsStore = defineStore('prefs', {
@@ -55,6 +69,8 @@ export const usePrefsStore = defineStore('prefs', {
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
+    // Own developer theme ("" = as the instance), when the owner allows it.
+    devTheme: localStorage.getItem('orbit_dev_theme') || '',
   }),
   actions: {
     isDark(): boolean {
@@ -88,6 +104,8 @@ export const usePrefsStore = defineStore('prefs', {
       localStorage.setItem('orbit_timezone', p.timezone)
       localStorage.setItem('orbit_accent', this.accentColor)
       pushAccent(this.accentColor)
+      this.devTheme = p.dev_theme || ''
+      pushDevTheme(this.devTheme)
       this.applyTheme()
       // Reminders need the zone this browser is in (while the setting is "local").
       const tz = browserTZ()
@@ -122,6 +140,12 @@ export const usePrefsStore = defineStore('prefs', {
       this.timeFormat = v
       localStorage.setItem('orbit_time_format', v)
       await this.persist({ time_format: v })
+    },
+    // Pick this person's developer theme ("" = as the instance, "none").
+    async setDevTheme(choice: string) {
+      this.devTheme = choice
+      pushDevTheme(choice)
+      await this.persist({ dev_theme: choice })
     },
     // Set ("" clears) the personal accent; repaints immediately + persists.
     async setAccentColor(color: string) {

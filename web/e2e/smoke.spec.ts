@@ -283,6 +283,43 @@ test('the owner turns on a developer theme; the Konami code shows who built it',
   await expect(page.getByText('Engineered by')).toBeHidden()
 })
 
+test('Forest Green for the instance; a person picks their own theme; sign-in shows the instance\'s', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/owner')
+  await page.locator('.subtab', { hasText: 'Branding' }).click()
+  await page.locator('.dev-master').getByRole('switch').click()
+  await page.locator('.theme-card', { hasText: 'Forest Green' }).click()
+  await page.locator('.src-row', { hasText: 'Let each person choose' }).getByRole('switch').click()
+  await page.getByRole('button', { name: 'Save branding' }).click()
+  await expect(page.getByText('Branding saved')).toBeVisible()
+  await expect(page.locator('link[rel=icon]')).toHaveAttribute('href', '/dev-themes/crest-green.svg')
+  await expect(page.locator('link[rel=apple-touch-icon]')).toHaveAttribute('href', '/dev-themes/crest-green-touch-180.png')
+
+  // Settings → Appearance: this person picks Gold Leaf for themselves.
+  await page.goto('/settings')
+  await page.getByRole('radio', { name: 'Gold Leaf' }).click()
+  await expect(page.locator('link[rel=icon]')).toHaveAttribute('href', '/dev-themes/crest-gold.svg')
+  await page.reload()
+  await expect(page.locator('link[rel=icon]')).toHaveAttribute('href', '/dev-themes/crest-gold.svg')
+
+  // Signed out, the sign-in page is the instance's: Forest Green, on its ground.
+  await page.locator('button.user-btn').click()
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await page.waitForURL(/\/login/)
+  await expect(page.locator('.login.themed')).toBeVisible()
+  await expect(page.locator('link[rel=icon]')).toHaveAttribute('href', '/dev-themes/crest-green.svg')
+
+  // Back to no theme for the tests after this one.
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/settings')
+  await page.getByRole('radio', { name: /As the instance/ }).click()
+  await page.goto('/owner')
+  await page.locator('.subtab', { hasText: 'Branding' }).click()
+  await page.locator('.dev-master').getByRole('switch').click()
+  await page.getByRole('button', { name: 'Save branding' }).click()
+  await expect(page.getByText('Branding saved')).toBeVisible()
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

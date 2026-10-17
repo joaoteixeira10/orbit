@@ -197,6 +197,14 @@ export const useAuthStore = defineStore('auth', {
       this.canCreateWorkspaces = false
       this.impersonator = null
       import('@/lib/live').then((m) => m.stopLiveUpdates())
+      // Signed out: the instance's developer theme again (the sign-in page's).
+      localStorage.removeItem('orbit_dev_theme')
+      import('@/stores/branding').then((m) => {
+        const b = m.useBrandingStore()
+        b.userDevTheme = ''
+        b.applyAccent()
+        b.applyFavicon()
+      })
     },
 
     // startImpersonation swaps the current (admin) session for a short-lived

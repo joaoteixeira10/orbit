@@ -27,6 +27,7 @@ type prefsResponse struct {
 	DigestTime    string                    `json:"digest_time"`
 	Locale        string                    `json:"locale"`
 	PageEditor    string                    `json:"page_editor"` // visual | markdown
+	DevTheme      string                    `json:"dev_theme"`   // "" (as the instance) | none | a theme id
 }
 
 func toPrefsResponse(p models.UserPrefs) prefsResponse {
@@ -47,6 +48,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		DigestTime:     orDefault(p.DigestTime, "08:00"),
 		Locale:         p.Locale,
 		PageEditor:     orDefault(p.PageEditor, "visual"),
+		DevTheme:       p.DevTheme,
 	}
 }
 
@@ -143,6 +145,13 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.PageEditor != nil {
 		updates["page_editor"] = *req.PageEditor
+	}
+	if req.DevTheme != nil {
+		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "dev_theme must be empty, none, blue, gold, red, ink or green"})
+			return
+		}
+		updates["dev_theme"] = *req.DevTheme
 	}
 	if len(updates) > 0 {
 		if err := h.db.Model(&prefs).Updates(updates).Error; err != nil {

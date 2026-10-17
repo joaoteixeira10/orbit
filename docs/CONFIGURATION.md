@@ -229,7 +229,8 @@ the `step_up_auth` feature flag is on.
 | **Security alerts**: which events alert (impersonation, owner transfer, admin role granted, security/SSO config changed, session token reuse), which channels, which email | Owner → Owner, **Security alerts** | Owner | all off |
 | **Owner transfer** | Owner → Owner, danger zone | Owner (step-up) | the first admin |
 | **Branding**: app name, accent colour, logo, favicon, show name, show logo, sign-in message | Owner → Branding | Owner, or a role with `settings.branding` | "Orbit" |
-| **Developer themes**: `developer_themes_enabled`, `developer_theme` (`blue`, `gold`, `red`, `ink`; anything else is stored as `blue`), and per asset `asset_source_logo` / `_wordmark` / `_favicon` (`theme` or `keep`) | Owner → Branding | Owner, or a role with `settings.branding` | off; `blue`; `theme` |
+| **Developer themes**: `developer_themes_enabled`, `developer_theme` (`blue`, `gold`, `red`, `ink`, `green`; anything else is stored as `blue`), per asset `asset_source_logo` / `_wordmark` / `_favicon` (`theme` or `keep`), and `developer_themes_personal` (each person may pick their own) | Owner → Branding | Owner, or a role with `settings.branding` | off; `blue`; `theme`; off |
+| Per user: **developer theme** (as the instance, none, or one of the five) — when the owner allows it | Settings → Appearance | the user | as the instance |
 | **Notification channels**: email, Discord, Telegram, ntfy, Gotify, Microsoft Teams, Slack, signed webhook (stored sealed) | Owner → Notifications | Owner, or a role with `settings.notifications` | none |
 | **Automatic backups**: on / off, every N hours, keep N, a directory or an S3 bucket (prefix, endpoint, region) | Owner → Owner → Backups | Owner (step-up) | off |
 | Per user: **require two-factor**, unlock, reset password or two-factor | Admin → Users | `users.manage` | off |

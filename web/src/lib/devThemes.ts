@@ -6,15 +6,23 @@
 // crest (the owner's design, baked to font-independent SVGs under /dev-themes/
 // by scripts/bake-crests.py; used for the in-app mark and the favicon) and the
 // "UBonito" wordmark (self-hosted UnifrakturCook 700). Every project names its
-// crests the same way: crest-<ink>.svg and crest-<ink>-512.png.
+// crests the same way: crest-<ink>.svg (tab favicon, in-app mark) and, from
+// the owner's pack, crest-<ink>-192.png / -512.png (install icons, rounded),
+// -touch-180.png (iPhone / iPad home screen: square, opaque — iOS rounds it)
+// and -maskable-512.png (Android: square, the emblem in the safe circle).
 
-export type DevThemeId = 'blue' | 'gold' | 'red' | 'ink'
+export type DevThemeId = 'blue' | 'gold' | 'red' | 'ink' | 'green'
 
 export interface DevTheme {
   id: DevThemeId
   accent: string // dark-UI accent (Ink: bone)
   onAccent: string // foreground on the accent (button label etc.)
   accentStrong: string // 2nd gradient stop / hover
+  // The accent as text (links, titles) where the accent itself doesn't reach
+  // 4.5:1 against the page: a darker shade on the light UI, a lighter one on
+  // the dark UI. Unset = the accent reads fine there.
+  textLight?: string
+  textDark?: string
   // Ink is monochrome and flips with the light/dark UI; these are the light-UI
   // overrides. The other themes are the same in both.
   accentLight?: string
@@ -30,6 +38,8 @@ export interface DevTheme {
   // doesn't take SVG there). Same variants as crest / crestLight.
   crestPng: string
   crestPngLight?: string
+  ink: string // the crest ink (crest-<ink>-…): the dark UI's / the colour themes'
+  inkLight?: string // the light UI's (Ink: bone)
 }
 
 const crest = (ink: string) => `/dev-themes/crest-${ink}.svg`
@@ -39,23 +49,26 @@ export const DEV_THEMES: Record<DevThemeId, DevTheme> = {
   blue: {
     id: 'blue',
     accent: '#2f6fe0', onAccent: '#ffffff', accentStrong: '#2257c4',
+    textLight: '#2467de', textDark: '#6494e8',
     mark: '#2f6fe0', halo: '#e6edfa', badge: '#0e1320',
     ground: 'radial-gradient(120% 120% at 50% 0%, #101a2e, #060a14)',
-    crest: crest('blue'), crestPng: crestPng('blue'),
+    crest: crest('blue'), crestPng: crestPng('blue'), ink: 'blue',
   },
   gold: {
     id: 'gold',
     accent: '#c79a3f', onAccent: '#1c1608', accentStrong: '#a87f2c',
+    textLight: '#886828',
     mark: '#cda44e', halo: '#f3e9cf', badge: '#13100b',
     ground: 'radial-gradient(120% 120% at 50% 0%, #1d1809, #0a0804)',
-    crest: crest('gold'), crestPng: crestPng('gold'),
+    crest: crest('gold'), crestPng: crestPng('gold'), ink: 'gold',
   },
   red: {
     id: 'red',
     accent: '#b4151c', onAccent: '#ffffff', accentStrong: '#8c0f14',
+    textDark: '#ee6c72',
     mark: '#b01217', halo: '#f4f1ea', badge: '#13100f',
     ground: 'radial-gradient(120% 120% at 50% 0%, #1c0c0c, #0c0606)',
-    crest: crest('red'), crestPng: crestPng('red'),
+    crest: crest('red'), crestPng: crestPng('red'), ink: 'red',
   },
   ink: {
     id: 'ink',
@@ -66,31 +79,49 @@ export const DEV_THEMES: Record<DevThemeId, DevTheme> = {
     ground: 'radial-gradient(120% 120% at 50% 0%, #242424, #0c0c0c)',
     crest: crest('dark'), crestLight: crest('bone'),
     crestPng: crestPng('dark'), crestPngLight: crestPng('bone'),
+    ink: 'dark', inkLight: 'bone',
+  },
+  green: {
+    id: 'green',
+    // White on this green is too faint (2.4:1): a dark label, as Gold Leaf.
+    accent: '#2fbf6a', onAccent: '#06120b', accentStrong: '#25a85b',
+    textLight: '#1e7b45',
+    mark: '#0b1c12', halo: '#2fbf6a', badge: '#0b1c12',
+    ground: 'radial-gradient(120% 120% at 50% 0%, #10261a, #06120b)',
+    crest: crest('green'), crestPng: crestPng('green'), ink: 'green',
   },
 }
 
-export const DEV_THEME_LIST: DevTheme[] = [DEV_THEMES.blue, DEV_THEMES.gold, DEV_THEMES.red, DEV_THEMES.ink]
+export const DEV_THEME_LIST: DevTheme[] = [DEV_THEMES.blue, DEV_THEMES.gold, DEV_THEMES.red, DEV_THEMES.ink, DEV_THEMES.green]
+
+// isDevThemeId tells a stored value is one of the themes.
+export function isDevThemeId(v: unknown): v is DevThemeId {
+  return typeof v === 'string' && v in DEV_THEMES
+}
 
 // The themes' names, in every locale the projects have (the card and the
 // settings use them; a project without one of these locales gets English).
 export const DEV_THEME_NAMES: Record<string, Record<DevThemeId, string>> = {
-  en: { blue: 'Steel Blue', gold: 'Gold Leaf', red: 'Blood Red', ink: 'Ink' },
-  pt: { blue: 'Azul Aço', gold: 'Folha de Ouro', red: 'Vermelho Sangue', ink: 'Tinta' },
+  en: { blue: 'Steel Blue', gold: 'Gold Leaf', red: 'Blood Red', ink: 'Ink', green: 'Forest Green' },
+  pt: { blue: 'Azul Aço', gold: 'Folha de Ouro', red: 'Vermelho Sangue', ink: 'Tinta', green: 'Verde Floresta' },
 }
 
 export interface ResolvedThemeAccent {
   accent: string
   onAccent: string
   accentStrong: string
+  text: string // the accent as text (links, titles), readable on the page
 }
 
 // The accent of a theme, honouring Ink's light/dark flip.
 export function resolveThemeAccent(t: DevTheme, isDark: boolean): ResolvedThemeAccent {
   const light = !isDark && t.accentLight
+  const accent = light ? t.accentLight! : t.accent
   return {
-    accent: light ? t.accentLight! : t.accent,
+    accent,
     onAccent: light ? t.onAccentLight! : t.onAccent,
     accentStrong: light ? (t.accentStrongLight ?? t.accentStrong) : t.accentStrong,
+    text: (isDark ? t.textDark : t.textLight) ?? accent,
   }
 }
 
@@ -102,4 +133,20 @@ export function resolveCrest(t: DevTheme, isDark: boolean): string {
 // The PNG crest, for the iOS home-screen icon and the install manifest.
 export function resolveCrestPng(t: DevTheme, isDark: boolean): string {
   return !isDark && t.crestPngLight ? t.crestPngLight : t.crestPng
+}
+
+// The icons of a theme for the browser and the home screen (Ink: bone in the
+// light UI): the tab favicon, the iPhone / iPad home-screen icon (square,
+// opaque) and the install manifest's icons.
+export interface CrestIcons {
+  svg: string
+  touch: string
+  png192: string
+  png512: string
+  maskable: string
+}
+export function resolveCrestIcons(t: DevTheme, isDark: boolean): CrestIcons {
+  const ink = !isDark && t.inkLight ? t.inkLight : t.ink
+  const base = `/dev-themes/crest-${ink}`
+  return { svg: `${base}.svg`, touch: `${base}-touch-180.png`, png192: `${base}-192.png`, png512: `${base}-512.png`, maskable: `${base}-maskable-512.png` }
 }

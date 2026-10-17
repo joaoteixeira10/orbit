@@ -496,12 +496,15 @@ SPA themes itself before login and also learns the login-page capabilities. `PUT
 pointer-field partial patch, audited.
 
 ### 9.2 Developer themes (curated presets)
-**Every project has them**, with the same four themes (Steel Blue, Gold Leaf, Blood Red, Ink), the
+**Every project has them**, with the same five themes (Steel Blue, Gold Leaf, Blood Red, Ink, Forest Green), the
 same settings and the same Branding UI; only the crest changes per project. **The code is one shared
 kit** — `devThemes.ts`, the Branding card (`DevThemesCard.vue`), `dev-themes.css`, the wordmark font,
 the Konami egg and `bake-crests.py` — kept in the blueprint folder (`shared/dev-themes/`, see its
 README) and copied into each project with `sync-themes.sh`; never edit a project's copy. Crests are
-named the same everywhere: `web/public/dev-themes/crest-<ink>.svg` + `crest-<ink>-512.png`.
+named the same everywhere: `web/public/dev-themes/crest-<ink>.svg` (tab favicon, in-app mark) and the
+pack's PNGs `crest-<ink>-192.png` / `-512.png` (install icons), `-touch-180.png` (iPhone / iPad home
+screen: square and opaque — iOS rounds it; a rounded badge gets black corners) and
+`-maskable-512.png` (Android, the emblem inside the safe circle).
 
 **The icons are the project owner's, never the implementer's.** Crests, favicons, marks and app
 icons are designed and delivered by the owner as a design pack; whoever builds the project (a
@@ -522,14 +525,25 @@ and its PNGs, §9.3) follows the same rule.
   owner = run the script again and commit the output.
 - Ink: the `dark` crest in the dark UI, `bone` in the light UI.
 
-- `developer_themes_enabled` + `developer_theme ∈ {blue, gold, red, ink}` (clamped server-side)
-  + `asset_source_{logo,wordmark,favicon} ∈ {theme, keep}`.
+- `developer_themes_enabled` + `developer_theme ∈ {blue, gold, red, ink, green}` (clamped server-side)
+  + `asset_source_{logo,wordmark,favicon} ∈ {theme, keep}` + `developer_themes_personal` (each person
+  may pick their own: a user preference `dev_theme` = "" as the instance | `none` | a theme id, picked
+  in Settings → Appearance with the kit's `DevThemePicker.vue`; the instance's theme stays the
+  default and the **sign-in page's**; sign-out clears the person's choice).
+- **Readable accent text:** where a theme's colour doesn't reach 4.5:1 as text on the page, it has
+  `textLight` / `textDark` shades, and `resolveThemeAccent` returns them as `text` → `--accent-text`.
+  Buttons keep the exact colour; their label (`onAccent`) is dark where white would be faint (Gold,
+  Green). The kit's `devThemes.spec.ts` checks every theme in both modes.
+- **The sign-in page** stands on the theme's dark `ground` (its card nearly opaque, the text outside it
+  light).
 - A theme **locks the accent** and supplies a matching mark, wordmark and favicon. Per asset, the
   owner keeps the theme's or their own.
 - `web/src/lib/devThemes.ts` defines each theme: `accent`, `onAccent`, `accentStrong`, optional light-UI
   variants (Ink is the only theme that changes between light and dark), `mark`/`halo` colours for the
   wordmark, and `crest` (SVG) + `crestPng` (512 px, because iOS home-screen and PWA icons refuse SVG).
-- Resolvers: `resolveThemeAccent(t, isDark)`, `resolveCrest`, `resolveCrestPng`.
+- Resolvers: `resolveThemeAccent(t, isDark)` (incl. `text`), `resolveCrest`, `resolveCrestPng`,
+  `resolveCrestIcons` (svg, touch, 192, 512, maskable — for the favicon, `apple-touch-icon` and the
+  manifest's icons).
 - Assets in `web/public/dev-themes/` are **font-independent** SVGs, with the glyph baked as a path,
   because a favicon paints before `@font-face` loads. The wordmark font is self-hosted
   (`web/public/fonts/`).

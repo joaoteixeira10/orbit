@@ -2,12 +2,14 @@
 
 Bake a project's UBonito crests (the developer themes' marks) from the owner's
 design pack (../assets, out of git — the icons are the owner's; this only
-converts them) into web/public/dev-themes/crest-<ink>.svg + crest-<ink>-512.png:
+converts them) into web/public/dev-themes/crest-<ink>…:
 
-- the <text>U</text> (UnifrakturCook 700) becomes the glyph as a vector path,
-  so the SVG renders the same as a favicon or an <img> (neither loads fonts);
-- the C2PA manifest is dropped (no longer valid once the file changes);
-- the 512 px PNG is copied as delivered.
+- the SVG: a <text>U</text> (UnifrakturCook 700), if the pack still has one,
+  becomes the glyph as a vector path, so the SVG renders the same as a favicon
+  or an <img> (neither loads fonts); packs with the U already in outlines are
+  taken as they are. Any metadata (the C2PA manifest) is dropped;
+- the PNGs are copied as delivered: -192 and -512 (install icons), -touch-180
+  (iPhone / iPad home screen) and -maskable-512 (Android).
 
   make crests     (the project's Makefile passes its pack, e.g.
                    ../assets/orbit/ubonito-orbit)
@@ -23,7 +25,8 @@ from fontTools.pens.transformPen import TransformPen
 
 FONT = "web/public/fonts/unifrakturcook-700.woff2"
 DST = "web/public/dev-themes/crest-{}"
-INKS = ["dark", "bone", "blue", "gold", "red"]
+INKS = ["dark", "bone", "blue", "gold", "red", "green"]
+PNGS = ["192", "512", "touch-180", "maskable-512"]
 
 if len(sys.argv) < 2:
     sys.exit(__doc__)
@@ -45,7 +48,13 @@ for ink in inks:
     svg = svg.replace(' xmlns:c2pa="http://c2pa.org/manifest"', "")
     m = TEXT.search(svg)
     if not m:
-        sys.exit(f"{ink}: no <text>U</text> (already baked? then copy it as is)")
+        if "<text" in svg:
+            sys.exit(f"{ink}: a <text> that isn't the U — ask the owner for outlines")
+        open(DST.format(ink) + ".svg", "w").write(svg)  # already in outlines
+        for png in PNGS:
+            shutil.copyfile(f"{src}-{ink}-{png}.png", DST.format(ink) + f"-{png}.png")
+        print(ink, len(svg), "bytes (outlines)")
+        continue
     x, y, attrs = float(m.group(1)), float(m.group(2)), m.group(3)
     size = float(SIZE.search(attrs).group(1))
     s = size / upm
@@ -55,5 +64,6 @@ for ink in inks:
     keep = re.sub(r'\s(font-family|font-weight|font-size|text-anchor)="[^"]*"', "", attrs)
     svg = svg[: m.start()] + f'<path d="{pen.getCommands()}"{keep}/>' + svg[m.end():]
     open(DST.format(ink) + ".svg", "w").write(svg)
-    shutil.copyfile(f"{src}-{ink}-512.png", DST.format(ink) + "-512.png")
+    for png in PNGS:
+        shutil.copyfile(f"{src}-{ink}-{png}.png", DST.format(ink) + f"-{png}.png")
     print(ink, len(svg), "bytes")

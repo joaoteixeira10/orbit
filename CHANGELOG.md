@@ -90,6 +90,12 @@ merge, not at release time.
   now follows the theme (dark on Ink's bone, not white). The themes' code is
   the shared kit in `../blueprint/shared/dev-themes`, the same as in LB Admin
   and PKI Management; `make crests` bakes the crests from `../assets`.
+  A fifth theme, **Forest Green**. **Each person can pick their own** theme
+  (or none) in Settings → Appearance when the owner allows it. Links and
+  titles use a readable shade of the theme's colour (4.5:1 on the page, in
+  light and dark). The **sign-in page** takes the theme's dark background. The
+  crests come as a full icon set: a square one for the iPhone / iPad home
+  screen (no black corners) and 192 / 512 / maskable icons for installing.
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,

@@ -93,7 +93,8 @@ export interface Branding {
   auto_sso: boolean
   // Developer themes (owner): a curated accent + UBonito crest / wordmark / favicon.
   developer_themes_enabled?: boolean
-  developer_theme?: 'blue' | 'gold' | 'red' | 'ink'
+  developer_theme?: 'blue' | 'gold' | 'red' | 'ink' | 'green'
+  developer_themes_personal?: boolean // each person may pick their own
   asset_source_logo?: 'theme' | 'keep'
   asset_source_wordmark?: 'theme' | 'keep'
   asset_source_favicon?: 'theme' | 'keep'

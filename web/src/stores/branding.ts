@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { settingsApi } from '@/api'
 import type { Branding } from '@/api/types'
-import { DEV_THEMES, resolveCrest, resolveCrestPng, resolveThemeAccent, type DevTheme, type DevThemeId } from '@/lib/devThemes'
+import { DEV_THEMES, isDevThemeId, resolveCrest, resolveCrestIcons, resolveThemeAccent, type DevTheme, type DevThemeId } from '@/lib/devThemes'
 
 // upsertLink returns the (created-if-missing) <link rel=...> in <head>.
 function upsertLink(rel: string): HTMLLinkElement {
@@ -58,23 +58,37 @@ export const useBrandingStore = defineStore('branding', {
     assetSourceLogo: 'theme' as 'theme' | 'keep',
     assetSourceWordmark: 'theme' as 'theme' | 'keep',
     assetSourceFavicon: 'theme' as 'theme' | 'keep',
+    // The owner lets each person pick their own theme (Settings → Appearance).
+    devThemesPersonal: false,
+    // This person's choice ("" = as the instance, "none", or a theme id; set
+    // by the prefs store, cached for the first paint, cleared at sign-out).
+    userDevTheme: localStorage.getItem('orbit_dev_theme') || '',
     // Bumped when light/dark changes, so getters that read it (Ink's crest) recompute.
     dark: document.documentElement.classList.contains('dark'),
     loaded: false,
   }),
   getters: {
-    // The active developer theme, or null when the flag is off.
-    theme(): DevTheme | null {
+    // The instance's developer theme (the sign-in page's, everyone's default).
+    instanceTheme(): DevTheme | null {
       return this.devThemesEnabled ? DEV_THEMES[this.devTheme] : null
+    },
+    // The active developer theme: this person's own when the owner allows it,
+    // else the instance's; null for none.
+    theme(): DevTheme | null {
+      if (this.devThemesPersonal && this.userDevTheme) {
+        if (this.userDevTheme === 'none') return null
+        if (isDevThemeId(this.userDevTheme)) return DEV_THEMES[this.userDevTheme]
+      }
+      return this.instanceTheme
     },
     // What the sidebar/login mark should render.
     logoMode(): 'theme' | 'upload' | 'default' {
-      if (this.devThemesEnabled && this.assetSourceLogo === 'theme') return 'theme'
+      if (this.theme && this.assetSourceLogo === 'theme') return 'theme'
       return this.logoDataURL ? 'upload' : 'default'
     },
     // The blackletter "UBonito" or the app name.
     wordmarkIsTheme(): boolean {
-      return this.devThemesEnabled && this.assetSourceWordmark === 'theme'
+      return !!this.theme && this.assetSourceWordmark === 'theme'
     },
     // A developer theme is a block: its crest and wordmark always show,
     // overriding the per-element toggles (greyed out in Branding while on).
@@ -118,6 +132,7 @@ export const useBrandingStore = defineStore('branding', {
       this.assetSourceLogo = b.asset_source_logo || 'theme'
       this.assetSourceWordmark = b.asset_source_wordmark || 'theme'
       this.assetSourceFavicon = b.asset_source_favicon || 'theme'
+      this.devThemesPersonal = !!b.developer_themes_personal
 
       document.title = this.appName
       this.applyAccent()
@@ -130,13 +145,13 @@ export const useBrandingStore = defineStore('branding', {
     applyAccent() {
       const root = document.documentElement
       this.dark = root.classList.contains('dark')
-      const setRamp = (accent: string, strong: string, fg: string) => {
+      const setRamp = (accent: string, strong: string, fg: string, text = accent) => {
         root.style.setProperty('--accent', accent)
         root.style.setProperty('--accent-strong', strong)
         // Soft accent fills (active nav item, chips) track the accent too.
         root.style.setProperty('--accent-soft', `color-mix(in srgb, ${accent} 14%, transparent)`)
         root.style.setProperty('--accent-bg', `color-mix(in srgb, ${accent} 16%, transparent)`)
-        root.style.setProperty('--accent-text', accent)
+        root.style.setProperty('--accent-text', text)
         root.style.setProperty('--accent-fg', fg)
         root.style.setProperty('--ring', `color-mix(in srgb, ${accent} 38%, transparent)`)
       }
@@ -146,7 +161,7 @@ export const useBrandingStore = defineStore('branding', {
         setRamp(this.userAccentColor, `color-mix(in srgb, ${this.userAccentColor} 78%, #000)`, '#fff')
       } else if (this.theme) {
         const r = resolveThemeAccent(this.theme, this.dark)
-        setRamp(r.accent, r.accentStrong, r.onAccent)
+        setRamp(r.accent, r.accentStrong, r.onAccent, r.text)
       } else if (this.accentColor) {
         setRamp(this.accentColor, `color-mix(in srgb, ${this.accentColor} 78%, #000)`, '#fff')
       } else {
@@ -169,10 +184,16 @@ export const useBrandingStore = defineStore('branding', {
       let href = ''
       let appleHref = ''
       let manifestHref = ''
+      // A theme's crest comes as a full icon set (the owner's pack): a square,
+      // opaque one for the iPhone / iPad home screen (iOS rounds it; the
+      // rounded badge would get black corners) and 192 / 512 / maskable for
+      // the install manifest.
+      let themeIcons: ReturnType<typeof resolveCrestIcons> | null = null
       if (this.theme && this.assetSourceFavicon === 'theme') {
-        href = resolveCrest(this.theme, isDark)
-        appleHref = resolveCrestPng(this.theme, isDark)
-        manifestHref = appleHref
+        themeIcons = resolveCrestIcons(this.theme, isDark)
+        href = themeIcons.svg
+        appleHref = themeIcons.touch
+        manifestHref = themeIcons.png512
       } else if (this.faviconDataURL) {
         href = this.faviconDataURL
         appleHref = this.faviconDataURL // an uploaded favicon is used as-is
@@ -204,7 +225,13 @@ export const useBrandingStore = defineStore('branding', {
       // manifest, '/' doesn't resolve against the site. (CSP: manifest-src blob:.)
       const abs = (u: string) => new URL(u, location.origin).href
       // PNG icons (iOS/Android installers don't reliably take SVG manifest icons).
-      const icons = manifestHref === '/favicon-512.png'
+      const icons = themeIcons
+        ? [
+            { src: abs(themeIcons.png192), sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: abs(themeIcons.png512), sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: abs(themeIcons.maskable), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ]
+        : manifestHref === '/favicon-512.png'
         ? [
             { src: abs('/favicon-192.png'), sizes: '192x192', type: 'image/png', purpose: 'any' },
             { src: abs('/favicon-512.png'), sizes: '512x512', type: 'image/png', purpose: 'any' },

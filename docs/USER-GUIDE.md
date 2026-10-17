@@ -530,6 +530,8 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
 - **Account** — photo, display name, email.
 - **Appearance** — **Light**, **Dark** or **Automatic**; a personal **accent
   colour**.
+  When the owner lets each person choose, **Developer theme**: as the
+  instance (the default), none, or one of the five themes — for you only.
 - **Language & time** — **English** or **Português**; **Time zone** (for
   reminders; "This device" by default); **Week starts on** Monday or Sunday;
   **Time format** 13:00 or 1:00 PM.
@@ -710,7 +712,8 @@ sidebar**, a **Custom login page message**, and your own **logo** and
 **favicon** (without them Orbit shows its planet icon).
 
 **Developer themes** (off by default): turn on **Enable developer themes** and
-pick one of four — **Steel Blue**, **Gold Leaf**, **Blood Red**, **Ink**. A
+pick one of five — **Steel Blue**, **Gold Leaf**, **Blood Red**, **Ink**,
+**Forest Green**. A
 theme sets the accent colour for everyone (the accent picker is locked, with a
 note) and brings the UBonito Orbit crest (the blackletter "U" on Orbit's ring)
 and the blackletter **UBonito** wordmark. Under **Apply the theme's assets — or
@@ -721,7 +724,17 @@ light mode, a dark one in dark mode); the others look the same in both. While a
 theme is on, **Show logo** and **Show application name** are greyed out: the
 theme always shows its crest and wordmark. A personal accent (Settings →
 Appearance) still wins over the theme's colour for that person, never over its
-crest or wordmark. Turning the themes off puts everything back.
+crest or wordmark. Turning the themes off puts everything back. Links and
+titles use a darker or lighter shade of the theme's colour where the colour
+itself would be hard to read on the page.
+
+With a theme, the **sign-in page** stands on the theme's dark background, and
+a phone or computer that installs Orbit (or adds it to the Home Screen) gets
+the theme's crest as its app icon.
+
+**Let each person choose** (under the switch): everyone can then pick another
+theme, or none, for themselves in **Settings → Appearance → Developer theme**.
+The theme chosen here stays the default and the sign-in page's.
 
 **Live preview** shows the result before you save — the tab, the sidebar brand
 and a button; **Save branding**.

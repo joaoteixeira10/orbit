@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import NotificationSettings from '@/components/settings/NotificationSettings.vue'
 import GitSettings from '@/components/settings/GitSettings.vue'
+import DevThemePicker from '@/components/DevThemePicker.vue'
+import { useBrandingStore } from '@/stores/branding'
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n, I18nT } from 'vue-i18n'
@@ -26,6 +28,7 @@ import type { APIToken } from '@/api/types'
 import { GLOBAL_PRIVILEGES, isOwnerOnlyPriv } from '@/lib/privileges'
 
 const prefs = usePrefsStore()
+const branding = useBrandingStore()
 const auth = useAuthStore()
 const wss = useWorkspacesStore()
 const { t } = useI18n()
@@ -511,6 +514,11 @@ onMounted(loadSessions)
                   />
                 </div>
               </div>
+            </div>
+            <!-- Own developer theme, when the owner lets each person choose. -->
+            <div v-if="branding.devThemesPersonal" class="border-t border-border pt-5">
+              <div class="mb-3"><div class="text-[13px] font-semibold">{{ t('acct.appearance.devTheme') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.devThemeHint') }}</div></div>
+              <DevThemePicker :model-value="prefs.devTheme" :instance-theme="branding.instanceTheme?.id ?? null" :dark="branding.dark" @update:model-value="prefs.setDevTheme($event)" />
             </div>
           </div>
         </section>

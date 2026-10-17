@@ -19,6 +19,9 @@ const theme = defineModel<DevThemeId>('theme', { required: true })
 const logo = defineModel<Source>('logo', { required: true })
 const wordmark = defineModel<Source>('wordmark', { required: true })
 const favicon = defineModel<Source>('favicon', { required: true })
+// Optional: when bound, a switch lets each person pick their own theme in
+// Settings (a project without per-person themes just doesn't bind it).
+const personal = defineModel<boolean | undefined>('personal')
 defineProps<{ hasLogo: boolean; hasFavicon: boolean }>()
 
 const en = {
@@ -47,6 +50,8 @@ const en = {
   accent: 'Accent colour',
   accentHint: 'Set by the theme selected above',
   alwaysTheme: 'Always theme',
+  personal: 'Let each person choose',
+  personalHint: 'Everyone can pick another theme, or none, for themselves in Settings → Appearance. The one above stays the default and the sign-in page’s.',
 }
 const pt: typeof en = {
   title: 'Temas de programador',
@@ -74,6 +79,8 @@ const pt: typeof en = {
   accent: 'Cor de destaque',
   accentHint: 'Definida pelo tema escolhido acima',
   alwaysTheme: 'Sempre do tema',
+  personal: 'Cada pessoa pode escolher',
+  personalHint: 'Cada um pode escolher outro tema, ou nenhum, para si em Definições → Aspeto. O de cima continua a ser o predefinido e o da página de entrada.',
 }
 const { locale } = useI18n()
 const lang = computed(() => (locale.value.startsWith('pt') ? 'pt' : 'en'))
@@ -97,6 +104,13 @@ const names = computed(() => DEV_THEME_NAMES[lang.value])
           </div>
         </div>
         <Toggle v-model="enabled" />
+      </div>
+      <div v-if="personal !== undefined" class="src-row mt-2">
+        <div class="min-w-0 flex-1 pl-1">
+          <b class="text-[14px] font-semibold">{{ L.personal }}</b>
+          <span class="mt-0.5 block max-w-[460px] text-[12px] leading-snug text-text-3">{{ L.personalHint }}</span>
+        </div>
+        <Toggle v-model="personal" />
       </div>
 
       <div v-if="enabled" class="mt-[22px]">

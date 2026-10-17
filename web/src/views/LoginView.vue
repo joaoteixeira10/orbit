@@ -183,7 +183,8 @@ function backToCredentials() {
 
 <template>
   <!-- The sign-in card; the code step keeps PKI's six-box input. -->
-  <div class="login">
+  <!-- With a developer theme, the page stands on the theme's dark ground. -->
+  <div class="login" :class="{ themed: !!branding.theme }" :style="branding.theme ? { '--login-ground': branding.theme.ground } : undefined">
     <main class="wrap">
       <div class="brand">
         <template v-if="branding.showMark">
@@ -454,5 +455,19 @@ h1 {
   text-align: center;
   font-size: 12px;
   color: var(--text-3);
+}
+/* A developer theme: its dark ground (as on its card in Branding) with a soft
+   glow of its accent; the text outside the card turns light. */
+.login.themed {
+  background:
+    radial-gradient(900px 520px at 50% -12%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 62%),
+    var(--login-ground);
+}
+.login.themed .lcard {
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+.login.themed .brand b:not(.brand-word),
+.login.themed .foot {
+  color: rgba(255, 255, 255, 0.82);
 }
 </style>

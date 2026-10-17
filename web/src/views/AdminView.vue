@@ -461,6 +461,7 @@ const brandForm = reactive({
   show_logo: true,
   // Developer themes (a closed curated set; the accent is locked to the theme while on).
   developer_themes_enabled: false,
+  developer_themes_personal: false,
   developer_theme: 'blue' as DevThemeId,
   asset_source_logo: 'theme' as 'theme' | 'keep',
   asset_source_wordmark: 'theme' as 'theme' | 'keep',
@@ -515,6 +516,7 @@ function loadBrandForm() {
   brandForm.asset_source_logo = branding.assetSourceLogo
   brandForm.asset_source_wordmark = branding.assetSourceWordmark
   brandForm.asset_source_favicon = branding.assetSourceFavicon
+  brandForm.developer_themes_personal = branding.devThemesPersonal
   loginMessage.value = branding.loginMessage
   customLoginMessage.value = !!branding.loginMessage
 }
@@ -1010,6 +1012,7 @@ function switchTab(t: Tab) {
         v-model:logo="brandForm.asset_source_logo"
         v-model:wordmark="brandForm.asset_source_wordmark"
         v-model:favicon="brandForm.asset_source_favicon"
+        v-model:personal="brandForm.developer_themes_personal"
         :has-logo="!!brandForm.logo_data_url"
         :has-favicon="!!brandForm.favicon_data_url"
       />

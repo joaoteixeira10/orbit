@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, Check, ListTree, Repeat } from 'lucide-vue-next'
+import { Calendar, Check, ListTree, MessageSquare, Repeat } from 'lucide-vue-next'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import GitBadge from '@/components/tasks/GitBadge.vue'
 import type { Member, Task } from '@/api/planner'
@@ -26,7 +26,7 @@ const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, pr
 const prio = computed(() => '!'.repeat(props.task.priority))
 const note = computed(() => firstLine(props.task.notes))
 const who = computed(() => (props.assignees ?? []).map((m) => m.display_name || m.username).join(', '))
-const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props.task.repeat || props.task.tags.length > 0 || props.subtasks.total > 0 || !!who.value)
+const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props.task.repeat || props.task.tags.length > 0 || props.subtasks.total > 0 || !!who.value || props.task.comment_count > 0)
 </script>
 
 <template>
@@ -49,6 +49,7 @@ const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props
       >
         <ListTree class="h-3.5 w-3.5" />{{ subtasks.done }}/{{ subtasks.total }}
       </span>
+      <span v-if="task.comment_count" class="inline-flex items-center gap-1 tabular-nums" :title="t('comments.count', { n: task.comment_count }, task.comment_count)"><MessageSquare class="h-3.5 w-3.5" />{{ task.comment_count }}</span>
       <GitBadge :task="task" />
       <span v-for="tag in task.tags" :key="tag" class="tag">#{{ tag }}</span>
       <AvatarStack v-if="assignees?.length" :people="assignees" :size="20" class="avatar" :title="t('board.assignedTo', { name: who })" />

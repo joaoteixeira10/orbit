@@ -285,6 +285,7 @@ type taskResponse struct {
 	AssigneeIDs []string `json:"assignee_ids"`
 	AssigneeID  *string  `json:"assignee_id"` // the first one (older clients)
 	Done        bool     `json:"done"`
+	Comments    int64    `json:"comment_count"`
 	// GitError: the change is saved but didn't reach the linked issue (the
 	// sync tries again).
 	GitError string `json:"git_error,omitempty"`
@@ -298,6 +299,32 @@ func toTaskResponse(t models.Task) taskResponse {
 	}
 	return r
 }
+
+// counted fills in how many comments each task has (one query).
+func (h *Handlers) counted(rs []taskResponse) []taskResponse {
+	if len(rs) == 0 {
+		return rs
+	}
+	ids := make([]string, len(rs))
+	for i, r := range rs {
+		ids[i] = r.ID
+	}
+	var rows []struct {
+		TaskID string
+		N      int64
+	}
+	h.db.Model(&models.TaskComment{}).Select("task_id, COUNT(*) AS n").Where("task_id IN ?", ids).Group("task_id").Scan(&rows)
+	n := map[string]int64{}
+	for _, r := range rows {
+		n[r.TaskID] = r.N
+	}
+	for i := range rs {
+		rs[i].Comments = n[rs[i].ID]
+	}
+	return rs
+}
+
+func (h *Handlers) countedOne(r taskResponse) taskResponse { return h.counted([]taskResponse{r})[0] }
 
 func toTaskResponses(ts []models.Task) []taskResponse {
 	out := make([]taskResponse, 0, len(ts))
@@ -350,7 +377,7 @@ func (h *Handlers) listTasks(c *gin.Context) {
 	}
 	var tasks []models.Task
 	q.Find(&tasks)
-	c.JSON(http.StatusOK, toTaskResponses(tasks))
+	c.JSON(http.StatusOK, h.counted(toTaskResponses(tasks)))
 }
 
 type taskRequest struct {
@@ -594,7 +621,7 @@ func (h *Handlers) createTask(c *gin.Context) {
 		resp = toTaskResponse(t)
 		h.publishWS(c, ws.ID, "tasks")
 	}
-	c.JSON(http.StatusCreated, resp)
+	c.JSON(http.StatusCreated, h.countedOne(resp))
 }
 
 // updateTask changes a task (editors). Completing a repeating task with a due
@@ -709,7 +736,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	gitErr := h.gitAfter(c, &before, &t)
 	resp := toTaskResponse(t)
 	resp.GitError = gitErr
-	c.JSON(http.StatusOK, gin.H{"task": resp, "repeated": repeated})
+	c.JSON(http.StatusOK, gin.H{"task": h.countedOne(resp), "repeated": repeated})
 }
 
 type moveTaskRequest struct {
@@ -783,7 +810,7 @@ func (h *Handlers) moveTask(c *gin.Context) {
 	gitErr := h.gitAfter(c, &before, &t)
 	resp := toTaskResponse(t)
 	resp.GitError = gitErr
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, h.countedOne(resp))
 }
 
 // deleteTask deletes a task and its sub-tasks (editors).

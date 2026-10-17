@@ -7,6 +7,7 @@ import Confirm from '@/components/ui/Confirm.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { commentsApi, type Member, type TaskComment } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
+import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
@@ -19,8 +20,17 @@ const props = defineProps<{ ws: string; taskId: string; canWrite: boolean; isOwn
 const { t } = useI18n()
 const auth = useAuthStore()
 const toast = useToastStore()
+const tasksStore = useTasksStore()
 
 const comments = ref<TaskComment[]>([])
+// Keep the count on the task's row and card in step.
+watch(
+  () => comments.value.length,
+  (n) => {
+    const tk = tasksStore.tasksOf(props.ws).find((x) => x.id === props.taskId)
+    if (tk) tk.comment_count = n
+  },
+)
 const draft = ref('')
 const sending = ref(false)
 const editing = ref('')

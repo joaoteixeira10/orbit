@@ -2,6 +2,7 @@
 export const commentsEn = {
   comments: {
     title: 'Comments',
+    count: 'No comments | 1 comment | {n} comments',
     none: 'No comments yet',
     placeholder: "Add a comment… (Markdown; {'@'} to mention someone)",
     send: 'Comment',
@@ -20,6 +21,7 @@ export const commentsEn = {
 export const commentsPt: typeof commentsEn = {
   comments: {
     title: 'Comentários',
+    count: 'Sem comentários | 1 comentário | {n} comentários',
     none: 'Ainda sem comentários',
     placeholder: "Escreva um comentário… (Markdown; {'@'} para mencionar alguém)",
     send: 'Comentar',

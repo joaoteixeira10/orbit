@@ -519,7 +519,7 @@ func (h *Handlers) linkGitTask(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, t.WorkspaceID, "tasks")
-	c.JSON(http.StatusOK, toTaskResponse(t))
+	c.JSON(http.StatusOK, h.countedOne(toTaskResponse(t)))
 }
 
 // unlinkGitTask forgets a task's issue (the issue itself stays as it is).
@@ -547,7 +547,7 @@ func (h *Handlers) unlinkGitTask(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, t.WorkspaceID, "tasks")
-	c.JSON(http.StatusOK, toTaskResponse(t))
+	c.JSON(http.StatusOK, h.countedOne(toTaskResponse(t)))
 }
 
 // ---- Hooks from the task handlers ----------------------------------------------

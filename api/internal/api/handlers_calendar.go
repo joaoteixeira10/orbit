@@ -125,7 +125,7 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 
 	var tasks []models.Task
 	h.db.Where("workspace_id IN ? AND due >= ? AND due <= ?", wsIDs, fromDate, toDate).Order("due, due_time, rank").Find(&tasks)
-	resp.Tasks = toTaskResponses(tasks)
+	resp.Tasks = h.counted(toTaskResponses(tasks))
 	return resp
 }
 

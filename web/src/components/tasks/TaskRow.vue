@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Repeat, Flag, ListTree } from 'lucide-vue-next'
+import { Check, Repeat, Flag, ListTree, MessageSquare } from 'lucide-vue-next'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import GitBadge from './GitBadge.vue'
 import type { Task, Member } from '@/api/planner'
@@ -64,6 +64,7 @@ const prio = computed(() => '!'.repeat(props.task.priority))
         <span v-if="listName">{{ listName }}</span>
         <span v-if="workspaceName">{{ workspaceName }}</span>
         <span v-if="subtasks && subtasks.total" class="inline-flex items-center gap-0.5"><ListTree class="h-3 w-3" />{{ subtasks.done }}/{{ subtasks.total }}</span>
+        <span v-if="task.comment_count" class="inline-flex items-center gap-0.5" :title="t('comments.count', { n: task.comment_count }, task.comment_count)"><MessageSquare class="h-3 w-3" />{{ task.comment_count }}</span>
         <span v-for="tag in task.tags" :key="tag" class="text-accent-text">#{{ tag }}</span>
         <span v-if="task.notes && !compact" class="truncate">{{ firstLine(task.notes) }}</span>
       </div>

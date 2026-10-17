@@ -7953,6 +7953,9 @@ const docTemplate = `{
                 "column_id": {
                     "type": "string"
                 },
+                "comment_count": {
+                    "type": "integer"
+                },
                 "completed_at": {
                     "type": "string"
                 },

@@ -97,7 +97,7 @@ export function wireTasksLive() {
   wired = true
   const s = useTasksStore()
   onLiveEvent('ws', (e) => {
-    if ((e.what !== 'tasks' && e.what !== 'lists') || e.origin === CLIENT_ID) return
+    if ((e.what !== 'tasks' && e.what !== 'lists' && e.what !== 'comments') || e.origin === CLIENT_ID) return
     const ws = String(e.ws)
     if (s.tasks[ws]) void s.load(ws)
   })

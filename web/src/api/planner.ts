@@ -117,6 +117,7 @@ export interface Task {
   done: boolean
   assignee_ids: string[] // who it's for
   assignee_id: string | null // the first of them (older clients)
+  comment_count: number
   created_by: string
   created_at: string
   updated_at: string

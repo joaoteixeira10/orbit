@@ -110,6 +110,7 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Comment counts** on task rows and board cards (💬 2).
 - **Comments on tasks**, as in Planner: Markdown, by any member (viewers
   too), with @mentions (suggested as you type); the assignees, the creator
   and earlier commenters are told (one inbox entry per task while unread),

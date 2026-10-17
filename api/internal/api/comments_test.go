@@ -48,6 +48,14 @@ func TestComments(t *testing.T) {
 		t.Fatalf("bob: %v", v)
 	}
 
+	var tasks []struct {
+		ID       string `json:"id"`
+		Comments int    `json:"comment_count"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/tasks", "", bob), &tasks)
+	if len(tasks) != 1 || tasks[0].Comments != 2 {
+		t.Fatalf("tasks: %+v", tasks)
+	}
 	var list []struct {
 		Body string `json:"body"`
 	}

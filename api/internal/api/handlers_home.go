@@ -87,7 +87,7 @@ func (h *Handlers) home(c *gin.Context) {
 	mine.Session(&gorm.Session{}).Where("due < ?", today).Order("due, due_time").Limit(50).Find(&overdue)
 	mine.Session(&gorm.Session{}).Where("due = ?", today).Order("due_time, priority DESC, rank").Limit(100).Find(&todays)
 	mine.Session(&gorm.Session{}).Where("due > ? AND due <= ?", today, weekEnd).Order("due, due_time").Limit(100).Find(&upcoming)
-	resp.Overdue, resp.Today, resp.Upcoming = toTaskResponses(overdue), toTaskResponses(todays), toTaskResponses(upcoming)
+	resp.Overdue, resp.Today, resp.Upcoming = h.counted(toTaskResponses(overdue)), h.counted(toTaskResponses(todays)), h.counted(toTaskResponses(upcoming))
 	resp.Events = h.calendarFor(wsIDs, from, to, today, today).Events
 	if len(resp.Events) > 60 {
 		resp.Events = resp.Events[:60]

@@ -8,7 +8,7 @@ const list: TaskList = {
 }
 const task = (p: Partial<Task>): Task => ({
   id: 't', workspace_id: 'w', list_id: 'l1', column_id: 'backlog', parent_id: null, title: 'Report', notes: '', priority: 0, tags: [],
-  start: null, due: null, due_time: null, repeat: '', rank: 1, completed_at: null, done: false, assignee_ids: [], assignee_id: null,
+  start: null, due: null, due_time: null, repeat: '', rank: 1, completed_at: null, done: false, assignee_ids: [], assignee_id: null, comment_count: 0,
   created_by: 'me', created_at: '', updated_at: '', ...p,
 })
 // Tuesday 13 October 2026; weeks start on Monday.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluate } from './mathnotes'
+import { acceptAnswer, evaluate } from './mathnotes'
 
 const answers = (text: string) => Object.fromEntries(evaluate(text).map((r) => [r.line, r.result]))
 
@@ -20,6 +20,15 @@ describe('math in notes', () => {
   it('names values for the lines below', () => {
     const text = 'rent = 650\nbills = 120,5\ntotal = rent + bills\nTotal =\ntotal * 12 =\nunknown + 1 ='
     expect(answers(text)).toEqual({ 3: '770,5', 4: '9246' })
+  })
+  it('reads list items and Markdown', () => {
+    expect(answers('- 12 + 3 =\n1. 2 * 4 =\n- [ ] 10 - 1 =')).toEqual({ 0: '15', 1: '8', 2: '9' })
+    expect(Object.fromEntries(evaluate('**rent** = 650\n`rent` * 2 =', { markdown: true }).map((r) => [r.line, r.result]))).toEqual({ 1: '1300' })
+  })
+  it('writes an answer in with Tab', () => {
+    const v = 'a = 2\na * 3 =\nmore'
+    expect(acceptAnswer(v, 12, evaluate(v))).toEqual({ value: 'a = 2\na * 3 = 6\nmore', caret: 15 })
+    expect(acceptAnswer(v, 2, evaluate(v))).toBeNull()
   })
   it('takes names of several words', () => {
     expect(answers('per person = 120 / 4\nPer  person * 2 =\nper person =')).toEqual({ 1: '60', 2: '30' })

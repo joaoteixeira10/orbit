@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { normalizeMarkdown } from '@/lib/markdown'
 import { markdownFor, uploadFile } from '@/lib/uploads'
 import { useToastStore } from '@/stores/toast'
+import { acceptAnswer, evaluate } from '@/lib/mathnotes'
+import MathGhost from '@/components/ui/MathGhost.vue'
 
 // The page body, edited as Markdown source: a plain text area that grows with
 // the page, with the small helps of a Markdown editor — Enter continues a
@@ -119,10 +121,29 @@ function wrap(before: string, after = before) {
   replace(a, b, before + sel + after, a + before.length, b + before.length)
 }
 
+// Sums, as in Quick Notes: a line ending in "=" shows its answer; Tab
+// writes it in.
+const answers = computed(() => evaluate(text.value, { markdown: true }))
+function takeAnswer(): boolean {
+  const el = area.value
+  if (!el) return false
+  const v = text.value
+  const caret = el.selectionStart ?? 0
+  if (!acceptAnswer(v, caret, answers.value)) return false
+  const line = v.slice(0, caret).split('\n').length - 1
+  const answer = answers.value.find((a) => a.line === line)!.result
+  const start = v.lastIndexOf('\n', caret - 1) + 1
+  const nl = v.indexOf('\n', caret)
+  const end = nl === -1 ? v.length : nl
+  const at = start + v.slice(start, end).replace(/\s+$/, '').length
+  replace(at, end, ' ' + answer, at + 1 + answer.length) // undoable
+  return true
+}
 function onKey(e: KeyboardEvent) {
   if (!props.editable) return
   const mod = e.metaKey || e.ctrlKey
   if (e.key === 'Enter' && !mod && !e.shiftKey && !e.isComposing) onEnter(e)
+  else if (e.key === 'Tab' && !mod && !e.shiftKey && takeAnswer()) e.preventDefault()
   else if (e.key === 'Tab' && !mod) onTab(e)
   else if (mod && !e.altKey) {
     const k = e.key.toLowerCase()
@@ -154,6 +175,7 @@ defineExpose({ getContent, setContent, focusStart })
 </script>
 
 <template>
+  <div class="math-wrap">
   <textarea
     ref="area"
     v-model="text"
@@ -167,6 +189,8 @@ defineExpose({ getContent, setContent, focusStart })
     @paste="onPaste"
     @drop="onDrop"
   />
+  <MathGhost class="md-source" :text="text" :answers="answers" />
+  </div>
 </template>
 
 <style scoped>

@@ -204,17 +204,26 @@ export interface MathLine {
   result: string // what to show (and write) after the "="
 }
 
+// A line as read for sums: no list, heading or quote marker (so "- 12 + 3"
+// isn't minus twelve); in Markdown also no emphasis or code marks.
+function clean(raw: string, markdown: boolean): string {
+  let s = raw.replace(/^\s*(?:#{1,6}\s+|>\s*|(?:[-*+•]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)+/, '')
+  if (markdown) s = s.replace(/(\*\*|__|`)/g, '')
+  return s
+}
+
 // evaluate reads a note line by line: names defined so far, and the answer
 // of each line that ends with "=" (nothing when it can't be worked out, or
-// when the answer is already written after it).
-export function evaluate(text: string): MathLine[] {
+// when the answer is already written after it). markdown: the text is
+// Markdown source.
+export function evaluate(text: string, opts: { markdown?: boolean } = {}): MathLine[] {
   const vars = new Map<string, number>()
   const out: MathLine[] = []
   // The note's way of writing decimals, for answers of lines without any.
   const noteComma = (text.match(/\d,\d/g)?.length ?? 0) > (text.match(/\d\.\d/g)?.length ?? 0)
   const commaFor = (s: string, used: boolean) => used || (!/\d\.\d/.test(s) && noteComma)
   text.split('\n').forEach((raw, line) => {
-    const s = raw.replace(/\s+$/, '')
+    const s = clean(raw, !!opts.markdown).replace(/\s+$/, '')
     const asks = s.endsWith('=') && !s.endsWith('==')
     const body = asks ? s.slice(0, -1) : s
     // "name = sum" defines name (and, with a closing "=", shows it too).
@@ -241,4 +250,17 @@ export function evaluate(text: string): MathLine[] {
     }
   })
   return out
+}
+
+// acceptAnswer writes the answer of the caret's line after its "=" (Tab), or
+// returns null when that line has none.
+export function acceptAnswer(value: string, caret: number, answers: MathLine[]): { value: string; caret: number } | null {
+  const line = value.slice(0, caret).split('\n').length - 1
+  const a = answers.find((x) => x.line === line)
+  if (!a) return null
+  const start = value.lastIndexOf('\n', caret - 1) + 1
+  const nl = value.indexOf('\n', caret)
+  const end = nl === -1 ? value.length : nl
+  const text = value.slice(start, end).replace(/\s+$/, '') + ' ' + a.result
+  return { value: value.slice(0, start) + text + value.slice(end), caret: start + text.length }
 }

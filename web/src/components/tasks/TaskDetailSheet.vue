@@ -15,6 +15,8 @@ import Avatar from '@/components/ui/Avatar.vue'
 import TaskComments from './TaskComments.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
+import { acceptAnswer, evaluate } from '@/lib/mathnotes'
+import MathGhost from '@/components/ui/MathGhost.vue'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
 // Everything about one task, Reminders' "Details": notes, start, date and
@@ -96,6 +98,16 @@ async function editNotes() {
   editingNotes.value = true
   await nextTick()
   notesEl.value?.focus()
+}
+// Sums in the notes, as in Quick Notes: answers after "=", Tab writes one in.
+const noteAnswers = computed(() => (editingNotes.value || !notes.value.trim() ? evaluate(notes.value, { markdown: true }) : []))
+function notesKey(e: KeyboardEvent) {
+  if (e.key !== 'Tab' || e.shiftKey || !notesEl.value) return
+  const r = acceptAnswer(notes.value, notesEl.value.selectionStart ?? 0, noteAnswers.value)
+  if (!r) return
+  e.preventDefault()
+  notes.value = r.value
+  void nextTick(() => notesEl.value?.setSelectionRange(r.caret, r.caret))
 }
 function tickInNotes(i: number) {
   notes.value = toggleTask(notes.value, i)
@@ -228,20 +240,23 @@ async function remove() {
         />
       </div>
       <div v-if="notes.trim() && !editingNotes" class="notes-box mt-2" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
-        <MarkdownView class="notes-md" :content="notes" :editable="editable" @toggle="tickInNotes" @edit="editNotes" />
+        <MarkdownView class="notes-md" :content="notes" :editable="editable" math @toggle="tickInNotes" @edit="editNotes" />
       </div>
+      <div v-else-if="editable || notes.trim()" class="math-wrap mt-2">
       <textarea
-        v-else-if="editable || notes.trim()"
         id="task-notes"
         ref="notesEl"
         v-model="notes"
         rows="3"
-        class="notes-area mt-2 w-full resize-none rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
+        class="notes-area w-full resize-none rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
         :placeholder="t('tasks.notesMd')"
         :readonly="!editable"
         @blur="saveNotes"
+        @keydown="notesKey"
         @keydown.esc.stop="($event.target as HTMLTextAreaElement).blur()"
       />
+      <MathGhost class="notes-area px-3 py-2.5 text-[14px]" :text="notes" :answers="noteAnswers" />
+      </div>
 
       <!-- When -->
       <div class="group mt-4">

@@ -321,7 +321,8 @@ Name a value on its own line and use it below (`rent = 650`, then
 `*` `/` `^`, brackets, percentages (`80 + 10%` is 88, `20% of 80` is 16),
 decimals with a dot or a comma (answers follow the note), and a currency sign
 (€ $ £). Words before the sum are fine (`March: 650 * 3 =`). The cards show
-the answers too.
+the answers too, and the same works in **pages** (each paragraph, list item
+or heading is a line; code blocks are left alone) and in **task notes**.
 
 ### Quick Notes (your own)
 

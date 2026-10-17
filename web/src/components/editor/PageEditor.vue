@@ -15,6 +15,7 @@ import { useToastStore } from '@/stores/toast'
 import SlashMenu from './SlashMenu.vue'
 import BubbleToolbar from './BubbleToolbar.vue'
 import './editor.css'
+import { MathAnswers } from './math'
 
 // The page body, edited visually: a TipTap editor that reads and writes the
 // page's Markdown (extensions.ts). The parent owns saving; this reports
@@ -64,6 +65,7 @@ const editor = useEditor({
   extensions: pageExtensions(
     [
       Placeholder.configure({ placeholder, includeChildren: true }),
+      MathAnswers,
       SlashCommand.configure({ state: slash, items: (q: string) => filterItems(slashItems(t), q) }),
       FileUpload.configure({
         upload: props.pageId ? (f: File) => (toast.info(t('editor.uploading', { name: f.name })), uploadFile('page', props.pageId!, f)) : null,

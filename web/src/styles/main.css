@@ -785,3 +785,15 @@ textarea.outline-none:focus-visible,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A textarea with its sums' answers laid over it (components/ui/MathGhost). */
+.math-wrap {
+  position: relative;
+}
+/* A sum's answer in a page or a task's notes (reading view and editor). */
+.md-calc {
+  color: var(--accent-text);
+  font-weight: 600;
+  white-space: pre;
+  user-select: none;
+}

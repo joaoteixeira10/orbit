@@ -4,11 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { renderMarkdown } from '@/lib/markdown'
 import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
 import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
+import { evaluate } from '@/lib/mathnotes'
 
 // A page as it reads: its Markdown rendered like a README on GitHub, with
 // the app's type. Task boxes can be ticked without editing (when allowed);
 // a double click asks to edit. Code blocks get a copy button, as on GitHub.
-const props = defineProps<{ content: string; editable: boolean }>()
+const props = defineProps<{ content: string; editable: boolean; math?: boolean }>()
 const emit = defineEmits<{ toggle: [index: number]; edit: [] }>()
 const { t } = useI18n()
 
@@ -67,10 +68,40 @@ function loadUploads() {
     uploadBlobUrl(src).then((url) => (img.src = url)).catch(() => img.classList.add('broken'))
   }
 }
+// Sums (lib/mathnotes): each block whose text ends with "=" gets its answer
+// after it, as in Quick Notes. A list item's own text only (not its
+// sub-list); code is left alone.
+function addAnswers() {
+  const el = root.value
+  if (!el) return
+  el.querySelectorAll('.md-calc').forEach((n) => n.remove())
+  if (!props.math) return
+  const blocks = [...el.querySelectorAll<HTMLElement>('p, li, h1, h2, h3, h4, td, th')].filter(
+    (b) => !b.closest('pre') && !(b.tagName === 'LI' && b.querySelector(':scope > p')),
+  )
+  const own = (b: HTMLElement) => {
+    if (b.tagName !== 'LI') return b.textContent ?? ''
+    const c = b.cloneNode(true) as HTMLElement
+    c.querySelectorAll('ul, ol').forEach((n) => n.remove())
+    return c.textContent ?? ''
+  }
+  const texts = blocks.map((b) => own(b).replace(/\n/g, ' '))
+  for (const a of evaluate(texts.join('\n'))) {
+    const b = blocks[a.line]
+    const s = document.createElement('span')
+    s.className = 'md-calc'
+    s.textContent = (/\s$/.test(texts[a.line]) ? '' : ' ') + a.result
+    const sub = b.tagName === 'LI' ? b.querySelector(':scope > ul, :scope > ol') : null
+    if (sub) b.insertBefore(s, sub)
+    else b.appendChild(s)
+  }
+}
+
 function afterRender() {
   addCopyButtons()
   showImages()
   loadUploads()
+  addAnswers()
 }
 onMounted(afterRender)
 watch(html, () => nextTick(afterRender))

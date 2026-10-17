@@ -3,7 +3,8 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Plus, X, ChevronRight } from 'lucide-vue-next'
 import { newItem, MAX_BODY, MAX_ITEMS, MAX_ITEM_TEXT, MAX_TITLE, type Draft, type DraftItem } from './noteModel'
-import { evaluate } from '@/lib/mathnotes'
+import { acceptAnswer, evaluate } from '@/lib/mathnotes'
+import MathGhost from '@/components/ui/MathGhost.vue'
 
 // The editable inside of a note, shared by the capture box and the editor:
 // a title, then either the text (growing with it) or checklist rows. In a
@@ -52,25 +53,14 @@ function onKey(e: KeyboardEvent) {
 // in grey; Tab writes it in. The grey layer lies under the (transparent)
 // text, wrapped the same way. ----
 const answers = computed(() => (draft.value.checklist ? [] : evaluate(draft.value.body)))
-const bodyLines = computed(() => draft.value.body.split('\n'))
-const answerAt = computed(() => new Map(answers.value.map((a) => [a.line, a.result])))
 function onBodyKey(e: KeyboardEvent) {
   if (onKey(e) || e.key !== 'Tab' || e.shiftKey || props.readonly || !bodyEl.value) return
   const el = bodyEl.value
-  const v = draft.value.body
-  const caret = el.selectionStart ?? 0
-  const line = v.slice(0, caret).split('\n').length - 1
-  const answer = answerAt.value.get(line)
-  if (!answer) return
+  const r = acceptAnswer(draft.value.body, el.selectionStart ?? 0, answers.value)
+  if (!r) return
   e.preventDefault()
-  const end = v.indexOf('\n', caret) === -1 ? v.length : v.indexOf('\n', caret)
-  const start = v.lastIndexOf('\n', caret - 1) + 1
-  const text = v.slice(start, end).replace(/\s+$/, '') + ' ' + answer
-  draft.value.body = v.slice(0, start) + text + v.slice(end)
-  void nextTick(() => {
-    const p = start + text.length
-    el.setSelectionRange(p, p)
-  })
+  draft.value.body = r.value
+  void nextTick(() => el.setSelectionRange(r.caret, r.caret))
 }
 function onTitleKey(e: KeyboardEvent) {
   if (onKey(e)) return
@@ -178,8 +168,7 @@ defineExpose({ focus })
       @input="grow(titleEl)"
     />
 
-    <div v-if="!draft.checklist" class="calc">
-      <div v-if="answers.length" class="f-body calc-ghost" aria-hidden="true"><template v-for="(l, i) in bodyLines" :key="i"><span class="calc-t">{{ l }}</span><span v-if="answerAt.get(i)" class="calc-r">{{ /\s$/.test(l) ? '' : ' ' }}{{ answerAt.get(i) }}</span>{{ i < bodyLines.length - 1 ? '\n' : '' }}</template></div>
+    <div v-if="!draft.checklist" class="math-wrap">
       <textarea
         ref="bodyEl"
         v-model="draft.body"
@@ -192,6 +181,7 @@ defineExpose({ focus })
         @keydown="onBodyKey"
         @input="grow(bodyEl)"
       />
+      <MathGhost class="f-body" :text="draft.body" :answers="answers" />
       <p v-if="answers.length && !readonly" class="calc-hint">{{ t('notes.mathHint') }}</p>
     </div>
 
@@ -356,28 +346,6 @@ textarea::placeholder,
   font-weight: 500;
   color: var(--text-2);
   text-align: left;
-}
-.calc {
-  position: relative;
-}
-.calc textarea {
-  position: relative;
-}
-/* The answers' layer: the same text, invisible, with the answers showing. */
-.calc-ghost {
-  position: absolute;
-  inset: 0;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  pointer-events: none;
-}
-.calc-t {
-  color: transparent;
-}
-.calc-r {
-  color: var(--accent-text);
-  opacity: 0.75;
-  font-weight: 500;
 }
 .calc-hint {
   margin-top: 2px;

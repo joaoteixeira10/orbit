@@ -696,7 +696,7 @@ onUnmounted(() => {
             @change="onEditorChange"
             @invalid="onInvalid"
           />
-          <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" @toggle="onToggle" @edit="startEdit()" />
+          <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" math @toggle="onToggle" @edit="startEdit()" />
           <p v-else class="empty-read">
             {{ t('editor.emptyRead') }}
             <button v-if="editable" class="btn-plain" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</button>

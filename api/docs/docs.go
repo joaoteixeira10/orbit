@@ -1090,6 +1090,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/invites/{token}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "What an invite link is for",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.invitePreview"
+                        }
+                    }
+                }
+            }
+        },
+        "/invites/{token}/accept": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Accept an invite link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/invites/{token}/signup": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Create an account through an invite link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The new account",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.inviteSignupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.inviteSignupResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/lists/{id}": {
             "put": {
                 "security": [
@@ -4570,6 +4672,119 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/invites": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Invite links of a workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.WorkspaceInvite"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Create an invite link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role, days, uses",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.inviteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.inviteCreated"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/invites/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Revoke an invite link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Invite id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/lists": {
             "get": {
                 "security": [
@@ -6029,6 +6244,123 @@ const docTemplate = `{
                 },
                 "unread": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.inviteCreated": {
+            "type": "object",
+            "properties": {
+                "invite": {
+                    "$ref": "#/definitions/models.WorkspaceInvite"
+                },
+                "path": {
+                    "description": "/join/\u003ctoken\u003e",
+                    "type": "string"
+                },
+                "token": {
+                    "description": "shown once",
+                    "type": "string"
+                }
+            }
+        },
+        "api.invitePreview": {
+            "type": "object",
+            "properties": {
+                "can_sign_up": {
+                    "description": "an account can be made here (password sign-in isn't hidden)",
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "invited_by": {
+                    "type": "string"
+                },
+                "member_count": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "workspace": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.inviteRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "days": {
+                    "description": "default 7",
+                    "type": "integer",
+                    "maximum": 30,
+                    "minimum": 1
+                },
+                "max_uses": {
+                    "description": "default 1",
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "editor",
+                        "viewer"
+                    ]
+                }
+            }
+        },
+        "api.inviteSignupRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "display_name": {
+                    "type": "string",
+                    "maxLength": 80
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 8
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 32
+                }
+            }
+        },
+        "api.inviteSignupResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "description": "The refresh token is delivered as an HttpOnly cookie, never in the body.",
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/models.User"
+                },
+                "workspace_id": {
+                    "type": "string"
                 }
             }
         },
@@ -7819,6 +8151,46 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.WorkspaceInvite": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "max_uses": {
+                    "type": "integer"
+                },
+                "prefix": {
+                    "description": "the token's start, to tell links apart",
+                    "type": "string"
+                },
+                "revoked_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "description": "editor | viewer",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "uses": {
+                    "type": "integer"
+                },
+                "workspace_id": {
                     "type": "string"
                 }
             }

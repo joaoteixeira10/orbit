@@ -331,6 +331,7 @@ func AllModels() []any {
 		&GitLink{},
 		&Upload{},
 		&UploadBlob{},
+		&WorkspaceInvite{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

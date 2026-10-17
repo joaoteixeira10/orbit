@@ -31,6 +31,10 @@ const (
 	// GitIntegration lets users connect their Gitea / Forgejo accounts and
 	// sync repositories' issues with task lists. On by default.
 	GitIntegration = "git_integration"
+	// WorkspaceInvites lets workspace owners make invite links: whoever opens
+	// one joins the workspace, creating an account if they have none. On by
+	// default.
+	WorkspaceInvites = "workspace_invites"
 )
 
 const settingKey = "features"
@@ -46,6 +50,7 @@ var Defaults = map[string]bool{
 	CalendarSubscriptions: true,
 	CalendarFeeds:         true,
 	GitIntegration:        true,
+	WorkspaceInvites:      true,
 }
 
 // All returns every known flag with its effective value (stored value, else

@@ -711,6 +711,7 @@ const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() 
   { key: 'calendar_subscriptions', label: t('adm.owner.feature.calSubs'), hint: t('adm.owner.feature.calSubsHint') },
   { key: 'calendar_feeds', label: t('adm.owner.feature.calFeeds'), hint: t('adm.owner.feature.calFeedsHint') },
   { key: 'git_integration', label: t('adm.owner.feature.git'), hint: t('adm.owner.feature.gitHint') },
+  { key: 'workspace_invites', label: t('adm.owner.feature.invites'), hint: t('adm.owner.feature.invitesHint') },
   { key: 'step_up_auth', label: t('adm.owner.feature.stepUp'), hint: t('adm.owner.feature.stepUpHint') },
 ])
 const featureFlags = ref<Record<string, boolean>>({ ...auth.features })

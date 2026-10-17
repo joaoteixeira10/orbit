@@ -32,10 +32,21 @@ func requestID() gin.HandlerFunc {
 }
 
 // logPath is a request path as logged: a calendar feed's address is its
-// secret (/ical/<token>.ics), so only its prefix is kept.
+// secret (/ical/<token>.ics), and so is an invite link's
+// (/api/v1/invites/<token>[/accept|/signup], /join/<token>), so only their
+// prefixes are kept.
 func logPath(p string) string {
 	if strings.HasPrefix(p, "/ical/") {
 		return "/ical/…"
+	}
+	for _, pre := range []string{"/api/v1/invites/", "/join/"} {
+		if strings.HasPrefix(p, pre) {
+			rest := p[len(pre):]
+			if i := strings.IndexByte(rest, '/'); i >= 0 {
+				return pre + "…" + rest[i:]
+			}
+			return pre + "…"
+		}
 	}
 	return p
 }

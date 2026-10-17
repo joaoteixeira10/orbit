@@ -136,6 +136,9 @@ func New(d Deps) *gin.Engine {
 		v1.GET("/auth/oidc/login", h.oidcLogin)
 		v1.GET("/auth/oidc/callback", h.oidcCallback)
 		v1.POST("/auth/oidc/exchange", authLimit, h.oidcExchange)
+		// Invite links: what one is for, and an account made through it.
+		v1.GET("/invites/:token", authLimit, h.previewInvite)
+		v1.POST("/invites/:token/signup", authLimit, h.signupInvite)
 		// Passwordless / second-factor passkey assertion (pre-auth).
 		v1.POST("/auth/webauthn/login/begin", authLimit, h.webauthnLoginBegin)
 		v1.POST("/auth/webauthn/login/finish", authLimit, h.webauthnLoginFinish)
@@ -249,6 +252,10 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/members", h.addMember)
 			authed.PUT("/workspaces/:ws/members/:uid", h.setMemberRole)
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)
+			authed.GET("/workspaces/:ws/invites", h.listInvites)
+			authed.POST("/workspaces/:ws/invites", h.createInvite)
+			authed.DELETE("/workspaces/:ws/invites/:id", h.revokeInvite)
+			authed.POST("/invites/:token/accept", authLimit, notImpersonating(), h.acceptInvite)
 			authed.PUT("/workspaces/:ws/mute", h.muteWorkspace)
 
 			authed.GET("/workspaces/:ws/pages", h.listPages)

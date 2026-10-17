@@ -315,6 +315,40 @@ export const workspacesApi = {
   removeMember: (id: string, uid: string) => api<void>(`/workspaces/${id}/members/${uid}`, { method: 'DELETE' }),
 }
 
+// Invite links: an owner makes one (a role, days, uses); its token is shown
+// once. Whoever opens /join/<token> joins, signed in or making an account.
+export interface Invite {
+  id: string
+  workspace_id: string
+  prefix: string
+  role: 'editor' | 'viewer'
+  created_by: string
+  created_at: string
+  expires_at: string
+  max_uses: number
+  uses: number
+}
+export interface InvitePreview {
+  workspace: string
+  icon: string
+  color: string
+  invited_by: string
+  role: 'editor' | 'viewer'
+  can_sign_up: boolean
+  expires_at: string
+  member_count: number
+}
+export const invitesApi = {
+  list: (ws: string) => api<Invite[]>(`/workspaces/${ws}/invites`),
+  create: (ws: string, b: { role: 'editor' | 'viewer'; days: number; max_uses: number }) =>
+    api<{ invite: Invite; token: string; path: string }>(`/workspaces/${ws}/invites`, { method: 'POST', body: j(b) }),
+  revoke: (ws: string, id: string) => api<void>(`/workspaces/${ws}/invites/${id}`, { method: 'DELETE' }),
+  preview: (token: string) => api<InvitePreview>(`/invites/${encodeURIComponent(token)}`),
+  accept: (token: string) => api<{ workspace_id: string; already_member: boolean }>(`/invites/${encodeURIComponent(token)}/accept`, { method: 'POST' }),
+  signup: (token: string, b: { username: string; display_name: string; email: string; password: string }) =>
+    api<{ access_token: string; workspace_id: string }>(`/invites/${encodeURIComponent(token)}/signup`, { method: 'POST', body: j(b) }),
+}
+
 export const withContent = (p: Page): Page => ({ ...p, content: p.content ?? '' })
 
 export const pagesApi = {

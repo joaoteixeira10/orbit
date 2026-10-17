@@ -108,6 +108,7 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/search?q=essay" | jq -r '.[] | "\(.kind)\t\(
 | Overview | `GET /home?today=&from=&to=[&ws=]`, `GET /search?q=[&ws=]`, `GET /catalog` (modules and templates) |
 | Workspaces | `GET/POST /workspaces`, `GET/PUT/DELETE /workspaces/{ws}`, `PUT /me/workspace-order` |
 | Members | `GET/POST /workspaces/{ws}/members`, `PUT/DELETE /workspaces/{ws}/members/{uid}` (your own id to leave), `GET /users/lookup?q=` (exact username or email) |
+| Invite links | `GET/POST /workspaces/{ws}/invites` (owners; `{role: editor\|viewer, days: 1–30, max_uses: 1–100}`, the answer carries the token once), `DELETE /workspaces/{ws}/invites/{id}`; public, rate-limited: `GET /invites/{token}` (what it's for), `POST /invites/{token}/signup` (`{username, password, display_name?, email?}` → signed in); signed in: `POST /invites/{token}/accept` |
 | Pages | `GET/POST /workspaces/{ws}/pages`, `GET /workspaces/{ws}/trash`, `GET/PUT/DELETE /pages/{id}` (`?permanent=1` from the trash), `POST /pages/{id}/move`, `/restore`, `/duplicate`, `POST/DELETE /pages/{id}/favorite`, `GET /me/favorites` |
 | Lists | `GET/POST /workspaces/{ws}/lists`, `PUT /workspaces/{ws}/lists/order`, `PUT/DELETE /lists/{id}` |
 | Tasks | `GET/POST /workspaces/{ws}/tasks`, `PUT/DELETE /tasks/{id}`, `POST /tasks/{id}/move` (board: `column_id`, `after_id`) |

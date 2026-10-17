@@ -11,6 +11,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/LoginView.vue'),
     meta: { public: true },
   },
+  // An invite link: open to all (it says what it's for, then joins).
+  {
+    path: '/join/:token',
+    name: 'join',
+    component: () => import('@/views/JoinView.vue'),
+    meta: { public: true },
+  },
   {
     path: '/',
     component: () => import('@/components/AppShell.vue'),

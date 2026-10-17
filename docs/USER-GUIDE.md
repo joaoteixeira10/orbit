@@ -184,6 +184,19 @@ it you only see workspaces you're invited to.
   deleted) and drag them to change their order in the sidebar.
 - **Members** — invite an existing account by **username or email** as
   **Owner**, **Editor** or **Viewer**; change roles; remove members.
+- **Invite links** (under Members, for owners) — for people who don't have an
+  account yet, or whose user name you don't know. Choose the role (**Editor**
+  or **Viewer**), how long the link lasts (1 to 30 days) and how many people
+  can use it (once by default), then **Make a link** and copy it — it is shown
+  only that once. Whoever opens it sees the workspace and who invited them:
+  signed in, **Join workspace** is one click; otherwise they **Create an
+  account** right there (unless your instance signs everyone in with SSO —
+  then they sign in and open the link again) or sign in and come back. The
+  list shows each link's uses and expiry; **Revoke** ends one. A link stops
+  working when it expires, is used up, is revoked, or when whoever made it is
+  no longer an owner. Opening a link again when you're already in doesn't use
+  it up (an editor link does raise a viewer to editor). The owners are told
+  who joined.
 
 | Role | Can |
 |---|---|
@@ -684,6 +697,8 @@ until they transfer it. Your name → **Owner** has these tabs: **Owner**,
 | **User impersonation** | off | **Impersonate** for holders of **Impersonate users** — which shows that user's workspaces. |
 | **Calendar subscriptions** | on | Subscribing workspaces to outside calendars. |
 | **Calendar feeds** | on | Private ICS feeds in Settings. |
+| **Git integration** | on | Gitea / Forgejo accounts in Settings, lists made from repositories, tasks linked to issues. |
+| **Invite links** | on | Owners make links to their workspaces; people join through them, making an account if they need one. Off: existing links stop working. |
 | **Step-up re-authentication** | off | **Confirm it's you** before security and SSO changes, feature flags, backups, owner transfer and impersonation. |
 
 **Backups.** One encrypted archive of the whole database — accounts, roles,

@@ -319,3 +319,19 @@ type UploadBlob struct {
 	ID   string `gorm:"primaryKey;size:36"`
 	Data []byte `gorm:"not null"`
 }
+
+// WorkspaceInvite is a link that lets people join a workspace (with a role),
+// creating an account if they have none. Only the token's SHA-256 is kept;
+// it expires, can be used MaxUses times, and can be revoked.
+type WorkspaceInvite struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	TokenHash   string     `gorm:"size:64;not null;uniqueIndex" json:"-"`
+	Prefix      string     `gorm:"size:12" json:"prefix"`        // the token's start, to tell links apart
+	Role        string     `gorm:"size:10;not null" json:"role"` // editor | viewer
+	CreatedBy   string     `gorm:"size:36;not null" json:"created_by"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	MaxUses     int        `gorm:"not null;default:1" json:"max_uses"`
+	Uses        int        `gorm:"not null;default:0" json:"uses"`
+	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
+}

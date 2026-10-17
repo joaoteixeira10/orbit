@@ -102,6 +102,13 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Invite links** — a workspace's owners make a link (editor or viewer, 1
+  to 30 days, one or more uses), shown once; whoever opens it joins with one
+  click, or makes an account right there (not when the instance signs people
+  in only with SSO). Links can be revoked and stop when their maker is no
+  longer an owner; owners are told who joined. Flag `workspace_invites` (on).
+  A sign-in that goes through SSO now comes back to where it was going (the
+  link, say).
 - **Read-only API tokens.**
 - **Apple-style interface** — system font and colours, translucent sidebar,
   sheets, segmented controls, round checkboxes, light and dark; installable,

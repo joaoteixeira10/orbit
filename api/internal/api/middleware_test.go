@@ -97,6 +97,12 @@ func TestLogPathHidesFeedTokens(t *testing.T) {
 	if got := logPath("/ical/0123456789abcdef.ics"); got != "/ical/…" {
 		t.Errorf("feed path logged as %q", got)
 	}
+	if got := logPath("/api/v1/invites/s3cr3t/accept"); got != "/api/v1/invites/…/accept" {
+		t.Errorf("invite path logged as %q", got)
+	}
+	if got := logPath("/join/s3cr3t"); got != "/join/…" {
+		t.Errorf("join path logged as %q", got)
+	}
 	if got := logPath("/api/v1/workspaces"); got != "/api/v1/workspaces" {
 		t.Errorf("ordinary path changed: %q", got)
 	}

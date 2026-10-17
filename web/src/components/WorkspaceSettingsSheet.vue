@@ -9,6 +9,7 @@ import Confirm from './ui/Confirm.vue'
 import WsIcon from './ui/WsIcon.vue'
 import IconColorPicker from './ui/IconColorPicker.vue'
 import Avatar from './ui/Avatar.vue'
+import InviteLinks from './InviteLinks.vue'
 import { ICONS } from '@/lib/icons'
 import { useSortable } from '@/lib/sortable'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -244,6 +245,7 @@ async function destroy() {
           </div>
         </div>
         <p class="footnote px-1">{{ t('ws.rolesHint') }}</p>
+        <InviteLinks v-if="isOwner && auth.features.workspace_invites !== false" :ws-id="wsId" />
       </div>
     </template>
   </Overlay>

@@ -187,6 +187,20 @@ workspaces).
   deletes the workspaces it was alone in and hands the others to a remaining
   member (an editor first) — content is never orphaned or exposed.
 - **Assignees** must be members of the workspace.
+- **Invite links** (flag `workspace_invites`, on by default). Only owners
+  make them, with role editor or viewer (never owner), up to 30 days and 100
+  uses. The token is 24 random bytes, shown once and stored as a SHA-256
+  (plus a six-character prefix to tell links apart); it never reaches the
+  request log or the audit log. A link dies when it expires, is used up or
+  revoked, its workspace is archived or deleted, or its maker stops being an
+  owner (or is deleted). Uses are counted in the same update that checks
+  them, so a one-use link can't be used twice at once. The public lookup and
+  sign-up are rate-limited like sign-in; sign-up makes a **member**-role
+  account (no instance privileges), takes the usual password rules, and is
+  refused when the sign-in page hides the password form for SSO. Joining
+  isn't possible while impersonating. Audited: `workspace.invite_create`,
+  `workspace.invite_revoke`, `workspace.invite_accept`, and `user.create`
+  with `via: invite`.
 - **Impersonation** (flag `impersonation`, off by default) does show the
   impersonated user's workspaces — that is what it is for. Leave it off unless
   you need it; every impersonation is audited and can raise a security alert.

@@ -242,6 +242,45 @@ test('attachments: an image on a task shows as a thumbnail, and goes when remove
   await expect(thumb).toHaveCount(0)
 })
 
+test('invite links: an owner makes one; a newcomer opens it, makes an account and is in', async ({ page, browser }) => {
+  await signIn(page, NEW_PASSWORD)
+  const row = page.locator('.ws-row').first()
+  const name = (await row.innerText()).trim().split('\n')[0]
+  await row.hover()
+  await row.locator('.more').click()
+  await page.getByRole('button', { name: 'Members', exact: true }).click()
+  await page.getByRole('button', { name: 'Make a link' }).click()
+  const url = await page.getByTestId('invite-url').inputValue()
+  expect(url).toMatch(/\/join\/[\w-]{30,}$/)
+
+  // Someone with no account, in a browser of their own.
+  const other = await browser.newContext()
+  const p = await other.newPage()
+  await p.goto(url)
+  await expect(p.getByRole('heading', { name: `Join ${name}` })).toBeVisible()
+  await expect(p.getByText(/invited you to join as editor/)).toBeVisible()
+  await p.getByRole('button', { name: 'Create an account' }).click()
+  await p.getByLabel('Your name').fill('Rui')
+  await p.getByLabel('Username').fill('rui')
+  await p.getByLabel('Password').fill('rui-e2e-password-42')
+  await p.getByRole('button', { name: 'Create account and join' }).click()
+  await p.waitForURL(/\/w\/[^/]+$/)
+  await expect(p.getByRole('heading', { name })).toBeVisible()
+
+  // The link was for one person: it's spent now.
+  await p.goto(url)
+  await expect(p.getByRole('heading', { name: /expired, was revoked or was used up/ })).toBeVisible()
+  await other.close()
+
+  // The owner is told who joined.
+  await page.keyboard.press('Escape')
+  const bell = page.locator('#sidebar').getByRole('button', { name: /^Notifications/ })
+  await expect(bell).toContainText('1')
+  await bell.click()
+  await page.getByRole('button', { name: /Rui joined/ }).click()
+  await expect(bell).not.toContainText('1')
+})
+
 test('notifications: a task someone gives you rings the bell and opens', async ({ page, request }) => {
   // Another member (made through the API) gives the admin a task.
   const json = async (r: { json: () => Promise<any> }) => r.json()

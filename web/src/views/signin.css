@@ -1,0 +1,197 @@
+/* Sign-in, the way Apple's account pages look: the mark large and centred,
+   a clean card, filled fields, one prominent button. */
+.login {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  font-size: 14px;
+  line-height: 1.5;
+  background:
+    radial-gradient(1200px 600px at 20% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, #af52de 14%, transparent), transparent 60%),
+    var(--grouped);
+}
+.wrap {
+  width: min(380px, 100%);
+}
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.brand b {
+  font: 700 26px var(--font-display);
+  letter-spacing: -0.02em;
+}
+.logo {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.brand b.brand-word {
+  font: 700 34px "UnifrakturCook", serif;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.brand-logo {
+  height: 56px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.lcard {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border-radius: 18px;
+  padding: 28px 26px;
+  box-shadow: var(--shadow-lg);
+}
+h1 {
+  margin: 0 0 4px;
+  font: 700 22px var(--font-display);
+  letter-spacing: -0.015em;
+  text-align: center;
+}
+.lead {
+  margin: 0 0 18px;
+  color: var(--text-2);
+  text-align: center;
+}
+.lead.center {
+  margin: 0;
+}
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.fields input {
+  width: 100%;
+  padding: 10px 13px;
+  font-size: 15px;
+  color: var(--text);
+  border-radius: 11px;
+  border: 0;
+  background: var(--fill-2);
+  outline: none;
+  transition: box-shadow 0.2s var(--ease);
+}
+.fields input:focus {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.code {
+  text-align: center;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.primary,
+.alt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 11px;
+  border: 0;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+.primary {
+  margin-top: 4px;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.alt {
+  background: var(--fill);
+  color: var(--text);
+}
+.primary:hover:not(:disabled),
+.alt:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.primary:active:not(:disabled),
+.alt:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.primary:disabled,
+.alt:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.or span {
+  flex: 1;
+  height: 0.5px;
+  background: var(--border);
+}
+.error {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--crit-bg);
+  color: var(--crit-text);
+  font-size: 13px;
+}
+.links {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.link.accent {
+  color: var(--accent-text);
+}
+.foot {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+}
+/* A developer theme: its dark ground (as on its card in Branding) with a soft
+   glow of its accent; the text outside the card turns light. */
+.login.themed {
+  background:
+    radial-gradient(900px 520px at 50% -12%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 62%),
+    var(--login-ground);
+}
+.login.themed .lcard {
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+.login.themed .brand b:not(.brand-word),
+.login.themed .foot {
+  color: rgba(255, 255, 255, 0.82);
+}

@@ -37,6 +37,10 @@ const members = computed(() => wss.members[props.ws] ?? [])
 const auth = useAuthStore()
 const assigned = computed(() => (task.value?.assignee_ids ?? []).map((id) => members.value.find((m) => m.user_id === id)).filter((m) => !!m))
 const unassigned = computed(() => members.value.filter((m) => !task.value?.assignee_ids.includes(m.user_id)))
+function invitePeople() {
+  emit('close')
+  window.dispatchEvent(new CustomEvent('orbit:settings', { detail: { ws: props.ws, tab: 'members' } }))
+}
 function setAssignees(ids: string[]) {
   void save({ assignee_ids: ids.filter(Boolean) })
 }
@@ -54,7 +58,7 @@ watch(
   async ([o]) => {
     if (!o) return
     if (!tasks.tasks[props.ws]) await tasks.load(props.ws).catch(() => {})
-    if ((workspace.value?.member_count ?? 1) > 1 && !wss.members[props.ws]) void wss.loadMembers(props.ws).catch(() => {})
+    if (!wss.members[props.ws]) void wss.loadMembers(props.ws).catch(() => {})
     title.value = task.value?.title ?? ''
     notes.value = task.value?.notes ?? ''
     editingNotes.value = false
@@ -310,7 +314,7 @@ async function remove() {
             <option v-for="c in list.columns" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
-        <div v-if="members.length > 1" class="group-row !items-start" data-testid="assignees">
+        <div class="group-row !items-start" data-testid="assignees">
           <span class="tile mt-0.5 h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>
           <div class="min-w-0 flex-1">
             <span class="block text-[14px]">{{ t('tasks.assignee') }}</span>
@@ -330,6 +334,8 @@ async function remove() {
                 <option value="" disabled>{{ assigned.length ? '+' : t('tasks.addAssignee') }}</option>
                 <option v-for="m in unassigned" :key="m.user_id" :value="m.user_id">{{ m.display_name || m.username }}</option>
               </select>
+              <!-- Alone in the workspace: others are invited from its Members. -->
+              <button v-if="members.length <= 1 && workspace?.role === 'owner'" type="button" class="text-[13px] text-accent-text hover:underline" @click="invitePeople">{{ t('tasks.invitePeople') }}</button>
             </div>
           </div>
         </div>

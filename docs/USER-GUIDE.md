@@ -366,7 +366,7 @@ shows or hides completed tasks). **Click a task** (anywhere but its
 checkbox) to open its details — rename it there, in the title. The details
 hold: notes, **Start date**, **Date** and **Time**, **Repeat** (every day,
 weekday, week, 2 weeks, month, year), **Priority**, **List**, **Status** (its
-board column), **Assignees** (one or several members, in shared workspaces — each gets the reminders), **tags**,
+board column), **Assignees** (one or several members — each gets the reminders; alone in a workspace, **Invite people** opens its Members), **tags**,
 **Attachments** (add files or drop them; images show as thumbnails — click to
 open, other files download) and **Sub-tasks**. **Delete** is at the bottom
 (it deletes the task's attachments too).

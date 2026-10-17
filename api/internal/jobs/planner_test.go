@@ -100,10 +100,9 @@ func TestDigest(t *testing.T) {
 	db.Create(&models.UserPrefs{UserID: "u1", Timezone: "Europe/Lisbon", DigestEnabled: true, DigestTime: "08:00"})
 	db.Create(&models.UserPrefs{UserID: "u2", Timezone: "Europe/Lisbon", DigestEnabled: true, DigestTime: "08:00"})
 	late, today, at := "2026-10-12", "2026-10-13", "14:00"
-	other := "u2"
 	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Essay", Due: &late, CreatedBy: "u1"})
 	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Lab report", Due: &today, DueTime: &at, CreatedBy: "u1"})
-	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Bob's", Due: &today, AssigneeID: &other, CreatedBy: "u1"})
+	db.Create(&models.Task{WorkspaceID: "w", ListID: "l", ColumnID: "c", Title: "Bob's", Due: &today, Assignees: `["u2"]`, CreatedBy: "u1"})
 	start := time.Date(2026, 10, 13, 9, 30, 0, 0, time.UTC)
 	db.Create(&models.Event{WorkspaceID: "w", Title: "Class", StartsAt: start, EndsAt: start.Add(time.Hour)})
 

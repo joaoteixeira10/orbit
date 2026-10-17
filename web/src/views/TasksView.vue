@@ -16,7 +16,7 @@ import { useToastStore } from '@/stores/toast'
 import { useSortable } from '@/lib/sortable'
 import { parseQuick } from '@/lib/quickadd'
 import { todayStr, relDay } from '@/lib/dates'
-import { tasksApi, type Task, type TaskList, type TaskInput } from '@/api/planner'
+import { tasksApi, type Member, type Task, type TaskList, type TaskInput } from '@/api/planner'
 import { useTaskFilter, dueBucket, dueEdges, DUE_BUCKETS, type DueBucket } from '@/lib/taskFilter'
 
 // Tasks, Reminders-style: smart lists (Today, Scheduled, All, Completed) and
@@ -138,7 +138,8 @@ const sections = computed<Section[]>(() => {
       case 'assignee':
         return [...members.value.map((m) => ({ id: m.user_id, name: m.display_name || m.username })), { id: '', name: t('tasks.unassigned') }].map((m) => ({
           ...base, key: 'who-' + (m.id || 'none'), title: m.name,
-          tasks: pool.filter((x) => (x.assignee_id ?? '') === m.id).sort(byDue), preset: m.id ? { assignee_id: m.id } : undefined,
+          // A task for several people shows under each of them.
+          tasks: pool.filter((x) => (m.id ? x.assignee_ids.includes(m.id) : !x.assignee_ids.length)).sort(byDue), preset: m.id ? { assignee_ids: [m.id] } : undefined,
         })).filter((s) => s.tasks.length)
     }
   }
@@ -205,9 +206,7 @@ async function toggle(x: Task) {
     toast.error(e.message)
   }
 }
-async function rename(x: Task, title: string) {
-  await tasks.update(ws.value, x.id, { title }).catch((e) => toast.error(e.message))
-}
+const peopleOf = (x: Task) => x.assignee_ids.map((id) => memberById.value.get(id)).filter((m): m is Member => !!m)
 function subCount(x: Task) {
   const subs = all.value.filter((s) => s.parent_id === x.id)
   return { done: subs.filter((s) => s.done).length, total: subs.length }
@@ -359,14 +358,13 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
               :color="listById.get(x.list_id)?.color"
               :list-name="!list && sel !== 'all' ? listById.get(x.list_id)?.name : ''"
               :subtasks="subCount(x)"
-              :assignee="x.assignee_id ? memberById.get(x.assignee_id) : undefined"
+              :assignees="peopleOf(x)"
               :editable="editable"
               @toggle="toggle(x)"
               @open="openTask = x.id"
-              @rename="(v) => rename(x, v)"
             />
             <div v-for="sub in all.filter((y) => y.parent_id === x.id && (!y.done || showDone))" :key="sub.id" class="pl-8">
-              <TaskRow :task="sub" :color="listById.get(x.list_id)?.color" compact :editable="editable" @toggle="toggle(sub)" @open="openTask = sub.id" @rename="(v) => rename(sub, v)" />
+              <TaskRow :task="sub" :color="listById.get(x.list_id)?.color" compact :editable="editable" @toggle="toggle(sub)" @open="openTask = sub.id" />
             </div>
           </div>
         </div>

@@ -560,7 +560,7 @@ func gitChange(before, after models.Task) gitsync.Change {
 		Notes:    before.Notes != after.Notes,
 		Due:      !eqs(before.Due, after.Due),
 		State:    (before.CompletedAt == nil) != (after.CompletedAt == nil),
-		Assignee: !eqs(before.AssigneeID, after.AssigneeID),
+		Assignee: before.Assignees != after.Assignees,
 		Tags:     before.Tags != after.Tags,
 		Column:   before.ColumnID != after.ColumnID || before.ListID != after.ListID,
 	}

@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, ChevronRight, Plus } from 'lucide-vue-next'
-import Avatar from '@/components/ui/Avatar.vue'
+import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TimelineScale from './TimelineScale.vue'
 import TimelineBar from './TimelineBar.vue'
 import { locale } from '@/lib/dates'
@@ -415,7 +415,7 @@ function commitAdd(listId: string) {
                 </button>
                 <button class="nm-title" :class="{ done: r.task.done }" :title="r.task.title" @click="emit('open', r.task.id)">{{ r.task.title }}</button>
                 <span v-if="!r.span && !phone" class="nodate">{{ t('timeline.noDate') }}</span>
-                <Avatar v-if="r.assignee" :name="r.assignee.display_name || r.assignee.username" :src="r.assignee.avatar_url" :size="18" />
+                <AvatarStack v-if="r.assignees.length" :people="r.assignees" :size="18" />
               </div>
               <div
                 class="tr"

@@ -8,7 +8,7 @@ const list: TaskList = {
 }
 const task = (p: Partial<Task>): Task => ({
   id: 't', workspace_id: 'w', list_id: 'l1', column_id: 'backlog', parent_id: null, title: 'Report', notes: '', priority: 0, tags: [],
-  start: null, due: null, due_time: null, repeat: '', rank: 1, completed_at: null, done: false, assignee_id: null,
+  start: null, due: null, due_time: null, repeat: '', rank: 1, completed_at: null, done: false, assignee_ids: [], assignee_id: null,
   created_by: 'me', created_at: '', updated_at: '', ...p,
 })
 // Tuesday 13 October 2026; weeks start on Monday.
@@ -37,16 +37,17 @@ describe('task filter', () => {
     f.priority = [2]
     f.assignee = ['me']
     expect(activeCount(f)).toBe(3)
-    expect(matchTask(task({ priority: 2, assignee_id: 'me' }), f, ctx)).toBe(true)
-    expect(matchTask(task({ priority: 2, assignee_id: 'other' }), f, ctx)).toBe(false)
-    expect(matchTask(task({ priority: 1, assignee_id: 'me' }), f, ctx)).toBe(false)
-    expect(matchTask(task({ title: 'Slides', priority: 2, assignee_id: 'me', tags: ['report'] }), f, ctx)).toBe(true)
+    expect(matchTask(task({ priority: 2, assignee_ids: ['me'] }), f, ctx)).toBe(true)
+    expect(matchTask(task({ priority: 2, assignee_ids: ['other'] }), f, ctx)).toBe(false)
+    expect(matchTask(task({ priority: 1, assignee_ids: ['me'] }), f, ctx)).toBe(false)
+    expect(matchTask(task({ priority: 2, assignee_ids: ['other', 'me'] }), f, ctx)).toBe(true) // one of several
+    expect(matchTask(task({ title: 'Slides', priority: 2, assignee_ids: ['me'], tags: ['report'] }), f, ctx)).toBe(true)
   })
   it('"unassigned" and tags', () => {
     const f = { ...emptyFilter(), assignee: ['none'], tags: ['q4'] }
     expect(matchTask(task({ tags: ['q4'] }), f, ctx)).toBe(true)
     expect(matchTask(task({ tags: ['q3'] }), f, ctx)).toBe(false)
-    expect(matchTask(task({ tags: ['q4'], assignee_id: 'me' }), f, ctx)).toBe(false)
+    expect(matchTask(task({ tags: ['q4'], assignee_ids: ['me'] }), f, ctx)).toBe(false)
   })
 })
 

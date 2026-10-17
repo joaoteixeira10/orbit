@@ -102,6 +102,11 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Several assignees on a task** ("For" is now **Assignees**): each gets
+  the reminders and the "assigned you" notification; filters, grouping and
+  charts count each one; git sync carries all of them. The API takes
+  `assignee_ids` (`assignee_id` still works, as the first one).
+- **Clicking a task opens its details** (as in Plane); it's renamed there.
 - **Task notes in Markdown** — rendered in the task's details, with
   checklists that tick; a click edits the source. Lists and boards show the
   first line as plain text.

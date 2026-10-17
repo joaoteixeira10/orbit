@@ -470,18 +470,20 @@ func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
 			}
 		}
 		t.Tags = encodeTags(tags)
-		// The first assignee who is a member with an account there. Someone
-		// git can't name (no account there) stays assigned.
-		var who *string
+		// The issue's assignees who are members with an account there; those
+		// git can't name (no account there) stay assigned.
+		var who []string
 		for _, a := range is.Assignees {
 			if uid, ok := byLogin[strings.ToLower(a.Login)]; ok {
-				who = &uid
-				break
+				who = append(who, uid)
 			}
 		}
-		if who != nil || t.AssigneeID == nil || byUser[*t.AssigneeID] != "" {
-			t.AssigneeID = who
+		for _, uid := range t.AssigneeList() {
+			if byUser[uid] == "" {
+				who = append(who, uid)
+			}
 		}
+		t.SetAssignees(who)
 		t.GitHost, t.GitRepo, t.GitNumber, t.GitIssueID = link.Host, link.Owner+"/"+link.Repo, is.Number, is.ID
 		t.GitURL, t.GitState, t.GitPull = is.HTMLURL, is.GitState(), false
 		synced := is.UpdatedAt
@@ -635,12 +637,13 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 	if ch.Assignee && link != nil {
 		_, byUser := e.workspaceLogins(t.WorkspaceID, t.GitHost)
 		logins := []string{}
-		if t.AssigneeID != nil {
-			if l, ok := byUser[*t.AssigneeID]; ok {
+		ids := t.AssigneeList()
+		for _, uid := range ids {
+			if l, ok := byUser[uid]; ok {
 				logins = append(logins, l)
 			}
 		}
-		if t.AssigneeID == nil || len(logins) > 0 {
+		if len(ids) == 0 || len(logins) > 0 {
 			in.Assignees, edit = &logins, true
 		}
 	}
@@ -742,9 +745,16 @@ func (e *Engine) createIssue(ctx context.Context, actor string, link models.GitL
 		d := DueTime(*t.Due)
 		in.DueDate = &d
 	}
-	if t.AssigneeID != nil {
-		if _, byUser := e.workspaceLogins(t.WorkspaceID, link.Host); byUser[*t.AssigneeID] != "" {
-			in.Assignees = &[]string{byUser[*t.AssigneeID]}
+	if ids := t.AssigneeList(); len(ids) > 0 {
+		_, byUser := e.workspaceLogins(t.WorkspaceID, link.Host)
+		var logins []string
+		for _, uid := range ids {
+			if l := byUser[uid]; l != "" {
+				logins = append(logins, l)
+			}
+		}
+		if len(logins) > 0 {
+			in.Assignees = &logins
 		}
 	}
 	if ids, err := e.labelIDs(ctx, c, link, t); err == nil && len(ids) > 0 {

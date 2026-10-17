@@ -1238,7 +1238,14 @@ definitions:
         description: 'create: place after this task ("" = at the end)'
         type: string
       assignee_id:
+        description: 'older clients: just one ("" = none)'
         type: string
+      assignee_ids:
+        description: the whole list
+        items:
+          type: string
+        maxItems: 20
+        type: array
       column_id:
         type: string
       completed:
@@ -1277,10 +1284,12 @@ definitions:
   api.taskResponse:
     properties:
       assignee_id:
-        description: |-
-          AssigneeID is who it's for in a shared workspace (reminders go to them;
-          nil = to whoever created it).
+        description: the first one (older clients)
         type: string
+      assignee_ids:
+        items:
+          type: string
+        type: array
       column_id:
         type: string
       completed_at:

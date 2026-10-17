@@ -70,8 +70,8 @@ export function matchTask(t: Task, f: TaskFilter, ctx: MatchContext): boolean {
   if (f.priority.length && !f.priority.includes(t.priority)) return false
   if (f.progress.length && !f.progress.includes(progressOf(t, ctx.lists.get(t.list_id)))) return false
   if (f.assignee.length) {
-    const who = t.assignee_id ?? 'none'
-    if (!f.assignee.includes(who) && !(who === ctx.me && f.assignee.includes('me'))) return false
+    const who = t.assignee_ids.length ? t.assignee_ids : ['none']
+    if (!who.some((w) => f.assignee.includes(w) || (w === ctx.me && f.assignee.includes('me')))) return false
   }
   if (f.tags.length && !t.tags.some((x) => f.tags.includes(x))) return false
   if (f.lists.length && !f.lists.includes(t.list_id)) return false

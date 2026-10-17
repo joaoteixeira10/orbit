@@ -278,15 +278,22 @@ func (h *Handlers) orderLists(c *gin.Context) {
 
 type taskResponse struct {
 	models.Task
-	Tags []string `json:"tags"`
-	Done bool     `json:"done"`
+	Tags        []string `json:"tags"`
+	AssigneeIDs []string `json:"assignee_ids"`
+	AssigneeID  *string  `json:"assignee_id"` // the first one (older clients)
+	Done        bool     `json:"done"`
 	// GitError: the change is saved but didn't reach the linked issue (the
 	// sync tries again).
 	GitError string `json:"git_error,omitempty"`
 }
 
 func toTaskResponse(t models.Task) taskResponse {
-	return taskResponse{Task: t, Tags: decodeList(t.Tags), Done: t.CompletedAt != nil}
+	r := taskResponse{Task: t, Tags: decodeList(t.Tags), AssigneeIDs: t.AssigneeList(), Done: t.CompletedAt != nil}
+	if len(r.AssigneeIDs) > 0 {
+		first := r.AssigneeIDs[0]
+		r.AssigneeID = &first
+	}
+	return r
 }
 
 func toTaskResponses(ts []models.Task) []taskResponse {
@@ -344,20 +351,21 @@ func (h *Handlers) listTasks(c *gin.Context) {
 }
 
 type taskRequest struct {
-	ListID     *string   `json:"list_id"`
-	ColumnID   *string   `json:"column_id"`
-	ParentID   *string   `json:"parent_id"`
-	Title      *string   `json:"title" binding:"omitempty,max=500"`
-	Notes      *string   `json:"notes" binding:"omitempty,max=20000"`
-	Priority   *int      `json:"priority" binding:"omitempty,min=0,max=3"`
-	Tags       *[]string `json:"tags"`
-	Start      *string   `json:"start"`    // YYYY-MM-DD, "" clears
-	Due        *string   `json:"due"`      // YYYY-MM-DD, "" clears
-	DueTime    *string   `json:"due_time"` // HH:MM, "" clears
-	Repeat     *string   `json:"repeat"`   // RRULE, "" clears
-	AssigneeID *string   `json:"assignee_id"`
-	Completed  *bool     `json:"completed"`
-	AfterID    string    `json:"after_id"` // create: place after this task ("" = at the end)
+	ListID      *string   `json:"list_id"`
+	ColumnID    *string   `json:"column_id"`
+	ParentID    *string   `json:"parent_id"`
+	Title       *string   `json:"title" binding:"omitempty,max=500"`
+	Notes       *string   `json:"notes" binding:"omitempty,max=20000"`
+	Priority    *int      `json:"priority" binding:"omitempty,min=0,max=3"`
+	Tags        *[]string `json:"tags"`
+	Start       *string   `json:"start"`                                   // YYYY-MM-DD, "" clears
+	Due         *string   `json:"due"`                                     // YYYY-MM-DD, "" clears
+	DueTime     *string   `json:"due_time"`                                // HH:MM, "" clears
+	Repeat      *string   `json:"repeat"`                                  // RRULE, "" clears
+	AssigneeIDs *[]string `json:"assignee_ids" binding:"omitempty,max=20"` // the whole list
+	AssigneeID  *string   `json:"assignee_id"`                             // older clients: just one ("" = none)
+	Completed   *bool     `json:"completed"`
+	AfterID     string    `json:"after_id"` // create: place after this task ("" = at the end)
 }
 
 // cleanTags trims, de-duplicates and bounds tags.
@@ -449,18 +457,25 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 		}
 		t.Repeat = r
 	}
-	if req.AssigneeID != nil {
-		if *req.AssigneeID == "" {
-			t.AssigneeID = nil
-		} else {
+	ids := req.AssigneeIDs
+	if ids == nil && req.AssigneeID != nil {
+		one := []string{}
+		if *req.AssigneeID != "" {
+			one = append(one, *req.AssigneeID)
+		}
+		ids = &one
+	}
+	if ids != nil {
+		var want models.Task
+		want.SetAssignees(*ids)
+		if list := want.AssigneeList(); len(list) > 0 {
 			var n int64
-			h.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ? AND user_id = ?", t.WorkspaceID, *req.AssigneeID).Count(&n)
-			if n == 0 {
+			h.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ? AND user_id IN ?", t.WorkspaceID, list).Count(&n)
+			if int(n) != len(list) {
 				return "tasks can only be assigned to members of the workspace"
 			}
-			a := *req.AssigneeID
-			t.AssigneeID = &a
 		}
+		t.Assignees = want.Assignees
 	}
 	return ""
 }
@@ -569,11 +584,7 @@ func (h *Handlers) createTask(c *gin.Context) {
 	h.publishWS(c, ws.ID, "tasks")
 	h.notifyAssigned(c, t, nil)
 	if t.ParentID == nil {
-		var assignee []string
-		if t.AssigneeID != nil {
-			assignee = append(assignee, *t.AssigneeID)
-		}
-		h.notifyActivity(c, ws, "task_added", t.Title, taskLink(t), assignee...)
+		h.notifyActivity(c, ws, "task_added", t.Title, taskLink(t), t.AssigneeList()...)
 	}
 	resp := toTaskResponse(t)
 	if resp.GitError = h.gitAfter(c, nil, &t); resp.GitError == "" && t.GitIssueID != 0 {
@@ -605,7 +616,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	wasDone, prevAssignee, before := t.CompletedAt != nil, t.AssigneeID, t
+	wasDone, prevAssignees, before := t.CompletedAt != nil, t.AssigneeList(), t
 	if msg := h.applyTaskFields(req, &t); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -688,7 +699,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, t.WorkspaceID, "tasks")
-	h.notifyAssigned(c, t, prevAssignee)
+	h.notifyAssigned(c, t, prevAssignees)
 	if !wasDone && (t.CompletedAt != nil || repeated) && t.ParentID == nil {
 		h.notifyActivity(c, h.workspaceOf(t.WorkspaceID), "task_done", t.Title, taskLink(t))
 	}

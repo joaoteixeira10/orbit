@@ -56,18 +56,31 @@ func (h *Handlers) notifyActivity(c *gin.Context, ws models.Workspace, verb, tit
 	}
 }
 
-// notifyAssigned tells someone the caller gave them a task.
-func (h *Handlers) notifyAssigned(c *gin.Context, t models.Task, before *string) {
+// notifyAssigned tells each person the caller just gave a task to (those
+// not among before).
+func (h *Handlers) notifyAssigned(c *gin.Context, t models.Task, before []string) {
 	uid := auth.UserID(c)
-	if t.AssigneeID == nil || *t.AssigneeID == uid || (before != nil && *before == *t.AssigneeID) || t.CompletedAt != nil {
+	if t.CompletedAt != nil {
 		return
 	}
-	ws := h.workspaceOf(t.WorkspaceID)
-	h.inbox.Notify(inbox.Message{
-		UserID: *t.AssigneeID, Kind: inbox.Assigned, Verb: "task_assigned", WorkspaceID: t.WorkspaceID, ActorID: uid,
-		Params: map[string]any{"actor": h.actorName(uid), "title": t.Title, "ws": ws.Name, "task": t.ID},
-		Link:   taskLink(t),
-	})
+	had := map[string]bool{uid: true}
+	for _, id := range before {
+		had[id] = true
+	}
+	var ws models.Workspace
+	for _, to := range t.AssigneeList() {
+		if had[to] {
+			continue
+		}
+		if ws.ID == "" {
+			ws = h.workspaceOf(t.WorkspaceID)
+		}
+		h.inbox.Notify(inbox.Message{
+			UserID: to, Kind: inbox.Assigned, Verb: "task_assigned", WorkspaceID: t.WorkspaceID, ActorID: uid,
+			Params: map[string]any{"actor": h.actorName(uid), "title": t.Title, "ws": ws.Name, "task": t.ID},
+			Link:   taskLink(t),
+		})
+	}
 }
 
 // notifyMembership tells someone they were added to a workspace, their role

@@ -11,6 +11,7 @@ import { gitApi, type TaskInput } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
 import GitBadge from './GitBadge.vue'
 import Attachments from '@/components/ui/Attachments.vue'
+import Avatar from '@/components/ui/Avatar.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
@@ -33,6 +34,11 @@ const workspace = computed(() => wss.byId(props.ws))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at)
 const members = computed(() => wss.members[props.ws] ?? [])
 const auth = useAuthStore()
+const assigned = computed(() => (task.value?.assignee_ids ?? []).map((id) => members.value.find((m) => m.user_id === id)).filter((m) => !!m))
+const unassigned = computed(() => members.value.filter((m) => !task.value?.assignee_ids.includes(m.user_id)))
+function setAssignees(ids: string[]) {
+  void save({ assignee_ids: ids.filter(Boolean) })
+}
 
 const title = ref('')
 const notes = ref('')
@@ -303,13 +309,28 @@ async function remove() {
             <option v-for="c in list.columns" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
-        <div v-if="members.length > 1" class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>
-          <span class="flex-1 text-[14px]">{{ t('tasks.assignee') }}</span>
-          <select class="input !w-auto !py-1 text-[13px]" :value="task.assignee_id ?? ''" :disabled="!editable" @change="save({ assignee_id: ($event.target as HTMLSelectElement).value })">
-            <option value="">{{ t('tasks.nobody') }}</option>
-            <option v-for="m in members" :key="m.user_id" :value="m.user_id">{{ m.display_name || m.username }}</option>
-          </select>
+        <div v-if="members.length > 1" class="group-row !items-start" data-testid="assignees">
+          <span class="tile mt-0.5 h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>
+          <div class="min-w-0 flex-1">
+            <span class="block text-[14px]">{{ t('tasks.assignee') }}</span>
+            <div class="mt-1 flex flex-wrap items-center gap-1.5">
+              <span v-for="m in assigned" :key="m.user_id" class="pill inline-flex items-center gap-1.5 !pl-0.5">
+                <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="18" />{{ m.display_name || m.username }}
+                <button v-if="editable" type="button" class="-mr-0.5 text-text-3 hover:text-text" :aria-label="t('tasks.removeAssignee', { name: m.display_name || m.username })" @click="setAssignees(task.assignee_ids.filter((x) => x !== m.user_id))"><X class="h-3 w-3" /></button>
+              </span>
+              <span v-if="!assigned.length && !editable" class="text-[13px] text-text-3">{{ t('tasks.nobody') }}</span>
+              <select
+                v-if="editable && unassigned.length"
+                class="input !w-auto !py-0.5 text-[13px]"
+                :aria-label="t('tasks.addAssignee')"
+                value=""
+                @change="setAssignees([...task.assignee_ids, ($event.target as HTMLSelectElement).value]); ($event.target as HTMLSelectElement).value = ''"
+              >
+                <option value="" disabled>{{ assigned.length ? '+' : t('tasks.addAssignee') }}</option>
+                <option v-for="m in unassigned" :key="m.user_id" :value="m.user_id">{{ m.display_name || m.username }}</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="group-row !items-start">
           <span class="tile mt-0.5 h-7 w-7" style="--tile: #8e8e93"><Tag class="h-4 w-4" /></span>

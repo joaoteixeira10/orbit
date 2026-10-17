@@ -130,7 +130,7 @@ export interface TlRow {
   span: Span | null
   subs: { done: number; total: number }
   overdue: boolean
-  assignee?: Member
+  assignees: Member[]
 }
 export interface TlGroup {
   list: TaskList

@@ -115,7 +115,8 @@ export interface Task {
   rank: number
   completed_at: string | null
   done: boolean
-  assignee_id: string | null
+  assignee_ids: string[] // who it's for
+  assignee_id: string | null // the first of them (older clients)
   created_by: string
   created_at: string
   updated_at: string
@@ -141,7 +142,7 @@ export interface TaskInput {
   due?: string // "" clears
   due_time?: string
   repeat?: string
-  assignee_id?: string
+  assignee_ids?: string[]
   completed?: boolean
   after_id?: string
 }

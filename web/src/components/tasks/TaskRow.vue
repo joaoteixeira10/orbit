@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Info, Repeat, Flag, ListTree } from 'lucide-vue-next'
-import Avatar from '@/components/ui/Avatar.vue'
+import { Check, Repeat, Flag, ListTree } from 'lucide-vue-next'
+import AvatarStack from '@/components/ui/AvatarStack.vue'
 import GitBadge from './GitBadge.vue'
 import type { Task, Member } from '@/api/planner'
 import { dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
 import { firstLine } from '@/lib/markdown'
 
 // One task, Reminders-style: a round check in its list's colour, the title
-// (click to edit in place), and a line of details — when it's due (red when
-// late), repeat, priority, tags, sub-task progress, who it's for. The ⓘ
-// button opens the details sheet.
+// and a line of details — when it's due (red when late), repeat, priority,
+// tags, sub-task progress, who it's for (one or several). A click anywhere but the check
+// opens the details (as in Plane); the title is renamed there.
 const props = withDefaults(
   defineProps<{
     task: Task
@@ -19,13 +19,13 @@ const props = withDefaults(
     listName?: string
     workspaceName?: string
     subtasks?: { done: number; total: number }
-    assignee?: Member
+    assignees?: Member[]
     editable?: boolean
     compact?: boolean
   }>(),
   { color: 'var(--ws)', listName: '', workspaceName: '', editable: true, compact: false },
 )
-const emit = defineEmits<{ toggle: []; open: []; rename: [title: string] }>()
+const emit = defineEmits<{ toggle: []; open: [] }>()
 const { t } = useI18n()
 
 const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, props.task.done))
@@ -37,26 +37,10 @@ const due = computed(() => {
   return d ? `${relDay(s)} – ${d}` : `${t('tasks.startsOn')} ${relDay(s)}`
 })
 const prio = computed(() => '!'.repeat(props.task.priority))
-
-const editing = ref(false)
-const draft = ref('')
-const input = ref<HTMLInputElement | null>(null)
-async function startEdit() {
-  if (!props.editable) return emit('open')
-  draft.value = props.task.title
-  editing.value = true
-  await nextTick()
-  input.value?.focus()
-}
-function commit() {
-  editing.value = false
-  const v = draft.value.trim()
-  if (v && v !== props.task.title) emit('rename', v)
-}
 </script>
 
 <template>
-  <div class="task-row group/task" :class="{ done: task.done, compact }">
+  <div class="task-row group/task" :class="{ done: task.done, compact }" @click="emit('open')">
     <button
       class="check mt-[1px]"
       :class="{ on: task.done }"
@@ -65,22 +49,12 @@ function commit() {
       :aria-checked="task.done"
       :aria-label="task.title"
       :disabled="!editable"
-      @click="emit('toggle')"
+      @click.stop="emit('toggle')"
     >
       <Check class="h-3 w-3" :stroke-width="3.4" />
     </button>
-    <div class="min-w-0 flex-1">
-      <input
-        v-if="editing"
-        ref="input"
-        v-model="draft"
-        class="w-full bg-transparent text-[14.5px] outline-none"
-        maxlength="500"
-        @blur="commit"
-        @keydown.enter="commit"
-        @keydown.esc="editing = false"
-      />
-      <div v-else class="title" @click="startEdit">
+    <button type="button" class="main min-w-0 flex-1 text-left" :title="t('tasks.details')" @click.stop="emit('open')">
+      <div class="title">
         <span v-if="prio" class="mr-1 font-semibold" :style="{ color }">{{ prio }}</span>{{ task.title }}
       </div>
       <div v-if="!compact || due || task.git_number" class="meta">
@@ -93,10 +67,9 @@ function commit() {
         <span v-for="tag in task.tags" :key="tag" class="text-accent-text">#{{ tag }}</span>
         <span v-if="task.notes && !compact" class="truncate">{{ firstLine(task.notes) }}</span>
       </div>
-    </div>
+    </button>
     <Flag v-if="task.priority === 3 && !task.done" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" />
-    <Avatar v-if="assignee" :name="assignee.display_name || assignee.username" :src="assignee.avatar_url" :size="20" class="mt-0.5" />
-    <button class="info" :title="t('tasks.details')" @click="emit('open')"><Info class="h-[18px] w-[18px]" /></button>
+    <AvatarStack v-if="assignees?.length" :people="assignees" :size="20" class="mt-0.5" />
   </div>
 </template>
 
@@ -117,7 +90,6 @@ function commit() {
   font-size: 14.5px;
   line-height: 1.35;
   word-break: break-word;
-  cursor: text;
 }
 .done .title {
   color: var(--text-3);
@@ -133,18 +105,17 @@ function commit() {
 .meta:empty {
   display: none;
 }
-.info {
-  opacity: 0;
-  color: var(--accent);
-  transition: opacity 0.15s;
+.task-row {
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background var(--speed);
 }
-.task-row:hover .info,
-.info:focus-visible {
-  opacity: 1;
+.task-row:hover {
+  background: var(--fill-2);
 }
-@media (hover: none) {
-  .info {
-    opacity: 0.6;
-  }
+.main:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+  border-radius: 6px;
 }
 </style>

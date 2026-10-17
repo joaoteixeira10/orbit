@@ -310,7 +310,7 @@ func TestPull(t *testing.T) {
 
 	task := f.task(t)
 	if task.Title != "Fix login" || task.Notes != "steps" || task.ColumnID != f.cols[2].ID || task.Tags != `["bug"]` ||
-		task.AssigneeID == nil || *task.AssigneeID != f.ana || task.Due == nil || *task.Due != "2026-03-01" {
+		task.Assignees != `["`+f.ana+`"]` || task.Due == nil || *task.Due != "2026-03-01" {
 		t.Fatalf("task %+v", task)
 	}
 	var n int64
@@ -345,9 +345,10 @@ func TestPush(t *testing.T) {
 	task := f.task(t)
 	before := task
 
-	task.Title, task.ColumnID, task.Tags, task.AssigneeID = "Fix the login", f.cols[2].ID, `["bug","mine"]`, &f.bo
+	task.Title, task.ColumnID, task.Tags = "Fix the login", f.cols[2].ID, `["bug","mine"]`
+	task.SetAssignees([]string{f.bo})
 	f.db.Save(&task)
-	ch := Change{Title: true, Column: true, Tags: true, Assignee: before.AssigneeID != task.AssigneeID}
+	ch := Change{Title: true, Column: true, Tags: true, Assignee: before.Assignees != task.Assignees}
 	if err := f.e.Push(context.Background(), f.bo, &task, ch); err != nil {
 		t.Fatal(err)
 	}
@@ -365,7 +366,7 @@ func TestPush(t *testing.T) {
 		t.Fatalf("assignees %v", is.Assignees)
 	}
 	f.sync(t)
-	if got := f.task(t); got.AssigneeID == nil || *got.AssigneeID != f.bo || got.Tags != `["bug","mine"]` {
+	if got := f.task(t); !got.AssignedTo(f.bo) || got.Tags != `["bug","mine"]` {
 		t.Fatalf("after pull %+v", got)
 	}
 

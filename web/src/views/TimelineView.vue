@@ -122,7 +122,7 @@ const groups = computed<TlGroup[]>(() => {
       span: spanOf(x),
       subs: subs.value.get(x.id) ?? NONE,
       overdue: isOverdue(x.due, x.due_time, x.done),
-      assignee: shared.value && x.assignee_id ? members.value.get(x.assignee_id) : undefined,
+      assignees: shared.value ? x.assignee_ids.map((id) => members.value.get(id)).filter((m): m is Member => !!m) : [],
     }
     const arr = byList.get(x.list_id) ?? []
     arr.push(row)

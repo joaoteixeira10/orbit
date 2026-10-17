@@ -353,10 +353,11 @@ So *Essay tomorrow 14:30 !! #maths* is "Essay", due tomorrow at 14:30, medium
 priority, tagged maths.
 
 **Complete** with the round checkbox (it fades after a moment; the eye button
-shows or hides completed tasks). Click a title to rename it in place. **ⓘ**
-opens the details: notes, **Start date**, **Date** and **Time**, **Repeat** (every day,
+shows or hides completed tasks). **Click a task** (anywhere but its
+checkbox) to open its details — rename it there, in the title. The details
+hold: notes, **Start date**, **Date** and **Time**, **Repeat** (every day,
 weekday, week, 2 weeks, month, year), **Priority**, **List**, **Status** (its
-board column), **For** (a member, in shared workspaces), **tags**,
+board column), **Assignees** (one or several members, in shared workspaces — each gets the reminders), **tags**,
 **Attachments** (add files or drop them; images show as thumbnails — click to
 open, other files download) and **Sub-tasks**. **Delete** is at the bottom
 (it deletes the task's attachments too).

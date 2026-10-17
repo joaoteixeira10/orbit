@@ -82,7 +82,7 @@ func (h *Handlers) home(c *gin.Context) {
 	d, _ := time.Parse(planner.DateLayout, today)
 	weekEnd := d.AddDate(0, 0, 7).Format(planner.DateLayout)
 	// My tasks: assigned to me, or unassigned ones I can see.
-	mine := h.db.Where("workspace_id IN ? AND completed_at IS NULL AND parent_id IS NULL AND (assignee_id IS NULL OR assignee_id = ?)", wsIDs, uid)
+	mine := h.db.Where("workspace_id IN ? AND completed_at IS NULL AND parent_id IS NULL AND "+models.MineOrUnassigned, wsIDs, models.AssigneeArg(uid))
 	var overdue, todays, upcoming []models.Task
 	mine.Session(&gorm.Session{}).Where("due < ?", today).Order("due, due_time").Limit(50).Find(&overdue)
 	mine.Session(&gorm.Session{}).Where("due = ?", today).Order("due_time, priority DESC, rank").Limit(100).Find(&todays)

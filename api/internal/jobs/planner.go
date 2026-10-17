@@ -129,19 +129,21 @@ func (s *Scheduler) remindAt(minute time.Time) {
 	}
 	s.db.Where("completed_at IS NULL AND due IN ? AND due_time IS NOT NULL", days).Find(&tasks)
 	for _, t := range tasks {
-		uid := t.CreatedBy
-		if t.AssigneeID != nil {
-			uid = *t.AssigneeID
+		to := t.AssigneeList()
+		if len(to) == 0 {
+			to = []string{t.CreatedBy}
 		}
-		at, err := time.ParseInLocation(planner.DateLayout+" 15:04", *t.Due+" "+*t.DueTime, userZone(prefs(uid)))
-		if err != nil || at.Before(minute) || !at.Before(end) {
-			continue
+		for _, uid := range to {
+			at, err := time.ParseInLocation(planner.DateLayout+" 15:04", *t.Due+" "+*t.DueTime, userZone(prefs(uid)))
+			if err != nil || at.Before(minute) || !at.Before(end) {
+				continue
+			}
+			s.inbox.Notify(inbox.Message{
+				UserID: uid, Kind: inbox.Reminder, Verb: "task_due", WorkspaceID: t.WorkspaceID,
+				Params: map[string]any{"title": t.Title, "ws": wsName(t.WorkspaceID), "task": t.ID},
+				Link:   fmt.Sprintf("/w/%s/tasks/%s?task=%s", t.WorkspaceID, t.ListID, t.ID),
+			})
 		}
-		s.inbox.Notify(inbox.Message{
-			UserID: uid, Kind: inbox.Reminder, Verb: "task_due", WorkspaceID: t.WorkspaceID,
-			Params: map[string]any{"title": t.Title, "ws": wsName(t.WorkspaceID), "task": t.ID},
-			Link:   fmt.Sprintf("/w/%s/tasks/%s?task=%s", t.WorkspaceID, t.ListID, t.ID),
-		})
 	}
 
 	// Events: an occurrence starting RemindMinutes after this minute.

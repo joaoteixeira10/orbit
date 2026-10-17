@@ -188,7 +188,7 @@ function onComposerBlur() {
             :color="color"
             :done="column.done || c.done"
             :subtasks="progress(c.id)"
-            :assignee="c.assignee_id ? members[c.assignee_id] : undefined"
+            :assignees="c.assignee_ids.map((id) => members[id]).filter(Boolean)"
             @click="open(c.id)"
             @keydown.enter.prevent="emit('open', c.id)"
             @keydown.space.prevent="emit('open', c.id)"

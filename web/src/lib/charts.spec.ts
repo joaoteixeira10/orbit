@@ -36,6 +36,7 @@ function task(p: Partial<Task> = {}): Task {
     rank: 0,
     completed_at: null,
     done: false,
+    assignee_ids: [],
     assignee_id: null,
     created_by: 'u',
     created_at: '2026-10-01T10:00:00Z',

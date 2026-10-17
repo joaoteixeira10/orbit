@@ -7681,7 +7681,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "assignee_id": {
+                    "description": "older clients: just one (\"\" = none)",
                     "type": "string"
+                },
+                "assignee_ids": {
+                    "description": "the whole list",
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "column_id": {
                     "type": "string"
@@ -7736,8 +7745,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "assignee_id": {
-                    "description": "AssigneeID is who it's for in a shared workspace (reminders go to them;\nnil = to whoever created it).",
+                    "description": "the first one (older clients)",
                     "type": "string"
+                },
+                "assignee_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "column_id": {
                     "type": "string"

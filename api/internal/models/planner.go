@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ---- Workspaces -------------------------------------------------------------
 
@@ -114,10 +117,11 @@ type Task struct {
 	Repeat      string     `gorm:"size:200" json:"repeat"`
 	Rank        float64    `gorm:"not null;default:0" json:"rank"`
 	CompletedAt *time.Time `gorm:"index" json:"completed_at"`
-	// AssigneeID is who it's for in a shared workspace (reminders go to them;
-	// nil = to whoever created it).
-	AssigneeID *string `gorm:"size:36;index" json:"assignee_id"`
-	CreatedBy  string  `gorm:"size:36" json:"created_by"`
+	// Assignees are who it's for in a shared workspace: a JSON list of user
+	// ids (reminders go to each; none = to whoever created it). See
+	// AssigneeList / SetAssignees.
+	Assignees string `gorm:"type:text" json:"-"`
+	CreatedBy string `gorm:"size:36" json:"created_by"`
 	// The git issue (or pull request) this task is, when it is one: a task
 	// of a git-linked list, or a task linked by hand. GitIssueID is the
 	// server's global id; GitRepo is "owner/repo" on GitHost (a base URL).
@@ -403,3 +407,43 @@ type CourseGoal struct {
 	UserID   string  `gorm:"primaryKey;size:36" json:"user_id"`
 	Target   float64 `gorm:"not null" json:"target"`
 }
+
+// AssigneeList is the task's assignees (user ids), never nil.
+func (t Task) AssigneeList() []string {
+	out := []string{}
+	if t.Assignees != "" {
+		_ = json.Unmarshal([]byte(t.Assignees), &out)
+	}
+	return out
+}
+
+// SetAssignees stores ids (in order, without duplicates or blanks).
+func (t *Task) SetAssignees(ids []string) {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, id := range ids {
+		if id != "" && !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	b, _ := json.Marshal(out)
+	t.Assignees = string(b)
+}
+
+// AssignedTo reports whether uid is one of the task's assignees.
+func (t Task) AssignedTo(uid string) bool {
+	for _, id := range t.AssigneeList() {
+		if id == uid {
+			return true
+		}
+	}
+	return false
+}
+
+// MineOrUnassigned is a where clause for tasks assigned to a user (the one
+// argument, AssigneeArg(uid)) or to nobody.
+const MineOrUnassigned = "(assignees IS NULL OR assignees = '' OR assignees = '[]' OR assignees LIKE ?)"
+
+// AssigneeArg is MineOrUnassigned's argument for uid.
+func AssigneeArg(uid string) string { return `%"` + uid + `"%` }

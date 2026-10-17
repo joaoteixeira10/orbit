@@ -143,7 +143,7 @@ const memberName = (id: string) => {
   return id === 'none' ? t('filter.unassigned') : m ? m.display_name || m.username : '?'
 }
 const byPerson = computed(() => {
-  const m = countBy(shown.value, listMap.value, today, (x) => x.assignee_id ?? 'none')
+  const m = countBy(shown.value, listMap.value, today, (x) => (x.assignee_ids.length ? x.assignee_ids : ['none']))
   const keys = [...m.keys()].sort((a, b) => (a === 'none' ? 1 : b === 'none' ? -1 : totalOf(m.get(b)!) - totalOf(m.get(a)!)))
   return asRows(m, keys, memberName)
 })

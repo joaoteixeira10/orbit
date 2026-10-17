@@ -356,6 +356,12 @@ test('notifications: a task someone gives you rings the bell and opens', async (
   await bell.click()
   await page.getByRole('button', { name: /Ana assigned you a task/ }).click()
   await expect(page.locator('#task-title')).toHaveValue('Water the plants')
+  // Several people: add Ana as well.
+  const who = page.getByTestId('assignees')
+  await expect(who.locator('.pill')).toHaveCount(1)
+  await who.getByLabel('Assign someone').selectOption({ label: 'Ana' })
+  await expect(who.locator('.pill')).toHaveCount(2)
+  await page.keyboard.press('Escape')
   await expect(bell).not.toContainText('1')
 
   // The daily summary is a setting that sticks.

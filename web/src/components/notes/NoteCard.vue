@@ -7,6 +7,7 @@ import Popover from '@/components/ui/Popover.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
 import { orderedItems } from './noteModel'
 import type { Note, NoteColor } from '@/api/planner'
+import { evaluate } from '@/lib/mathnotes'
 
 // One sticky note on the wall: its tint, title, text (clamped with a fade)
 // or checklist (tick right here; open items first, then the checked ones).
@@ -49,6 +50,9 @@ watch(
 
 // The text is clamped; the fade only shows when something is cut off.
 const bodyEl = ref<HTMLElement | null>(null)
+const bodyLines = computed(() => props.note.body.split('\n'))
+// Sums ending in "=" show their answer, as in the editor.
+const answers = computed(() => new Map(props.note.checklist ? [] : evaluate(props.note.body).map((a) => [a.line, a.result])))
 const clamped = ref(false)
 const measure = () => nextTick(() => (clamped.value = !!bodyEl.value && bodyEl.value.scrollHeight > bodyEl.value.clientHeight + 2))
 onMounted(measure)
@@ -96,7 +100,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     <img v-if="cover" :src="cover" alt="" class="n-cover" />
     <h3 v-if="note.title" class="n-title" :class="{ 'pr-7': editable }">{{ note.title }}</h3>
 
-    <div v-if="!note.checklist && note.body" ref="bodyEl" class="n-body" :class="{ clamped, big: !note.title && note.body.length < 80 }">{{ note.body }}</div>
+    <div v-if="!note.checklist && note.body" ref="bodyEl" class="n-body" :class="{ clamped, big: !note.title && note.body.length < 80 }"><template v-if="answers.size"><template v-for="(l, i) in bodyLines" :key="i">{{ l }}<b v-if="answers.get(i)" class="n-calc">{{ /\s$/.test(l) ? '' : ' ' }}{{ answers.get(i) }}</b>{{ i < bodyLines.length - 1 ? '\n' : '' }}</template></template><template v-else>{{ note.body }}</template></div>
 
     <ul v-else-if="note.checklist && items.length" class="n-list">
       <li v-for="it in shown" :key="it.id" class="n-item" :class="{ done: it.done }">
@@ -301,5 +305,9 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   .pin {
     opacity: 1;
   }
+}
+.n-calc {
+  color: var(--accent-text);
+  font-weight: 600;
 }
 </style>

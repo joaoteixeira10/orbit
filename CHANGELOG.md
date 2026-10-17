@@ -102,6 +102,9 @@ merge, not at release time.
   the workspace's members can open them; images show inline, other files
   download. The page export zips them with the pages. `UPLOAD_MAX_MB` (25)
   and `UPLOAD_QUOTA_MB` (2048).
+- **Sums in notes**, like iPhone's Math Notes: a line ending in "=" shows its
+  answer (Tab writes it in); named values (`rent = 650`), percentages,
+  decimal commas and currency signs. Cards show the answers too.
 - **Calendar side panes, as in Outlook**: on the left a small month to move
   around and the calendars, each ticked to show or hide it (workspaces; in a
   workspace its events, tasks and each subscription); on the right the

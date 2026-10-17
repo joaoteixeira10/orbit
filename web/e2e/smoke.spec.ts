@@ -129,6 +129,19 @@ test('quick notes: a checklist note is kept, then turned into tasks', async ({ p
   await expect(page.getByText('2 tasks added')).toBeVisible()
 })
 
+test('quick notes do sums: an answer after "=", names, Tab writes it in', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/notes')
+  await page.getByRole('button', { name: 'Take a note…' }).first().click()
+  const body = page.getByTestId('note-body').first()
+  await body.fill('rent = 650\nbills = 120\nrent + bills =')
+  await expect(page.locator('.calc-r')).toHaveText(' 770')
+  await body.press('End')
+  await body.press('Tab')
+  await expect(body).toHaveValue('rent = 650\nbills = 120\nrent + bills = 770')
+  await expect(page.locator('.calc-r')).toHaveCount(0)
+})
+
 test('quick notes: jot one on Today, find it in Quick Notes, move it into a workspace', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.getByText('Jot something down…').click()

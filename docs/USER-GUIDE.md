@@ -314,6 +314,15 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
 - **Drag** cards to reorder them (between Pinned and Others to pin or unpin).
 - **Search notes** and the colour dots at the top narrow the wall.
 
+**Sums in notes**, as in iPhone's Math Notes: end a line with **=** and its
+answer shows after it (`120 + 35 =` → 155); **Tab** writes the answer in.
+Name a value on its own line and use it below (`rent = 650`, then
+`rent * 12 =`); names can be a few words (`per person`). It knows + − × ÷
+`*` `/` `^`, brackets, percentages (`80 + 10%` is 88, `20% of 80` is 16),
+decimals with a dot or a comma (answers follow the note), and a currency sign
+(€ $ £). Words before the sum are fine (`March: 650 * 3 =`). The cards show
+the answers too.
+
 ### Quick Notes (your own)
 
 **Quick Notes** (under Today and Calendar in the sidebar) is your scratchpad:

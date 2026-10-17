@@ -74,16 +74,15 @@ func unsigned(body string) string {
 }
 
 // pullComments brings an issue's comments into its task: new ones added,
-// edited ones changed, deleted ones removed. It reports whether anything
-// changed.
-func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, byLogin map[string]string) bool {
+// edited ones changed, deleted ones removed.
+func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, byLogin map[string]string) {
 	owner, repo, ok := strings.Cut(t.GitRepo, "/")
 	if !ok || t.GitNumber == 0 {
-		return false
+		return
 	}
 	remote, err := c.Comments(ctx, owner, repo, t.GitNumber)
 	if err != nil {
-		return false
+		return
 	}
 	var local []models.TaskComment
 	e.db.Where("task_id = ? AND git_comment_id <> 0", t.ID).Find(&local)
@@ -91,7 +90,6 @@ func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, by
 	for i := range local {
 		have[local[i].GitCommentID] = &local[i]
 	}
-	changed := false
 	seen := map[int64]bool{}
 	for _, rc := range remote {
 		seen[rc.ID] = true
@@ -100,7 +98,6 @@ func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, by
 			if lc.GitHash != h {
 				now := time.Now()
 				e.db.Model(lc).Updates(map[string]any{"body": unsigned(rc.Body), "git_hash": h, "edited_at": &now})
-				changed = true
 			}
 			continue
 		}
@@ -111,17 +108,13 @@ func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, by
 			cm.GitAuthor = rc.User.Login
 		}
 		cm.CreatedAt = rc.CreatedAt
-		if e.db.Create(&cm).Error == nil {
-			changed = true
-		}
+		e.db.Create(&cm)
 	}
 	for id, lc := range have {
 		if !seen[id] {
 			e.db.Delete(lc)
-			changed = true
 		}
 	}
-	return changed
 }
 
 // PushComment sends a new or changed Orbit comment to the task's issue (a

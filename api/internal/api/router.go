@@ -204,6 +204,10 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/me/push/test", h.testPush)
 			authed.GET("/me/prefs", h.getPrefs)
 			authed.PUT("/me/prefs", h.updatePrefs)
+			authed.GET("/me/channels", h.listMyChannels)
+			authed.POST("/me/channels", authLimit, notImpersonating(), h.addMyChannel)
+			authed.POST("/me/channels/:id/test", authLimit, h.testMyChannel)
+			authed.DELETE("/me/channels/:id", notImpersonating(), h.deleteMyChannel)
 			// Notification channels the admin has enabled (for the user's picker).
 			authed.GET("/notifications/channels", h.notifChannels)
 

@@ -1073,6 +1073,32 @@ definitions:
       workspace_id:
         type: string
     type: object
+  api.personalRequest:
+    properties:
+      bot_token:
+        description: telegram
+        type: string
+      chat_id:
+        description: telegram
+        type: string
+      kind:
+        type: string
+      name:
+        maxLength: 60
+        type: string
+      server_url:
+        description: ntfy, gotify
+        type: string
+      token:
+        description: ntfy (optional), gotify
+        type: string
+      topic:
+        description: ntfy
+        type: string
+      webhook_url:
+        description: discord, slack, teams
+        type: string
+    type: object
   api.prefsResponse:
     properties:
       accent_color:
@@ -1920,6 +1946,23 @@ definitions:
       weight:
         type: number
       workspace_id:
+        type: string
+    type: object
+  models.PersonalChannel:
+    properties:
+      created_at:
+        type: string
+      hint:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      last_error:
+        type: string
+      name:
+        type: string
+      updated_at:
         type: string
     type: object
   models.PushSubscription:
@@ -3300,6 +3343,76 @@ paths:
       summary: Revoke an API token
       tags:
       - auth
+  /me/channels:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.PersonalChannel'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My own notification channels
+      tags:
+      - prefs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Kind and its settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.personalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.PersonalChannel'
+      security:
+      - BearerAuth: []
+      summary: Add my own notification channel
+      tags:
+      - prefs
+  /me/channels/{id}:
+    delete:
+      parameters:
+      - description: Channel id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove my own notification channel
+      tags:
+      - prefs
+  /me/channels/{id}/test:
+    post:
+      parameters:
+      - description: Channel id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Test my own notification channel
+      tags:
+      - prefs
   /me/favorites:
     get:
       produces:

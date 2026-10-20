@@ -336,13 +336,17 @@ user. Release mode refuses either secret under 32 characters.
   SSRF-guarded client: it won't connect to loopback, link-local (including the
   cloud metadata address) or unspecified addresses, checks the IP it actually
   dials, and never follows redirects. Private LAN addresses stay reachable.
-- **Web Push and git servers** — addresses any user can name — use the
+- **Web Push, git servers and personal notification channels** — addresses
+  any user can name — use the
   **public-only** variant, which also refuses private networks (RFC 1918,
   carrier-grade NAT, IPv6 unique-local), so they can't be used to probe the
   LAN. A git server on your network is allowed only when the operator lists it
   in `GIT_SERVERS` (then dialed directly, no redirects). Git tokens are sealed;
   a list linked to a repository stops syncing when whoever linked it leaves the
-  workspace (their token isn't used any more).
+  workspace (their token isn't used any more). Personal channels must be
+  `https://`, take a test message before they're kept, are stored sealed and
+  are never shown again (only their host); adding and removing one is
+  audited, and the owner's `personal_channels` flag turns them off.
 - **Subscribed calendars** are fetched through the same guarded dialer, with
   three differences: up to **three redirects** (calendar hosts use them), each
   hop dialed through the guard and limited to `http`/`https`; at most

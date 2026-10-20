@@ -436,6 +436,20 @@ type TaskEvent struct {
 	Params      string `gorm:"type:text" json:"-"`
 }
 
+// PersonalChannel is one of a person's own notification channels (their
+// Discord webhook, ntfy topic, Telegram chat…), besides the owner's shared
+// ones. Config is the settings, sealed; Hint is what the page shows instead
+// (a host, a topic).
+type PersonalChannel struct {
+	Base
+	UserID       string `gorm:"size:36;not null;index" json:"-"`
+	Kind         string `gorm:"size:16;not null" json:"kind"`
+	Name         string `gorm:"size:60" json:"name"`
+	Hint         string `gorm:"size:200" json:"hint"`
+	ConfigSealed []byte `json:"-"`
+	LastError    string `gorm:"size:300" json:"last_error,omitempty"`
+}
+
 // AssigneeList is the task's assignees (user ids), never nil.
 func (t Task) AssigneeList() []string {
 	out := []string{}

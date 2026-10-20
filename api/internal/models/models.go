@@ -343,6 +343,7 @@ func AllModels() []any {
 		&CourseGoal{},
 		&TaskComment{},
 		&TaskEvent{},
+		&PersonalChannel{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

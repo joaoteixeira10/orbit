@@ -147,6 +147,32 @@ export const prefsApi = {
   update: (body: Partial<NotifyPrefs>) => api<NotifyPrefs>('/me/prefs', { method: 'PUT', body: JSON.stringify(body) }),
 }
 
+// A person's own notification channels (their Discord webhook, ntfy topic…).
+export interface PersonalChannel {
+  id: string
+  kind: 'discord' | 'slack' | 'teams' | 'telegram' | 'ntfy' | 'gotify'
+  name: string
+  hint: string
+  last_error?: string
+  created_at: string
+}
+export type PersonalChannelInput = {
+  kind: PersonalChannel['kind']
+  name?: string
+  webhook_url?: string
+  bot_token?: string
+  chat_id?: string
+  server_url?: string
+  topic?: string
+  token?: string
+}
+export const myChannelsApi = {
+  list: () => api<PersonalChannel[]>('/me/channels'),
+  add: (b: PersonalChannelInput) => api<PersonalChannel>('/me/channels', { method: 'POST', body: JSON.stringify(b) }),
+  test: (id: string) => api<void>(`/me/channels/${id}/test`, { method: 'POST' }),
+  remove: (id: string) => api<void>(`/me/channels/${id}`, { method: 'DELETE' }),
+}
+
 // ---- Notifications ----
 export const notifyApi = {
   channels: () => api<{ enabled: string[] }>('/notifications/channels'),

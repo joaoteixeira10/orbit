@@ -111,6 +111,10 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Your own notification channels**: each person adds their own Discord,
+  Slack or Teams webhook, Telegram chat, ntfy topic or Gotify app (Settings →
+  Notifications); theirs alone, so they get the full text. Public https only,
+  tested before they're kept, stored sealed. Flag `personal_channels` (on).
 - **Shared notification channels get a ping, not the content.** Slack,
   Teams, Discord, Telegram, ntfy and Gotify — places the owner set up, which
   others may read — receive "Orbit: a reminder for you" and a link unless the

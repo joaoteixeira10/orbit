@@ -636,6 +636,14 @@ all as read** clears the count. What you get:
   up, which other people may read: by default they get only a ping — *Orbit:
   a reminder for you* and a link — never titles, names or workspaces. Turn
   on **Include titles in shared channels** to send them the full text.
+- **Your own channels** — add your own Discord, Slack or Teams webhook,
+  Telegram chat (bot token and chat id), ntfy topic or Gotify app: **Add a
+  channel**, fill it in, **Test and add** (a test message is sent first).
+  They're yours alone, so they get the full text, like email. Addresses must
+  be public `https://` (not your local network); afterwards only the server
+  is shown, with **Send a test** and remove. Your first one turns on Channels
+  for reminders, assignments, comments and workspaces under **What reaches
+  you**.
 
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.

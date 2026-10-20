@@ -35,6 +35,9 @@ const (
 	// one joins the workspace, creating an account if they have none. On by
 	// default.
 	WorkspaceInvites = "workspace_invites"
+	// PersonalChannels lets each person add their own notification channels
+	// (a Discord webhook, an ntfy topic…), which get the full text.
+	PersonalChannels = "personal_channels"
 )
 
 const settingKey = "features"
@@ -51,6 +54,7 @@ var Defaults = map[string]bool{
 	CalendarFeeds:         true,
 	GitIntegration:        true,
 	WorkspaceInvites:      true,
+	PersonalChannels:      true,
 }
 
 // All returns every known flag with its effective value (stored value, else

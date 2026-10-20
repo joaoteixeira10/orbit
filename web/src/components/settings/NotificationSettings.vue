@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { BellRing, Smartphone, X } from 'lucide-vue-next'
 import Toggle from '@/components/ui/Toggle.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
+import PersonalChannels from './PersonalChannels.vue'
 import { prefsApi, notifyApi } from '@/api'
 import { pushApi, type PushDevice } from '@/api/planner'
 import type { Delivery, NotifyKind, NotifyPrefs } from '@/api/types'
@@ -62,7 +63,20 @@ function toggleChannel(ch: string, on: boolean) {
   void save({ notify_channels: list })
 }
 const channelLabel = (ch: string) => (ch === 'email' ? t('notif.chEmail', { email: auth.user?.email || '—' }) : ch.charAt(0).toUpperCase() + ch.slice(1))
-const hasChannels = computed(() => enabledChannels.value.length > 0)
+// Their own channels, when the owner allows them.
+const ownOn = computed(() => auth.features.personal_channels !== false)
+const ownCount = ref(0)
+// The first channel of one's own: what's about you starts going there (the
+// Channels column was hidden until now, all off).
+function onOwnAdded(n: number) {
+  if (n !== 1 || enabledChannels.value.length || !prefs.value) return
+  const p = prefs.value.notify_prefs
+  if ((Object.keys(p) as NotifyKind[]).some((k) => p[k].channels)) return
+  const next = { ...p }
+  for (const k of ['reminder', 'assigned', 'comment', 'workspace'] as NotifyKind[]) next[k] = { ...next[k], channels: true }
+  void save({ notify_prefs: next })
+}
+const hasChannels = computed(() => enabledChannels.value.length > 0 || ownCount.value > 0)
 
 // This device.
 async function turnOn() {
@@ -184,7 +198,7 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
     <!-- Channels -->
     <div class="border-t border-border pt-5">
       <div class="text-[13px] font-semibold">{{ t('notif.channels') }}</div>
-      <template v-if="hasChannels">
+      <template v-if="enabledChannels.length">
         <div class="text-[12px] text-text-3">{{ t('notif.channelsHint') }}</div>
         <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
           <Checkbox v-for="ch in enabledChannels" :key="ch" :model-value="prefs.notify_channels.includes(ch)" @update:model-value="(v) => toggleChannel(ch, v)">
@@ -200,7 +214,8 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
           <Toggle :model-value="prefs.channel_details" :aria-label="t('notif.details')" @update:model-value="(v) => save({ channel_details: v })" />
         </div>
       </template>
-      <p v-else class="mt-2 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('notif.noChannels') }}</p>
+      <p v-else-if="!ownOn" class="mt-2 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('notif.noChannels') }}</p>
+      <PersonalChannels v-if="ownOn" class="mt-5" @count="(n) => (ownCount = n)" @added="onOwnAdded" />
     </div>
   </div>
 </template>

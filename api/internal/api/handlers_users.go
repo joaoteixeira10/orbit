@@ -426,6 +426,7 @@ func (h *Handlers) deleteUser(c *gin.Context) {
 	h.db.Where("created_by = ?", user.ID).Delete(&models.WorkspaceInvite{})
 	h.db.Where("owner_id = ?", user.ID).Delete(&models.Grade{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.CourseGoal{})
+	h.db.Where("user_id = ?", user.ID).Delete(&models.PersonalChannel{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.Notification{})
 	_ = uploads.Delete(h.db, "workspace_id = '' AND owner_id = ?", user.ID) // their Quick Notes' files
 	h.db.Where("workspace_id = '' AND owner_id = ?", user.ID).Delete(&models.Note{})

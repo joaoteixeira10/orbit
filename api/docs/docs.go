@@ -1707,6 +1707,123 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/channels": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prefs"
+                ],
+                "summary": "My own notification channels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.PersonalChannel"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prefs"
+                ],
+                "summary": "Add my own notification channel",
+                "parameters": [
+                    {
+                        "description": "Kind and its settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.personalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.PersonalChannel"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/channels/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "prefs"
+                ],
+                "summary": "Remove my own notification channel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/me/channels/{id}/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "prefs"
+                ],
+                "summary": "Test my own notification channel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/me/favorites": {
             "get": {
                 "security": [
@@ -7632,6 +7749,42 @@ const docTemplate = `{
                 }
             }
         },
+        "api.personalRequest": {
+            "type": "object",
+            "properties": {
+                "bot_token": {
+                    "description": "telegram",
+                    "type": "string"
+                },
+                "chat_id": {
+                    "description": "telegram",
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 60
+                },
+                "server_url": {
+                    "description": "ntfy, gotify",
+                    "type": "string"
+                },
+                "token": {
+                    "description": "ntfy (optional), gotify",
+                    "type": "string"
+                },
+                "topic": {
+                    "description": "ntfy",
+                    "type": "string"
+                },
+                "webhook_url": {
+                    "description": "discord, slack, teams",
+                    "type": "string"
+                }
+            }
+        },
         "api.prefsResponse": {
             "type": "object",
             "properties": {
@@ -8850,6 +9003,32 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PersonalChannel": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "hint": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }

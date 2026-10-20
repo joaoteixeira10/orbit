@@ -9,12 +9,14 @@
 package inbox
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
@@ -215,6 +217,15 @@ func (s *Service) deliver(n models.Notification) {
 		if len(personal) > 0 {
 			go s.channels.Send(personal, u.Email, "Orbit: "+title, title+"\n"+body)
 		}
+		// Their own channels (a Discord webhook, an ntfy topic…): theirs
+		// alone, the whole text.
+		if feature.Enabled(s.db, feature.PersonalChannels) {
+			var own []models.PersonalChannel
+			s.db.Where("user_id = ?", n.UserID).Find(&own)
+			for _, ch := range own {
+				go s.sendOwn(ch, "Orbit: "+title, title+"\n"+body)
+			}
+		}
 		if len(shared) > 0 {
 			if p.ChannelDetails {
 				go s.channels.Send(shared, u.Email, "Orbit: "+title, title+"\n"+body)
@@ -223,6 +234,28 @@ func (s *Service) deliver(n models.Notification) {
 				go s.channels.Send(shared, u.Email, pt, pb)
 			}
 		}
+	}
+}
+
+// sendOwn sends to one of a person's own channels, noting a failure on it
+// (shown in their settings).
+func (s *Service) sendOwn(ch models.PersonalChannel, subject, body string) {
+	cfg, err := s.channels.OpenPersonal(ch.ConfigSealed)
+	if err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		err = s.channels.SendPersonal(ctx, cfg, subject, body)
+	}
+	msg := ""
+	if err != nil {
+		msg = err.Error()
+		if len(msg) > 300 {
+			msg = msg[:300]
+		}
+		s.log.Warn("personal channel failed", zap.String("kind", ch.Kind), zap.Error(err))
+	}
+	if msg != ch.LastError {
+		s.db.Model(&models.PersonalChannel{}).Where("id = ?", ch.ID).Update("last_error", msg)
 	}
 }
 

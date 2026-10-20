@@ -368,7 +368,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
               :subtasks="subCount(x)"
               :assignees="peopleOf(x)"
               :members="members.length > 1 ? members : []"
-              :editable="editable"
+              :editable="editable && listById.get(x.list_id)?.git?.write !== 'none'"
               @toggle="toggle(x)"
               @open="openTask = x.id"
               @update="(p) => change(x, p)"

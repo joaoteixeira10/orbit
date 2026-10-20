@@ -1583,6 +1583,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/lists/{id}/git/bot": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "The bot account of a linked list",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "List id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The bot's token (empty: none)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gitBotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.listResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/lists/{id}/git/sync": {
             "post": {
                 "security": [
@@ -6981,6 +7026,16 @@ const docTemplate = `{
                 }
             }
         },
+        "api.gitBotRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "description": "\"\" removes it",
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
         "api.gitConnectRequest": {
             "type": "object",
             "required": [
@@ -7001,6 +7056,10 @@ const docTemplate = `{
         "api.gitLinkResponse": {
             "type": "object",
             "properties": {
+                "bot_login": {
+                    "description": "BotLogin: the bot account members without their own account act as\n(\"\" = they can only read). Write: how the caller's changes reach git —\nown (their account), bot, or none (read only).",
+                    "type": "string"
+                },
                 "host": {
                     "type": "string"
                 },
@@ -7023,6 +7082,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                },
+                "write": {
                     "type": "string"
                 }
             }

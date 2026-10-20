@@ -247,6 +247,19 @@ test('git: connect an account, make a list from a repository, a new task opens a
   const r = await page.request.get(`${GIT_URL}/api/v1/repos/${process.env.E2E_GIT_OWNER || 'ana'}/${GIT_REPO}/issues/${number}/comments`, { headers: { Authorization: `token ${GIT_TOKEN}` } })
   const onGit = (await r.json()) as { body: string }[]
   expect(onGit.some((c) => c.body === 'Hello from **Orbit**')).toBeTruthy()
+
+  // Someone without a git account can't change it (nothing goes as the admin).
+  const H = async (u: string, p: string) => ({ Authorization: `Bearer ${(await (await page.request.post('/api/v1/auth/login', { data: { username: u, password: p } })).json()).access_token}` })
+  const admin = await H(ADMIN_USER, NEW_PASSWORD)
+  await page.request.post('/api/v1/users', { headers: admin, data: { username: 'nogit', password: 'nogit-e2e-password-42' } })
+  const wsId = new URL(page.url()).pathname.split('/')[2]
+  await page.request.post(`/api/v1/workspaces/${wsId}/members`, { headers: admin, data: { user: 'nogit', role: 'editor' } })
+  const nogit = await H('nogit', 'nogit-e2e-password-42')
+  const tasks = (await (await page.request.get(`/api/v1/workspaces/${wsId}/tasks`, { headers: nogit })).json()) as { id: string; title: string }[]
+  const linked = tasks.find((x) => x.title === title)!
+  const refused = await page.request.put(`/api/v1/tasks/${linked.id}`, { headers: nogit, data: { title: 'Renamed by nogit' } })
+  expect(refused.status()).toBe(403)
+  expect((await refused.json()).git_read_only).toBeTruthy()
 })
 
 test('task notes: written in Markdown, read rendered, a box ticks, the row shows plain text', async ({ page }) => {

@@ -279,9 +279,14 @@ type gitLinkResponse struct {
 	SyncedAt  *time.Time `json:"synced_at,omitempty"`
 	LastError string     `json:"last_error,omitempty"`
 	LinkedBy  string     `json:"linked_by"`
+	// BotLogin: the bot account members without their own account act as
+	// ("" = they can only read). Write: how the caller's changes reach git —
+	// own (their account), bot, or none (read only).
+	BotLogin string `json:"bot_login,omitempty"`
+	Write    string `json:"write"`
 }
 
-func (h *Handlers) gitLinkOf(listID string) *gitLinkResponse {
+func (h *Handlers) gitLinkOf(listID, uid string) *gitLinkResponse {
 	var l models.GitLink
 	if h.db.Where("list_id = ?", listID).First(&l).Error != nil {
 		return nil
@@ -292,7 +297,11 @@ func (h *Handlers) gitLinkOf(listID string) *gitLinkResponse {
 	} else {
 		url += "/issues"
 	}
-	return &gitLinkResponse{Host: l.Host, Owner: l.Owner, Repo: l.Repo, Mode: l.Mode, URL: url, SyncedAt: l.SyncedAt, LastError: l.LastError, LinkedBy: l.LinkedBy}
+	write := "own"
+	if h.git != nil {
+		write = h.git.WriteMode(uid, &l, l.Host)
+	}
+	return &gitLinkResponse{Host: l.Host, Owner: l.Owner, Repo: l.Repo, Mode: l.Mode, URL: url, SyncedAt: l.SyncedAt, LastError: l.LastError, LinkedBy: l.LinkedBy, BotLogin: l.BotLogin, Write: write}
 }
 
 // createGitList makes a task list that holds a repository's issues (as the
@@ -413,7 +422,7 @@ func (h *Handlers) createGitList(c *gin.Context) {
 	h.recordCtx(c, "git.link", "list", l.ID, gin.H{"repo": req.Owner + "/" + req.Repo, "mode": req.Mode})
 	h.publishWS(c, ws.ID, "lists")
 	h.publishWS(c, ws.ID, "tasks")
-	c.JSON(http.StatusCreated, h.toListResponse(l))
+	c.JSON(http.StatusCreated, h.toListResponse(c, l))
 }
 
 func truncateRunes(s string, n int) string {
@@ -473,7 +482,7 @@ func (h *Handlers) syncGitList(c *gin.Context) {
 	defer cancel()
 	_ = h.git.SyncLink(ctx, link)
 	h.publishWS(c, l.WorkspaceID, "lists")
-	c.JSON(http.StatusOK, h.toListResponse(l))
+	c.JSON(http.StatusOK, h.toListResponse(c, l))
 }
 
 // ---- A task linked by hand -------------------------------------------------------
@@ -566,6 +575,38 @@ func gitChange(before, after models.Task) gitsync.Change {
 	}
 }
 
+// gitGuard refuses a change to a git-linked task (or a new task in a linked
+// list) that would have to go to git but can't: the caller has no account
+// of their own there and the list has no bot account. Nobody's change goes
+// to git as someone else. It answers 403 and reports false.
+func (h *Handlers) gitGuard(c *gin.Context, before *models.Task, after *models.Task) bool {
+	if !h.gitOn() || after.ParentID != nil {
+		return true
+	}
+	var link *models.GitLink
+	host := after.GitHost
+	needs := false
+	switch {
+	case before == nil: // a new task: an issue, in a linked list
+		if link = h.git.ListLink(after.ListID); link != nil {
+			host, needs = link.Host, true
+		}
+	case after.GitIssueID != 0:
+		link = h.git.LinkOf(after)
+		ch := gitChange(*before, *after)
+		if link == nil {
+			needs = ch.State // linked by hand: only open / closed goes
+		} else {
+			needs = ch.Any()
+		}
+	}
+	if !needs || h.git.WriteMode(auth.UserID(c), link, host) != "none" {
+		return true
+	}
+	c.JSON(http.StatusForbidden, gin.H{"error": gitsync.CantWrite{Host: host}.Error(), "git_read_only": true})
+	return false
+}
+
 // gitAfter tells git what happened to a task (a new issue for a new task of
 // a linked list, else its changes), as the caller. A failure doesn't undo
 // the change: it is answered as git_error, and the sync tries again.
@@ -586,4 +627,58 @@ func (h *Handlers) gitAfter(c *gin.Context, before *models.Task, t *models.Task)
 		return err.Error()
 	}
 	return ""
+}
+
+type gitBotRequest struct {
+	Token string `json:"token" binding:"max=500"` // "" removes it
+}
+
+// setGitBot sets (or with an empty token removes) the bot account members
+// without their own account act as on a linked list — so their changes
+// never go to git as whoever linked it. Whoever linked the list, or an
+// owner of the workspace.
+//
+//	@Summary	The bot account of a linked list
+//	@Tags		git
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string			true	"List id"
+//	@Param		body	body		gitBotRequest	true	"The bot's token (empty: none)"
+//	@Success	200		{object}	listResponse
+//	@Router		/lists/{id}/git/bot [put]
+func (h *Handlers) setGitBot(c *gin.Context) {
+	if !h.gitEnabled(c) {
+		return
+	}
+	l, ok := h.listAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	link := h.git.ListLink(l.ID)
+	if link == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "this list isn't linked to a repository"})
+		return
+	}
+	uid := auth.UserID(c)
+	if link.LinkedBy != uid {
+		var m models.WorkspaceMember
+		if h.db.Where("workspace_id = ? AND user_id = ?", l.WorkspaceID, uid).First(&m).Error != nil || m.Role != models.WSOwner {
+			c.JSON(http.StatusForbidden, gin.H{"error": "only whoever linked the list, or an owner of the workspace, chooses its bot account"})
+			return
+		}
+	}
+	var req gitBotRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	ctx, cancel := gitCtx(c)
+	defer cancel()
+	if err := h.git.SetBot(ctx, link, req.Token); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	h.recordCtx(c, "git.bot_set", "list", l.ID, gin.H{"bot": link.BotLogin})
+	h.publishWS(c, l.WorkspaceID, "lists")
+	c.JSON(http.StatusOK, h.toListResponse(c, l))
 }

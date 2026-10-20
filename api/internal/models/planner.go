@@ -134,6 +134,7 @@ type Task struct {
 	GitPull     bool       `gorm:"not null;default:false" json:"git_pull,omitempty"`
 	GitSyncedAt *time.Time `json:"-"`
 	GitDirty    bool       `gorm:"not null;default:false" json:"git_dirty,omitempty"` // a change didn't reach git yet (retried by the sync)
+	GitDirtyBy  string     `gorm:"size:36" json:"-"`                                  // whose change it was (retried as them)
 }
 
 // ---- Quick notes ------------------------------------------------------------
@@ -292,18 +293,23 @@ type GitAccount struct {
 // in the background; changes made in Orbit go out as whoever made them.
 type GitLink struct {
 	Base
-	ListID      string     `gorm:"size:36;not null;uniqueIndex" json:"list_id"`
-	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
-	Host        string     `gorm:"size:255;not null" json:"host"`
-	Owner       string     `gorm:"size:255;not null" json:"owner"`
-	Repo        string     `gorm:"size:255;not null" json:"repo"`
-	Mode        string     `gorm:"size:16;not null" json:"mode"` // issues | labels | project
-	ProjectID   int64      `gorm:"not null;default:0" json:"project_id,omitempty"`
-	ColumnMap   string     `gorm:"type:text" json:"-"`
-	IgnoreIDs   string     `gorm:"type:text" json:"-"` // JSON []int64: issues whose task was deleted here
-	LinkedBy    string     `gorm:"size:36;not null" json:"linked_by"`
-	SyncedAt    *time.Time `json:"synced_at,omitempty"`
-	LastError   string     `gorm:"size:500" json:"last_error,omitempty"`
+	ListID      string `gorm:"size:36;not null;uniqueIndex" json:"list_id"`
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	Host        string `gorm:"size:255;not null" json:"host"`
+	Owner       string `gorm:"size:255;not null" json:"owner"`
+	Repo        string `gorm:"size:255;not null" json:"repo"`
+	Mode        string `gorm:"size:16;not null" json:"mode"` // issues | labels | project
+	ProjectID   int64  `gorm:"not null;default:0" json:"project_id,omitempty"`
+	ColumnMap   string `gorm:"type:text" json:"-"`
+	IgnoreIDs   string `gorm:"type:text" json:"-"` // JSON []int64: issues whose task was deleted here
+	LinkedBy    string `gorm:"size:36;not null" json:"linked_by"`
+	// A bot account (its token, sealed) for members without their own
+	// account on the server: their changes go to git as the bot, never as
+	// whoever linked the list. Without one, such members can only read.
+	BotTokenSealed []byte     `json:"-"`
+	BotLogin       string     `gorm:"size:255" json:"bot_login,omitempty"`
+	SyncedAt       *time.Time `json:"synced_at,omitempty"`
+	LastError      string     `gorm:"size:500" json:"last_error,omitempty"`
 }
 
 // ---- Uploads ---------------------------------------------------------------------

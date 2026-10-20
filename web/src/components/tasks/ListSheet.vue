@@ -172,6 +172,29 @@ async function save() {
 
 // ---- Git ----
 const git = computed(() => list.value?.git)
+// The bot account: chosen by whoever linked the list, or an owner.
+const canBot = computed(() => !!git.value && editable.value && (git.value.linked_by === auth.user?.id || wss.byId(props.ws)?.role === 'owner'))
+const botToken = ref('')
+const botBusy = ref(false)
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).host
+  } catch {
+    return u
+  }
+}
+async function saveBot(token: string) {
+  botBusy.value = true
+  try {
+    upsertList(await gitApi.setBot(props.listId!, token))
+    botToken.value = ''
+    toast.success(token ? t('git.bot.set') : t('git.bot.removed'))
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    botBusy.value = false
+  }
+}
 const syncing = ref(false)
 const confirmUnlink = ref(false)
 const gitMode = computed(() => {
@@ -259,6 +282,24 @@ async function destroy() {
             <TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.link.syncFailed', { error: git.last_error }) }}
           </div>
         </div>
+        <!-- Members without their own account: read only, or as a bot — never as whoever linked it -->
+        <div class="group mt-3" data-testid="git-bot">
+          <div class="group-row !items-start">
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px]">{{ t('git.bot.title') }}</div>
+              <div class="text-[12px] text-text-3">
+                {{ git.bot_login ? t('git.bot.asBot', { bot: git.bot_login }) : t('git.bot.readOnly') }}
+              </div>
+            </div>
+            <button v-if="canBot && git.bot_login" type="button" class="btn-plain shrink-0 !text-danger" @click="saveBot('')">{{ t('git.bot.remove') }}</button>
+          </div>
+          <form v-if="canBot && !git.bot_login" class="group-row flex-wrap !gap-y-2" @submit.prevent="saveBot(botToken)">
+            <input v-model="botToken" type="password" class="input min-w-0 flex-1 !py-1 text-[13.5px]" :placeholder="t('git.bot.tokenPh')" autocomplete="off" :aria-label="t('git.bot.token')" />
+            <button class="btn btn-sm" :disabled="!botToken.trim() || botBusy">{{ t('git.bot.use') }}</button>
+          </form>
+        </div>
+        <p class="footnote mt-1 px-1 leading-snug">{{ t('git.bot.hint', { host: hostOf(git.host) }) }}</p>
+        <p v-if="git.write === 'none'" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text">{{ t('git.bot.youRead', { host: hostOf(git.host) }) }}</p>
         <button v-if="editable" type="button" class="btn-plain mt-1.5 !text-danger" @click="confirmUnlink = true">{{ t('git.link.unlink') }}</button>
       </section>
 

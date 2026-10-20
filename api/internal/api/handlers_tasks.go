@@ -27,10 +27,10 @@ type listResponse struct {
 	Git       *gitLinkResponse `json:"git,omitempty"`
 }
 
-func (h *Handlers) toListResponse(l models.TaskList) listResponse {
+func (h *Handlers) toListResponse(c *gin.Context, l models.TaskList) listResponse {
 	var n int64
 	h.db.Model(&models.Task{}).Where("list_id = ? AND completed_at IS NULL AND parent_id IS NULL", l.ID).Count(&n)
-	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: n, Git: h.gitLinkOf(l.ID)}
+	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: n, Git: h.gitLinkOf(l.ID, auth.UserID(c))}
 }
 
 func (h *Handlers) listAccess(c *gin.Context, need string) (models.TaskList, bool) {
@@ -61,7 +61,7 @@ func (h *Handlers) listLists(c *gin.Context) {
 	h.db.Where("workspace_id = ?", ws.ID).Order("rank").Find(&lists)
 	out := make([]listResponse, 0, len(lists))
 	for _, l := range lists {
-		out = append(out, h.toListResponse(l))
+		out = append(out, h.toListResponse(c, l))
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -126,7 +126,7 @@ func (h *Handlers) createList(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "lists")
-	c.JSON(http.StatusCreated, h.toListResponse(l))
+	c.JSON(http.StatusCreated, h.toListResponse(c, l))
 }
 
 // updateList renames, recolours or changes a list's columns (editors). Tasks
@@ -211,7 +211,7 @@ func (h *Handlers) updateList(c *gin.Context) {
 	}
 	l = reloadTaskList(h, l.ID)
 	h.publishWS(c, l.WorkspaceID, "lists")
-	c.JSON(http.StatusOK, h.toListResponse(l))
+	c.JSON(http.StatusOK, h.toListResponse(c, l))
 }
 
 // deleteList deletes a list and its tasks (editors).
@@ -610,6 +610,9 @@ func (h *Handlers) createTask(c *gin.Context) {
 			t.ColumnID = planner.FirstDone(cols).ID
 		}
 	}
+	if !h.gitGuard(c, nil, &t) {
+		return
+	}
 	if err := h.db.Create(&t).Error; err != nil {
 		h.internalError(c, err, "could not create the task")
 		return
@@ -719,6 +722,9 @@ func (h *Handlers) updateTask(c *gin.Context) {
 			t.Rank = h.columnRank(t.ListID, col.ID, "", t.ID)
 		}
 	}
+	if !h.gitGuard(c, &before, &t) {
+		return
+	}
 	if err := h.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&t).Error; err != nil {
 			return err
@@ -791,11 +797,18 @@ func (h *Handlers) moveTask(c *gin.Context) {
 	}
 	up := map[string]any{"list_id": list.ID, "column_id": col.ID, "rank": h.columnRank(list.ID, col.ID, req.AfterID, t.ID)}
 	completing := col.Done && t.CompletedAt == nil
+	after := t
+	after.ListID, after.ColumnID = list.ID, col.ID
 	if completing {
 		now := time.Now()
 		up["completed_at"] = &now
+		after.CompletedAt = &now
 	} else if !col.Done && t.CompletedAt != nil {
 		up["completed_at"] = nil
+		after.CompletedAt = nil
+	}
+	if !h.gitGuard(c, &t, &after) {
+		return
 	}
 	if err := h.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.Task{}).Where("id = ?", t.ID).Updates(up).Error; err != nil {

@@ -441,6 +441,18 @@ a change (the server is down, the token expired), the change is kept, you're
 told, and it is sent again by the next sync. **Stop syncing** in **Edit
 list** keeps the tasks.
 
+**Whose name is on git.** Everyone works as themselves: a change goes to
+git with **the account of the person who made it**. Nobody's change ever
+goes as someone else — not as whoever linked the list either. So a member
+who hasn't connected their own account on that server **can only read** the
+list's tasks (the details say so; sub-tasks stay editable). To let them
+work anyway, whoever linked the list (or an owner of the workspace) can give
+it a **bot account** in **Edit list → Members without their own git
+account**: create a user on the server for this (say *orbit-bot*), give it
+access to the repository, and paste its token. Their changes then appear on
+git as the bot, and their comments are signed with their name ("**Rui** (in
+Orbit):").
+
 **One task, one issue.** In any other list, a task's details have an
 **Issue** field: paste the address of an issue or pull request. Closing the
 issue — or merging the pull request — completes the task, and completing

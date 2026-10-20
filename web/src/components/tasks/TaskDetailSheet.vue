@@ -34,7 +34,18 @@ const lists = computed(() => tasks.listsOf(props.ws))
 const list = computed(() => lists.value.find((l) => l.id === task.value?.list_id))
 const subtasks = computed(() => (task.value ? tasks.subtasksOf(props.ws, task.value.id) : []))
 const workspace = computed(() => wss.byId(props.ws))
-const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at)
+// A task of a git-linked list is an issue there: changed only by someone with
+// their own account on the server, or through the list's bot (never as
+// someone else). Sub-tasks stay Orbit's.
+const gitHost = computed(() => {
+  try {
+    return new URL(list.value?.git?.host ?? '').host
+  } catch {
+    return list.value?.git?.host ?? ''
+  }
+})
+const gitReadOnly = computed(() => !!list.value?.git && list.value.git.write === 'none' && !task.value?.parent_id)
+const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !gitReadOnly.value)
 const members = computed(() => wss.members[props.ws] ?? [])
 const auth = useAuthStore()
 const assigned = computed(() => (task.value?.assignee_ids ?? []).map((id) => members.value.find((m) => m.user_id === id)).filter((m) => !!m))
@@ -239,6 +250,7 @@ async function remove() {
           @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
         />
       </div>
+      <p v-if="gitReadOnly" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text" data-testid="git-read-only">{{ t('git.bot.readOnlyTask', { host: gitHost }) }}</p>
       <div v-if="notes.trim() && !editingNotes" class="notes-box mt-2" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
         <MarkdownView class="notes-md" :content="notes" :editable="editable" math @toggle="tickInNotes" @edit="editNotes" />
       </div>

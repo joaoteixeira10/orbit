@@ -343,7 +343,13 @@ user. Release mode refuses either secret under 32 characters.
   LAN. A git server on your network is allowed only when the operator lists it
   in `GIT_SERVERS` (then dialed directly, no redirects). Git tokens are sealed;
   a list linked to a repository stops syncing when whoever linked it leaves the
-  workspace (their token isn't used any more). Personal channels must be
+  workspace (their token isn't used any more, unless the list has a bot
+  account). **Nobody's change goes to git as someone else:** a change is sent
+  with its author's own account, or — when they have none — the list's bot
+  account (sealed, set by whoever linked the list or an owner, audited
+  `git.bot_set`); without one, the API refuses changes that would reach git
+  (`403`, `git_read_only`). Reading (the sync) uses whoever linked the list,
+  or the bot once they've left; failed changes are retried as their author. Personal channels must be
   `https://`, take a test message before they're kept, are stored sealed and
   are never shown again (only their host); adding and removing one is
   audited, and the owner's `personal_channels` flag turns them off — or

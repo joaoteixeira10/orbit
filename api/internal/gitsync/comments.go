@@ -13,8 +13,8 @@ import (
 
 // Comments on a git-linked task follow the issue's comments both ways. One
 // written in Orbit goes to the issue as its author when they have an account
-// on that server, else as whoever linked the list, signed "**Name** (in
-// Orbit):". The issue's comments come back with the sync: from a member with
+// on that server, else as the list's bot account, signed "**Name** (in
+// Orbit):" — never as someone else; without either it stays in Orbit. The issue's comments come back with the sync: from a member with
 // an account there, as that member; from anyone else, under their git login.
 // GitHash is the issue comment's text as last seen or sent, so an edit on
 // either side is told from an echo.
@@ -127,22 +127,12 @@ func (e *Engine) PushComment(ctx context.Context, actor, actorName string, t *mo
 	if !ok {
 		return nil
 	}
-	link := e.linkOf(t)
-	own, ownErr := e.ClientFor(actor, t.GitHost)
-	c := own
-	if ownErr != nil {
-		var err error
-		if link != nil {
-			c, err = e.linkerClient(*link)
-		} else {
-			c, err = e.ClientFor(t.CreatedBy, t.GitHost)
-		}
-		if err != nil {
-			return err
-		}
+	c, viaBot, err := e.writer(actor, e.linkOf(t), t.GitHost, t.WorkspaceID)
+	if err != nil {
+		return err
 	}
 	body := cm.Body
-	if ownErr != nil {
+	if viaBot {
 		body = signed(actorName, body)
 	}
 	switch {

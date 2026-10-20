@@ -518,6 +518,13 @@ definitions:
         description: the server has the projects API
         type: boolean
     type: object
+  api.gitBotRequest:
+    properties:
+      token:
+        description: '"" removes it'
+        maxLength: 500
+        type: string
+    type: object
   api.gitConnectRequest:
     properties:
       base_url:
@@ -532,6 +539,12 @@ definitions:
     type: object
   api.gitLinkResponse:
     properties:
+      bot_login:
+        description: |-
+          BotLogin: the bot account members without their own account act as
+          ("" = they can only read). Write: how the caller's changes reach git —
+          own (their account), bot, or none (read only).
+        type: string
       host:
         type: string
       last_error:
@@ -547,6 +560,8 @@ definitions:
       synced_at:
         type: string
       url:
+        type: string
+      write:
         type: string
     type: object
   api.gitListRequest:
@@ -3274,6 +3289,34 @@ paths:
       security:
       - BearerAuth: []
       summary: Unlink a list from git
+      tags:
+      - git
+  /lists/{id}/git/bot:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'The bot''s token (empty: none)'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gitBotRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.listResponse'
+      security:
+      - BearerAuth: []
+      summary: The bot account of a linked list
       tags:
       - git
   /lists/{id}/git/sync:

@@ -3,6 +3,7 @@ package gitsync
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -408,7 +409,15 @@ func TestPush(t *testing.T) {
 	task.SetAssignees([]string{f.bo})
 	f.db.Save(&task)
 	ch := Change{Title: true, Column: true, Tags: true, Assignee: before.Assignees != task.Assignees}
-	if err := f.e.Push(context.Background(), f.bo, &task, ch); err != nil {
+	// Bo has no account there and the list no bot: nothing goes as Ana.
+	var cw CantWrite
+	if err := f.e.Push(context.Background(), f.bo, &task, ch); !errors.As(err, &cw) {
+		t.Fatalf("bo pushed without an account: %v", err)
+	}
+	if f.fake.get(1).Title != "Fix login" || f.task(t).GitDirty {
+		t.Fatal("the change went to git, or waits to be retried")
+	}
+	if err := f.e.Push(context.Background(), f.ana, &task, ch); err != nil {
 		t.Fatal(err)
 	}
 	is := f.fake.get(1)
@@ -587,9 +596,21 @@ func TestComments(t *testing.T) {
 		t.Fatalf("pulled: %+v", cs)
 	}
 
-	// Bo has no account on the server: the comment goes as the linker, signed.
+	// Bo has no account on the server: without a bot it stays here; with
+	// the list's bot it goes as the bot, signed with his name.
 	mine := models.TaskComment{TaskID: task.ID, WorkspaceID: task.WorkspaceID, AuthorID: f.bo, Body: "Thanks, **both**"}
 	f.db.Create(&mine)
+	var cw CantWrite
+	if err := f.e.PushComment(context.Background(), f.bo, "Bo", &task, &mine, false); !errors.As(err, &cw) {
+		t.Fatalf("no bot: %v", err)
+	}
+	link := f.e.ListLink(task.ListID)
+	if err := f.e.SetBot(context.Background(), link, "good"); err != nil || link.BotLogin != "ana" {
+		t.Fatalf("bot: %v %+v", err, link)
+	}
+	if mode := f.e.WriteMode(f.bo, link, link.Host); mode != "bot" {
+		t.Fatalf("bo's mode %q", mode)
+	}
 	if err := f.e.PushComment(context.Background(), f.bo, "Bo", &task, &mine, false); err != nil {
 		t.Fatal(err)
 	}

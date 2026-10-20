@@ -97,6 +97,8 @@ export interface GitLink {
   synced_at?: string
   last_error?: string
   linked_by: string
+  bot_login?: string // members without their own account act as this bot ("" = read only)
+  write: 'own' | 'bot' | 'none' // how my changes reach git; none = I can only read
 }
 export interface Task {
   id: string
@@ -414,6 +416,7 @@ export const gitApi = {
   createList: (ws: string, b: GitListInput) => api<TaskList>(`/workspaces/${ws}/lists/git`, { method: 'POST', body: j(b) }),
   unlinkList: (id: string) => api<void>(`/lists/${id}/git`, { method: 'DELETE' }),
   syncList: (id: string) => api<TaskList>(`/lists/${id}/git/sync`, { method: 'POST' }),
+  setBot: (id: string, token: string) => api<TaskList>(`/lists/${id}/git/bot`, { method: 'PUT', body: j({ token }) }),
   linkTask: (id: string, url: string) => api<Task>(`/tasks/${id}/git`, { method: 'POST', body: j({ url }) }),
   unlinkTask: (id: string) => api<Task>(`/tasks/${id}/git`, { method: 'DELETE' }),
 }

@@ -33,7 +33,12 @@ const ws = computed(() => String(route.params.ws ?? ''))
 const routeList = computed(() => String(route.params.list ?? ''))
 const workspace = computed(() => wss.byId(ws.value))
 const readonly = computed(
-  () => !workspace.value || workspace.value.role === 'viewer' || !!workspace.value.archived_at || !!auth.privileges.read_only,
+  () =>
+    !workspace.value ||
+    workspace.value.role === 'viewer' ||
+    !!workspace.value.archived_at ||
+    !!auth.privileges.read_only ||
+    list.value?.git?.write === 'none', // a linked list I can't write to git
 )
 
 // ---- Data ----

@@ -170,15 +170,90 @@ func (e *Engine) ClientFor(userID, base string) (*Client, error) {
 	return e.client(acc)
 }
 
-// clientAs acts as actor on a link's server, else as whoever linked it.
-func (e *Engine) clientAs(actor string, link *models.GitLink, host string) (*Client, error) {
-	if c, err := e.ClientFor(actor, host); err == nil {
-		return c, nil
+// CantWrite: the person has no account of their own on the server, and the
+// list has no bot account to act for them — they can only read its tasks.
+type CantWrite struct{ Host string }
+
+func (e CantWrite) Error() string {
+	return fmt.Sprintf("connect your own account on %s (Settings → Git) to change this here — or whoever linked the list can let a bot account act for people without one", e.Host)
+}
+
+// writer is who a change by actor goes to git as: their own account (while a
+// member of the workspace), else the list's bot account — never someone
+// else's. viaBot tells the second.
+func (e *Engine) writer(actor string, link *models.GitLink, host, wsID string) (c *Client, viaBot bool, err error) {
+	if wsID == "" || e.member(wsID, actor) {
+		if c, err := e.ClientFor(actor, host); err == nil {
+			return c, false, nil
+		}
 	}
-	if link != nil {
-		return e.linkerClient(*link)
+	if link != nil && link.BotLogin != "" {
+		c, err := e.botClient(*link)
+		return c, true, err
 	}
-	return nil, fmt.Errorf("connect your account on %s first (Settings → Git)", host)
+	return nil, false, CantWrite{Host: host}
+}
+
+// WriteMode is how actor's changes to a list's (or a hand-linked task's)
+// issues reach git: "own", "bot" or "none" (read only).
+func (e *Engine) WriteMode(actor string, link *models.GitLink, host string) string {
+	var n int64
+	e.db.Model(&models.GitAccount{}).Where("user_id = ? AND base_url = ?", actor, host).Count(&n)
+	switch {
+	case n > 0:
+		return "own"
+	case link != nil && link.BotLogin != "":
+		return "bot"
+	}
+	return "none"
+}
+
+// LinkOf is the link of the list a task is in (nil: none — a task linked
+// by hand, or no issue).
+func (e *Engine) LinkOf(t *models.Task) *models.GitLink { return e.linkOf(t) }
+
+// ListLink is a list's link (nil: not linked).
+func (e *Engine) ListLink(listID string) *models.GitLink {
+	var l models.GitLink
+	if e.db.Where("list_id = ?", listID).First(&l).Error != nil {
+		return nil
+	}
+	return &l
+}
+
+func (e *Engine) botClient(link models.GitLink) (*Client, error) {
+	if e.sealer == nil {
+		return nil, errors.New("git tokens can't be read on this instance")
+	}
+	tok, err := e.sealer.Unseal(link.BotTokenSealed)
+	if err != nil {
+		return nil, errors.New("the list's bot token can't be read; set it again")
+	}
+	return &Client{base: link.Host, token: string(tok), http: e.clientFor(link.Host)}, nil
+}
+
+// SetBot checks a bot account's token against the list's server and keeps
+// it (sealed); an empty token removes the bot.
+func (e *Engine) SetBot(ctx context.Context, link *models.GitLink, token string) error {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		link.BotTokenSealed, link.BotLogin = nil, ""
+		return e.db.Model(link).Updates(map[string]any{"bot_token_sealed": nil, "bot_login": ""}).Error
+	}
+	c := &Client{base: link.Host, token: token, http: e.clientFor(link.Host)}
+	me, err := c.Me(ctx)
+	if err != nil {
+		if isStatus(err, http.StatusUnauthorized) || isStatus(err, http.StatusForbidden) {
+			return errors.New("the server refused this token")
+		}
+		return fmt.Errorf("couldn't reach %s: %w", link.Host, err)
+	}
+	sealed, err := e.sealer.Seal([]byte(token))
+	if err != nil {
+		return err
+	}
+	link.BotTokenSealed, link.BotLogin = sealed, me.Login
+	return e.db.Model(link).Updates(map[string]any{"bot_token_sealed": sealed, "bot_login": me.Login}).Error
 }
 
 // errLinkerLeft: the person who linked a list left its workspace, so their
@@ -347,7 +422,11 @@ func truncate(s string, n int) string {
 }
 
 func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
+	// Reading: as whoever linked it, or — once they've left — its bot.
 	c, err := e.linkerClient(link)
+	if err != nil && link.BotLogin != "" {
+		c, err = e.botClient(link)
+	}
 	if err != nil {
 		return err
 	}
@@ -511,23 +590,24 @@ func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
 	return nil
 }
 
-// retry sends the changes of a list's tasks that didn't reach git, as whoever
-// linked the list.
+// retry sends the changes of a list's tasks that didn't reach git, each as
+// whoever made it (their own account, or the list's bot).
 func (e *Engine) retry(ctx context.Context, link models.GitLink) {
-	if !e.member(link.WorkspaceID, link.LinkedBy) {
-		return // their token isn't used any more (errLinkerLeft)
-	}
 	var dirty []models.Task
 	e.db.Where("list_id = ? AND git_dirty = ? AND parent_id IS NULL", link.ListID, true).Limit(50).Find(&dirty)
 	for i := range dirty {
 		t := &dirty[i]
+		actor := t.GitDirtyBy
+		if actor == "" {
+			actor = t.CreatedBy
+		}
 		var err error
 		if t.GitIssueID == 0 {
-			err = e.createIssue(ctx, link.LinkedBy, link, t)
+			err = e.createIssue(ctx, actor, link, t)
 		} else {
-			err = e.push(ctx, link.LinkedBy, e.linkOf(t), t, All)
+			err = e.push(ctx, actor, e.linkOf(t), t, All)
 		}
-		_ = e.dirtyOn(t, err)
+		_ = e.dirtyOn(t, actor, err)
 	}
 }
 
@@ -584,14 +664,23 @@ func (e *Engine) Push(ctx context.Context, actor string, t *models.Task, ch Chan
 	if link != nil {
 		defer e.lock(link.ListID)()
 	}
-	return e.dirtyOn(t, e.push(ctx, actor, link, t, ch))
+	return e.dirtyOn(t, actor, e.push(ctx, actor, link, t, ch))
 }
 
-// dirtyOn marks a task whose change didn't reach git (or clears the mark).
-func (e *Engine) dirtyOn(t *models.Task, err error) error {
-	if dirty := err != nil; dirty != t.GitDirty {
+// dirtyOn marks a task whose change (by actor) didn't reach git, to be sent
+// again as them — or clears the mark. A change nobody may send (CantWrite)
+// isn't retried.
+func (e *Engine) dirtyOn(t *models.Task, actor string, err error) error {
+	var cw CantWrite
+	dirty := err != nil && !errors.As(err, &cw)
+	if dirty != t.GitDirty || (dirty && actor != t.GitDirtyBy) {
 		t.GitDirty = dirty
-		e.db.Model(&models.Task{}).Where("id = ?", t.ID).Update("git_dirty", dirty)
+		by := ""
+		if dirty {
+			by = actor
+		}
+		t.GitDirtyBy = by
+		e.db.Model(&models.Task{}).Where("id = ?", t.ID).Updates(map[string]any{"git_dirty": dirty, "git_dirty_by": by})
 	}
 	return err
 }
@@ -607,7 +696,7 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 	if !ok {
 		return nil
 	}
-	c, err := e.clientAs(actor, link, t.GitHost)
+	c, _, err := e.writer(actor, link, t.GitHost, t.WorkspaceID)
 	if err != nil {
 		return err
 	}
@@ -730,11 +819,11 @@ func (e *Engine) CreateIssue(ctx context.Context, actor string, t *models.Task) 
 		return nil
 	}
 	defer e.lock(link.ListID)()
-	return e.dirtyOn(t, e.createIssue(ctx, actor, link, t))
+	return e.dirtyOn(t, actor, e.createIssue(ctx, actor, link, t))
 }
 
 func (e *Engine) createIssue(ctx context.Context, actor string, link models.GitLink, t *models.Task) error {
-	c, err := e.clientAs(actor, &link, link.Host)
+	c, _, err := e.writer(actor, &link, link.Host, link.WorkspaceID)
 	if err != nil {
 		return err
 	}
@@ -861,7 +950,7 @@ func (e *Engine) refreshLinked(ctx context.Context) {
 		}
 		if t.GitDirty {
 			if e.member(t.WorkspaceID, t.CreatedBy) {
-				_ = e.dirtyOn(t, e.push(ctx, t.CreatedBy, nil, t, Change{State: true}))
+				_ = e.dirtyOn(t, t.CreatedBy, e.push(ctx, t.CreatedBy, nil, t, Change{State: true}))
 			}
 			continue
 		}

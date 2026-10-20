@@ -111,6 +111,12 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Git: nobody's change goes as someone else.** A change to a linked task
+  is sent with its author's own account; members without one can only read
+  the list's tasks — unless whoever linked it gives the list a **bot
+  account** (Edit list → Members without their own git account), whose name
+  then appears on git (comments signed with theirs). Failed changes are
+  retried as their author.
 - **Your own notification channels**: each person adds their own Discord,
   Slack or Teams webhook, Telegram chat, ntfy topic or Gotify app (Settings →
   Notifications); theirs alone, so they get the full text. Public https only,

@@ -326,6 +326,7 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/lists/git", h.createGitList)
 			authed.DELETE("/lists/:id/git", h.unlinkGitList)
 			authed.POST("/lists/:id/git/sync", h.syncGitList)
+			authed.PUT("/lists/:id/git/bot", notImpersonating(), h.setGitBot)
 			authed.POST("/tasks/:id/git", h.linkGitTask)
 			authed.DELETE("/tasks/:id/git", h.unlinkGitTask)
 

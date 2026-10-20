@@ -165,3 +165,19 @@ func TestPush(t *testing.T) {
 		t.Errorf("endpoint validation")
 	}
 }
+
+// TestPing: a shared channel's ping names the kind only, in the person's
+// language, with a link to the app.
+func TestPing(t *testing.T) {
+	title, body := Ping("pt-PT", Assigned, "https://orbit.example.org")
+	if title != "Orbit: Alguém lhe atribuiu uma tarefa" || body != "Abra o Orbit para a ver: https://orbit.example.org" {
+		t.Fatalf("ping: %q / %q", title, body)
+	}
+	if title, body := Ping("en", "something-new", ""); title != "Orbit: You have a new notification" || body != "Open Orbit to see it" {
+		t.Fatalf("ping: %q / %q", title, body)
+	}
+	personal, shared := SplitChannels([]string{"slack", "email", "ntfy"})
+	if len(personal) != 1 || personal[0] != "email" || len(shared) != 2 {
+		t.Fatalf("split: %v %v", personal, shared)
+	}
+}

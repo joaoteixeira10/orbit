@@ -631,7 +631,11 @@ all as read** clears the count. What you get:
   reaches your devices and others' activity stays in the bell.
 - **Daily summary** — on or off, and the time.
 - **Your channels** — which of the owner's channels (email, ntfy, Telegram,
-  Discord, Slack, Teams, Gotify) to use.
+  Discord, Slack, Teams, Gotify) to use. **Email** goes to your own address,
+  with the full text. The others are one chat, topic or webhook the owner set
+  up, which other people may read: by default they get only a ping — *Orbit:
+  a reminder for you* and a link — never titles, names or workspaces. Turn
+  on **Include titles in shared channels** to send them the full text.
 
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.

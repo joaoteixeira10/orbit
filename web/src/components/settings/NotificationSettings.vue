@@ -191,6 +191,14 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
             {{ channelLabel(ch) }}
           </Checkbox>
         </div>
+        <!-- Chats, topics and webhooks are the owner's: others may read them. -->
+        <div v-if="prefs.notify_channels.some((c) => c !== 'email')" class="mt-4 flex items-start gap-3 rounded-xl bg-fill-2 p-3" data-testid="channel-details">
+          <div class="min-w-0 flex-1">
+            <div class="text-[13.5px]">{{ t('notif.details') }}</div>
+            <div class="mt-0.5 text-[12px] text-text-3">{{ prefs.channel_details ? t('notif.detailsOn') : t('notif.detailsOff') }}</div>
+          </div>
+          <Toggle :model-value="prefs.channel_details" :aria-label="t('notif.details')" @update:model-value="(v) => save({ channel_details: v })" />
+        </div>
       </template>
       <p v-else class="mt-2 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('notif.noChannels') }}</p>
     </div>

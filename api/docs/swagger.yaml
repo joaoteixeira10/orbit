@@ -1077,6 +1077,9 @@ definitions:
     properties:
       accent_color:
         type: string
+      channel_details:
+        description: titles in shared channels too
+        type: boolean
       dev_theme:
         description: '"" (as the instance) | none | a theme id'
         type: string
@@ -1463,6 +1466,8 @@ definitions:
       accent_color:
         description: '#rrggbb or "" (validated in the handler)'
         type: string
+      channel_details:
+        type: boolean
       dev_theme:
         maxLength: 10
         type: string
@@ -2026,6 +2031,13 @@ definitions:
           AccentColor is a personal #rrggbb accent that overrides the org accent for
           this user only (empty = follow the org/developer-theme accent).
         type: string
+      channel_details:
+        description: |-
+          ChannelDetails: the shared channels (chats, topics, webhooks — places
+          the owner set up, which others may read) get the notification's
+          text. Off (the default), they get only a ping; email, which is
+          personal, always has the text.
+        type: boolean
       created_at:
         type: string
       dev_theme:

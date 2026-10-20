@@ -187,6 +187,13 @@ workspaces).
   deletes the workspaces it was alone in and hands the others to a remaining
   member (an editor first) — content is never orphaned or exposed.
 - **Assignees** must be members of the workspace.
+- **Notification channels don't carry workspace content by default.** The
+  shared channels (Slack, Teams, Discord, Telegram, ntfy, Gotify) are one
+  place the owner set up, which others may read; a person's notifications
+  reach them only as a ping ("Orbit: a reminder for you" and a link — the
+  kind, never titles, names or workspaces) unless that person turns on
+  **Include titles in shared channels**. Email goes to the person's own
+  address and has the full text.
 - **Grades are personal.** Courses and their timetable belong to the
   workspace, but a grade or a goal is its owner's alone: every query filters
   by the caller, so other members — owners included — get `404` for someone

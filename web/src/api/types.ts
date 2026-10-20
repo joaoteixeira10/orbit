@@ -139,6 +139,7 @@ export interface NotifyPrefs {
   theme: 'light' | 'dark' | 'system'
   notify_events: boolean
   notify_channels: string[]
+  channel_details: boolean // shared channels get the text, not just a ping
   notify_prefs: Record<NotifyKind, Delivery>
   digest_enabled: boolean
   digest_time: string // HH:MM

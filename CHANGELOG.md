@@ -111,6 +111,11 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Shared notification channels get a ping, not the content.** Slack,
+  Teams, Discord, Telegram, ntfy and Gotify — places the owner set up, which
+  others may read — receive "Orbit: a reminder for you" and a link unless the
+  person turns on **Include titles in shared channels**; email (the
+  person's own) keeps the full text.
 - **Comment counts** on task rows and board cards (💬 2).
 - **Chips on task rows**, as in Plane: the date, priority and assignees at
   the end of each row (wide screens), each changed right there.

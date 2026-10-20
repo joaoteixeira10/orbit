@@ -152,3 +152,43 @@ func digestLines(p map[string]any) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// pings are what the shared channels get by default: what kind of thing
+// happened, never what it's about (no titles, names or workspaces).
+var pings = map[string]map[string]string{
+	"en": {
+		Reminder:  "A reminder for you",
+		Assigned:  "Someone gave you a task",
+		Comment:   "A new comment or mention for you",
+		Workspace: "A change in your workspaces",
+		Activity:  "New activity in a shared workspace",
+		Digest:    "Your daily summary is ready",
+		"":        "You have a new notification",
+		"open":    "Open Orbit to see it",
+	},
+	"pt": {
+		Reminder:  "Um lembrete para si",
+		Assigned:  "Alguém lhe atribuiu uma tarefa",
+		Comment:   "Um novo comentário ou menção para si",
+		Workspace: "Uma alteração nos seus espaços",
+		Activity:  "Nova atividade num espaço partilhado",
+		Digest:    "O seu resumo do dia está pronto",
+		"":        "Tem uma nova notificação",
+		"open":    "Abra o Orbit para a ver",
+	},
+}
+
+// Ping is the title and body of a notification for a shared channel: its
+// kind only, and a link to the app (when its address is known).
+func Ping(locale, kind, appURL string) (title, body string) {
+	words := pings[lang(locale)]
+	t, ok := words[kind]
+	if !ok {
+		t = words[""]
+	}
+	body = words["open"]
+	if appURL != "" {
+		body += ": " + appURL
+	}
+	return "Orbit: " + t, body
+}

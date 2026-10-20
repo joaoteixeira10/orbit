@@ -7638,6 +7638,10 @@ const docTemplate = `{
                 "accent_color": {
                     "type": "string"
                 },
+                "channel_details": {
+                    "description": "titles in shared channels too",
+                    "type": "boolean"
+                },
                 "dev_theme": {
                     "description": "\"\" (as the instance) | none | a theme id",
                     "type": "string"
@@ -8181,6 +8185,9 @@ const docTemplate = `{
                 "accent_color": {
                     "description": "#rrggbb or \"\" (validated in the handler)",
                     "type": "string"
+                },
+                "channel_details": {
+                    "type": "boolean"
                 },
                 "dev_theme": {
                     "type": "string",
@@ -8983,6 +8990,10 @@ const docTemplate = `{
                 "accent_color": {
                     "description": "AccentColor is a personal #rrggbb accent that overrides the org accent for\nthis user only (empty = follow the org/developer-theme accent).",
                     "type": "string"
+                },
+                "channel_details": {
+                    "description": "ChannelDetails: the shared channels (chats, topics, webhooks — places\nthe owner set up, which others may read) get the notification's\ntext. Off (the default), they get only a ping; email, which is\npersonal, always has the text.",
+                    "type": "boolean"
                 },
                 "created_at": {
                     "type": "string"

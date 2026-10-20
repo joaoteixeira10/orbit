@@ -19,6 +19,7 @@ type prefsResponse struct {
 	AccentColor    string       `json:"accent_color"`
 	NotifyEvents   bool         `json:"notify_events"`
 	NotifyChannels []string     `json:"notify_channels"`
+	ChannelDetails bool         `json:"channel_details"` // titles in shared channels too
 	WeekStart      int          `json:"week_start"`
 	TimeFormat     string       `json:"time_format"`
 	// NotifyPrefs is where each kind of notification goes besides the inbox.
@@ -42,6 +43,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		AccentColor:    p.AccentColor,
 		NotifyEvents:   p.NotifyEvents,
 		NotifyChannels: chans,
+		ChannelDetails: p.ChannelDetails,
 		WeekStart:      p.WeekStart,
 		TimeFormat:     orDefault(p.TimeFormat, "24h"),
 		NotifyPrefs:    inbox.PrefsOf(p),
@@ -120,6 +122,9 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	if req.NotifyChannels != nil {
 		b, _ := json.Marshal(*req.NotifyChannels)
 		updates["notify_channels"] = string(b)
+	}
+	if req.ChannelDetails != nil {
+		updates["channel_details"] = *req.ChannelDetails
 	}
 	if req.NotifyPrefs != nil {
 		merged := inbox.PrefsOf(prefs)

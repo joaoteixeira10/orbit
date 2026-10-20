@@ -67,6 +67,7 @@ type Service struct {
 	log        *zap.Logger
 	client     *http.Client
 	subscriber string // VAPID "sub": mailto: or https URL of the instance
+	publicURL  string // the app's address, for a ping's link ("" = none)
 	vapidPub   string
 	vapidPriv  string
 }
@@ -76,6 +77,7 @@ type Service struct {
 func New(db *gorm.DB, hub *events.Hub, channels *notify.Service, sealer *keystore.Sealer, log *zap.Logger, publicURL string) *Service {
 	s := &Service{db: db, hub: hub, channels: channels, log: log, client: safedial.PublicClient(15 * time.Second)}
 	s.subscriber = "mailto:orbit@localhost"
+	s.publicURL = strings.TrimRight(publicURL, "/")
 	if strings.HasPrefix(publicURL, "https://") {
 		s.subscriber = strings.TrimRight(publicURL, "/")
 	}
@@ -206,10 +208,35 @@ func (s *Service) deliver(n models.Notification) {
 	if d.Channels && s.channels != nil {
 		var chans []string
 		_ = json.Unmarshal([]byte(p.NotifyChannels), &chans)
-		if len(chans) > 0 {
-			go s.channels.Send(chans, u.Email, "Orbit: "+title, title+"\n"+body)
+		personal, shared := SplitChannels(chans)
+		// Email is the person's own: the whole text. The others are places
+		// the owner set up, which others may read: a ping, unless the person
+		// chose to send the text there too.
+		if len(personal) > 0 {
+			go s.channels.Send(personal, u.Email, "Orbit: "+title, title+"\n"+body)
+		}
+		if len(shared) > 0 {
+			if p.ChannelDetails {
+				go s.channels.Send(shared, u.Email, "Orbit: "+title, title+"\n"+body)
+			} else {
+				pt, pb := Ping(p.Locale, n.Kind, s.publicURL)
+				go s.channels.Send(shared, u.Email, pt, pb)
+			}
 		}
 	}
+}
+
+// SplitChannels separates the personal channels (email, to the person's own
+// address) from the shared ones (one chat, topic or webhook for everyone).
+func SplitChannels(chans []string) (personal, shared []string) {
+	for _, c := range chans {
+		if c == notify.ChEmail {
+			personal = append(personal, c)
+		} else {
+			shared = append(shared, c)
+		}
+	}
+	return personal, shared
 }
 
 // tagOf lets a newer notification of the same thing replace an older one on

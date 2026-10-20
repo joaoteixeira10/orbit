@@ -162,6 +162,11 @@ type UserPrefs struct {
 	// admin has enabled.
 	NotifyEvents   bool   `gorm:"not null;default:false" json:"notify_events"`
 	NotifyChannels string `gorm:"type:text" json:"-"` // JSON []string; exposed via DTO
+	// ChannelDetails: the shared channels (chats, topics, webhooks — places
+	// the owner set up, which others may read) get the notification's
+	// text. Off (the default), they get only a ping; email, which is
+	// personal, always has the text.
+	ChannelDetails bool `gorm:"not null;default:false" json:"channel_details"`
 	// NotifyPrefs is, per kind of notification (reminder, assigned,
 	// workspace, activity, digest), where it goes besides the inbox: JSON
 	// {"<kind>": {"push": bool, "channels": bool}}; missing kinds take the

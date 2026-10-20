@@ -79,6 +79,7 @@ type updatePrefsRequest struct {
 	AccentColor    *string       `json:"accent_color"` // #rrggbb or "" (validated in the handler)
 	NotifyEvents   *bool         `json:"notify_events"`
 	NotifyChannels *[]string     `json:"notify_channels"`
+	ChannelDetails *bool         `json:"channel_details"`
 	DeviceTZ       *string       `json:"device_tz" binding:"omitempty,max=64"`
 	WeekStart      *int          `json:"week_start" binding:"omitempty,oneof=0 1"`
 	TimeFormat     *string       `json:"time_format" binding:"omitempty,oneof=24h 12h"`

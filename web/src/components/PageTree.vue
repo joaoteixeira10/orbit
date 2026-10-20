@@ -59,7 +59,9 @@ function go(n: PageNode) {
         <span v-if="n.icon" class="w-4 shrink-0 text-center text-[13px] leading-none">{{ n.icon }}</span>
         <FileText v-else class="h-3.5 w-3.5 shrink-0 !text-text-3" />
         <span class="min-w-0 flex-1 truncate">{{ n.title || t('pages.untitled') }}</span>
-        <span v-if="canEdit" class="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex">
+        <!-- Shown on hover — and while this row's menu is open, which is
+             anchored to its ⋯ (hidden, the menu would lose its place). -->
+        <span v-if="canEdit" class="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex" :class="{ '!flex': menuFor === n.id }">
           <button class="grid h-5 w-5 place-items-center rounded hover:bg-fill" :title="t('pages.addSub')" @click.stop="emit('add', n.id)">
             <Plus class="h-3.5 w-3.5 !text-text-2" />
           </button>

@@ -210,6 +210,7 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/me/channels/:id", notImpersonating(), h.deleteMyChannel)
 			// Notification channels the admin has enabled (for the user's picker).
 			authed.GET("/notifications/channels", h.notifChannels)
+			authed.PUT("/notifications/personal-kinds", h.auth.RequireOwner(), h.requireStepUp(), h.setPersonalKinds)
 
 			// Global-privilege routes.
 			authed.GET("/users", h.auth.RequireGlobal(rbac.PUsersManage), h.listUsers)

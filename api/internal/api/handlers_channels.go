@@ -42,12 +42,18 @@ func (h *Handlers) listMyChannels(c *gin.Context) {
 	if !h.personalOn(c) {
 		return
 	}
-	var out []models.PersonalChannel
-	h.db.Where("user_id = ?", auth.UserID(c)).Order("created_at").Find(&out)
-	if out == nil {
-		out = []models.PersonalChannel{}
+	var rows []models.PersonalChannel
+	h.db.Where("user_id = ?", auth.UserID(c)).Order("created_at").Find(&rows)
+	out := make([]personalResponse, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, personalResponse{PersonalChannel: r, Allowed: h.notify.PersonalKindAllowed(r.Kind)})
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+type personalResponse struct {
+	models.PersonalChannel
+	Allowed bool `json:"allowed"` // its kind is allowed (else it gets nothing)
 }
 
 type personalRequest struct {
@@ -84,6 +90,10 @@ func (h *Handlers) addMyChannel(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if !h.notify.PersonalKindAllowed(p.Kind) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "this kind of channel isn't allowed on this instance"})
+		return
+	}
 	uid := auth.UserID(c)
 	var n int64
 	h.db.Model(&models.PersonalChannel{}).Where("user_id = ?", uid).Count(&n)
@@ -113,7 +123,7 @@ func (h *Handlers) addMyChannel(c *gin.Context) {
 		return
 	}
 	h.recordCtx(c, "user.channel_add", "user", uid, gin.H{"kind": ch.Kind, "hint": ch.Hint})
-	c.JSON(http.StatusCreated, ch)
+	c.JSON(http.StatusCreated, personalResponse{PersonalChannel: ch, Allowed: true})
 }
 
 func (h *Handlers) myChannel(c *gin.Context) (models.PersonalChannel, bool) {
@@ -139,6 +149,10 @@ func (h *Handlers) testMyChannel(c *gin.Context) {
 	}
 	ch, ok := h.myChannel(c)
 	if !ok {
+		return
+	}
+	if !h.notify.PersonalKindAllowed(ch.Kind) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "this kind of channel isn't allowed on this instance"})
 		return
 	}
 	p, err := h.notify.OpenPersonal(ch.ConfigSealed)

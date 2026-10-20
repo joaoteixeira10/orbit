@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
 )
 
@@ -140,4 +141,51 @@ func (s *Service) SendPersonal(ctx context.Context, p Personal, subject, body st
 		return sendGotify(ctx, c, p.ServerURL, p.Token, subject, body)
 	}
 	return errors.New("unknown kind of channel")
+}
+
+const allowedKey = "personal_channel_kinds"
+
+// PersonalAllowed is the kinds people may add as their own, as the owner
+// chose (all of them until the owner says otherwise).
+func (s *Service) PersonalAllowed() []string {
+	var row models.Setting
+	if s.db.Where(&models.Setting{Key: allowedKey}).First(&row).Error != nil {
+		return append([]string{}, PersonalKinds...)
+	}
+	var kinds []string
+	_ = json.Unmarshal([]byte(row.Value), &kinds)
+	out := []string{}
+	for _, k := range PersonalKinds {
+		for _, x := range kinds {
+			if x == k {
+				out = append(out, k)
+			}
+		}
+	}
+	return out
+}
+
+// SetPersonalAllowed stores the kinds people may add (unknown ones dropped).
+func (s *Service) SetPersonalAllowed(kinds []string) ([]string, error) {
+	out := []string{}
+	for _, k := range PersonalKinds {
+		for _, x := range kinds {
+			if x == k {
+				out = append(out, k)
+				break
+			}
+		}
+	}
+	b, _ := json.Marshal(out)
+	return out, s.db.Save(&models.Setting{Key: allowedKey, Value: string(b), UpdatedAt: time.Now()}).Error
+}
+
+// PersonalKindAllowed reports whether people may use kind as their own.
+func (s *Service) PersonalKindAllowed(kind string) bool {
+	for _, k := range s.PersonalAllowed() {
+		if k == kind {
+			return true
+		}
+	}
+	return false
 }

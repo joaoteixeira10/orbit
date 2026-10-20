@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
 
@@ -77,7 +78,8 @@ func (h *Handlers) testNotif(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "sent"})
 }
 
-// notifChannels returns the channel keys the admin has enabled (for any user).
+// notifChannels returns the channel keys the admin has enabled, and the
+// kinds people may add as their own channels (for any user).
 //
 //	@Summary	List enabled notification channels
 //	@Tags		notifications
@@ -86,5 +88,39 @@ func (h *Handlers) testNotif(c *gin.Context) {
 //	@Success	200	{object}	map[string][]string
 //	@Router		/notifications/channels [get]
 func (h *Handlers) notifChannels(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"enabled": h.notify.EnabledChannels()})
+	personal := []string{}
+	if feature.Enabled(h.db, feature.PersonalChannels) {
+		personal = h.notify.PersonalAllowed()
+	}
+	c.JSON(http.StatusOK, gin.H{"enabled": h.notify.EnabledChannels(), "personal": personal})
+}
+
+type personalKindsRequest struct {
+	Kinds []string `json:"kinds" binding:"max=10"`
+}
+
+// setPersonalKinds sets which kinds people may add as their own channels
+// (the owner). A channel of a kind no longer allowed is kept but gets
+// nothing.
+//
+//	@Summary	Kinds of personal channels allowed
+//	@Tags		notifications
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		personalKindsRequest	true	"Allowed kinds"
+//	@Success	200		{object}	map[string][]string
+//	@Router		/notifications/personal-kinds [put]
+func (h *Handlers) setPersonalKinds(c *gin.Context) {
+	var req personalKindsRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	kinds, err := h.notify.SetPersonalAllowed(req.Kinds)
+	if err != nil {
+		h.internalError(c, err, "could not save")
+		return
+	}
+	h.recordCtx(c, "owner.personal_channel_kinds", "settings", "notifications", gin.H{"kinds": kinds})
+	c.JSON(http.StatusOK, gin.H{"personal": kinds})
 }

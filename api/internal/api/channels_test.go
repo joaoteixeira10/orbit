@@ -49,6 +49,29 @@ func TestPersonalChannels(t *testing.T) {
 	expect(t, authdo(r, "POST", "/api/v1/me/channels/"+ch.ID+"/test", "", bob), http.StatusNotFound, "bob tests alice's")
 	expect(t, authdo(r, "DELETE", "/api/v1/me/channels/"+ch.ID, "", bob), http.StatusNotFound, "bob removes alice's")
 
+	// The owner allows only ntfy: no new Slack; the existing one is kept but
+	// marked, and can't be tested.
+	expect(t, authdo(r, "PUT", "/api/v1/notifications/personal-kinds", `{"kinds":["ntfy"]}`, alice), http.StatusForbidden, "not the owner")
+	expect(t, authdo(r, "PUT", "/api/v1/notifications/personal-kinds", `{"kinds":["ntfy","bogus"]}`, admin), http.StatusOK, "owner sets kinds")
+	var info struct {
+		Personal []string `json:"personal"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/notifications/channels", "", alice), &info)
+	if len(info.Personal) != 1 || info.Personal[0] != "ntfy" {
+		t.Fatalf("allowed: %v", info.Personal)
+	}
+	expect(t, authdo(r, "POST", "/api/v1/me/channels", `{"kind":"slack","webhook_url":"`+srv.URL+`/other"}`, alice), http.StatusForbidden, "slack not allowed")
+	var mine []struct {
+		Allowed bool `json:"allowed"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/channels", "", alice), &mine)
+	if len(mine) != 1 || mine[0].Allowed {
+		t.Fatalf("kept, not allowed: %+v", mine)
+	}
+	expect(t, authdo(r, "POST", "/api/v1/me/channels/"+ch.ID+"/test", "", alice), http.StatusForbidden, "test not allowed")
+	expect(t, authdo(r, "PUT", "/api/v1/notifications/personal-kinds", `{"kinds":["slack","ntfy"]}`, admin), http.StatusOK, "allowed again")
+	expect(t, authdo(r, "POST", "/api/v1/me/channels/"+ch.ID+"/test", "", alice), http.StatusNoContent, "test allowed again")
+
 	expect(t, authdo(r, "PUT", "/api/v1/features", `{"personal_channels":false}`, admin), http.StatusOK, "flag off")
 	expect(t, authdo(r, "GET", "/api/v1/me/channels", "", alice), http.StatusNotFound, "off")
 	expect(t, authdo(r, "PUT", "/api/v1/features", `{"personal_channels":true}`, admin), http.StatusOK, "flag on")

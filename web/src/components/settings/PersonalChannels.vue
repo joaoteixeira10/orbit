@@ -8,6 +8,7 @@ import { useToastStore } from '@/stores/toast'
 // A person's own notification channels: theirs alone (not the owner's
 // shared ones), so they get the full text. Adding one sends it a test first;
 // afterwards only a hint of it is shown (its secrets stay on the server).
+const props = defineProps<{ allowed: string[] }>() // the kinds the owner allows
 const emit = defineEmits<{ count: [n: number]; added: [n: number] }>()
 const { t } = useI18n()
 const toast = useToastStore()
@@ -16,7 +17,12 @@ const list = ref<PersonalChannel[]>([])
 const adding = ref(false)
 const busy = ref(false)
 const form = ref<PersonalChannelInput>({ kind: 'ntfy' })
-const KINDS: PersonalChannel['kind'][] = ['ntfy', 'telegram', 'discord', 'slack', 'teams', 'gotify']
+const ORDER: PersonalChannel['kind'][] = ['ntfy', 'telegram', 'discord', 'slack', 'teams', 'gotify']
+const KINDS = computed(() => ORDER.filter((k) => props.allowed.includes(k)))
+function startAdd() {
+  if (!KINDS.value.includes(form.value.kind)) form.value = { kind: KINDS.value[0] }
+  adding.value = true
+}
 const label = (k: string) => ({ ntfy: 'ntfy', telegram: 'Telegram', discord: 'Discord', slack: 'Slack', teams: 'Microsoft Teams', gotify: 'Gotify' })[k] ?? k
 
 // The fields each kind needs.
@@ -100,9 +106,10 @@ async function remove(c: PersonalChannel) {
         <div class="min-w-0 flex-1">
           <div class="truncate text-[13.5px]">{{ c.name }} <span class="text-text-3">· {{ label(c.kind) }}</span></div>
           <div class="truncate text-[12px] text-text-3">{{ c.hint }}</div>
-          <div v-if="c.last_error" class="mt-0.5 flex items-center gap-1 text-[12px] text-crit-text"><TriangleAlert class="h-3 w-3 shrink-0" /><span class="truncate">{{ c.last_error }}</span></div>
+          <div v-if="!c.allowed" class="mt-0.5 text-[12px] text-warn-text">{{ t('notif.own.notAllowed') }}</div>
+          <div v-else-if="c.last_error" class="mt-0.5 flex items-center gap-1 text-[12px] text-crit-text"><TriangleAlert class="h-3 w-3 shrink-0" /><span class="truncate">{{ c.last_error }}</span></div>
         </div>
-        <button class="icon-btn" :title="t('notif.own.test')" :aria-label="t('notif.own.test')" @click="test(c)"><Send class="h-4 w-4" /></button>
+        <button v-if="c.allowed" class="icon-btn" :title="t('notif.own.test')" :aria-label="t('notif.own.test')" @click="test(c)"><Send class="h-4 w-4" /></button>
         <button class="icon-btn !text-danger" :title="t('notif.own.remove')" :aria-label="t('notif.own.remove')" @click="remove(c)"><Trash2 class="h-4 w-4" /></button>
       </div>
     </div>
@@ -124,6 +131,7 @@ async function remove(c: PersonalChannel) {
         <button class="btn-primary btn-sm" :disabled="!ready || busy">{{ busy ? t('notif.own.testing') : t('notif.own.add') }}</button>
       </div>
     </form>
-    <button v-else class="btn btn-sm mt-3" @click="adding = true"><Plus class="h-4 w-4" />{{ t('notif.own.new') }}</button>
+    <button v-else-if="KINDS.length" class="btn btn-sm mt-3" @click="startAdd"><Plus class="h-4 w-4" />{{ t('notif.own.new') }}</button>
+    <p v-else class="mt-2 text-[12px] text-text-3">{{ t('notif.own.noneAllowed') }}</p>
   </div>
 </template>

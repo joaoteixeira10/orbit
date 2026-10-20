@@ -346,7 +346,9 @@ user. Release mode refuses either secret under 32 characters.
   workspace (their token isn't used any more). Personal channels must be
   `https://`, take a test message before they're kept, are stored sealed and
   are never shown again (only their host); adding and removing one is
-  audited, and the owner's `personal_channels` flag turns them off.
+  audited, and the owner's `personal_channels` flag turns them off — or
+  limits them to some kinds (a channel of a kind no longer allowed is kept
+  but nothing is sent to it).
 - **Subscribed calendars** are fetched through the same guarded dialer, with
   three differences: up to **three redirects** (calendar hosts use them), each
   hop dialed through the guard and limited to `http`/`https`; at most

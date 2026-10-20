@@ -637,8 +637,8 @@ all as read** clears the count. What you get:
   a reminder for you* and a link — never titles, names or workspaces. Turn
   on **Include titles in shared channels** to send them the full text.
 - **Your own channels** — add your own Discord, Slack or Teams webhook,
-  Telegram chat (bot token and chat id), ntfy topic or Gotify app: **Add a
-  channel**, fill it in, **Test and add** (a test message is sent first).
+  Telegram chat (bot token and chat id), ntfy topic or Gotify app — the kinds
+  the owner allows: **Add a channel**, fill it in, **Test and add** (a test message is sent first).
   They're yours alone, so they get the full text, like email. Addresses must
   be public `https://` (not your local network); afterwards only the server
   is shown, with **Send a test** and remove. Your first one turns on Channels
@@ -798,6 +798,7 @@ until they transfer it. Your name → **Owner** has these tabs: **Owner**,
 | **Calendar subscriptions** | on | Subscribing workspaces to outside calendars. |
 | **Calendar feeds** | on | Private ICS feeds in Settings. |
 | **Git integration** | on | Gitea / Forgejo accounts in Settings, lists made from repositories, tasks linked to issues. |
+| **Personal notification channels** | on | Each person adds their own Discord / Slack / Teams / Telegram / ntfy / Gotify channel. Under it, tick **which kinds** people may add — whether or not you set up a shared one; a channel of a kind you untick is kept but gets nothing. |
 | **Invite links** | on | Owners make links to their workspaces; people join through them, making an account if they need one. Off: existing links stop working. |
 | **Step-up re-authentication** | off | **Confirm it's you** before security and SSO changes, feature flags, backups, owner transfer and impersonation. |
 

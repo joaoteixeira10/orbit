@@ -1073,6 +1073,14 @@ definitions:
       workspace_id:
         type: string
     type: object
+  api.personalKindsRequest:
+    properties:
+      kinds:
+        items:
+          type: string
+        maxItems: 10
+        type: array
+    type: object
   api.personalRequest:
     properties:
       bot_token:
@@ -4230,6 +4238,33 @@ paths:
       security:
       - BearerAuth: []
       summary: Update notification config
+      tags:
+      - notifications
+  /notifications/personal-kinds:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Allowed kinds
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.personalKindsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Kinds of personal channels allowed
       tags:
       - notifications
   /notifications/test:

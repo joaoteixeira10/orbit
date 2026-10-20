@@ -25,6 +25,7 @@ const { t } = useI18n()
 const KINDS: NotifyKind[] = ['reminder', 'assigned', 'comment', 'workspace', 'activity', 'digest']
 const prefs = ref<NotifyPrefs | null>(null)
 const enabledChannels = ref<string[]>([])
+const personalKinds = ref<string[]>([])
 const devices = ref<PushDevice[]>([])
 const pushAvailable = ref(true)
 const busy = ref(false)
@@ -39,6 +40,7 @@ onMounted(async () => {
     const [p, chans] = await Promise.all([prefsApi.get(), notifyApi.channels(), loadDevices(), refreshPush()])
     prefs.value = p
     enabledChannels.value = chans.enabled ?? []
+    personalKinds.value = chans.personal ?? []
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -215,7 +217,7 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
         </div>
       </template>
       <p v-else-if="!ownOn" class="mt-2 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('notif.noChannels') }}</p>
-      <PersonalChannels v-if="ownOn" class="mt-5" @count="(n) => (ownCount = n)" @added="onOwnAdded" />
+      <PersonalChannels v-if="ownOn" class="mt-5" :allowed="personalKinds" @count="(n) => (ownCount = n)" @added="onOwnAdded" />
     </div>
   </div>
 </template>

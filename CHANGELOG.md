@@ -114,7 +114,8 @@ merge, not at release time.
 - **Your own notification channels**: each person adds their own Discord,
   Slack or Teams webhook, Telegram chat, ntfy topic or Gotify app (Settings →
   Notifications); theirs alone, so they get the full text. Public https only,
-  tested before they're kept, stored sealed. Flag `personal_channels` (on).
+  tested before they're kept, stored sealed. Flag `personal_channels` (on),
+  with the kinds people may add chosen by the owner.
 - **Shared notification channels get a ping, not the content.** Slack,
   Teams, Discord, Telegram, ntfy and Gotify — places the owner set up, which
   others may read — receive "Orbit: a reminder for you" and a link unless the

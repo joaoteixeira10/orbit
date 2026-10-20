@@ -664,6 +664,7 @@ watch(
 )
 
 onMounted(async () => {
+  if (isOwnerArea.value) void loadPersonalKinds()
   loadBrandForm()
   if (auth.can(P.usersManage)) await loadUsers()
   if (auth.can(P.rolesManage) || auth.can(P.usersManage)) await loadRoles()
@@ -716,6 +717,29 @@ const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() 
   { key: 'step_up_auth', label: t('adm.owner.feature.stepUp'), hint: t('adm.owner.feature.stepUpHint') },
 ])
 const featureFlags = ref<Record<string, boolean>>({ ...auth.features })
+// Which kinds people may add as their own channels (under its flag).
+const PERSONAL_KINDS = ['ntfy', 'telegram', 'discord', 'slack', 'teams', 'gotify']
+const personalLabel = (k: string) => ({ ntfy: 'ntfy', telegram: 'Telegram', discord: 'Discord', slack: 'Slack', teams: 'Teams', gotify: 'Gotify' })[k] ?? k
+const personalKinds = ref<string[]>([])
+async function loadPersonalKinds() {
+  try {
+    personalKinds.value = (await notifyApi.channels()).personal ?? []
+  } catch {
+    /* shown empty */
+  }
+}
+watch(isOwnerArea, (o) => o && void loadPersonalKinds())
+async function togglePersonalKind(k: string, on: boolean) {
+  const next = on ? [...personalKinds.value, k] : personalKinds.value.filter((x) => x !== k)
+  const prev = personalKinds.value
+  personalKinds.value = next
+  try {
+    personalKinds.value = (await notifyApi.setPersonalKinds(next)).personal
+  } catch (e: any) {
+    personalKinds.value = prev
+    toast.error(e.message)
+  }
+}
 async function toggleFeature(key: string, on: boolean) {
   const prev = featureFlags.value[key] ?? false
   featureFlags.value = { ...featureFlags.value, [key]: on }
@@ -1356,13 +1380,22 @@ function switchTab(t: Tab) {
         </div>
         <div class="flex flex-col gap-4 p-5">
           <p class="text-[12px] text-text-3">{{ t('adm.owner.flagsHint') }}</p>
-          <div v-for="f in featureMeta" :key="f.key" class="flex items-center justify-between gap-4">
+          <template v-for="f in featureMeta" :key="f.key">
+          <div class="flex items-center justify-between gap-4">
             <div>
               <div class="text-[13px] font-semibold">{{ f.label }}</div>
               <div class="text-[12px] text-text-3">{{ f.hint }}</div>
             </div>
             <Toggle :model-value="featureFlags[f.key] ?? false" :aria-label="f.label" @update:model-value="(v) => toggleFeature(f.key, v)" />
           </div>
+          <!-- The kinds people may add as their own (with that flag on) -->
+          <div v-if="f.key === 'personal_channels' && featureFlags.personal_channels !== false" class="-mt-2 rounded-xl bg-fill-2 p-3" data-testid="personal-kinds">
+            <div class="text-[12px] text-text-2">{{ t('adm.owner.feature.ownChannelsKinds') }}</div>
+            <div class="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+              <Checkbox v-for="k in PERSONAL_KINDS" :key="k" :model-value="personalKinds.includes(k)" @update:model-value="(v) => togglePersonalKind(k, v)">{{ personalLabel(k) }}</Checkbox>
+            </div>
+          </div>
+          </template>
         </div>
       </div>
 

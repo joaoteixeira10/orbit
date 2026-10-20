@@ -154,6 +154,7 @@ export interface PersonalChannel {
   name: string
   hint: string
   last_error?: string
+  allowed: boolean // its kind is allowed by the owner (else it gets nothing)
   created_at: string
 }
 export type PersonalChannelInput = {
@@ -175,7 +176,9 @@ export const myChannelsApi = {
 
 // ---- Notifications ----
 export const notifyApi = {
-  channels: () => api<{ enabled: string[] }>('/notifications/channels'),
+  // enabled: the owner's channels; personal: the kinds people may add as their own.
+  channels: () => api<{ enabled: string[]; personal: string[] }>('/notifications/channels'),
+  setPersonalKinds: (kinds: string[]) => api<{ personal: string[] }>('/notifications/personal-kinds', { method: 'PUT', body: JSON.stringify({ kinds }) }),
   getConfig: () => api<NotifConfig>('/notifications/config'),
   updateConfig: (cfg: NotifConfig) => api<NotifConfig>('/notifications/config', { method: 'PUT', body: JSON.stringify(cfg) }),
   test: (channel: string) => api<{ status: string }>('/notifications/test', { method: 'POST', body: JSON.stringify({ channel }) }),

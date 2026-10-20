@@ -222,8 +222,14 @@ func (s *Service) deliver(n models.Notification) {
 		if feature.Enabled(s.db, feature.PersonalChannels) {
 			var own []models.PersonalChannel
 			s.db.Where("user_id = ?", n.UserID).Find(&own)
+			allowed := s.channels.PersonalAllowed()
 			for _, ch := range own {
-				go s.sendOwn(ch, "Orbit: "+title, title+"\n"+body)
+				for _, k := range allowed {
+					if k == ch.Kind {
+						go s.sendOwn(ch, "Orbit: "+title, title+"\n"+body)
+						break
+					}
+				}
 			}
 		}
 		if len(shared) > 0 {

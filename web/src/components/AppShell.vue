@@ -373,7 +373,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
             <WsIcon :icon="w.icon" :color="w.color" :size="22" :name="w.name" />
             <span class="min-w-0 flex-1 truncate font-medium">{{ w.name }}</span>
             <span v-if="w.member_count > 1" class="text-[11px] text-text-3">{{ w.member_count }}</span>
-            <button class="more" :title="t('ws.settings')" @click.stop="openWsMenu(w.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
+            <button class="more" :class="{ open: wsMenu === w.id }" :title="t('ws.settings')" @click.stop="openWsMenu(w.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
           </div>
           <div v-if="expanded.has(w.id)" class="ws-mods">
             <template v-for="m in w.modules" :key="m">
@@ -698,7 +698,9 @@ html.dark .smart-tile.on {
   border-radius: 6px;
   color: var(--text-2);
 }
-.ws-row:hover .more {
+.ws-row:hover .more,
+.ws-row .more.open {
+  /* Shown on hover — and while its menu is open, which is anchored to it. */
   display: grid;
 }
 .ws-row .more:hover {

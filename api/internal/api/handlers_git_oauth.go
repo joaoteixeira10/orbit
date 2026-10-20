@@ -150,11 +150,9 @@ func (h *Handlers) startGitOAuth(c *gin.Context) {
 		h.internalError(c, err, "could not start")
 		return
 	}
-	secure := strings.HasPrefix(h.baseURL(c), "https://")
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name: gitOAuthCookie, Value: st.Nonce, Path: "/api/v1/git/oauth", MaxAge: 600,
-		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
-	})
+	// Lax: the server's redirect back is a top-level navigation.
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(gitOAuthCookie, st.Nonce, 600, "/api/v1/git/oauth", h.cfg.CookieDomain, h.cfg.CookieSecure, true)
 	c.JSON(http.StatusOK, gin.H{"url": gitsync.AuthorizeURL(app, h.gitOAuthRedirect(c), state, st.Verifier)})
 }
 
@@ -166,7 +164,8 @@ func (h *Handlers) startGitOAuth(c *gin.Context) {
 //	@Router		/git/oauth/callback [get]
 func (h *Handlers) gitOAuthCallback(c *gin.Context) {
 	done := func(q string) {
-		http.SetCookie(c.Writer, &http.Cookie{Name: gitOAuthCookie, Value: "", Path: "/api/v1/git/oauth", MaxAge: -1, HttpOnly: true})
+		c.SetSameSite(http.SameSiteLaxMode)
+		c.SetCookie(gitOAuthCookie, "", -1, "/api/v1/git/oauth", h.cfg.CookieDomain, h.cfg.CookieSecure, true)
 		c.Redirect(http.StatusFound, "/settings?"+q+"#git")
 	}
 	if !h.gitOn() {

@@ -32,6 +32,13 @@ type OAuthApp struct {
 
 const oauthKey = "git_oauth_apps"
 
+// stored is how the registrations are kept (sealed as a whole).
+type stored struct {
+	Base string `json:"b"`
+	ID   string `json:"i"`
+	Key  string `json:"k"`
+}
+
 // OAuthApps are the servers where people can sign in, with their secrets.
 func (e *Engine) OAuthApps() []OAuthApp {
 	var row models.Setting
@@ -47,7 +54,11 @@ func (e *Engine) OAuthApps() []OAuthApp {
 	if err != nil {
 		return out
 	}
-	_ = json.Unmarshal(raw, &out)
+	var rows []stored
+	_ = json.Unmarshal(raw, &rows)
+	for _, r := range rows {
+		out = append(out, OAuthApp{BaseURL: r.Base, ClientID: r.ID, ClientSecret: r.Key})
+	}
 	return out
 }
 
@@ -80,7 +91,11 @@ func (e *Engine) SetOAuthApps(apps []OAuthApp) ([]OAuthApp, error) {
 			clean = append(clean, a)
 		}
 	}
-	b, _ := json.Marshal(clean)
+	rows := make([]stored, 0, len(clean))
+	for _, a := range clean {
+		rows = append(rows, stored{Base: a.BaseURL, ID: a.ClientID, Key: a.ClientSecret})
+	}
+	b, _ := json.Marshal(rows)
 	blob, err := e.sealer.Seal(b)
 	if err != nil {
 		return nil, err

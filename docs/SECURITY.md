@@ -349,7 +349,14 @@ user. Release mode refuses either secret under 32 characters.
   account (sealed, set by whoever linked the list or an owner, audited
   `git.bot_set`); without one, the API refuses changes that would reach git
   (`403`, `git_read_only`). Reading (the sync) uses whoever linked the list,
-  or the bot once they've left; failed changes are retried as their author. Personal channels must be
+  or the bot once they've left; failed changes are retried as their author.
+- **"Sign in with Gitea / Forgejo"** (OAuth2 authorization code with PKCE):
+  the owner's client secrets are sealed; the flow's state is single-use, kept
+  server-side (10 minutes) and tied to the browser that started it by an
+  HttpOnly `SameSite=Lax` cookie, so a sign-in link someone else started
+  can't attach your server account to their Orbit account. The access and
+  refresh tokens are sealed; the access token is renewed shortly before it
+  expires. Personal channels must be
   `https://`, take a test message before they're kept, are stored sealed and
   are never shown again (only their host); adding and removing one is
   audited, and the owner's `personal_channels` flag turns them off — or

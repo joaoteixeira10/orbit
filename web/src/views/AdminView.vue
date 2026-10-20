@@ -17,6 +17,7 @@ import RoleSelect from '@/components/ui/RoleSelect.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import BackupCard from '@/components/admin/BackupCard.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
+import GitSignInApps from '@/components/admin/GitSignInApps.vue'
 import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
@@ -1388,6 +1389,8 @@ function switchTab(t: Tab) {
             </div>
             <Toggle :model-value="featureFlags[f.key] ?? false" :aria-label="f.label" @update:model-value="(v) => toggleFeature(f.key, v)" />
           </div>
+          <!-- "Sign in with Gitea": the servers' registrations (with git on) -->
+          <GitSignInApps v-if="f.key === 'git_integration' && featureFlags.git_integration !== false" class="-mt-2" />
           <!-- The kinds people may add as their own (with that flag on) -->
           <div v-if="f.key === 'personal_channels' && featureFlags.personal_channels !== false" class="-mt-2 rounded-xl bg-fill-2 p-3" data-testid="personal-kinds">
             <div class="text-[12px] text-text-2">{{ t('adm.owner.feature.ownChannelsKinds') }}</div>

@@ -62,15 +62,21 @@ type gitAccountResponse struct {
 	Login     string     `json:"login"`
 	LastError string     `json:"last_error,omitempty"`
 	CheckedAt *time.Time `json:"checked_at,omitempty"`
+	Via       string     `json:"via"` // token (pasted) | oauth (signed in)
 }
 
 func toGitAccount(a models.GitAccount) gitAccountResponse {
-	return gitAccountResponse{ID: a.ID, Kind: a.Kind, BaseURL: a.BaseURL, Login: a.Login, LastError: a.LastError, CheckedAt: a.CheckedAt}
+	via := a.Via
+	if via == "" {
+		via = "token"
+	}
+	return gitAccountResponse{ID: a.ID, Kind: a.Kind, BaseURL: a.BaseURL, Login: a.Login, LastError: a.LastError, CheckedAt: a.CheckedAt, Via: via}
 }
 
 type gitAccountsResponse struct {
 	Accounts []gitAccountResponse `json:"accounts"`
 	Servers  []string             `json:"servers"` // suggested (GIT_SERVERS)
+	SignIn   []string             `json:"sign_in"` // servers with "Sign in with …"
 }
 
 // listGitAccounts returns the caller's git accounts.
@@ -87,7 +93,10 @@ func (h *Handlers) listGitAccounts(c *gin.Context) {
 	}
 	var accs []models.GitAccount
 	h.db.Where("user_id = ?", auth.UserID(c)).Order("base_url").Find(&accs)
-	out := gitAccountsResponse{Accounts: []gitAccountResponse{}, Servers: h.git.Allowed()}
+	out := gitAccountsResponse{Accounts: []gitAccountResponse{}, Servers: h.git.Allowed(), SignIn: []string{}}
+	for _, a := range h.git.OAuthApps() {
+		out.SignIn = append(out.SignIn, a.BaseURL)
+	}
 	for _, a := range accs {
 		out.Accounts = append(out.Accounts, toGitAccount(a))
 	}

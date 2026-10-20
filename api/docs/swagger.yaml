@@ -491,6 +491,9 @@ definitions:
         type: string
       login:
         type: string
+      via:
+        description: token (pasted) | oauth (signed in)
+        type: string
     type: object
   api.gitAccountsResponse:
     properties:
@@ -500,6 +503,11 @@ definitions:
         type: array
       servers:
         description: suggested (GIT_SERVERS)
+        items:
+          type: string
+        type: array
+      sign_in:
+        description: servers with "Sign in with …"
         items:
           type: string
         type: array
@@ -596,6 +604,41 @@ definitions:
     - mode
     - owner
     - repo
+    type: object
+  api.gitOAuthAppResponse:
+    properties:
+      base_url:
+        type: string
+      client_id:
+        type: string
+      has_secret:
+        type: boolean
+    type: object
+  api.gitOAuthAppsRequest:
+    properties:
+      apps:
+        items:
+          $ref: '#/definitions/gitsync.OAuthApp'
+        maxItems: 20
+        type: array
+    type: object
+  api.gitOAuthAppsResponse:
+    properties:
+      apps:
+        items:
+          $ref: '#/definitions/api.gitOAuthAppResponse'
+        type: array
+      redirect_uri:
+        description: to paste in the server's application
+        type: string
+    type: object
+  api.gitOAuthStartRequest:
+    properties:
+      base_url:
+        maxLength: 255
+        type: string
+    required:
+    - base_url
     type: object
   api.gitTaskRequest:
     properties:
@@ -1791,6 +1834,15 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+    type: object
+  gitsync.OAuthApp:
+    properties:
+      base_url:
+        type: string
+      client_id:
+        type: string
+      client_secret:
         type: string
     type: object
   gitsync.Project:
@@ -3076,6 +3128,48 @@ paths:
       summary: Update feature flags
       tags:
       - owner
+  /git/oauth-apps:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.gitOAuthAppsResponse'
+      security:
+      - BearerAuth: []
+      summary: Git sign-in applications
+      tags:
+      - git
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Registrations
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gitOAuthAppsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.gitOAuthAppsResponse'
+      security:
+      - BearerAuth: []
+      summary: Set git sign-in applications
+      tags:
+      - git
+  /git/oauth/callback:
+    get:
+      responses: {}
+      summary: Git sign-in callback
+      tags:
+      - git
   /grades/{id}:
     delete:
       parameters:
@@ -3641,6 +3735,31 @@ paths:
       security:
       - BearerAuth: []
       summary: Search repositories
+      tags:
+      - git
+  /me/git/oauth/start:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Server
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.gitOAuthStartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Start signing in with a git server
       tags:
       - git
   /me/notes:

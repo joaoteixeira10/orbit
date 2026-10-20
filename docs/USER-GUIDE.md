@@ -413,10 +413,12 @@ task's start moves with it.
 ### Git: issues as tasks
 
 Connect your account on a **Gitea** or **Forgejo** server first, in
-**Settings → Git**: the server's address and a personal access token (make
-one in the server's *Settings → Applications* with the permissions *issue:
-read and write*, *repository: read*, *user: read*). Orbit acts as you, with
-your token; everyone connects their own.
+**Settings → Git**. Where the owner set it up, click **Sign in with
+\<server\>**: you sign in on the server, approve Orbit, and come back
+connected — nothing to copy. Otherwise give the server's address and a
+personal access token (make one in the server's *Settings → Applications*
+with the permissions *issue: read and write*, *repository: read*, *user:
+read*). Orbit acts as you, with your account; everyone connects their own.
 
 **A list from a repository.** **Add List → From a Git repository…**, pick
 the repository and how its issues are laid out:
@@ -809,7 +811,7 @@ until they transfer it. Your name → **Owner** has these tabs: **Owner**,
 | **User impersonation** | off | **Impersonate** for holders of **Impersonate users** — which shows that user's workspaces. |
 | **Calendar subscriptions** | on | Subscribing workspaces to outside calendars. |
 | **Calendar feeds** | on | Private ICS feeds in Settings. |
-| **Git integration** | on | Gitea / Forgejo accounts in Settings, lists made from repositories, tasks linked to issues. |
+| **Git integration** | on | Gitea / Forgejo accounts in Settings, lists made from repositories, tasks linked to issues. Under it, **Sign in with Gitea / Forgejo**: for each server, Orbit's OAuth2 application — create one on the server (Site administration → Applications, or Settings → Applications), *confidential*, with the **redirect URI** shown here, and paste its client ID and secret. People then connect with one click. |
 | **Personal notification channels** | on | Each person adds their own Discord / Slack / Teams / Telegram / ntfy / Gotify channel. Under it, tick **which kinds** people may add — whether or not you set up a shared one; a channel of a kind you untick is kept but gets nothing. |
 | **Invite links** | on | Owners make links to their workspaces; people join through them, making an account if they need one. Off: existing links stop working. |
 | **Step-up re-authentication** | off | **Confirm it's you** before security and SSO changes, feature flags, backups, owner transfer and impersonation. |

@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **"Sign in with Gitea / Forgejo"**: the owner registers Orbit as an
+  OAuth2 application on a server once; then people connect their own account
+  with one click (no token to make or paste). Tokens sealed and renewed.
 - **Git: nobody's change goes as someone else.** A change to a linked task
   is sent with its author's own account; members without one can only read
   the list's tasks — unless whoever linked it gives the list a **bot

@@ -138,6 +138,8 @@ func New(d Deps) *gin.Engine {
 		v1.POST("/auth/oidc/exchange", authLimit, h.oidcExchange)
 		// Invite links: what one is for, and an account made through it.
 		v1.GET("/invites/:token", authLimit, h.previewInvite)
+		// "Sign in with Gitea" comes back here (the state names who started it).
+		v1.GET("/git/oauth/callback", authLimit, h.gitOAuthCallback)
 		v1.POST("/invites/:token/signup", authLimit, h.signupInvite)
 		// Passwordless / second-factor passkey assertion (pre-auth).
 		v1.POST("/auth/webauthn/login/begin", authLimit, h.webauthnLoginBegin)
@@ -327,6 +329,9 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/lists/:id/git", h.unlinkGitList)
 			authed.POST("/lists/:id/git/sync", h.syncGitList)
 			authed.PUT("/lists/:id/git/bot", notImpersonating(), h.setGitBot)
+			authed.POST("/me/git/oauth/start", notImpersonating(), h.startGitOAuth)
+			authed.GET("/git/oauth-apps", h.auth.RequireOwner(), h.getGitOAuthApps)
+			authed.PUT("/git/oauth-apps", h.auth.RequireOwner(), h.requireStepUp(), h.setGitOAuthApps)
 			authed.POST("/tasks/:id/git", h.linkGitTask)
 			authed.DELETE("/tasks/:id/git", h.unlinkGitTask)
 

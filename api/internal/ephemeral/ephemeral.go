@@ -28,6 +28,7 @@ const (
 	KindWebAuthn  = "webauthn"
 	KindSSOCode   = "sso_code"
 	KindSSETicket = "sse_ticket" // must match events.ticketKind
+	KindGitOAuth  = "git_oauth"  // a "Sign in with Gitea" in progress
 )
 
 // Store persists ephemeral tokens in the shared database.

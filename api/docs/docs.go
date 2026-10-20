@@ -1239,6 +1239,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/git/oauth-apps": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Git sign-in applications",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.gitOAuthAppsResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Set git sign-in applications",
+                "parameters": [
+                    {
+                        "description": "Registrations",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gitOAuthAppsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.gitOAuthAppsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/git/oauth/callback": {
+            "get": {
+                "tags": [
+                    "git"
+                ],
+                "summary": "Git sign-in callback",
+                "responses": {}
+            }
+        },
         "/grades/{id}": {
             "put": {
                 "security": [
@@ -2042,6 +2111,47 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.gitAccountResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/git/oauth/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Start signing in with a git server",
+                "parameters": [
+                    {
+                        "description": "Server",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.gitOAuthStartRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -6984,6 +7094,10 @@ const docTemplate = `{
                 },
                 "login": {
                     "type": "string"
+                },
+                "via": {
+                    "description": "token (pasted) | oauth (signed in)",
+                    "type": "string"
                 }
             }
         },
@@ -6998,6 +7112,13 @@ const docTemplate = `{
                 },
                 "servers": {
                     "description": "suggested (GIT_SERVERS)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sign_in": {
+                    "description": "servers with \"Sign in with …\"",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -7131,6 +7252,59 @@ const docTemplate = `{
                 "repo": {
                     "type": "string",
                     "maxLength": 100
+                }
+            }
+        },
+        "api.gitOAuthAppResponse": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string"
+                },
+                "client_id": {
+                    "type": "string"
+                },
+                "has_secret": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.gitOAuthAppsRequest": {
+            "type": "object",
+            "properties": {
+                "apps": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "$ref": "#/definitions/gitsync.OAuthApp"
+                    }
+                }
+            }
+        },
+        "api.gitOAuthAppsResponse": {
+            "type": "object",
+            "properties": {
+                "apps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.gitOAuthAppResponse"
+                    }
+                },
+                "redirect_uri": {
+                    "description": "to paste in the server's application",
+                    "type": "string"
+                }
+            }
+        },
+        "api.gitOAuthStartRequest": {
+            "type": "object",
+            "required": [
+                "base_url"
+            ],
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -8854,6 +9028,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "gitsync.OAuthApp": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string"
+                },
+                "client_id": {
+                    "type": "string"
+                },
+                "client_secret": {
                     "type": "string"
                 }
             }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -31,6 +32,7 @@ type fakeGitea struct {
 	// Comments by issue number; nextComment numbers them.
 	comments    map[int64][]Comment
 	nextComment int64
+	refreshes   int // OAuth refresh-token grants answered
 }
 
 func newFake() *fakeGitea {
@@ -215,6 +217,27 @@ func (f *fakeGitea) handler() http.Handler {
 		})
 		writeJSON(w, f.get(num(r)))
 	}))
+	// OAuth2: code c1 (with a PKCE verifier) → a token that expires at once;
+	// its refresh token r1 → one that lasts.
+	mux.HandleFunc("POST /login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+		var in map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		if in["client_id"] != "orbit" || in["client_secret"] != "s3cret" {
+			http.Error(w, `{"error":"invalid_client"}`, http.StatusUnauthorized)
+			return
+		}
+		switch {
+		case in["grant_type"] == "authorization_code" && in["code"] == "c1" && in["code_verifier"] != "":
+			writeJSON(w, map[string]any{"access_token": "good", "refresh_token": "r1", "expires_in": 1})
+		case in["grant_type"] == "refresh_token" && in["refresh_token"] == "r1":
+			f.mu.Lock()
+			f.refreshes++
+			f.mu.Unlock()
+			writeJSON(w, map[string]any{"access_token": "good", "refresh_token": "r2", "expires_in": 3600})
+		default:
+			http.Error(w, `{"error":"invalid_grant"}`, http.StatusBadRequest)
+		}
+	})
 	mux.HandleFunc("GET /api/v1/repos/o/r/issues/{n}/comments", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		out := append([]Comment{}, f.comments[num(r)]...)
@@ -633,5 +656,49 @@ func TestComments(t *testing.T) {
 	f.db.Where("task_id = ?", task.ID).Order("git_comment_id").Find(&cs)
 	if len(cs) != 2 || cs[0].Body != "Seen on Safari and Firefox" || cs[0].EditedAt == nil {
 		t.Fatalf("after edits on git: %+v", cs)
+	}
+}
+
+// TestOAuthSignIn: an owner's registration (sealed, secret kept when left
+// blank), a sign-in that turns a code into the person's account, and an
+// access token renewed with its refresh token when it's about to expire.
+func TestOAuthSignIn(t *testing.T) {
+	f := setup(t)
+	ctx := context.Background()
+	if _, err := f.e.SetOAuthApps([]OAuthApp{{BaseURL: f.srv.URL, ClientID: "orbit"}}); err == nil {
+		t.Fatal("a registration without a secret was kept")
+	}
+	if _, err := f.e.SetOAuthApps([]OAuthApp{{BaseURL: f.srv.URL + "/", ClientID: "orbit", ClientSecret: "s3cret"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.e.SetOAuthApps([]OAuthApp{{BaseURL: f.srv.URL, ClientID: "orbit"}}); err != nil {
+		t.Fatalf("keeping the secret: %v", err)
+	}
+	app, ok := f.e.OAuthAppFor(f.srv.URL)
+	if !ok || app.ClientSecret != "s3cret" {
+		t.Fatalf("app: %+v", app)
+	}
+	if u := AuthorizeURL(app, "https://orbit.example/cb", "st", "verifier"); !strings.Contains(u, "code_challenge="+Challenge("verifier")) || !strings.Contains(u, "state=st") {
+		t.Fatalf("authorize url %s", u)
+	}
+	if _, err := f.e.ConnectOAuth(ctx, f.bo, app, "https://orbit.example/cb", "wrong", "v"); err == nil {
+		t.Fatal("a wrong code connected")
+	}
+	acc, err := f.e.ConnectOAuth(ctx, f.bo, app, "https://orbit.example/cb", "c1", "v")
+	if err != nil || acc.Login != "ana" || acc.Via != "oauth" || acc.ExpiresAt == nil {
+		t.Fatalf("connected: %+v %v", acc, err)
+	}
+	// About to expire: using it renews it first.
+	if _, err := f.e.ClientFor(f.bo, f.srv.URL); err != nil {
+		t.Fatal(err)
+	}
+	var again models.GitAccount
+	f.db.First(&again, "id = ?", acc.ID)
+	if f.fake.refreshes != 1 || again.ExpiresAt == nil || time.Until(*again.ExpiresAt) < 30*time.Minute {
+		t.Fatalf("refresh: %d, %v", f.fake.refreshes, again.ExpiresAt)
+	}
+	// A pasted token makes it a plain token account again.
+	if acc, err = f.e.Connect(ctx, f.bo, f.srv.URL, "good"); err != nil || acc.Via != "token" || acc.ExpiresAt != nil {
+		t.Fatalf("pasted: %+v %v", acc, err)
 	}
 }

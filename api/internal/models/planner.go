@@ -283,6 +283,11 @@ type GitAccount struct {
 	TokenSealed []byte     `json:"-"`
 	LastError   string     `gorm:"size:500" json:"last_error,omitempty"`
 	CheckedAt   *time.Time `json:"checked_at,omitempty"`
+	// Signed in with the server (OAuth): the access token expires and is
+	// renewed with the refresh token. Via is "token" (pasted) or "oauth".
+	Via           string     `gorm:"size:8" json:"via"`
+	RefreshSealed []byte     `json:"-"`
+	ExpiresAt     *time.Time `json:"-"`
 }
 
 // GitLink ties a task list to a repository: its issues are the list's

@@ -124,6 +124,9 @@ func (e *Engine) client(acc models.GitAccount) (*Client, error) {
 	if e.sealer == nil {
 		return nil, errors.New("git tokens can't be read on this instance")
 	}
+	if err := e.refresh(&acc); err != nil {
+		return nil, err
+	}
 	tok, err := e.sealer.Unseal(acc.TokenSealed)
 	if err != nil {
 		return nil, errors.New("this git token can't be read; connect the account again")
@@ -158,6 +161,7 @@ func (e *Engine) Connect(ctx context.Context, userID, base, token string) (model
 	acc := models.GitAccount{UserID: userID, Kind: "gitea", BaseURL: base}
 	e.db.Where("user_id = ? AND base_url = ?", userID, base).First(&acc)
 	acc.Login, acc.TokenSealed, acc.LastError, acc.CheckedAt = me.Login, sealed, "", &now
+	acc.Via, acc.RefreshSealed, acc.ExpiresAt = "token", nil, nil
 	return acc, e.db.Save(&acc).Error
 }
 

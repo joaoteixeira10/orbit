@@ -382,6 +382,12 @@ export interface GitAccount {
   login: string
   last_error?: string
   checked_at?: string
+  via: 'token' | 'oauth' // pasted a token, or signed in with the server
+}
+// The owner's registrations of Orbit on servers, for "Sign in with …".
+export interface GitOAuthApps {
+  apps: { base_url: string; client_id: string; has_secret: boolean }[]
+  redirect_uri: string
 }
 export interface GitRepo {
   id: number
@@ -408,7 +414,11 @@ export interface GitListInput {
 }
 
 export const gitApi = {
-  accounts: () => api<{ accounts: GitAccount[]; servers: string[] }>('/me/git'),
+  accounts: () => api<{ accounts: GitAccount[]; servers: string[]; sign_in: string[] }>('/me/git'),
+  // "Sign in with …": where to send the browser.
+  startSignIn: (base_url: string) => api<{ url: string }>('/me/git/oauth/start', { method: 'POST', body: j({ base_url }) }),
+  oauthApps: () => api<GitOAuthApps>('/git/oauth-apps'),
+  setOAuthApps: (apps: { base_url: string; client_id: string; client_secret?: string }[]) => api<GitOAuthApps>('/git/oauth-apps', { method: 'PUT', body: j({ apps }) }),
   connect: (base_url: string, token: string) => api<GitAccount>('/me/git', { method: 'POST', body: j({ base_url, token }) }),
   disconnect: (id: string) => api<void>(`/me/git/${id}`, { method: 'DELETE' }),
   repos: (id: string, q: string) => api<GitRepo[]>(`/me/git/${id}/repos?${qs({ q })}`),

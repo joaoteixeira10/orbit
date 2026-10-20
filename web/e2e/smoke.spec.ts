@@ -262,6 +262,32 @@ test('git: connect an account, make a list from a repository, a new task opens a
   expect((await refused.json()).git_read_only).toBeTruthy()
 })
 
+test('git: sign in with the server (OAuth) instead of a token', async ({ page, request }) => {
+  test.skip(!GIT_URL || !GIT_TOKEN, 'needs a test Gitea')
+  const G = { Authorization: `token ${GIT_TOKEN}` }
+  const user = 'e2e-signin'
+  const pass = 'E2e-signin-pass-42!'
+  // A person on the server (made once: gitea admin user create … e2e-signin),
+  // and Orbit registered there as an application.
+  const base = process.env.E2E_BASE_URL || 'http://orbit-e2e:8080'
+  const app = await (await request.post(`${GIT_URL}/api/v1/user/applications/oauth2`, { headers: G, data: { name: `Orbit e2e ${Date.now()}`, redirect_uris: [`${base}/api/v1/git/oauth/callback`], confidential_client: true } })).json()
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const r = await request.put('/api/v1/git/oauth-apps', { headers: { Authorization: `Bearer ${login.access_token}` }, data: { apps: [{ base_url: GIT_URL, client_id: app.client_id, client_secret: app.client_secret }] } })
+  expect(r.ok()).toBeTruthy()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/settings#git')
+  await page.getByTestId('git-sign-in').getByRole('button').first().click()
+  // On the server: its own sign-in, then approving Orbit.
+  await page.locator('#user_name').fill(user)
+  await page.locator('#password').fill(pass)
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click()
+  await page.getByRole('button', { name: /Authorize Application/i }).click()
+  await page.waitForURL(/\/settings/)
+  await expect(page.locator('#git')).toContainText(user)
+  await expect(page.locator('#git')).toContainText('signed in')
+})
+
 test('task notes: written in Markdown, read rendered, a box ticks, the row shows plain text', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.locator('.ws-row').first().click()

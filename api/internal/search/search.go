@@ -47,7 +47,7 @@ func Setup(db *gorm.DB) bool {
 }
 
 func setup(db *gorm.DB) bool {
-	if db.Dialector.Name() != "sqlite" {
+	if db.Name() != "sqlite" {
 		return false
 	}
 	stmts := []string{

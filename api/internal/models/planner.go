@@ -109,11 +109,12 @@ type Task struct {
 	ParentID    *string    `gorm:"size:36;index" json:"parent_id"`
 	Title       string     `gorm:"size:500;not null" json:"title"`
 	Notes       string     `gorm:"type:text" json:"notes"`
-	Priority    int        `gorm:"not null;default:0" json:"priority"` // 0 none, 1 low, 2 medium, 3 high
-	Tags        string     `gorm:"type:text" json:"-"`                 // JSON []string
-	Start       *string    `gorm:"size:10" json:"start"`               // YYYY-MM-DD, on or before Due
-	Due         *string    `gorm:"size:10;index" json:"due"`           // YYYY-MM-DD
-	DueTime     *string    `gorm:"size:5" json:"due_time"`             // HH:MM
+	Priority    int        `gorm:"not null;default:0" json:"priority"`     // 0 none, 1 low, 2 medium, 3 high
+	Kind        string     `gorm:"size:8;not null;default:''" json:"kind"` // "" a task | exam (counted down to)
+	Tags        string     `gorm:"type:text" json:"-"`                     // JSON []string
+	Start       *string    `gorm:"size:10" json:"start"`                   // YYYY-MM-DD, on or before Due
+	Due         *string    `gorm:"size:10;index" json:"due"`               // YYYY-MM-DD
+	DueTime     *string    `gorm:"size:5" json:"due_time"`                 // HH:MM
 	Repeat      string     `gorm:"size:200" json:"repeat"`
 	Rank        float64    `gorm:"not null;default:0" json:"rank"`
 	CompletedAt *time.Time `gorm:"index" json:"completed_at"`
@@ -379,6 +380,7 @@ type Course struct {
 	Notes       string  `gorm:"type:text" json:"notes"`
 	Rank        float64 `gorm:"not null;default:0" json:"rank"`
 	CreatedBy   string  `gorm:"size:36" json:"created_by"`
+	PageID      *string `gorm:"size:36" json:"page_id"` // its notes page
 }
 
 // CourseSlot is one weekly class: a weekday (1 Monday … 7 Sunday) and times

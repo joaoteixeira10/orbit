@@ -156,3 +156,11 @@ export function utcMidnight(s: string): string {
 export function allDayDate(iso: string): string {
   return iso.slice(0, 10)
 }
+
+// countdown is how far away a date is: Today, Tomorrow, In 5 days.
+export function countdown(s: string): string {
+  const days = Math.round((parseDate(s).getTime() - startOfDay(new Date()).getTime()) / 86400000)
+  const rtf = new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' })
+  const out = rtf.format(days, 'day')
+  return out.charAt(0).toUpperCase() + out.slice(1)
+}

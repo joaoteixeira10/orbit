@@ -38,7 +38,7 @@ function task(p: Partial<Task> = {}): Task {
     done: false,
     assignee_ids: [],
     assignee_id: null,
-    comment_count: 0,
+    comment_count: 0, kind: '',
     created_by: 'u',
     created_at: '2026-10-01T10:00:00Z',
     updated_at: '2026-10-01T10:00:00Z',

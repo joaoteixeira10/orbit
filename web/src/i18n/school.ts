@@ -70,6 +70,11 @@ export const schoolEn = {
     removeGrade: 'Remove grade',
     noCourseYet: 'Grades go in courses. Add your first one:',
     weightOf: '×{w}',
+    exam: 'Exam',
+    examHint: 'Counted down to on the overview and the course',
+    exams: 'Exams',
+    nextExam: 'Next exam',
+    notesPage: 'Notes page',
   },
 }
 
@@ -142,5 +147,10 @@ export const schoolPt: typeof schoolEn = {
     removeGrade: 'Remover classificação',
     noCourseYet: 'As classificações ficam nas disciplinas. Junte a primeira:',
     weightOf: '×{w}',
+    exam: 'Exame',
+    examHint: 'Com contagem decrescente na vista geral e na disciplina',
+    exams: 'Exames',
+    nextExam: 'Próximo exame',
+    notesPage: 'Página de notas',
   },
 }

@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Exams and course pages**: mark a task as an exam and it counts down —
+  in lists, as its course's next exam, in an Exams card on the overview;
+  each course gets its own notes page in one click.
 - **Workspace activity feed** on the overview: who added, completed,
   commented, joined — runs of the same thing as one line, kept 90 days.
 - **Full-text search**: ranked results, accents ignored ("acao" finds

@@ -596,6 +596,12 @@ its teacher, room, colour, and its **weekly classes**.
   you choose another) belong to the course. Its card shows the next ones and
   how many are open; quick add takes the tag too (*Exercises friday #mat*).
 - **Weight in the overall average** — credits or a coefficient (Grades).
+- **Notes page** (the page icon on a course's card) opens the course's own
+  page — made the first time, named after the course — for class notes.
+- **Exams**: in a task's details, switch on **Exam** (in workspaces with
+  Courses or Grades). An exam shows a red *Exam · In 4 days* in lists, as
+  **Next exam** on its course's card (tagged with the course's tag), and in
+  an **Exams** card on the overview counting down the next ones (60 days).
 - **Delete course** removes its classes from the calendar and everyone's
   grades in it; its tasks stay.
 

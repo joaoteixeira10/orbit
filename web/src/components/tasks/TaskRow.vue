@@ -6,7 +6,7 @@ import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'
 import type { Task, Member, TaskInput } from '@/api/planner'
-import { dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
+import { countdown, dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
 import { firstLine } from '@/lib/markdown'
 
 // One task, Reminders-style: a round check in its list's colour, the title
@@ -63,6 +63,7 @@ const prio = computed(() => '!'.repeat(props.task.priority))
       </div>
       <div v-if="!compact || due || task.git_number" class="meta">
         <GitBadge :task="task" />
+        <span v-if="task.kind === 'exam'" class="exam">{{ t('school.exam') }}<template v-if="task.due && !task.done"> · {{ countdown(task.due) }}</template></span>
         <span v-if="due" class="due-meta" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
         <span v-if="listName">{{ listName }}</span>
@@ -140,5 +141,12 @@ const prio = computed(() => '!'.repeat(props.task.priority))
   .has-chips .prio-mark {
     display: none;
   }
+}
+.exam {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #ff3b30 14%, transparent);
+  color: var(--crit-text);
+  font-weight: 600;
 }
 </style>

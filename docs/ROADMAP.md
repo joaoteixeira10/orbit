@@ -74,11 +74,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 - Swimlanes on boards (by assignee or priority); WIP limits per column.
 - Time estimates and a weekly planner view that fits tasks into free time.
 
-## Courses and grades
-
-- A notes page per course; exams as their own kind of task, with a
-  countdown.
-
 ## Instance
 
 - Per-workspace export / import (JSON + attachments), so a workspace can move

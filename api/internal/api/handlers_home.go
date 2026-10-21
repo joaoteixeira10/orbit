@@ -27,6 +27,8 @@ type homeResponse struct {
 	Notes    []noteResponse `json:"notes"` // pinned quick notes
 	// Mine is the caller's latest personal notes, not pinned (Today only).
 	Mine []noteResponse `json:"mine"`
+	// Exams: the next ones (within 60 days), soonest first, to count down to.
+	Exams []taskResponse `json:"exams"`
 }
 
 // home returns the overview. The browser sends its local date (?today=) and
@@ -60,7 +62,7 @@ func (h *Handlers) home(c *gin.Context) {
 		}
 		wsIDs = []string{ws}
 	}
-	resp := homeResponse{Overdue: []taskResponse{}, Today: []taskResponse{}, Upcoming: []taskResponse{}, Events: []occurrence{}, Pages: []pageSummary{}, Notes: []noteResponse{}, Mine: []noteResponse{}}
+	resp := homeResponse{Overdue: []taskResponse{}, Today: []taskResponse{}, Upcoming: []taskResponse{}, Events: []occurrence{}, Pages: []pageSummary{}, Notes: []noteResponse{}, Mine: []noteResponse{}, Exams: []taskResponse{}}
 	uid := auth.UserID(c)
 	// Today (all workspaces) also shows the caller's own notes.
 	personal := c.Query("ws") == ""
@@ -90,6 +92,10 @@ func (h *Handlers) home(c *gin.Context) {
 	mine.Session(&gorm.Session{}).Where("due = ?", today).Order("due_time, priority DESC, rank").Limit(100).Find(&todays)
 	mine.Session(&gorm.Session{}).Where("due > ? AND due <= ?", today, weekEnd).Order("due, due_time").Limit(100).Find(&upcoming)
 	resp.Overdue, resp.Today, resp.Upcoming = h.counted(toTaskResponses(overdue)), h.counted(toTaskResponses(todays)), h.counted(toTaskResponses(upcoming))
+	var exams []models.Task
+	h.db.Where("workspace_id IN ? AND completed_at IS NULL AND kind = ? AND due >= ? AND due <= ?", wsIDs, "exam", today, d.AddDate(0, 0, 60).Format(planner.DateLayout)).
+		Order("due, due_time").Limit(12).Find(&exams)
+	resp.Exams = toTaskResponses(exams)
 	resp.Events = h.calendarFor(wsIDs, from, to, today, today).Events
 	if len(resp.Events) > 60 {
 		resp.Events = resp.Events[:60]

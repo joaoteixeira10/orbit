@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -48,6 +48,7 @@ const gitReadOnly = computed(() => !!list.value?.git && list.value.git.write ===
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !gitReadOnly.value)
 const members = computed(() => wss.members[props.ws] ?? [])
 const auth = useAuthStore()
+const schoolWs = computed(() => !!workspace.value && (workspace.value.modules.includes('courses') || workspace.value.modules.includes('grades')))
 const assigned = computed(() => (task.value?.assignee_ids ?? []).map((id) => members.value.find((m) => m.user_id === id)).filter((m) => !!m))
 const unassigned = computed(() => members.value.filter((m) => !task.value?.assignee_ids.includes(m.user_id)))
 function invitePeople() {
@@ -340,6 +341,14 @@ async function remove() {
           <select class="input !w-auto !py-1 text-[13px]" :value="task.column_id" :disabled="!editable || !!task.parent_id" @change="save({ column_id: ($event.target as HTMLSelectElement).value })">
             <option v-for="c in list.columns" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
+        </div>
+        <div v-if="schoolWs && !task.parent_id" class="group-row">
+          <span class="tile h-7 w-7" style="--tile: #ff3b30"><GraduationCap class="h-4 w-4" /></span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-[14px]">{{ t('school.exam') }}</span>
+            <span class="block text-[12px] text-text-3">{{ t('school.examHint') }}</span>
+          </span>
+          <Toggle :model-value="task.kind === 'exam'" :disabled="!editable" :aria-label="t('school.exam')" @update:model-value="(v) => save({ kind: v ? 'exam' : 'task' })" />
         </div>
         <div class="group-row !items-start" data-testid="assignees">
           <span class="tile mt-0.5 h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>

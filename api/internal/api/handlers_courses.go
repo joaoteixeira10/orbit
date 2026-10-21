@@ -638,3 +638,40 @@ func (h *Handlers) setGoal(c *gin.Context) {
 	h.publishSelf(c, ws.ID, "courses")
 	c.Status(http.StatusNoContent)
 }
+
+// coursePage opens a course's notes page: the one it has, or a new page
+// named after it (editors).
+//
+//	@Summary	A course's notes page
+//	@Tags		school
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id	path		string	true	"Course id"
+//	@Success	200	{object}	map[string]string
+//	@Router		/courses/{id}/page [post]
+func (h *Handlers) coursePage(c *gin.Context) {
+	co, ws, ok := h.courseAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	if co.PageID != nil {
+		var p models.Page
+		if h.db.Select("id", "trashed_at").First(&p, "id = ?", *co.PageID).Error == nil && p.TrashedAt == nil {
+			c.JSON(http.StatusOK, gin.H{"page_id": p.ID})
+			return
+		}
+	}
+	uid := auth.UserID(c)
+	content := planner.PageMarkdown("")
+	p := models.Page{WorkspaceID: ws.ID, Title: co.Name, Icon: "📘", Content: content, ContentText: planner.DocText(content),
+		Rank: h.siblingRank(h.db, ws.ID, nil, "", ""), CreatedBy: uid, UpdatedBy: uid}
+	if err := h.db.Create(&p).Error; err != nil {
+		h.internalError(c, err, "could not create the page")
+		return
+	}
+	h.db.Model(&co).Update("page_id", p.ID)
+	h.publishWS(c, ws.ID, "pages")
+	h.publishWS(c, ws.ID, "courses")
+	h.notifyActivity(c, ws, "page_added", p.Title, pageLink(p))
+	c.JSON(http.StatusOK, gin.H{"page_id": p.ID})
+}

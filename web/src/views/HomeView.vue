@@ -20,7 +20,7 @@ import NoteCapture from '@/components/notes/NoteCapture.vue'
 import { useNotesStore } from '@/stores/notes'
 import type { Note, NoteInput } from '@/api/planner'
 import { orderedItems } from '@/components/notes/noteModel'
-import { todayStr, dateStr, startOfDay, addDays, fmtDate, fmtTime, relDay, sameDay, allDayDate, parseDate } from '@/lib/dates'
+import { todayStr, dateStr, startOfDay, addDays, fmtDate, fmtTime, relDay, sameDay, allDayDate, parseDate, countdown, dueLabel } from '@/lib/dates'
 import WorkspaceFeed from '@/components/WorkspaceFeed.vue'
 
 // Home. At / it is Today across every workspace: what's late and due, the
@@ -296,6 +296,18 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
 
       <!-- Pinned notes -->
+      <!-- Exams to count down to -->
+      <section v-if="data.exams?.length" class="widget card p-5" data-testid="exams">
+        <h2 class="widget-title" style="color: #ff3b30">{{ t('school.exams') }}</h2>
+        <button v-for="x in data.exams" :key="x.id" type="button" class="exam-row" @click="open(x)">
+          <span class="min-w-0 flex-1 text-left">
+            <span class="block truncate text-[14.5px]">{{ x.title }}</span>
+            <span class="block truncate text-[12px] text-text-3">{{ dueLabel(x.due, x.due_time) }}<template v-if="!wsId"> · {{ wss.byId(x.workspace_id)?.name }}</template></span>
+          </span>
+          <span class="countdown">{{ countdown(x.due!) }}</span>
+        </button>
+      </section>
+
       <section v-if="data.notes?.length" class="widget card p-5">
         <h2 class="widget-title" style="color: #d9a400">{{ t('home.pinnedNotes') }}</h2>
         <div class="mini-notes">
@@ -511,5 +523,25 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 .hero {
   padding: 48px 24px;
   text-align: center;
+}
+.exam-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.exam-row:last-child {
+  border-bottom: 0;
+}
+.countdown {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ff3b30 12%, transparent);
+  color: var(--crit-text);
+  font-size: 12.5px;
+  font-weight: 600;
 }
 </style>

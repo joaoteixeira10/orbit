@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"testing"
+	"time"
 )
 
 type courseOut struct {
@@ -157,5 +158,57 @@ func TestGrades(t *testing.T) {
 	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/courses", "", alice), &list)
 	if *list[0].Average != 90 || *list[0].Target != 80 {
 		t.Fatalf("on 100: average %v, target %v", *list[0].Average, *list[0].Target)
+	}
+}
+
+// TestCoursePageAndExams: a course's notes page is made once, then reused;
+// a task marked as an exam is counted down to on the overview (and stops
+// being one when marked back).
+func TestCoursePageAndExams(t *testing.T) {
+	r, _, alice, _ := plannerSetup(t)
+	ws := createWS(t, r, alice, `{"name":"School","kind":"school"}`)
+	var co courseOut
+	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/courses", `{"name":"History"}`, alice), &co)
+	var p1, p2 struct {
+		PageID string `json:"page_id"`
+	}
+	decode(t, authdo(r, "POST", "/api/v1/courses/"+co.ID+"/page", "", alice), &p1)
+	decode(t, authdo(r, "POST", "/api/v1/courses/"+co.ID+"/page", "", alice), &p2)
+	if p1.PageID == "" || p1.PageID != p2.PageID {
+		t.Fatalf("page: %q %q", p1.PageID, p2.PageID)
+	}
+	var page struct {
+		Title string `json:"title"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/pages/"+p1.PageID, "", alice), &page)
+	if page.Title != "History" {
+		t.Fatalf("page title %q", page.Title)
+	}
+
+	var task struct {
+		ID   string `json:"id"`
+		Kind string `json:"kind"`
+	}
+	soon := time.Now().AddDate(0, 0, 5).Format("2006-01-02")
+	today := time.Now().Format("2006-01-02")
+	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/tasks", `{"title":"History test","kind":"exam","due":"`+soon+`","tags":["history"]}`, alice), &task)
+	if task.Kind != "exam" {
+		t.Fatalf("kind %q", task.Kind)
+	}
+	home := func() int {
+		var h struct {
+			Exams []struct {
+				ID string `json:"id"`
+			} `json:"exams"`
+		}
+		decode(t, authdo(r, "GET", "/api/v1/home?today="+today+"&from="+time.Now().Format(time.RFC3339)+"&to="+time.Now().AddDate(0, 0, 7).Format(time.RFC3339), "", alice), &h)
+		return len(h.Exams)
+	}
+	if home() != 1 {
+		t.Fatal("exam not on the overview")
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/tasks/"+task.ID, `{"kind":"task"}`, alice), http.StatusOK, "not an exam")
+	if home() != 0 {
+		t.Fatal("still an exam")
 	}
 }

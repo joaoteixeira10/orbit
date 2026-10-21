@@ -259,6 +259,9 @@ definitions:
       open_tasks:
         description: 'not done, tagged #tag'
         type: integer
+      page_id:
+        description: its notes page
+        type: string
       rank:
         type: number
       room:
@@ -702,6 +705,12 @@ definitions:
       events:
         items:
           $ref: '#/definitions/api.occurrence'
+        type: array
+      exams:
+        description: 'Exams: the next ones (within 60 days), soonest first, to count
+          down to.'
+        items:
+          $ref: '#/definitions/api.taskResponse'
         type: array
       mine:
         description: Mine is the caller's latest personal notes, not pinned (Today
@@ -1426,6 +1435,12 @@ definitions:
       due_time:
         description: HH:MM, "" clears
         type: string
+      kind:
+        description: '"task" clears'
+        enum:
+        - task
+        - exam
+        type: string
       list_id:
         type: string
       notes:
@@ -1504,6 +1519,9 @@ definitions:
       git_url:
         type: string
       id:
+        type: string
+      kind:
+        description: '"" a task | exam (counted down to)'
         type: string
       list_id:
         type: string
@@ -3041,6 +3059,28 @@ paths:
       security:
       - BearerAuth: []
       summary: Add a grade
+      tags:
+      - school
+  /courses/{id}/page:
+    post:
+      parameters:
+      - description: Course id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: A course's notes page
       tags:
       - school
   /events/{id}:

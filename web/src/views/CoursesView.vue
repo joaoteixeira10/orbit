@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, GraduationCap, MapPin, User, Circle } from 'lucide-vue-next'
+import { Plus, GraduationCap, MapPin, User, Circle, FileText } from 'lucide-vue-next'
 import CourseSheet from '@/components/school/CourseSheet.vue'
 import { coursesApi, tasksApi, type Course, type CourseSlot, type Task } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
-import { dueLabel, fmtClock, locale, weekdayNames, weekStart } from '@/lib/dates'
+import { countdown, dueLabel, fmtClock, locale, todayStr, weekdayNames, weekStart } from '@/lib/dates'
 import { fmtMark } from '@/lib/grades'
 
 // Courses: the week's timetable (every course's classes), then a card per
@@ -122,6 +122,19 @@ const today = computed(() => ((new Date().getDay() + 6) % 7) + 1)
 // ---- Cards ----
 const tasksOf = (c: Course) =>
   c.tag ? tasks.value.filter((x) => x.tags.includes(c.tag)).sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999')) : []
+// The course's next exam (a task of its tag marked as an exam).
+const nextExam = (c: Course) =>
+  tasksOf(c).find((x) => x.kind === 'exam' && !!x.due && x.due >= todayStr())
+// Its notes page: the one it has, or a new one named after it.
+async function openNotes(c: Course) {
+  try {
+    const { page_id } = await coursesApi.page(c.id)
+    c.page_id = page_id
+    router.push({ name: 'ws-page', params: { ws: ws.value, page: page_id } })
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 function openTask(x: Task) {
   router.push({ name: 'ws-tasks', params: { ws: ws.value, list: x.list_id }, query: { task: x.id } })
 }
@@ -178,7 +191,22 @@ const mark = (v: number) => fmtMark(v, locale())
                 <span>{{ t('school.classesN', { n: c.slots.length }, c.slots.length) }}</span>
               </span>
             </span>
+            <button
+              v-if="editable || c.page_id"
+              type="button"
+              class="icon-btn shrink-0"
+              :title="t('school.notesPage')"
+              :aria-label="t('school.notesPage')"
+              @click.stop="openNotes(c)"
+            >
+              <FileText class="h-4 w-4" />
+            </button>
             <span v-if="withGrades && c.average != null" class="avg" :class="{ low: c.average < scale / 2 }" :title="t('school.average')">{{ mark(c.average) }}</span>
+          </button>
+          <button v-if="nextExam(c)" type="button" class="exam-line" @click="openTask(nextExam(c)!)">
+            <GraduationCap class="h-3.5 w-3.5 shrink-0" />
+            <span class="min-w-0 flex-1 truncate text-left">{{ t('school.nextExam') }}: {{ nextExam(c)!.title }}</span>
+            <b class="shrink-0">{{ countdown(nextExam(c)!.due!) }}</b>
           </button>
           <ul v-if="tasksOf(c).length" class="course-tasks">
             <li v-for="x in tasksOf(c).slice(0, 4)" :key="x.id">
@@ -344,5 +372,16 @@ const mark = (v: number) => fmtMark(v, locale())
   padding: 8px 16px 12px 38px;
   font-size: 12px;
   color: var(--text-3);
+}
+.exam-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px 8px 38px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #ff3b30 10%, transparent);
+  color: var(--crit-text);
+  font-size: 12.5px;
 }
 </style>

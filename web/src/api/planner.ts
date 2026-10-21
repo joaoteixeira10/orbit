@@ -109,6 +109,7 @@ export interface Task {
   title: string
   notes: string
   priority: 0 | 1 | 2 | 3
+  kind: '' | 'exam' // an exam is counted down to
   tags: string[]
   start: string | null // YYYY-MM-DD (floating), on or before due: the timeline bar's left end
   due: string | null // YYYY-MM-DD (floating)
@@ -140,6 +141,7 @@ export interface TaskInput {
   title?: string
   notes?: string
   priority?: number
+  kind?: 'task' | 'exam' // "task" makes it a plain task again
   tags?: string[]
   start?: string // "" clears
   due?: string // "" clears
@@ -280,6 +282,7 @@ export interface Home {
   pages: PageSummary[]
   notes: Note[] // pinned
   mine: Note[] // my latest personal notes, not pinned (Today only)
+  exams: Task[] // the next ones (60 days), soonest first
 }
 export interface SearchHit {
   kind: 'page' | 'task' | 'event' | 'note'
@@ -522,6 +525,7 @@ export interface Course {
   average: number | null // mine, on the workspace's scale
   grade_count: number
   target: number | null // my goal
+  page_id: string | null // its notes page
 }
 export type SlotInput = Pick<CourseSlot, 'weekday' | 'start' | 'end' | 'room' | 'kind'> & { id?: string }
 export type CourseInput = Partial<Pick<Course, 'name' | 'code' | 'teacher' | 'room' | 'color' | 'tag' | 'tz' | 'weight' | 'notes'>> & {
@@ -548,6 +552,7 @@ export const coursesApi = {
   create: (ws: string, b: CourseInput) => api<Course>(`/workspaces/${ws}/courses`, { method: 'POST', body: j(b) }),
   update: (id: string, b: CourseInput) => api<Course>(`/courses/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/courses/${id}`, { method: 'DELETE' }),
+  page: (id: string) => api<{ page_id: string }>(`/courses/${id}/page`, { method: 'POST' }),
   setGoal: (id: string, target: number | null) => api<void>(`/courses/${id}/goal`, { method: 'PUT', body: j({ target }) }),
   grades: (ws: string) => api<Grade[]>(`/workspaces/${ws}/grades`),
   addGrade: (course: string, b: GradeInput) => api<Grade>(`/courses/${course}/grades`, { method: 'POST', body: j(b) }),

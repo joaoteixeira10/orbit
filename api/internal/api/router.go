@@ -276,6 +276,7 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/courses/:id", h.updateCourse)
 			authed.DELETE("/courses/:id", h.deleteCourse)
 			authed.PUT("/courses/:id/goal", h.setGoal)
+			authed.POST("/courses/:id/page", h.coursePage)
 			authed.POST("/courses/:id/grades", h.createGrade)
 			authed.GET("/workspaces/:ws/grades", h.listGrades)
 			authed.PUT("/grades/:id", h.updateGrade)

@@ -390,6 +390,7 @@ type taskRequest struct {
 	Title       *string   `json:"title" binding:"omitempty,max=500"`
 	Notes       *string   `json:"notes" binding:"omitempty,max=20000"`
 	Priority    *int      `json:"priority" binding:"omitempty,min=0,max=3"`
+	Kind        *string   `json:"kind" binding:"omitempty,oneof=task exam"` // "task" clears
 	Tags        *[]string `json:"tags"`
 	Start       *string   `json:"start"`                                   // YYYY-MM-DD, "" clears
 	Due         *string   `json:"due"`                                     // YYYY-MM-DD, "" clears
@@ -429,6 +430,12 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 	}
 	if req.Notes != nil {
 		t.Notes = *req.Notes
+	}
+	if req.Kind != nil {
+		t.Kind = ""
+		if *req.Kind == "exam" {
+			t.Kind = "exam"
+		}
 	}
 	if req.Priority != nil {
 		t.Priority = *req.Priority

@@ -1063,6 +1063,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/courses/{id}/page": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "school"
+                ],
+                "summary": "A course's notes page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Course id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/events/{id}": {
             "get": {
                 "security": [
@@ -6813,6 +6849,10 @@ const docTemplate = `{
                     "description": "not done, tagged #tag",
                     "type": "integer"
                 },
+                "page_id": {
+                    "description": "its notes page",
+                    "type": "string"
+                },
                 "rank": {
                     "type": "number"
                 },
@@ -7440,6 +7480,13 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/api.occurrence"
+                    }
+                },
+                "exams": {
+                    "description": "Exams: the next ones (within 60 days), soonest first, to count down to.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.taskResponse"
                     }
                 },
                 "mine": {
@@ -8495,6 +8542,14 @@ const docTemplate = `{
                     "description": "HH:MM, \"\" clears",
                     "type": "string"
                 },
+                "kind": {
+                    "description": "\"task\" clears",
+                    "type": "string",
+                    "enum": [
+                        "task",
+                        "exam"
+                    ]
+                },
                 "list_id": {
                     "type": "string"
                 },
@@ -8598,6 +8653,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "\"\" a task | exam (counted down to)",
                     "type": "string"
                 },
                 "list_id": {

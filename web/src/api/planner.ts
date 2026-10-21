@@ -585,3 +585,19 @@ export const commentsApi = {
   update: (id: string, body: string) => api<TaskComment>(`/comments/${id}`, { method: 'PUT', body: j({ body }) }),
   remove: (id: string) => api<void>(`/comments/${id}`, { method: 'DELETE' }),
 }
+
+// A workspace's activity feed.
+export interface ActivityLine {
+  id: string
+  workspace_id: string
+  actor_id: string
+  actor_name: string
+  actor_avatar: string
+  verb: 'task_added' | 'task_done' | 'page_added' | 'note_added' | 'event_added' | 'commented' | 'member_joined'
+  title: string
+  link: string
+  created_at: string
+}
+export const activityApi = {
+  list: (ws: string, before?: string) => api<ActivityLine[]>(`/workspaces/${ws}/activity${before ? `?${qs({ before })}` : ''}`),
+}

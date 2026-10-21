@@ -111,6 +111,8 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Workspace activity feed** on the overview: who added, completed,
+  commented, joined — runs of the same thing as one line, kept 90 days.
 - **Full-text search**: ranked results, accents ignored ("acao" finds
   "ação"), words found by their start, task comments included (they open
   their task); an SQLite FTS5 index kept up to date by triggers.

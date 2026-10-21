@@ -5293,6 +5293,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "A workspace's activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339: older than this",
+                        "name": "before",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.activityLine"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/calendar": {
             "get": {
                 "security": [
@@ -6401,6 +6443,41 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "api.activityLine": {
+            "type": "object",
+            "properties": {
+                "actor_avatar": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "actor_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "verb": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "api.activityResponse": {
             "type": "object",
             "properties": {

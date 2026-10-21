@@ -21,6 +21,7 @@ import { useNotesStore } from '@/stores/notes'
 import type { Note, NoteInput } from '@/api/planner'
 import { orderedItems } from '@/components/notes/noteModel'
 import { todayStr, dateStr, startOfDay, addDays, fmtDate, fmtTime, relDay, sameDay, allDayDate, parseDate } from '@/lib/dates'
+import WorkspaceFeed from '@/components/WorkspaceFeed.vue'
 
 // Home. At / it is Today across every workspace: what's late and due, the
 // week's events, recently edited pages and pinned notes. At /w/:ws it is
@@ -354,6 +355,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
           </RouterLink>
         </div>
       </section>
+
+      <!-- What members did -->
+      <WorkspaceFeed v-if="wsId" :ws="wsId" />
 
     </div>
       <p v-if="nothing" class="footnote mt-2">{{ t('home.allClear') }}</p>

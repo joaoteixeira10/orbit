@@ -18,6 +18,7 @@ import { filesEn, filesPt } from './files'
 import { invitesEn, invitesPt } from './invites'
 import { schoolEn, schoolPt } from './school'
 import { commentsEn, commentsPt } from './comments'
+import { feedEn, feedPt } from './feed'
 import { accountUiEn, accountUiPt } from './accountui'
 import { adminUiEn, adminUiPt } from './adminui'
 
@@ -43,6 +44,7 @@ const en = {
   ...invitesEn,
   ...schoolEn,
   ...commentsEn,
+  ...feedEn,
   ...accountUiEn,
   ...adminUiEn,
   common: {
@@ -316,6 +318,7 @@ const pt: typeof en = {
   ...invitesPt,
   ...schoolPt,
   ...commentsPt,
+  ...feedPt,
   ...accountUiPt,
   ...adminUiPt,
   common: {

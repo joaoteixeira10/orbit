@@ -83,7 +83,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 - Per-workspace export / import (JSON + attachments), so a workspace can move
   between instances.
-- A workspace activity feed ("Ana completed 3 tasks in Shopping").
 - PostgreSQL support once it is smoke-tested (blueprint §11.5).
 - Notification channels (Slack, Teams, webhooks) get the titles of what they
   report; a choice to send only "you have a notification" (a decision for

@@ -231,6 +231,12 @@ Tasks show only when they're assigned to you or to nobody. A workspace's own
 **Overview** (click its name) shows the same for that workspace, plus a card
 per module, its members and an **Invite** button for owners.
 
+**Activity** (on a workspace's overview): what its members did, newest
+first — added a task, completed some, added a page, a note or an event,
+commented, joined. A run of the same thing reads as one line ("Ana completed
+3 tasks") with the first few as links. It keeps 90 days; muting a workspace
+silences its notifications, not this.
+
 ## 5. Pages
 
 **Create** a page with **+** next to **Pages** in the sidebar, **New page** on

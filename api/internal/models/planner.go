@@ -461,6 +461,19 @@ type PersonalChannel struct {
 	LastError    string `gorm:"size:300" json:"last_error,omitempty"`
 }
 
+// Activity is one line of a workspace's feed: who did what ("Ana completed
+// a task: Shopping"), kept 90 days. Verb is one of the activity verbs
+// (task_added, task_done, page_added, note_added, event_added,
+// member_joined, commented); Link opens what it's about.
+type Activity struct {
+	Base
+	WorkspaceID string `gorm:"size:36;not null;index:idx_activity_ws_time,priority:1" json:"workspace_id"`
+	ActorID     string `gorm:"size:36" json:"actor_id"`
+	Verb        string `gorm:"size:20;not null" json:"verb"`
+	Title       string `gorm:"size:300" json:"title"`
+	Link        string `gorm:"size:300" json:"link"`
+}
+
 // AssigneeList is the task's assignees (user ids), never nil.
 func (t Task) AssigneeList() []string {
 	out := []string{}

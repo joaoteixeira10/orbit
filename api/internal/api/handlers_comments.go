@@ -147,6 +147,7 @@ func (h *Handlers) createComment(c *gin.Context) {
 	}
 	gitErr := h.gitComment(c, &cm, false)
 	h.publishWS(c, ws.ID, "comments")
+	h.feed(ws.ID, cm.AuthorID, "commented", t.Title, taskLink(t))
 	h.notifyComment(c, ws, t, cm)
 	resp := h.commentResponses([]models.TaskComment{cm})[0]
 	resp.GitError = gitErr

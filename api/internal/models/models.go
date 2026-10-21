@@ -344,6 +344,7 @@ func AllModels() []any {
 		&TaskComment{},
 		&TaskEvent{},
 		&PersonalChannel{},
+		&Activity{},
 		&Event{},
 		&CalendarSubscription{},
 		&ExternalEvent{},

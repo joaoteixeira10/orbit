@@ -41,6 +41,7 @@ func (h *Handlers) workspaceOf(id string) models.Workspace {
 // that way) are left out.
 func (h *Handlers) notifyActivity(c *gin.Context, ws models.Workspace, verb, title, link string, except ...string) {
 	uid := auth.UserID(c)
+	h.feed(ws.ID, uid, verb, title, link)
 	var others []models.WorkspaceMember
 	h.db.Where("workspace_id = ? AND user_id NOT IN ? AND NOT muted", ws.ID, append(except, uid)).Find(&others)
 	if len(others) == 0 {
@@ -103,6 +104,7 @@ func (h *Handlers) notifyMembership(c *gin.Context, ws models.Workspace, userID,
 // notifyJoined tells the other members (not the one who added them) that
 // someone joined a workspace.
 func (h *Handlers) notifyJoined(c *gin.Context, ws models.Workspace, u models.User, role string) {
+	h.feed(ws.ID, u.ID, "member_joined", "", "/w/"+ws.ID)
 	var others []models.WorkspaceMember
 	h.db.Where("workspace_id = ? AND user_id NOT IN ? AND NOT muted", ws.ID, []string{u.ID, auth.UserID(c)}).Find(&others)
 	name := u.DisplayName

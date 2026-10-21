@@ -1,5 +1,28 @@
 basePath: /api/v1
 definitions:
+  api.activityLine:
+    properties:
+      actor_avatar:
+        type: string
+      actor_id:
+        type: string
+      actor_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      link:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      verb:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   api.activityResponse:
     properties:
       actor_id:
@@ -5602,6 +5625,32 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a workspace
+      tags:
+      - workspaces
+  /workspaces/{ws}/activity:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: 'RFC 3339: older than this'
+        in: query
+        name: before
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.activityLine'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's activity
       tags:
       - workspaces
   /workspaces/{ws}/calendar:

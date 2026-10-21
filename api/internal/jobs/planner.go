@@ -42,6 +42,7 @@ func (s *Scheduler) startPlanner() {
 		{"* * * * *", s.digests, "daily summaries"},
 		{"@daily", s.emptyTrash, "trash"},
 		{"@daily", s.inbox.Cleanup, "old notifications"},
+		{"@daily", s.oldActivity, "old workspace activity"},
 		{"@every 3m", s.syncGit, "git-linked lists"},
 	}
 	for _, j := range jobs {
@@ -181,4 +182,9 @@ func humanLead(d time.Duration) string {
 	default:
 		return fmt.Sprintf("%d min", int(d.Minutes()))
 	}
+}
+
+// oldActivity drops workspace feed lines older than 90 days.
+func (s *Scheduler) oldActivity() {
+	s.db.Where("created_at < ?", time.Now().AddDate(0, 0, -90)).Delete(&models.Activity{})
 }

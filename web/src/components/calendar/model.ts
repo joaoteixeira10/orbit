@@ -43,7 +43,9 @@ export function toEntry(o: Occurrence, editable: boolean): Entry {
   }
   const isOrbit = o.kind === 'event'
   return {
-    key: `${o.kind}:${o.id}:${o.start}`,
+    // By instant, not text: "12:00:00.000Z" (a drag's) and "12:00:00Z" (the
+    // server's) are one entry, so a reload doesn't swap a block mid-drag.
+    key: `${o.kind}:${o.id}:${new Date(o.start).getTime()}`,
     occ: o,
     start,
     end,

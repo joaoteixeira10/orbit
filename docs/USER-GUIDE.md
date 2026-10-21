@@ -497,7 +497,10 @@ administers the repository, Orbit adds the webhook itself; otherwise it
 shows an **address** and a **secret** for its admin to add in the
 repository's *Settings → Webhooks* (content type JSON; the *Issues* and
 *Issue comment* events) — the secret is shown only then. The row says when
-the last change came. (Orbit must be reachable from the git server.)
+the last change came. Orbit must be reachable from the git server: a Gitea /
+Forgejo on your own network posts only to public addresses unless its
+`app.ini` allows yours (`[webhook] ALLOWED_HOST_LIST = private`, or Orbit's
+host).
 
 **Milestones.** A task of a linked list shows its issue's milestone on its
 row; in its details, **Milestone** picks one of the repository's open

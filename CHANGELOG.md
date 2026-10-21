@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Share into Quick Notes from a phone**: the installed app is a share
+  target on Android (a link or text from any app becomes a Quick Note);
+  `/share?title=&text=&url=` does the same for an iPhone shortcut.
 - **Week and Day views: drag events** to another time or day, and their
   bottom edge to change the length (15-minute steps).
 - **A time zone per event**: times typed in the event's zone ("10:00, New

@@ -166,6 +166,17 @@ test('quick notes: jot one on Today, find it in Quick Notes, move it into a work
   await expect(page.getByText(/^Moved to /)).toBeVisible()
 })
 
+test('share target: a link shared from another app becomes a Quick Note (after signing in)', async ({ page }) => {
+  // Not signed in: the sign-in keeps what was shared.
+  await page.goto('/share?title=Trail%20map&text=For%20Saturday&url=https%3A%2F%2Fexample.com%2Ftrail')
+  await page.locator('input[autocomplete="username webauthn"]').fill(ADMIN_USER)
+  await page.locator('input[autocomplete="current-password"]').fill(NEW_PASSWORD)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByText('Saved to Quick Notes')).toBeVisible()
+  await expect(page).toHaveURL(/\/notes\?note=/)
+  await expect(page.locator('.note-card', { hasText: 'Trail map' })).toContainText('https://example.com/trail')
+})
+
 test('timeline and charts show the tasks, and the filter narrows them', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.locator('.ws-row').first().click()

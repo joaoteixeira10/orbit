@@ -252,6 +252,8 @@ export const useBrandingStore = defineStore('branding', {
         background_color: isDark ? '#1c1c1e' : '#ffffff',
         theme_color: isDark ? '#1c1c1e' : '#ffffff',
         icons,
+        // Android's share sheet lists Orbit; what's shared becomes a Quick Note.
+        share_target: { action: abs('/share'), method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
       }
       if (manifestBlobURL) URL.revokeObjectURL(manifestBlobURL)
       manifestBlobURL = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }))

@@ -341,7 +341,19 @@ moment. Jot one from anywhere:
 - **Jot something down…** at the top of **Today**;
 - the **+** on **Quick Notes** in the sidebar, or **⌥N** (Alt+N on Windows and
   Linux) on any page, or ⌘K → **Quick note**;
-- the box on the Quick Notes page.
+- the box on the Quick Notes page;
+- **from another app on your phone** — see below.
+
+**Share into Orbit**: on Android, once Orbit is installed (Chrome:
+**Install app**), it's in the share sheet: share a link or text from any app
+→ **Orbit**, and it's saved as a Quick Note, which opens (the title, the
+text, the link once). Not signed in: sign in and it carries on. iPhone and
+iPad don't let web apps into the share sheet; make a **Shortcut** instead
+(Shortcuts → New → *Receive* **URLs and Text** from the **Share Sheet** →
+**URL Encode** the input → **Open URLs**
+`https://your-orbit/share?text=` followed by the encoded input), and it's in
+the share sheet as that shortcut. Any address of the form
+`/share?title=…&text=…&url=…` does the same.
 
 They work like any notes (pin, colour, checklist, search). Today shows the
 latest ones; pinned ones join **Pinned Notes**. When you know where one
@@ -975,6 +987,8 @@ Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 - the calendar's Month shows dots, with the chosen day's list underneath;
 - Tasks show the lists first, then a list;
 - the Timeline keeps a narrow column of names; hold a bar to drag it;
-- boards scroll sideways one column at a time; long-press a card to drag it.
+- boards scroll sideways one column at a time; long-press a card to drag it;
+- **Share → Orbit** in other apps saves a link or text to Quick Notes
+  (Android; on iPhone, a shortcut — see [Quick Notes](#quick-notes-your-own)).
 
 Orbit needs a connection: it doesn't work offline yet ([roadmap](ROADMAP.md)).

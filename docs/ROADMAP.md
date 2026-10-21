@@ -15,9 +15,9 @@ What Orbit could do next, roughly in the order it would pay off. The
   "someone else changed this page" banner. Yjs (with TipTap's collaboration
   extension) over the existing SSE stream plus a small update endpoint would
   merge edits live, with cursors.
-- **Share target on phones.** The installed app as a share target, so a link
-  or text shared from another app lands in Quick Notes (the inbox, Quick
-  Notes and ⌥N already exist).
+- **Sharing files and photos** into Orbit from a phone (links and text
+  already land in Quick Notes; files need a POST share target and the
+  service worker to receive them).
 
 ## Modules
 

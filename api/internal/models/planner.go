@@ -33,6 +33,9 @@ type Workspace struct {
 	// GradeScale is what marks are out of in the Grades module (20 in
 	// Portugal, 100 for percentages, 10, 5).
 	GradeScale int `gorm:"not null;default:20" json:"grade_scale"`
+	// Holidays: the country whose public holidays its calendar shows
+	// (ISO code; "" none).
+	Holidays string `gorm:"size:2" json:"holidays"`
 }
 
 // WorkspaceMember gives one user a role in one workspace. Position is that

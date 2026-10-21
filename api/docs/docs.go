@@ -1436,6 +1436,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/holidays/countries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Countries for holidays",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.holidayCountry"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/home": {
             "get": {
                 "security": [
@@ -7473,6 +7500,17 @@ const docTemplate = `{
                 }
             }
         },
+        "api.holidayCountry": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "api.homeResponse": {
             "type": "object",
             "properties": {
@@ -7955,7 +7993,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "description": "event | external",
+                    "description": "event | external | holiday",
                     "type": "string"
                 },
                 "location": {
@@ -8948,6 +8986,10 @@ const docTemplate = `{
                     "description": "20, 100, 10 or 5",
                     "type": "integer"
                 },
+                "holidays": {
+                    "description": "a country code, \"\" none",
+                    "type": "string"
+                },
                 "icon": {
                     "type": "string",
                     "maxLength": 64
@@ -9043,6 +9085,10 @@ const docTemplate = `{
                 "grade_scale": {
                     "description": "GradeScale is what marks are out of in the Grades module (20 in\nPortugal, 100 for percentages, 10, 5).",
                     "type": "integer"
+                },
+                "holidays": {
+                    "description": "Holidays: the country whose public holidays its calendar shows\n(ISO code; \"\" none).",
+                    "type": "string"
                 },
                 "icon": {
                     "description": "an icon key (lucide name) or an emoji",

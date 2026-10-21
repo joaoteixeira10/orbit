@@ -73,7 +73,7 @@ async function cancelClass() {
       </div>
 
       <p class="footnote mt-4 flex items-start gap-1.5 px-1">
-        <Lock class="mt-0.5 h-3 w-3 shrink-0" />{{ course ? t('school.classHint') : external ? t('cal.externalReadOnly') : t('cal.viewOnlyEvent') }}
+        <Lock class="mt-0.5 h-3 w-3 shrink-0" />{{ entry.occ.kind === 'holiday' ? t('cal.holidayNote') : course ? t('school.classHint') : external ? t('cal.externalReadOnly') : t('cal.viewOnlyEvent') }}
       </p>
     </template>
     <template #footer>

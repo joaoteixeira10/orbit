@@ -700,6 +700,13 @@ definitions:
         minimum: 0
         type: number
     type: object
+  api.holidayCountry:
+    properties:
+      code:
+        type: string
+      name:
+        type: string
+    type: object
   api.homeResponse:
     properties:
       events:
@@ -1030,7 +1037,7 @@ definitions:
       id:
         type: string
       kind:
-        description: event | external
+        description: event | external | holiday
         type: string
       location:
         type: string
@@ -1723,6 +1730,9 @@ definitions:
       grade_scale:
         description: 20, 100, 10 or 5
         type: integer
+      holidays:
+        description: a country code, "" none
+        type: string
       icon:
         maxLength: 64
         type: string
@@ -1791,6 +1801,11 @@ definitions:
           GradeScale is what marks are out of in the Grades module (20 in
           Portugal, 100 for percentages, 10, 5).
         type: integer
+      holidays:
+        description: |-
+          Holidays: the country whose public holidays its calendar shows
+          (ISO code; "" none).
+        type: string
       icon:
         description: an icon key (lucide name) or an emoji
         type: string
@@ -3290,6 +3305,22 @@ paths:
       summary: Liveness probe
       tags:
       - system
+  /holidays/countries:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.holidayCountry'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Countries for holidays
+      tags:
+      - calendar
   /home:
     get:
       parameters:

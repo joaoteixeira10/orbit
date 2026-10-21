@@ -111,6 +111,10 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Public holidays on the calendar**: a workspace picks a country
+  (Portugal, Spain, France, Italy, Germany, UK, Netherlands, Belgium, US,
+  Brazil); its national holidays show as all-day entries, computed from
+  their rules.
 - **Exams and course pages**: mark a task as an exam and it counts down —
   in lists, as its course's next exam, in an Exams card on the overview;
   each course gets its own notes page in one click.

@@ -139,16 +139,37 @@ async function loadSubs() {
   }
 }
 watch(wsId, loadSubs, { immediate: true })
+const holidaySource = { id: 'holidays', name: '', color: '#8E8E93' }
 const sources = computed<CalSource[]>(() => {
-  if (!wsId.value) return wss.active.filter((w) => w.modules.includes('calendar')).map((w) => ({ id: w.id, name: w.name, color: w.color }))
+  const hol = { ...holidaySource, name: t('cal.holidays') }
+  if (!wsId.value) {
+    const list = wss.active.filter((w) => w.modules.includes('calendar'))
+    return [...list.map((w) => ({ id: w.id, name: w.name, color: w.color })), ...(list.some((w) => w.holidays) ? [hol] : [])]
+  }
   const w = workspace.value
   return [
     { id: 'events', name: w?.name ?? t('cal.events'), color: w?.color ?? '' },
     { id: 'tasks', name: t('cal.pane.tasks'), color: w?.color ?? '' },
     ...subs.value.map((s) => ({ id: s.id, name: s.name, color: s.color || w?.color || '' })),
+    ...(w?.holidays ? [hol] : []),
   ]
 })
+// Public holidays: the workspace's country (its owners choose it).
+const countries = ref<{ code: string; name: string }[]>([])
+void calendarApi.holidayCountries().then((c) => (countries.value = c)).catch(() => {})
+const holidaysCtl = computed(() =>
+  wsId.value && workspace.value ? { country: workspace.value.holidays, countries: countries.value, editable: workspace.value.role === 'owner' && !workspace.value.archived_at } : undefined,
+)
+async function setHolidays(code: string) {
+  try {
+    await wss.update(wsId.value, { holidays: code })
+    void load()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 function visible(o: { occ?: Occurrence; task?: Task }): boolean {
+  if (o.occ?.kind === 'holiday') return !hidden.value.has('holidays')
   if (o.occ) return !hidden.value.has(wsId.value ? (o.occ.kind === 'external' ? o.occ.subscription_id ?? '' : 'events') : o.occ.workspace_id)
   if (o.task) return !hidden.value.has(wsId.value ? 'tasks' : o.task.workspace_id)
   return true
@@ -465,8 +486,10 @@ const views: CalView[] = ['day', 'week', 'month']
         :heading="wsId ? t('cal.calendars') : t('cal.myCalendars')"
         :can-add="showSubs"
         @go="(d) => ((cursor = d), !wide && (leftOpen = false))"
+        :holidays="holidaysCtl"
         @toggle="toggleSource"
         @add="subsOpen = true"
+        @holidays="setHolidays"
       />
     </div>
     <div v-if="!wide && (leftOpen || rightOpen) && !phone" class="side-scrim" @click="(leftOpen = false), (rightOpen = false)" />

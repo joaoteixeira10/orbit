@@ -43,6 +43,7 @@ export interface Workspace {
   created_by: string
   archived_at?: string | null
   grade_scale: number // what marks are out of (Grades): 20, 100, 10, 5
+  holidays: string // the country whose public holidays its calendar shows ("" none)
   created_at: string
   updated_at: string
 }
@@ -208,7 +209,7 @@ export interface PushDevice {
 }
 
 export interface Occurrence {
-  kind: 'event' | 'external'
+  kind: 'event' | 'external' | 'holiday'
   id: string
   workspace_id: string
   subscription_id?: string
@@ -313,7 +314,7 @@ export const workspacesApi = {
   get: (id: string) => api<{ workspace: Workspace; members: Member[] }>(`/workspaces/${id}`),
   create: (b: { name: string; icon?: string; color?: string; kind?: WorkspaceKind; description?: string; modules?: ModuleKey[]; starter?: boolean; locale?: string }) =>
     api<Workspace>('/workspaces', { method: 'POST', body: j(b) }),
-  update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean; grade_scale: number }>) =>
+  update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean; grade_scale: number; holidays: string }>) =>
     api<Workspace>(`/workspaces/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/workspaces/${id}`, { method: 'DELETE' }),
   order: (ids: string[]) => api<void>('/me/workspace-order', { method: 'PUT', body: j({ ids }) }),
@@ -474,6 +475,7 @@ export const pushApi = {
 }
 
 export const calendarApi = {
+  holidayCountries: () => api<{ code: string; name: string }[]>('/holidays/countries'),
   workspace: (ws: string, p: { from: string; to: string; from_date?: string; to_date?: string }) => api<CalendarData>(`/workspaces/${ws}/calendar?${qs(p)}`),
   mine: (p: { from: string; to: string; from_date?: string; to_date?: string }) => api<CalendarData>(`/calendar?${qs(p)}`),
   createEvent: (ws: string, b: EventInput) => api<CalEvent>(`/workspaces/${ws}/events`, { method: 'POST', body: j(b) }),

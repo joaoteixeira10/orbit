@@ -555,6 +555,14 @@ the calendar):
 
 Each pane remembers whether it's open, and which calendars you hid.
 
+**Holidays**: in a workspace's calendar, the left pane's **Holidays** picks a
+country (its owners choose): its national public holidays show as grey
+all-day entries — Portugal, Spain, France, Italy, Germany, the UK (England
+and Wales), the Netherlands, Belgium, the United States, Brazil. They're
+worked out from their rules (Easter and the days that follow it, "the last
+Monday of May", weekend substitutes), not fetched; regional holidays aren't
+included. Untick **Holidays** to hide them.
+
 **Subscribe to another calendar** (editors; **Calendars** in a workspace's
 calendar): **Add calendar**, paste its **address** (`https://…` or
 `webcal://…`), name it, pick a colour, **Subscribe**. Orbit fetches it at once

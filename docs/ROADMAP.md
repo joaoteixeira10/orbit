@@ -43,7 +43,7 @@ What Orbit could do next, roughly in the order it would pay off. The
 - Two-way **CalDAV** sync (iCloud, Google, Nextcloud) — `emersion/go-ical`
   is already the parser, and `go-webdav` speaks CalDAV.
 - Week-view drag to move and resize; time-zone choice per event.
-- Holidays by country as a built-in subscription.
+- Regional holidays (by district / state); more countries.
 
 ## Pages
 

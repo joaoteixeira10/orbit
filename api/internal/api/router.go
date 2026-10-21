@@ -260,6 +260,7 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/workspaces/:ws/members/:uid", h.setMemberRole)
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)
 			authed.GET("/workspaces/:ws/activity", h.workspaceActivity)
+			authed.GET("/holidays/countries", h.holidayCountries)
 			authed.GET("/workspaces/:ws/invites", h.listInvites)
 			authed.POST("/workspaces/:ws/invites", h.createInvite)
 			authed.DELETE("/workspaces/:ws/invites/:id", h.revokeInvite)

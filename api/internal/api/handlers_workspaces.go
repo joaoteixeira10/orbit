@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/holidays"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
@@ -351,6 +352,7 @@ type updateWorkspaceRequest struct {
 	Modules     *[]string `json:"modules"`
 	Archived    *bool     `json:"archived"`
 	GradeScale  *int      `json:"grade_scale"` // 20, 100, 10 or 5
+	Holidays    *string   `json:"holidays"`    // a country code, "" none
 }
 
 // updateWorkspace changes a workspace's settings (owners).
@@ -410,6 +412,13 @@ func (h *Handlers) updateWorkspace(c *gin.Context) {
 		} else {
 			up["archived_at"] = nil
 		}
+	}
+	if req.Holidays != nil {
+		if *req.Holidays != "" && !holidays.Known(*req.Holidays) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown country for holidays"})
+			return
+		}
+		up["holidays"] = *req.Holidays
 	}
 	if req.GradeScale != nil && *req.GradeScale != ws.GradeScale {
 		if !planner.ValidScale(*req.GradeScale) {

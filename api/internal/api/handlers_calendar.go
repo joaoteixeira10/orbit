@@ -11,6 +11,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/holidays"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 
@@ -23,7 +24,7 @@ const maxRangeDays = 120
 // occurrence is one entry on a calendar: an Orbit event (one occurrence of a
 // series) or an event from a subscribed calendar.
 type occurrence struct {
-	Kind           string    `json:"kind"` // event | external
+	Kind           string    `json:"kind"` // event | external | holiday
 	ID             string    `json:"id"`
 	WorkspaceID    string    `json:"workspace_id"`
 	SubscriptionID string    `json:"subscription_id,omitempty"`
@@ -75,9 +76,24 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 	}
 	colors := map[string]string{}
 	var wss []models.Workspace
-	h.db.Select("id", "color").Where("id IN ?", wsIDs).Find(&wss)
+	h.db.Select("id", "color", "holidays").Where("id IN ?", wsIDs).Find(&wss)
 	for _, w := range wss {
 		colors[w.ID] = w.Color
+	}
+	// Public holidays, once per country (several workspaces may show them).
+	shown := map[string]bool{}
+	for _, w := range wss {
+		if w.Holidays == "" || shown[w.Holidays] {
+			continue
+		}
+		shown[w.Holidays] = true
+		for _, hd := range holidays.Between(w.Holidays, from.UTC().AddDate(0, 0, -1).Format(planner.DateLayout), to.UTC().Format(planner.DateLayout)) {
+			d, _ := time.Parse(planner.DateLayout, hd.Date)
+			resp.Events = append(resp.Events, occurrence{
+				Kind: "holiday", ID: "holiday:" + w.Holidays + ":" + hd.Date, WorkspaceID: w.ID, Title: hd.Name,
+				Start: d, End: d.AddDate(0, 0, 1), AllDay: true, Color: "#8E8E93",
+			})
+		}
 	}
 
 	var events []models.Event
@@ -635,4 +651,25 @@ func (h *Handlers) deleteSubscription(c *gin.Context) {
 	h.db.Delete(&sub)
 	h.publishWS(c, sub.WorkspaceID, "subscriptions")
 	c.Status(http.StatusNoContent)
+}
+
+type holidayCountry struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+// holidayCountries lists the countries whose holidays a calendar can show.
+//
+//	@Summary	Countries for holidays
+//	@Tags		calendar
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Success	200	{array}	holidayCountry
+//	@Router		/holidays/countries [get]
+func (h *Handlers) holidayCountries(c *gin.Context) {
+	out := make([]holidayCountry, 0, len(holidays.Countries))
+	for _, x := range holidays.Countries {
+		out = append(out, holidayCountry{Code: x.Code, Name: x.Name})
+	}
+	c.JSON(http.StatusOK, out)
 }

@@ -22,8 +22,11 @@ const props = defineProps<{
   hidden: Set<string>
   heading: string
   canAdd?: boolean
+  // A workspace's public holidays: its country, the choices, and whether
+  // the viewer may change it (owners).
+  holidays?: { country: string; countries: { code: string; name: string }[]; editable: boolean }
 }>()
-const emit = defineEmits<{ go: [day: Date]; toggle: [id: string]; add: [] }>()
+const emit = defineEmits<{ go: [day: Date]; toggle: [id: string]; add: []; holidays: [code: string] }>()
 const { t } = useI18n()
 
 const month = ref(new Date(props.cursor.getFullYear(), props.cursor.getMonth(), 1))
@@ -79,6 +82,13 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
           </button>
         </li>
       </ul>
+      <label v-if="holidays && (holidays.editable || holidays.country)" class="mt-3 block px-2" data-testid="holidays">
+        <span class="cap">{{ t('cal.holidays') }}</span>
+        <select class="input mt-1 !py-1 text-[13px]" :value="holidays.country" :disabled="!holidays.editable" @change="emit('holidays', ($event.target as HTMLSelectElement).value)">
+          <option value="">{{ t('cal.noHolidays') }}</option>
+          <option v-for="c in holidays.countries" :key="c.code" :value="c.code">{{ c.name }}</option>
+        </select>
+      </label>
     </div>
   </aside>
 </template>

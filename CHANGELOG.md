@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Full-text search**: ranked results, accents ignored ("acao" finds
+  "ação"), words found by their start, task comments included (they open
+  their task); an SQLite FTS5 index kept up to date by triggers.
 - **"Sign in with Gitea / Forgejo"**: the owner registers Orbit as an
   OAuth2 application on a server once; then people connect their own account
   with one click (no token to make or paste). Tokens sealed and renewed.

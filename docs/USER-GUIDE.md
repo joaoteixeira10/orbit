@@ -139,7 +139,9 @@ feature flags, ownership transfer and impersonation.
 The **sidebar** on the left (a drawer behind the ☰ button on narrow screens):
 
 - **Search ⌘K** (Ctrl+K on Windows and Linux) opens the **command palette**:
-  type to find pages, tasks, notes and events in all your workspaces, jump
+  type to find pages, tasks, notes, events and comments in all your
+  workspaces — the best matches first; accents don't matter and the start of
+  a word is enough ("orc" finds "Orçamento") — jump
   to a workspace, or run an action (new page, new task, new note, new
   workspace, light or dark appearance, settings). Arrows move, Enter opens, Esc closes.
 - **Today** and **Calendar**: across every workspace.

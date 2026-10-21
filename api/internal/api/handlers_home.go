@@ -8,8 +8,10 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -159,6 +161,10 @@ func (h *Handlers) search(c *gin.Context) {
 		}
 		wsIDs = []string{ws}
 	}
+	if search.Ready() {
+		c.JSON(http.StatusOK, h.searchIndex(c, q, wsIDs))
+		return
+	}
 	// No workspaces: "IN ?" matches nothing, and the caller's own notes still
 	// count.
 	pat := "%" + strings.ToLower(likeEscape(q)) + "%"
@@ -193,4 +199,97 @@ func (h *Handlers) search(c *gin.Context) {
 		out = append(out, searchHit{Kind: "event", ID: e.ID, WorkspaceID: e.WorkspaceID, Title: e.Title, Start: &s})
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// searchIndex answers a search from the full-text index: the best matches
+// first, a few of each kind, each with what the list shows of it.
+func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searchHit {
+	out := []searchHit{}
+	uid := auth.UserID(c)
+	notesScope := uid
+	if c.Query("ws") != "" {
+		notesScope = "" // one workspace: not the caller's own notes
+	}
+	hits, err := search.Find(h.db, q, wsIDs, notesScope, 60)
+	if err != nil {
+		h.log.Warn("search failed", zap.Error(err))
+		return out
+	}
+	ids := map[string][]string{}
+	for _, x := range hits {
+		ids[x.Kind] = append(ids[x.Kind], x.Ref)
+	}
+	pages := map[string]models.Page{}
+	tasks := map[string]models.Task{}
+	notes := map[string]models.Note{}
+	events := map[string]models.Event{}
+	if l := ids["page"]; len(l) > 0 {
+		var rows []models.Page
+		h.db.Select("id", "workspace_id", "title", "icon", "content_text", "trashed_at").Where("id IN ?", l).Find(&rows)
+		for _, r := range rows {
+			pages[r.ID] = r
+		}
+	}
+	if l := append(ids["task"], ids["comment"]...); len(l) > 0 {
+		var rows []models.Task
+		h.db.Where("id IN ?", l).Find(&rows)
+		for _, r := range rows {
+			tasks[r.ID] = r
+		}
+	}
+	if l := ids["note"]; len(l) > 0 {
+		var rows []models.Note
+		h.db.Where("id IN ?", l).Find(&rows)
+		for _, r := range rows {
+			notes[r.ID] = r
+		}
+	}
+	if l := ids["event"]; len(l) > 0 {
+		var rows []models.Event
+		h.db.Where("id IN ?", l).Find(&rows)
+		for _, r := range rows {
+			events[r.ID] = r
+		}
+	}
+	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8}
+	seen := map[string]bool{}
+	for _, x := range hits {
+		kind := x.Kind
+		if kind == "comment" {
+			kind = "task" // a comment opens its task
+		}
+		if seen[kind+x.Ref] || caps[kind] == 0 {
+			continue
+		}
+		switch kind {
+		case "page":
+			p, ok := pages[x.Ref]
+			if !ok || p.TrashedAt != nil {
+				continue
+			}
+			out = append(out, searchHit{Kind: "page", ID: p.ID, WorkspaceID: p.WorkspaceID, Title: p.Title, Icon: p.Icon, Snippet: planner.Snippet(p.ContentText, q, 120)})
+		case "task":
+			t, ok := tasks[x.Ref]
+			if !ok {
+				continue
+			}
+			out = append(out, searchHit{Kind: "task", ID: t.ID, WorkspaceID: t.WorkspaceID, Title: t.Title, Snippet: planner.Snippet(t.Notes, q, 100), Due: t.Due, Done: t.CompletedAt != nil, ListID: t.ListID})
+		case "note":
+			n, ok := notes[x.Ref]
+			if !ok {
+				continue
+			}
+			out = append(out, searchHit{Kind: "note", ID: n.ID, WorkspaceID: n.WorkspaceID, Title: n.Title, Snippet: planner.Snippet(n.PlainText, q, 100)})
+		case "event":
+			e, ok := events[x.Ref]
+			if !ok {
+				continue
+			}
+			s := e.StartsAt
+			out = append(out, searchHit{Kind: "event", ID: e.ID, WorkspaceID: e.WorkspaceID, Title: e.Title, Start: &s})
+		}
+		seen[kind+x.Ref] = true
+		caps[kind]--
+	}
+	return out
 }

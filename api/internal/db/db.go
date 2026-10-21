@@ -14,6 +14,7 @@ import (
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -66,7 +67,15 @@ func Migrate(gdb *gorm.DB) error {
 	if err := gdb.AutoMigrate(models.AllModels()...); err != nil {
 		return fmt.Errorf("automigrate: %w", err)
 	}
-	return migrateAssignees(gdb)
+	if err := migrateAssignees(gdb); err != nil {
+		return err
+	}
+	// The full-text index (SQLite FTS5); search falls back to plain matching
+	// without it.
+	if !search.Setup(gdb) {
+		log.Println("full-text search index unavailable; using plain search")
+	}
+	return nil
 }
 
 // migrateAssignees moves a task's single assignee (the old assignee_id

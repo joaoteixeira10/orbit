@@ -124,7 +124,7 @@ The stores refetch what changed. Reminders arrive the same way
 | Decision | Why |
 |---|---|
 | Markdown for pages, edited visually or as source | Portable (download, zip export, git), readable anywhere; one stored format so people with different editors share pages. Highlight, underline and callouts use GitHub's forms (`<mark>`, `<u>`, `> [!TIP]`); what the visual editor can't edit passes through untouched |
-| `LIKE` search | Enough at personal / family scale; FTS5 is on the roadmap |
+| Full-text search in SQLite FTS5 (`internal/search`) | Ranked, accent-insensitive, by word start; kept up to date by SQLite triggers on pages, tasks, notes, events and comments, so every writer (the app, the syncs, imports) is covered. Without FTS5 (another engine) search falls back to `LIKE` |
 | No content in the audit log | Thousands of edits would drown the security events the chain is for |
 | SSE + refetch, not CRDTs | Simple and correct for planners; real-time co-editing is a roadmap item |
 | Floating task dates, zoned events | Matches how people think about to-dos versus appointments |

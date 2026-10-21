@@ -81,7 +81,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Instance
 
-- Full-text search with SQLite FTS5 (today: `LIKE` over titles and text).
 - Per-workspace export / import (JSON + attachments), so a workspace can move
   between instances.
 - A workspace activity feed ("Ana completed 3 tasks in Shopping").

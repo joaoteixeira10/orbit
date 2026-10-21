@@ -62,8 +62,8 @@ What Orbit could do next, roughly in the order it would pay off. The
   issues by `iid`, `state_event` to close, notes for comments, labels by
   name, merge requests apart). GitHub's project boards (Projects v2, GraphQL
   only) as a list layout.
-- Git: webhooks from the server for instant updates (today a 3-minute poll
-  and **Sync now**), milestones as a field.
+- Git: milestones as a list layout or a filter (they're a field now);
+  webhooks for tasks linked by hand.
 - Git: an "only as me" choice — today every editor of a linked list writes
   to git as whoever linked it (a decision for the owner).
 

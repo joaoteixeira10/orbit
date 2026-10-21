@@ -93,6 +93,15 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Git: instant updates and milestones.** `POST /lists/{id}/git/hook` turns
+on a webhook for a linked list — `{auto: true}` when Orbit made it, else
+`{url, secret}` to add by hand; `DELETE` turns it off. The server posts to
+`/api/v1/git/hook/{link}` (public, HMAC-SHA256 signed: `X-Hub-Signature-256`,
+`X-Gitea-Signature` or `X-Forgejo-Signature`), which syncs the list at once.
+`GET /lists/{id}/git/milestones` lists the repository's open ones
+(`{ref, title, due_on}`); a task takes one with `git_milestone_id` (a `ref`,
+`0` for none) and `git_milestone` (its title).
+
 **Sync a workspace's calendar with a CalDAV calendar** (owners):
 `POST /workspaces/{ws}/caldav/calendars` with `{url, username, password}`
 lists the account's calendars; `PUT /workspaces/{ws}/caldav` with the same

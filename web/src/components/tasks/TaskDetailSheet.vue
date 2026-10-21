@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
-import { gitApi, type TaskInput } from '@/api/planner'
+import { gitApi, type TaskInput, type GitMilestone } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
 import GitBadge from './GitBadge.vue'
 import Attachments from '@/components/ui/Attachments.vue'
@@ -206,6 +206,25 @@ async function linkGit() {
     linking.value = false
   }
 }
+// A linked list's task: its issue's milestone, from the repository's open ones.
+const milestones = ref<GitMilestone[]>([])
+watch(
+  () => [task.value?.id, list.value?.git ? list.value.id : ''] as const,
+  async ([id, listId]) => {
+    milestones.value = []
+    if (!id || !listId || !gitOn.value) return
+    try {
+      milestones.value = await gitApi.milestones(listId)
+    } catch {
+      /* the repository can't be read now: the current one still shows */
+    }
+  },
+  { immediate: true },
+)
+function setMilestone(ref: number) {
+  const m = milestones.value.find((x) => x.ref === ref)
+  void save({ git_milestone_id: ref, git_milestone: m?.title ?? '' })
+}
 async function unlinkGit() {
   if (!task.value) return
   try {
@@ -399,6 +418,21 @@ async function remove() {
             </div>
             <button v-if="editable" class="btn-plain shrink-0 !text-danger" @click="unlinkGit">{{ t('git.task.unlink') }}</button>
           </div>
+          <label v-if="task.git_number && list?.git" class="group-row">
+            <Milestone class="h-4 w-4 shrink-0 text-text-3" />
+            <span class="flex-1 text-[14px]">{{ t('git.task.milestone') }}</span>
+            <select
+              :value="task.git_milestone_id || 0"
+              class="input !w-auto max-w-[60%] !py-1 text-[13.5px]"
+              :disabled="!editable"
+              data-testid="milestone"
+              @change="setMilestone(Number(($event.target as HTMLSelectElement).value))"
+            >
+              <option :value="0">{{ t('git.task.noMilestone') }}</option>
+              <option v-if="task.git_milestone_id && !milestones.some((m) => m.ref === task!.git_milestone_id)" :value="task.git_milestone_id">{{ task.git_milestone }}</option>
+              <option v-for="m in milestones" :key="m.ref" :value="m.ref">{{ m.title }}</option>
+            </select>
+          </label>
           <form v-else-if="editable && !list?.git" class="group-row" @submit.prevent="linkGit">
             <input v-model="gitDraft" type="url" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('git.task.placeholder')" :aria-label="t('git.task.placeholder')" />
             <button type="submit" class="btn-plain shrink-0" :disabled="!gitDraft.trim() || linking">{{ t('git.task.link') }}</button>

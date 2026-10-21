@@ -400,6 +400,10 @@ type taskRequest struct {
 	AssigneeID  *string   `json:"assignee_id"`                             // older clients: just one ("" = none)
 	Completed   *bool     `json:"completed"`
 	AfterID     string    `json:"after_id"` // create: place after this task ("" = at the end)
+	// A linked list's task: its issue's milestone (a ref from
+	// GET /lists/{id}/git/milestones; 0 = none) and its title.
+	GitMilestoneID *int64  `json:"git_milestone_id"`
+	GitMilestone   *string `json:"git_milestone" binding:"omitempty,max=255"`
 }
 
 // cleanTags trims, de-duplicates and bounds tags.
@@ -430,6 +434,13 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 	}
 	if req.Notes != nil {
 		t.Notes = *req.Notes
+	}
+	if req.GitMilestoneID != nil {
+		t.GitMilestoneID = *req.GitMilestoneID
+		t.GitMilestone = ""
+		if t.GitMilestoneID != 0 && req.GitMilestone != nil {
+			t.GitMilestone = strings.TrimSpace(*req.GitMilestone)
+		}
 	}
 	if req.Kind != nil {
 		t.Kind = ""

@@ -48,8 +48,10 @@ type Engine struct {
 	// Changed is told which workspace's tasks a background sync changed.
 	Changed func(workspaceID string)
 
-	mu    sync.Mutex
-	locks map[string]*sync.Mutex // one sync or push per list at a time
+	mu        sync.Mutex
+	locks     map[string]*sync.Mutex // one sync or push per list at a time
+	kicked    map[string]bool        // links a webhook asked to sync (soon)
+	kickDelay time.Duration
 	// clientFor makes the HTTP client for a base URL (tests replace it).
 	clientFor func(base string) *http.Client
 }
@@ -57,7 +59,7 @@ type Engine struct {
 // New builds the engine. allowed are base URLs users may connect even on a
 // private network (GIT_SERVERS); every other server must be public.
 func New(db *gorm.DB, sealer *keystore.Sealer, allowed []string, log *zap.Logger) *Engine {
-	e := &Engine{db: db, sealer: sealer, allowed: map[string]bool{}, log: log, locks: map[string]*sync.Mutex{}}
+	e := &Engine{db: db, sealer: sealer, allowed: map[string]bool{}, log: log, locks: map[string]*sync.Mutex{}, kicked: map[string]bool{}, kickDelay: 2 * time.Second}
 	for _, a := range allowed {
 		if b, err := normalize(a); err == nil {
 			e.allowed[b] = true
@@ -603,6 +605,10 @@ func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
 			}
 		}
 		t.SetAssignees(who)
+		t.GitMilestone, t.GitMilestoneID = "", 0
+		if is.Milestone != nil {
+			t.GitMilestone, t.GitMilestoneID = truncate(is.Milestone.Title, 255), c.msRef(*is.Milestone)
+		}
 		t.GitHost, t.GitRepo, t.GitNumber, t.GitIssueID = link.Host, link.Owner+"/"+link.Repo, is.Number, is.ID
 		t.GitURL, t.GitState, t.GitPull = is.HTMLURL, is.GitState(), false
 		synced := is.UpdatedAt
@@ -671,12 +677,12 @@ func (e *Engine) placeIn(t *models.Task, col planner.Column) {
 
 // Change says what changed on a task in Orbit.
 type Change struct {
-	Title, Notes, Due, State, Assignee, Tags, Column bool
+	Title, Notes, Due, State, Assignee, Tags, Column, Milestone bool
 }
 
 // Any reports whether anything that reaches git changed.
 func (c Change) Any() bool {
-	return c.Title || c.Notes || c.Due || c.State || c.Assignee || c.Tags || c.Column
+	return c.Title || c.Notes || c.Due || c.State || c.Assignee || c.Tags || c.Column || c.Milestone
 }
 
 func (e *Engine) linkOf(t *models.Task) *models.GitLink {
@@ -691,7 +697,7 @@ func (e *Engine) linkOf(t *models.Task) *models.GitLink {
 }
 
 // All is every change (a retry sends the whole task).
-var All = Change{Title: true, Notes: true, Due: true, State: true, Assignee: true, Tags: true, Column: true}
+var All = Change{Title: true, Notes: true, Due: true, State: true, Assignee: true, Tags: true, Column: true, Milestone: true}
 
 // Push sends a task's changes to its issue, as actor. A task linked by hand
 // (not in a linked list) only sends open / closed. When it fails the task is
@@ -764,6 +770,10 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 		}
 		edit = true
 	}
+	if ch.Milestone && link != nil {
+		m := t.GitMilestoneID
+		in.Milestone, edit = &m, true
+	}
 	if ch.Assignee && link != nil {
 		_, byUser := e.workspaceLogins(t.WorkspaceID, t.GitHost)
 		logins := []string{}
@@ -811,7 +821,15 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 	}
 	synced := is.UpdatedAt
 	t.GitSyncedAt, t.GitState = &synced, is.GitState()
-	return e.db.Model(&models.Task{}).Where("id = ?", t.ID).Updates(map[string]any{"git_synced_at": &synced, "git_state": t.GitState}).Error
+	up := map[string]any{"git_synced_at": &synced, "git_state": t.GitState}
+	if link != nil {
+		t.GitMilestone, t.GitMilestoneID = "", 0
+		if is.Milestone != nil {
+			t.GitMilestone, t.GitMilestoneID = truncate(is.Milestone.Title, 255), c.msRef(*is.Milestone)
+		}
+		up["git_milestone"], up["git_milestone_id"] = t.GitMilestone, t.GitMilestoneID
+	}
+	return e.db.Model(&models.Task{}).Where("id = ?", t.ID).Updates(up).Error
 }
 
 // labelIDs are the labels an issue should carry for a task: its tags that
@@ -889,6 +907,10 @@ func (e *Engine) createIssue(ctx context.Context, actor string, link models.GitL
 	}
 	if ids, err := e.labelIDs(ctx, c, link, t); err == nil && len(ids) > 0 {
 		in.Labels = ids
+	}
+	if t.GitMilestoneID != 0 {
+		m := t.GitMilestoneID
+		in.Milestone = &m
 	}
 	is, err := c.CreateIssue(ctx, link.Owner, link.Repo, in)
 	if err != nil {

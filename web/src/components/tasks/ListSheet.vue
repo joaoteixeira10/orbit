@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert } from 'lucide-vue-next'
+import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap } from 'lucide-vue-next'
+import CopyButton from '@/components/ui/CopyButton.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import Popover from '@/components/ui/Popover.vue'
@@ -16,7 +17,7 @@ import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
-import { tasksApi, gitApi, type Column, type TaskList } from '@/api/planner'
+import { tasksApi, gitApi, type Column, type TaskList, type GitHookSetup } from '@/api/planner'
 
 // Creates or edits a task list, as Reminders' list sheet: its name, colour
 // and icon, plus the board columns (statuses) its tasks move through.
@@ -213,6 +214,29 @@ async function syncNow() {
     syncing.value = false
   }
 }
+// Instant updates: a webhook on the repository (Orbit makes it when the
+// account may; otherwise the address and secret to add by hand, once).
+const hookBusy = ref(false)
+const hookSetup = ref<GitHookSetup | null>(null)
+async function setInstant(on: boolean) {
+  if (!props.listId) return
+  hookBusy.value = true
+  try {
+    if (on) {
+      const s = await gitApi.hookOn(props.listId)
+      if (s.auto) toast.success(t('git.link.instantAuto'))
+      else hookSetup.value = s
+    } else {
+      await gitApi.hookOff(props.listId)
+      hookSetup.value = null
+    }
+    upsertList(await gitApi.syncList(props.listId))
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    hookBusy.value = false
+  }
+}
 async function unlink() {
   if (!props.listId || !list.value) return
   try {
@@ -282,6 +306,25 @@ async function destroy() {
             <TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.link.syncFailed', { error: git.last_error }) }}
           </div>
         </div>
+        <!-- Instant updates: a webhook -->
+        <div class="group mt-3" data-testid="git-instant">
+          <div class="group-row">
+            <Zap class="h-4 w-4 shrink-0" :class="git.instant ? 'text-accent' : 'text-text-3'" />
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px]">{{ t('git.link.instant') }}</div>
+              <div class="text-[12.5px] text-text-3">
+                {{ git.instant ? (git.hook_at ? t('git.link.instantOn', { when: ago(git.hook_at, locale()) }) : t('git.link.instantWaiting')) : t('git.link.instantOff') }}
+              </div>
+            </div>
+            <button v-if="editable" type="button" class="btn-plain shrink-0" :disabled="hookBusy" @click="setInstant(!git.instant)">{{ git.instant ? t('git.link.turnOff') : t('git.link.turnOn') }}</button>
+          </div>
+          <div v-if="hookSetup?.secret" class="space-y-2 px-3.5 py-3 text-[12.5px]">
+            <p class="leading-snug text-text-2">{{ t('git.link.instantManual') }}</p>
+            <div class="flex items-center gap-2"><span class="w-16 shrink-0 text-text-3">{{ t('git.link.hookUrl') }}</span><code class="min-w-0 flex-1 truncate">{{ hookSetup.url }}</code><CopyButton :value="hookSetup.url" /></div>
+            <div class="flex items-center gap-2"><span class="w-16 shrink-0 text-text-3">{{ t('git.link.hookSecret') }}</span><code class="min-w-0 flex-1 truncate">{{ hookSetup.secret }}</code><CopyButton :value="hookSetup.secret" /></div>
+          </div>
+        </div>
+
         <!-- Members without their own account: read only, or as a bot — never as whoever linked it -->
         <div class="group mt-3" data-testid="git-bot">
           <div class="group-row !items-start">

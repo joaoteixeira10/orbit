@@ -371,6 +371,11 @@ user. Release mode refuses either secret under 32 characters.
   **8 MiB**; a **30 s** timeout. A failure is shown to the editors without the
   address. The scheduler refreshes each subscription at its interval (at least
   every 15 minutes, by default hourly).
+- **Git webhooks** (instant updates) post to a public endpoint per linked
+  list; a post counts only if signed (HMAC-SHA256 of the body) with the
+  list's secret — random, sealed, shown once when added by hand — and it
+  only triggers a sync (its content isn't trusted or read). Per-IP rate
+  limited.
 - **Synced CalDAV calendars** (owners set them up; the `caldav_sync` flag) are
   reached through the guarded dialer too (LAN servers allowed — a home
   Nextcloud is the point), redirects followed by hand (three at most, the

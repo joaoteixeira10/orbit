@@ -100,6 +100,18 @@ export interface GitLink {
   linked_by: string
   bot_login?: string // members without their own account act as this bot ("" = read only)
   write: 'own' | 'bot' | 'none' // how my changes reach git; none = I can only read
+  instant: boolean // a webhook tells Orbit of changes on git
+  hook_at?: string // its last post
+}
+export interface GitHookSetup {
+  auto: boolean // Orbit made the webhook
+  url: string
+  secret?: string // to add it by hand (shown once)
+}
+export interface GitMilestone {
+  ref: number
+  title: string
+  due_on?: string
 }
 export interface Task {
   id: string
@@ -134,6 +146,8 @@ export interface Task {
   git_pull?: boolean
   git_dirty?: boolean // a change didn't reach git yet
   git_error?: string // in a change's answer: saved, but git refused it
+  git_milestone?: string // its issue's milestone (a linked list's task)
+  git_milestone_id?: number
 }
 export interface TaskInput {
   list_id?: string
@@ -143,6 +157,8 @@ export interface TaskInput {
   notes?: string
   priority?: number
   kind?: 'task' | 'exam' // "task" makes it a plain task again
+  git_milestone_id?: number // a linked list's task: a milestone's ref (0 = none)
+  git_milestone?: string
   tags?: string[]
   start?: string // "" clears
   due?: string // "" clears
@@ -453,6 +469,9 @@ export const gitApi = {
   unlinkList: (id: string) => api<void>(`/lists/${id}/git`, { method: 'DELETE' }),
   syncList: (id: string) => api<TaskList>(`/lists/${id}/git/sync`, { method: 'POST' }),
   setBot: (id: string, token: string) => api<TaskList>(`/lists/${id}/git/bot`, { method: 'PUT', body: j({ token }) }),
+  hookOn: (id: string) => api<GitHookSetup>(`/lists/${id}/git/hook`, { method: 'POST' }),
+  hookOff: (id: string) => api<void>(`/lists/${id}/git/hook`, { method: 'DELETE' }),
+  milestones: (id: string) => api<GitMilestone[]>(`/lists/${id}/git/milestones`),
   linkTask: (id: string, url: string) => api<Task>(`/tasks/${id}/git`, { method: 'POST', body: j({ url }) }),
   unlinkTask: (id: string) => api<Task>(`/tasks/${id}/git`, { method: 'DELETE' }),
 }

@@ -293,6 +293,9 @@ type gitLinkResponse struct {
 	// own (their account), bot, or none (read only).
 	BotLogin string `json:"bot_login,omitempty"`
 	Write    string `json:"write"`
+	// Instant: a webhook tells Orbit of changes (HookAt: its last post).
+	Instant bool       `json:"instant"`
+	HookAt  *time.Time `json:"hook_at,omitempty"`
 }
 
 func (h *Handlers) gitLinkOf(listID, uid string) *gitLinkResponse {
@@ -310,7 +313,8 @@ func (h *Handlers) gitLinkOf(listID, uid string) *gitLinkResponse {
 	if h.git != nil {
 		write = h.git.WriteMode(uid, &l, l.Host)
 	}
-	return &gitLinkResponse{Host: l.Host, Owner: l.Owner, Repo: l.Repo, Mode: l.Mode, URL: url, SyncedAt: l.SyncedAt, LastError: l.LastError, LinkedBy: l.LinkedBy, BotLogin: l.BotLogin, Write: write}
+	return &gitLinkResponse{Host: l.Host, Owner: l.Owner, Repo: l.Repo, Mode: l.Mode, URL: url, SyncedAt: l.SyncedAt, LastError: l.LastError, LinkedBy: l.LinkedBy, BotLogin: l.BotLogin, Write: write,
+		Instant: len(l.HookSecretSealed) > 0, HookAt: l.HookAt}
 }
 
 // createGitList makes a task list that holds a repository's issues (as the
@@ -459,6 +463,11 @@ func (h *Handlers) unlinkGitList(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if link := h.git.ListLink(l.ID); link != nil && link.HookID != 0 {
+		ctx, cancel := gitCtx(c)
+		h.git.DisableHook(ctx, auth.UserID(c), link)
+		cancel()
+	}
 	h.db.Where("list_id = ?", l.ID).Delete(&models.GitLink{})
 	h.recordCtx(c, "git.unlink", "list", l.ID, nil)
 	h.publishWS(c, l.WorkspaceID, "lists")
@@ -574,13 +583,14 @@ func (h *Handlers) unlinkGitTask(c *gin.Context) {
 func gitChange(before, after models.Task) gitsync.Change {
 	eqs := func(a, b *string) bool { return (a == nil) == (b == nil) && (a == nil || *a == *b) }
 	return gitsync.Change{
-		Title:    before.Title != after.Title,
-		Notes:    before.Notes != after.Notes,
-		Due:      !eqs(before.Due, after.Due),
-		State:    (before.CompletedAt == nil) != (after.CompletedAt == nil),
-		Assignee: before.Assignees != after.Assignees,
-		Tags:     before.Tags != after.Tags,
-		Column:   before.ColumnID != after.ColumnID || before.ListID != after.ListID,
+		Title:     before.Title != after.Title,
+		Notes:     before.Notes != after.Notes,
+		Due:       !eqs(before.Due, after.Due),
+		State:     (before.CompletedAt == nil) != (after.CompletedAt == nil),
+		Assignee:  before.Assignees != after.Assignees,
+		Tags:      before.Tags != after.Tags,
+		Column:    before.ColumnID != after.ColumnID || before.ListID != after.ListID,
+		Milestone: before.GitMilestoneID != after.GitMilestoneID,
 	}
 }
 

@@ -47,6 +47,7 @@ type Issue struct {
 	Repository *struct {
 		FullName string `json:"full_name"`
 	} `json:"repository"`
+	Milestone *Milestone `json:"milestone"`
 }
 
 // Due is the issue's due date as YYYY-MM-DD (the date as the server wrote it).
@@ -322,6 +323,7 @@ type IssueInput struct {
 	UnsetDue  bool      `json:"unset_due_date,omitempty"`
 	Assignees *[]string `json:"assignees,omitempty"` // nil: unchanged; empty: none
 	Labels    []int64   `json:"labels,omitempty"`    // create only
+	Milestone *int64    `json:"milestone,omitempty"` // its ref (msRef); 0 takes it off
 }
 
 // DueTime is how a date is sent: the end of that day, UTC.
@@ -343,6 +345,9 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo string, in IssueIn
 		if in.Assignees != nil {
 			gh["assignees"] = *in.Assignees
 		}
+		if in.Milestone != nil && *in.Milestone != 0 {
+			gh["milestone"] = *in.Milestone
+		}
 		if len(names) > 0 {
 			gh["labels"] = names
 		}
@@ -355,10 +360,20 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo string, in IssueIn
 // EditIssue changes an issue.
 func (c *Client) EditIssue(ctx context.Context, owner, repo string, number int64, in IssueInput) (Issue, error) {
 	var i Issue
+	var body any = in
 	if c.GitHub() {
 		in.DueDate, in.UnsetDue = nil, false
+		body = in
+		if in.Milestone != nil && *in.Milestone == 0 {
+			// GitHub takes a milestone off with null.
+			b, _ := json.Marshal(in)
+			m := map[string]any{}
+			_ = json.Unmarshal(b, &m)
+			m["milestone"] = nil
+			body = m
+		}
 	}
-	err := c.do(ctx, "PATCH", fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), nil, in, &i)
+	err := c.do(ctx, "PATCH", fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), nil, body, &i)
 	return i, err
 }
 

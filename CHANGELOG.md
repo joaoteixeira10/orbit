@@ -111,6 +111,10 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Git: instant updates and milestones**: a webhook (added by Orbit when
+  the account may, else by hand with the address and secret shown) syncs a
+  linked list the moment an issue changes; a task shows its issue's
+  milestone and picks one in its details.
 - **GitHub in the git integration**: connect a GitHub (or GitHub
   Enterprise) account by token or by signing in; lists from repositories
   (open / closed, or labels as columns), tasks linked to issues and pull

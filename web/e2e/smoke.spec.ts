@@ -259,6 +259,34 @@ test('git: connect an account, make a list from a repository, a new task opens a
   const onGit = (await r.json()) as { body: string }[]
   expect(onGit.some((c) => c.body === 'Hello from **Orbit**')).toBeTruthy()
 
+  // A milestone picked here becomes the issue's (and shows on the row).
+  const owner = process.env.E2E_GIT_OWNER || 'ana'
+  const gtok = { Authorization: `token ${GIT_TOKEN}` }
+  const msTitle = `Sprint ${Date.now()}`
+  const ms = await (await page.request.post(`${GIT_URL}/api/v1/repos/${owner}/${GIT_REPO}/milestones`, { headers: gtok, data: { title: msTitle } })).json()
+  await page.keyboard.press('Escape')
+  await page.locator('.task-row', { hasText: title }).click()
+  await page.getByTestId('milestone').selectOption(String(ms.id))
+  await expect
+    .poll(async () => (await (await page.request.get(`${GIT_URL}/api/v1/repos/${owner}/${GIT_REPO}/issues/${number}`, { headers: gtok })).json()).milestone?.title)
+    .toBe(msTitle)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.task-row', { hasText: title }).locator('.milestone')).toHaveText(msTitle)
+
+  // Instant updates: the account owns the repository, so Orbit adds the webhook itself.
+  await page.getByRole('button', { name: 'Edit list' }).click()
+  await page.getByTestId('git-instant').getByRole('button', { name: 'Turn on' }).click()
+  await expect(page.getByText('Instant updates on')).toBeVisible()
+  await expect(page.getByTestId('git-instant')).toContainText('waiting for the first change')
+  const hooks = (await (await page.request.get(`${GIT_URL}/api/v1/repos/${owner}/${GIT_REPO}/hooks`, { headers: gtok })).json()) as { id: number; config: { url: string } }[]
+  const ours = hooks.filter((h) => h.config.url.includes('/api/v1/git/hook/'))
+  expect(ours.length).toBe(1)
+  await page.getByTestId('git-instant').getByRole('button', { name: 'Turn off' }).click()
+  await expect(page.getByTestId('git-instant')).toContainText('Off')
+  const after = (await (await page.request.get(`${GIT_URL}/api/v1/repos/${owner}/${GIT_REPO}/hooks`, { headers: gtok })).json()) as { id: number }[]
+  expect(after.some((h) => h.id === ours[0].id)).toBeFalsy()
+  await page.keyboard.press('Escape')
+
   // Someone without a git account can't change it (nothing goes as the admin).
   const H = async (u: string, p: string) => ({ Authorization: `Bearer ${(await (await page.request.post('/api/v1/auth/login', { data: { username: u, password: p } })).json()).access_token}` })
   const admin = await H(ADMIN_USER, NEW_PASSWORD)

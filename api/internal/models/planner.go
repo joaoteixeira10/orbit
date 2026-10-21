@@ -139,6 +139,10 @@ type Task struct {
 	GitSyncedAt *time.Time `json:"-"`
 	GitDirty    bool       `gorm:"not null;default:false" json:"git_dirty,omitempty"` // a change didn't reach git yet (retried by the sync)
 	GitDirtyBy  string     `gorm:"size:36" json:"-"`                                  // whose change it was (retried as them)
+	// The issue's milestone (a linked list's task): its title, and how the
+	// server names it (Gitea: its id; GitHub: its number). 0: none.
+	GitMilestone   string `gorm:"size:255" json:"git_milestone,omitempty"`
+	GitMilestoneID int64  `gorm:"not null;default:0" json:"git_milestone_id,omitempty"`
 }
 
 // ---- Quick notes ------------------------------------------------------------
@@ -345,10 +349,16 @@ type GitLink struct {
 	// A bot account (its token, sealed) for members without their own
 	// account on the server: their changes go to git as the bot, never as
 	// whoever linked the list. Without one, such members can only read.
-	BotTokenSealed []byte     `json:"-"`
-	BotLogin       string     `gorm:"size:255" json:"bot_login,omitempty"`
-	SyncedAt       *time.Time `json:"synced_at,omitempty"`
-	LastError      string     `gorm:"size:500" json:"last_error,omitempty"`
+	BotTokenSealed []byte `json:"-"`
+	BotLogin       string `gorm:"size:255" json:"bot_login,omitempty"`
+	// Instant updates: a webhook on the repository tells Orbit an issue
+	// changed. HookSecretSealed signs its posts (HMAC-SHA256); HookID is the
+	// hook Orbit made there (0: added by hand); HookAt the last post.
+	HookSecretSealed []byte     `json:"-"`
+	HookID           int64      `gorm:"not null;default:0" json:"-"`
+	HookAt           *time.Time `json:"hook_at,omitempty"`
+	SyncedAt         *time.Time `json:"synced_at,omitempty"`
+	LastError        string     `gorm:"size:500" json:"last_error,omitempty"`
 }
 
 // ---- Uploads ---------------------------------------------------------------------

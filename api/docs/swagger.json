@@ -1268,6 +1268,31 @@
                 }
             }
         },
+        "/git/hook/{link}": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "A git server's webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The list's link id",
+                        "name": "link",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    }
+                }
+            }
+        },
         "/git/oauth-apps": {
             "get": {
                 "security": [
@@ -1748,6 +1773,100 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.listResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/lists/{id}/git/hook": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Turn on instant updates (a webhook)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "List id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gitsync.HookSetup"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Turn off instant updates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "List id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/lists/{id}/git/milestones": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "A linked list's milestones",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "List id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/gitsync.MilestoneChoice"
+                            }
                         }
                     }
                 }
@@ -7636,8 +7755,15 @@
                     "description": "BotLogin: the bot account members without their own account act as\n(\"\" = they can only read). Write: how the caller's changes reach git —\nown (their account), bot, or none (read only).",
                     "type": "string"
                 },
+                "hook_at": {
+                    "type": "string"
+                },
                 "host": {
                     "type": "string"
+                },
+                "instant": {
+                    "description": "Instant: a webhook tells Orbit of changes (HookAt: its last post).",
+                    "type": "boolean"
                 },
                 "last_error": {
                     "type": "string"
@@ -8906,6 +9032,14 @@
                     "description": "HH:MM, \"\" clears",
                     "type": "string"
                 },
+                "git_milestone": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "git_milestone_id": {
+                    "description": "A linked list's task: its issue's milestone (a ref from\nGET /lists/{id}/git/milestones; 0 = none) and its title.",
+                    "type": "integer"
+                },
                 "kind": {
                     "description": "\"task\" clears",
                     "type": "string",
@@ -8999,6 +9133,13 @@
                 "git_host": {
                     "description": "The git issue (or pull request) this task is, when it is one: a task\nof a git-linked list, or a task linked by hand. GitIssueID is the\nserver's global id; GitRepo is \"owner/repo\" on GitHost (a base URL).",
                     "type": "string"
+                },
+                "git_milestone": {
+                    "description": "The issue's milestone (a linked list's task): its title, and how the\nserver names it (Gitea: its id; GitHub: its number). 0: none.",
+                    "type": "string"
+                },
+                "git_milestone_id": {
+                    "type": "integer"
                 },
                 "git_number": {
                     "type": "integer"
@@ -9540,6 +9681,20 @@
                 }
             }
         },
+        "gitsync.HookSetup": {
+            "type": "object",
+            "properties": {
+                "auto": {
+                    "type": "boolean"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "gitsync.Label": {
             "type": "object",
             "properties": {
@@ -9550,6 +9705,20 @@
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "gitsync.MilestoneChoice": {
+            "type": "object",
+            "properties": {
+                "due_on": {
+                    "type": "string"
+                },
+                "ref": {
+                    "type": "integer"
+                },
+                "title": {
                     "type": "string"
                 }
             }

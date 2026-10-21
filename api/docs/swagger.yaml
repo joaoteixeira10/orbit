@@ -623,8 +623,14 @@ definitions:
           ("" = they can only read). Write: how the caller's changes reach git —
           own (their account), bot, or none (read only).
         type: string
+      hook_at:
+        type: string
       host:
         type: string
+      instant:
+        description: 'Instant: a webhook tells Orbit of changes (HookAt: its last
+          post).'
+        type: boolean
       last_error:
         type: string
       linked_by:
@@ -1496,6 +1502,14 @@ definitions:
       due_time:
         description: HH:MM, "" clears
         type: string
+      git_milestone:
+        maxLength: 255
+        type: string
+      git_milestone_id:
+        description: |-
+          A linked list's task: its issue's milestone (a ref from
+          GET /lists/{id}/git/milestones; 0 = none) and its title.
+        type: integer
       kind:
         description: '"task" clears'
         enum:
@@ -1568,6 +1582,13 @@ definitions:
           of a git-linked list, or a task linked by hand. GitIssueID is the
           server's global id; GitRepo is "owner/repo" on GitHost (a base URL).
         type: string
+      git_milestone:
+        description: |-
+          The issue's milestone (a linked list's task): its title, and how the
+          server names it (Gitea: its id; GitHub: its number). 0: none.
+        type: string
+      git_milestone_id:
+        type: integer
       git_number:
         type: integer
       git_pull:
@@ -1946,6 +1967,15 @@ definitions:
       url:
         type: string
     type: object
+  gitsync.HookSetup:
+    properties:
+      auto:
+        type: boolean
+      secret:
+        type: string
+      url:
+        type: string
+    type: object
   gitsync.Label:
     properties:
       color:
@@ -1953,6 +1983,15 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+    type: object
+  gitsync.MilestoneChoice:
+    properties:
+      due_on:
+        type: string
+      ref:
+        type: integer
+      title:
         type: string
     type: object
   gitsync.OAuthApp:
@@ -3331,6 +3370,22 @@ paths:
       summary: Update feature flags
       tags:
       - owner
+  /git/hook/{link}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The list's link id
+        in: path
+        name: link
+        required: true
+        type: string
+      responses:
+        "202":
+          description: Accepted
+      summary: A git server's webhook
+      tags:
+      - git
   /git/oauth-apps:
     get:
       produces:
@@ -3630,6 +3685,63 @@ paths:
       security:
       - BearerAuth: []
       summary: The bot account of a linked list
+      tags:
+      - git
+  /lists/{id}/git/hook:
+    delete:
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Turn off instant updates
+      tags:
+      - git
+    post:
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gitsync.HookSetup'
+      security:
+      - BearerAuth: []
+      summary: Turn on instant updates (a webhook)
+      tags:
+      - git
+  /lists/{id}/git/milestones:
+    get:
+      parameters:
+      - description: List id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/gitsync.MilestoneChoice'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A linked list's milestones
       tags:
       - git
   /lists/{id}/git/sync:

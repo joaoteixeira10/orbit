@@ -490,6 +490,19 @@ a change (the server is down, the token expired), the change is kept, you're
 told, and it is sent again by the next sync. **Stop syncing** in **Edit
 list** keeps the tasks.
 
+**Instant updates.** Changes made on git come within three minutes; with
+**Edit list → Instant updates → Turn on** they come at once: the repository
+tells Orbit of every change to its issues (a webhook). If your account
+administers the repository, Orbit adds the webhook itself; otherwise it
+shows an **address** and a **secret** for its admin to add in the
+repository's *Settings → Webhooks* (content type JSON; the *Issues* and
+*Issue comment* events) — the secret is shown only then. The row says when
+the last change came. (Orbit must be reachable from the git server.)
+
+**Milestones.** A task of a linked list shows its issue's milestone on its
+row; in its details, **Milestone** picks one of the repository's open
+milestones (or none), and the issue follows.
+
 **Whose name is on git.** Everyone works as themselves: a change goes to
 git with **the account of the person who made it**. Nobody's change ever
 goes as someone else — not as whoever linked the list either. So a member

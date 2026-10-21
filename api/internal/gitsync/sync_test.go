@@ -3,6 +3,9 @@ package gitsync
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -39,11 +42,16 @@ type fakeGitea struct {
 	// whether a due date was sent (GitHub has none).
 	pr      *Issue
 	dueSent bool
+	// Milestones, and the webhooks made (hookDenied: the token may not).
+	milestones []Milestone
+	hooks      map[int64]map[string]any
+	hookDenied bool
 }
 
 func newFake() *fakeGitea {
-	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{},
-		labels: []Label{{ID: 1, Name: "Doing"}, {ID: 2, Name: "Review"}, {ID: 3, Name: "bug"}}}
+	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{}, hooks: map[int64]map[string]any{},
+		milestones: []Milestone{{ID: 501, Number: 1, Title: "v1.0"}, {ID: 502, Number: 2, Title: "v2.0"}},
+		labels:     []Label{{ID: 1, Name: "Doing"}, {ID: 2, Name: "Review"}, {ID: 3, Name: "bug"}}}
 }
 
 func (f *fakeGitea) tick() time.Time {
@@ -220,8 +228,41 @@ func (f *fakeGitea) handler() http.Handler {
 					is.Assignees = append(is.Assignees, User{Login: a})
 				}
 			}
+			if in.Milestone != nil {
+				is.Milestone = nil
+				for i := range f.milestones {
+					if f.milestones[i].ID == *in.Milestone {
+						m := f.milestones[i]
+						is.Milestone = &m
+					}
+				}
+			}
 		})
 		writeJSON(w, f.get(num(r)))
+	}))
+	mux.HandleFunc("GET /api/v1/repos/o/r/milestones", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, f.milestones)
+	})
+	mux.HandleFunc("POST /api/v1/repos/o/r/hooks", write(func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		if f.hookDenied {
+			http.Error(w, `{"message":"must be repo admin"}`, http.StatusForbidden)
+			return
+		}
+		var in map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		id := int64(76 + len(f.hooks) + 1)
+		f.hooks[id] = in
+		w.WriteHeader(http.StatusCreated)
+		writeJSON(w, map[string]any{"id": id})
+	}))
+	mux.HandleFunc("DELETE /api/v1/repos/o/r/hooks/{id}", write(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		f.mu.Lock()
+		delete(f.hooks, id)
+		f.mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	// OAuth2: code c1 (with a PKCE verifier) → a token that expires at once;
 	// its refresh token r1 → one that lasts.
@@ -794,10 +835,30 @@ func (f *fakeGitea) githubHandler() http.Handler {
 				f.mu.Unlock()
 			}
 			body, _ = json.Marshal(in)
-		case r.Method == "PATCH" && strings.Contains(string(body), "due_date"):
-			f.mu.Lock()
-			f.dueSent = true
-			f.mu.Unlock()
+		case r.Method == "PATCH":
+			var in map[string]any
+			_ = json.Unmarshal(body, &in)
+			if _, ok := in["due_date"]; ok {
+				f.mu.Lock()
+				f.dueSent = true
+				f.mu.Unlock()
+			}
+			if v, ok := in["milestone"]; ok {
+				// GitHub: a number, or null to take it off; Gitea's fake: an id.
+				id := int64(0)
+				if n, ok := v.(float64); ok {
+					for _, m := range f.milestones {
+						if m.Number == int64(n) {
+							id = m.ID
+						}
+					}
+				} else if v != nil {
+					http.Error(w, `{"message":"milestone is a number"}`, http.StatusUnprocessableEntity)
+					return
+				}
+				in["milestone"] = id
+			}
+			body, _ = json.Marshal(in)
 		}
 		inner.ServeHTTP(w, forward(r, path, body))
 	})
@@ -879,6 +940,23 @@ func TestGitHub(t *testing.T) {
 		t.Fatalf("created: %+v (due sent: %v)", is, f.fake.dueSent)
 	}
 
+	// Milestones by number on GitHub; null takes one off.
+	task = f.task(t)
+	task.GitMilestoneID = 2
+	if err := f.e.Push(context.Background(), f.ana, &task, Change{Milestone: true}); err != nil {
+		t.Fatal(err)
+	}
+	if task = f.task(t); f.fake.get(1).Milestone == nil || task.GitMilestone != "v2.0" || task.GitMilestoneID != 2 {
+		t.Fatalf("milestone: %+v %q %d", f.fake.get(1).Milestone, task.GitMilestone, task.GitMilestoneID)
+	}
+	task.GitMilestoneID = 0
+	if err := f.e.Push(context.Background(), f.ana, &task, Change{Milestone: true}); err != nil {
+		t.Fatal(err)
+	}
+	if f.fake.get(1).Milestone != nil {
+		t.Fatal("milestone not taken off")
+	}
+
 	// Comments go both ways as on Gitea.
 	f.fake.comment(1, "ana", "On it")
 	f.sync(t)
@@ -905,5 +983,124 @@ func TestGitHub(t *testing.T) {
 	}
 	if u := AuthorizeURL(OAuthApp{BaseURL: "https://github.com", ClientID: "x"}, "https://orbit/cb", "s", "v"); !strings.Contains(u, "scope=repo+read%3Auser") {
 		t.Errorf("authorize: %s", u)
+	}
+}
+
+// TestMilestones: an issue's milestone comes in, a task's goes out (and off).
+func TestMilestones(t *testing.T) {
+	f := setup(t)
+	f.fake.add("Ship it")
+	f.fake.edit(1, func(is *Issue) { m := f.fake.milestones[0]; is.Milestone = &m })
+	f.sync(t)
+	task := f.task(t)
+	if task.GitMilestone != "v1.0" || task.GitMilestoneID != 501 {
+		t.Fatalf("pulled: %q %d", task.GitMilestone, task.GitMilestoneID)
+	}
+	ms, err := f.e.Milestones(context.Background(), f.link)
+	if err != nil || len(ms) != 2 || ms[1].Ref != 502 || ms[1].Title != "v2.0" {
+		t.Fatalf("milestones: %+v %v", ms, err)
+	}
+	task.GitMilestoneID = 502
+	if err := f.e.Push(context.Background(), f.ana, &task, Change{Milestone: true}); err != nil {
+		t.Fatal(err)
+	}
+	if m := f.fake.get(1).Milestone; m == nil || m.Title != "v2.0" {
+		t.Fatalf("pushed: %+v", m)
+	}
+	if task = f.task(t); task.GitMilestone != "v2.0" {
+		t.Fatalf("the task's title of it: %q", task.GitMilestone)
+	}
+	task.GitMilestoneID = 0
+	if err := f.e.Push(context.Background(), f.ana, &task, Change{Milestone: true}); err != nil {
+		t.Fatal(err)
+	}
+	if m := f.fake.get(1).Milestone; m != nil {
+		t.Fatalf("not taken off: %+v", m)
+	}
+}
+
+func sign(secret string, body []byte) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(body)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// TestHooks: Orbit makes the webhook when the account may (else it hands
+// over the address and secret), only posts signed with the secret count,
+// and a post syncs the list at once.
+func TestHooks(t *testing.T) {
+	f := setup(t)
+	f.e.kickDelay = 0
+	target := "https://orbit.example.org/api/v1/git/hook/" + f.link.ID
+	setup, err := f.e.EnableHook(context.Background(), f.ana, &f.link, target)
+	if err != nil || !setup.Auto || setup.Secret != "" || f.link.HookID == 0 {
+		t.Fatalf("auto: %+v %v (hook %d)", setup, err, f.link.HookID)
+	}
+	f.fake.mu.Lock()
+	cfg := f.fake.hooks[f.link.HookID]["config"].(map[string]any)
+	f.fake.mu.Unlock()
+	secret := cfg["secret"].(string)
+	if cfg["url"] != target || len(secret) < 32 {
+		t.Fatalf("hook config: %+v", cfg)
+	}
+	body := []byte(`{"action":"edited"}`)
+	h := http.Header{}
+	h.Set("X-Gitea-Signature", sign(secret, body))
+	if err := f.e.VerifyHook(f.link, body, h); err != nil {
+		t.Fatalf("Gitea signature: %v", err)
+	}
+	h = http.Header{}
+	h.Set("X-Hub-Signature-256", "sha256="+sign(secret, body))
+	if err := f.e.VerifyHook(f.link, body, h); err != nil {
+		t.Fatalf("GitHub signature: %v", err)
+	}
+	h.Set("X-Hub-Signature-256", "sha256="+sign("guess", body))
+	if err := f.e.VerifyHook(f.link, body, h); !errors.Is(err, ErrHookSignature) {
+		t.Fatalf("a wrong signature: %v", err)
+	}
+	if err := f.e.VerifyHook(f.link, body, http.Header{}); err == nil {
+		t.Fatal("an unsigned post passed")
+	}
+
+	// A post syncs at once: the new issue is there without waiting for the poll.
+	f.fake.add("Hot fix")
+	f.e.Kick(f.link.ID)
+	f.e.Kick(f.link.ID)
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		var n int64
+		f.db.Model(&models.Task{}).Where("list_id = ? AND title = ?", f.link.ListID, "Hot fix").Count(&n)
+		if n == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the kick didn't sync")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Not allowed to make hooks: the address and secret to add by hand; the
+	// old hook is gone.
+	old := f.link.HookID
+	f.fake.hookDenied = true
+	setup, err = f.e.EnableHook(context.Background(), f.ana, &f.link, target)
+	if err != nil || setup.Auto || setup.Secret == "" || setup.URL != target || f.link.HookID != 0 {
+		t.Fatalf("by hand: %+v %v", setup, err)
+	}
+	f.fake.mu.Lock()
+	_, still := f.fake.hooks[old]
+	f.fake.mu.Unlock()
+	if still {
+		t.Error("the old hook stayed")
+	}
+	body = []byte(`{}`)
+	h = http.Header{}
+	h.Set("X-Forgejo-Signature", sign(setup.Secret, body))
+	if err := f.e.VerifyHook(f.link, body, h); err != nil {
+		t.Fatalf("the shown secret: %v", err)
+	}
+	f.e.DisableHook(context.Background(), f.ana, &f.link)
+	if err := f.e.VerifyHook(f.link, body, h); err == nil {
+		t.Fatal("still verifying after turning off")
 	}
 }

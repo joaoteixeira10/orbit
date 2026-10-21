@@ -146,6 +146,8 @@ func New(d Deps) *gin.Engine {
 		v1.GET("/invites/:token", authLimit, h.previewInvite)
 		// "Sign in with Gitea" comes back here (the state names who started it).
 		v1.GET("/git/oauth/callback", authLimit, h.gitOAuthCallback)
+		// A repository's webhook (signed with the list's secret).
+		v1.POST("/git/hook/:link", feedLimit, h.gitHook)
 		v1.POST("/invites/:token/signup", authLimit, h.signupInvite)
 		// Passwordless / second-factor passkey assertion (pre-auth).
 		v1.POST("/auth/webauthn/login/begin", authLimit, h.webauthnLoginBegin)
@@ -344,6 +346,9 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/lists/git", h.createGitList)
 			authed.DELETE("/lists/:id/git", h.unlinkGitList)
 			authed.POST("/lists/:id/git/sync", h.syncGitList)
+			authed.POST("/lists/:id/git/hook", h.gitHookOn)
+			authed.DELETE("/lists/:id/git/hook", h.gitHookOff)
+			authed.GET("/lists/:id/git/milestones", h.gitMilestones)
 			authed.PUT("/lists/:id/git/bot", notImpersonating(), h.setGitBot)
 			authed.POST("/me/git/oauth/start", notImpersonating(), h.startGitOAuth)
 			authed.GET("/git/oauth-apps", h.auth.RequireOwner(), h.getGitOAuthApps)

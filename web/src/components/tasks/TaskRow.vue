@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Repeat, Flag, ListTree, MessageSquare } from 'lucide-vue-next'
+import { Check, Repeat, Flag, ListTree, MessageSquare, Milestone } from 'lucide-vue-next'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'
@@ -63,6 +63,7 @@ const prio = computed(() => '!'.repeat(props.task.priority))
       </div>
       <div v-if="!compact || due || task.git_number" class="meta">
         <GitBadge :task="task" />
+        <span v-if="task.git_milestone" class="milestone" :title="t('git.task.milestone')"><Milestone class="h-3 w-3" />{{ task.git_milestone }}</span>
         <span v-if="task.kind === 'exam'" class="exam">{{ t('school.exam') }}<template v-if="task.due && !task.done"> · {{ countdown(task.due) }}</template></span>
         <span v-if="due" class="due-meta" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
@@ -141,6 +142,16 @@ const prio = computed(() => '!'.repeat(props.task.priority))
   .has-chips .prio-mark {
     display: none;
   }
+}
+.milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
 }
 .exam {
   padding: 0 6px;

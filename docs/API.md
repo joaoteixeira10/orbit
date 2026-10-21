@@ -93,6 +93,14 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Sync a workspace's calendar with a CalDAV calendar** (owners):
+`POST /workspaces/{ws}/caldav/calendars` with `{url, username, password}`
+lists the account's calendars; `PUT /workspaces/{ws}/caldav` with the same
+and `{calendar_url, calendar_name}` links one and runs the first sync;
+`GET` shows the link (`synced_at`, `event_count`, `last_error`), `POST
+…/caldav/sync` syncs now (editors), `DELETE` stops it. Calendar changes made
+through the API sync on their own.
+
 **Move a workspace** to another Orbit: `GET /workspaces/{ws}/transfer`
 (owners) downloads all of it as a zip (`workspace.json`, format
 `orbit-workspace` v1, and `files/<id>`); `POST /workspaces/import` (multipart

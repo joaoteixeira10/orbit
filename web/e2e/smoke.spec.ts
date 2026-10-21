@@ -614,6 +614,60 @@ test('a workspace exported to a file comes back as a new one with its tasks', as
   await expect(page.getByText('Pack the boxes')).toBeVisible()
 })
 
+// A CalDAV server (Radicale, any password) the instance can reach; skipped without.
+const CALDAV_URL = process.env.E2E_CALDAV_URL
+
+test('CalDAV: a workspace calendar syncs both ways with a calendar on a CalDAV server', async ({ page, request }) => {
+  test.skip(!CALDAV_URL, 'set E2E_CALDAV_URL to a CalDAV server')
+  const dav = { Authorization: 'Basic ' + Buffer.from('ana:any').toString('base64') }
+  const cal = `${CALDAV_URL}/ana/orbit-${Date.now()}/`
+  const mk = await request.fetch(cal, {
+    method: 'MKCALENDAR',
+    headers: { ...dav, 'Content-Type': 'application/xml' },
+    data: '<?xml version="1.0"?><c:mkcalendar xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:set><d:prop><d:displayname>Team</d:displayname></d:prop></d:set></c:mkcalendar>',
+  })
+  expect(mk.status()).toBe(201)
+  const ics = (uid: string, title: string, start: string) =>
+    `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//e2e//EN\r\nBEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:20261001T080000Z\r\nDTSTART:${start}\r\nDTEND:${start.slice(0, 9)}235900Z\r\nSUMMARY:${title}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`
+  expect((await request.put(cal + 'dentist.ics', { headers: { ...dav, 'Content-Type': 'text/calendar' }, data: ics('dentist-1', 'Dentist', '20261105T090000Z') })).status()).toBe(201)
+
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Synced', kind: 'work' } })).json()
+  const ev = await (await request.post(`/api/v1/workspaces/${ws.id}/events`, { headers: H, data: { title: 'Standup', starts_at: '2026-11-06T10:00:00Z', ends_at: '2026-11-06T10:15:00Z', tz: 'Europe/Lisbon' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.goto(`/w/${ws.id}/calendar?date=2026-11-05`)
+  await page.getByRole('button', { name: 'Calendars', exact: true }).click()
+  await page.getByTestId('caldav-start').click()
+  await page.getByLabel('Server').fill(CALDAV_URL!)
+  await page.getByLabel('Username').fill('ana')
+  await page.getByLabel('App password').fill('any')
+  await page.getByRole('button', { name: 'Find calendars' }).click()
+  await page.getByRole('radio', { name: 'Team' }).click()
+  await page.getByRole('button', { name: 'Sync', exact: true }).click()
+  await expect(page.getByTestId('caldav')).toContainText('2 events')
+
+  // The server's event is in Orbit; Orbit's is on the server, in its zone.
+  const cal1 = await (await request.get(`/api/v1/workspaces/${ws.id}/calendar?from=2026-11-01T00:00:00Z&to=2026-11-30T00:00:00Z`, { headers: H })).json()
+  expect(cal1.events.map((e: { title: string }) => e.title).sort()).toEqual(['Dentist', 'Standup'])
+  const there = await (await request.get(cal, { headers: dav })).text()
+  expect(there).toContain('SUMMARY:Standup')
+  expect(there).toContain('TZID=Europe/Lisbon')
+
+  // Renamed in Orbit: the server follows within seconds.
+  await request.put(`/api/v1/events/${ev.id}`, { headers: H, data: { title: 'Daily standup' } })
+  await expect.poll(async () => (await (await request.get(cal, { headers: dav })).text()).includes('SUMMARY:Daily standup'), { timeout: 15000 }).toBe(true)
+
+  // Moved on the server: Sync now brings it.
+  await request.put(cal + 'dentist.ics', { headers: { ...dav, 'Content-Type': 'text/calendar' }, data: ics('dentist-1', 'Dentist (moved)', '20261112T090000Z') })
+  await page.getByRole('button', { name: 'Sync now' }).click()
+  await expect.poll(async () => {
+    const c = await (await request.get(`/api/v1/workspaces/${ws.id}/calendar?from=2026-11-01T00:00:00Z&to=2026-11-30T00:00:00Z`, { headers: H })).json()
+    return c.events.map((e: { title: string }) => e.title).sort().join(',')
+  }).toBe('Daily standup,Dentist (moved)')
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

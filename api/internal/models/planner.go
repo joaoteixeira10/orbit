@@ -227,6 +227,36 @@ type ExternalEvent struct {
 	AllDay         bool      `gorm:"not null;default:false" json:"all_day"`
 }
 
+// CalDAVLink keeps a workspace's calendar in step with one calendar on a
+// CalDAV server (iCloud, Nextcloud, Fastmail…), both ways. The password —
+// an app-specific one, for iCloud — is sealed.
+type CalDAVLink struct {
+	Base
+	WorkspaceID    string     `gorm:"size:36;not null;uniqueIndex" json:"workspace_id"`
+	CalendarURL    string     `gorm:"size:1000;not null" json:"calendar_url"`
+	CalendarName   string     `gorm:"size:200" json:"calendar_name"`
+	Host           string     `gorm:"size:255" json:"host"` // shown
+	Username       string     `gorm:"size:255" json:"username"`
+	PasswordSealed []byte     `json:"-"`
+	CreatedBy      string     `gorm:"size:36" json:"created_by"`
+	SyncedAt       *time.Time `json:"synced_at,omitempty"`
+	LastError      string     `gorm:"size:500" json:"last_error,omitempty"`
+	EventCount     int        `gorm:"not null;default:0" json:"event_count"`
+}
+
+// CalDAVItem pairs an event with its object on the server: its address, the
+// version last seen (ETag), and the event's UpdatedAt when the two last
+// agreed (Stamp) — later means it changed in Orbit since. An object that
+// isn't an event (a to-do) has no EventID: it's only remembered, to skip.
+type CalDAVItem struct {
+	Base
+	LinkID  string    `gorm:"size:36;not null;index"`
+	EventID string    `gorm:"size:36;index"`
+	URL     string    `gorm:"size:1000;not null"`
+	ETag    string    `gorm:"size:200"`
+	Stamp   time.Time `gorm:"not null"`
+}
+
 // CalendarFeed is a private ICS address a user adds to another calendar app
 // (Apple Calendar, Google, Outlook) to see their Orbit events and due tasks.
 // Only the sha256 of the token is stored, like API tokens.

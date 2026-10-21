@@ -111,6 +111,12 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Two-way calendar sync (CalDAV)**: a workspace's calendar and a calendar
+  in iCloud, Nextcloud, Fastmail or any CalDAV server stay in step — new,
+  changed and deleted events both ways, right away from Orbit and every five
+  minutes from the server; the later change wins; what Orbit doesn't keep
+  (alerts, invitees, moved occurrences) is left as it was on the server.
+  Owners set it up in Calendars; the `caldav_sync` flag (on) turns it off.
 - **Move a workspace to another Orbit**: Workspace settings → Export
   workspace (a `.orbit.zip`), then New workspace → Import a workspace. New
   ids, links and files follow; members found by username or email join with

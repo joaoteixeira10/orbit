@@ -15,6 +15,12 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    # A CalDAV server for the two-way calendar test (any password). Reached
+    # by its service name — a private address the guarded dialer allows
+    # (localhost it refuses).
+    services:
+      radicale:
+        image: tomsquest/docker-radicale:latest
     env:
       GOFLAGS: -buildvcs=false
     steps:
@@ -59,6 +65,7 @@ jobs:
           AUTH_RATE_BURST: "50"
           AUTH_RATE_PER_MINUTE: "600"
           E2E_BASE_URL: http://localhost:8080
+          E2E_CALDAV_URL: http://radicale:5232
         run: |
           /tmp/orbit & SRV=$!
           trap 'kill "$SRV" 2>/dev/null || true' EXIT

@@ -496,6 +496,23 @@ export const pushApi = {
   test: () => api<{ devices: number }>('/me/push/test', { method: 'POST' }),
 }
 
+export interface CalDAVLink {
+  id: string
+  workspace_id: string
+  calendar_url: string
+  calendar_name: string
+  host: string
+  username: string
+  synced_at?: string | null
+  last_error?: string
+  event_count: number
+}
+export interface CalDAVCalendar {
+  url: string
+  name: string
+  color: string
+}
+
 export const calendarApi = {
   holidayCountries: () => api<{ code: string; name: string }[]>('/holidays/countries'),
   workspace: (ws: string, p: { from: string; to: string; from_date?: string; to_date?: string }) => api<CalendarData>(`/workspaces/${ws}/calendar?${qs(p)}`),
@@ -511,6 +528,14 @@ export const calendarApi = {
     api<Subscription>(`/subscriptions/${id}`, { method: 'PUT', body: j(b) }),
   refreshSubscription: (id: string) => api<Subscription>(`/subscriptions/${id}/refresh`, { method: 'POST' }),
   unsubscribe: (id: string) => api<void>(`/subscriptions/${id}`, { method: 'DELETE' }),
+  // Two-way sync with a calendar on a CalDAV server (iCloud, Nextcloud…).
+  caldav: (ws: string) => api<{ link: CalDAVLink | null }>(`/workspaces/${ws}/caldav`),
+  caldavCalendars: (ws: string, b: { url: string; username: string; password: string }) =>
+    api<CalDAVCalendar[]>(`/workspaces/${ws}/caldav/calendars`, { method: 'POST', body: j(b) }),
+  setCalDAV: (ws: string, b: { url: string; username: string; password: string; calendar_url: string; calendar_name: string }) =>
+    api<{ link: CalDAVLink }>(`/workspaces/${ws}/caldav`, { method: 'PUT', body: j(b) }),
+  syncCalDAV: (ws: string) => api<{ link: CalDAVLink }>(`/workspaces/${ws}/caldav/sync`, { method: 'POST' }),
+  unlinkCalDAV: (ws: string) => api<void>(`/workspaces/${ws}/caldav`, { method: 'DELETE' }),
   feeds: () => api<Feed[]>('/me/feeds'),
   createFeed: (b: { name?: string; workspace_ids?: string[]; include_tasks?: boolean }) =>
     api<{ feed: Feed; url: string; webcal: string }>('/me/feeds', { method: 'POST', body: j(b) }),

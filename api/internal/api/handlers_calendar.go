@@ -346,6 +346,7 @@ func (h *Handlers) createEvent(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "events")
+	h.caldavKick(ws.ID)
 	h.notifyActivity(c, ws, "event_added", ev.Title, fmt.Sprintf("/w/%s/calendar?date=%s", ws.ID, ev.StartsAt.UTC().Format(planner.DateLayout)))
 	c.JSON(http.StatusCreated, toEventResponse(ev))
 }
@@ -400,6 +401,7 @@ func (h *Handlers) updateEvent(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ev.WorkspaceID, "events")
+	h.caldavKick(ev.WorkspaceID)
 	c.JSON(http.StatusOK, toEventResponse(ev))
 }
 
@@ -433,6 +435,7 @@ func (h *Handlers) deleteEvent(c *gin.Context) {
 		h.db.Delete(&ev)
 	}
 	h.publishWS(c, ev.WorkspaceID, "events")
+	h.caldavKick(ev.WorkspaceID)
 	c.Status(http.StatusNoContent)
 }
 

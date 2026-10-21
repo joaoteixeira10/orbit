@@ -38,6 +38,9 @@ const (
 	// PersonalChannels lets each person add their own notification channels
 	// (a Discord webhook, an ntfy topic…), which get the full text.
 	PersonalChannels = "personal_channels"
+	// CalDAVSync lets workspace owners keep the workspace's calendar in step
+	// with a calendar on a CalDAV server (iCloud, Nextcloud…), both ways.
+	CalDAVSync = "caldav_sync"
 )
 
 const settingKey = "features"
@@ -55,6 +58,7 @@ var Defaults = map[string]bool{
 	GitIntegration:        true,
 	WorkspaceInvites:      true,
 	PersonalChannels:      true,
+	CalDAVSync:            true,
 }
 
 // All returns every known flag with its effective value (stored value, else

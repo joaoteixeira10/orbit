@@ -137,6 +137,50 @@ definitions:
         description: show the sidebar/login logo mark
         type: boolean
     type: object
+  api.caldavAccountRequest:
+    properties:
+      password:
+        maxLength: 500
+        type: string
+      url:
+        maxLength: 1000
+        type: string
+      username:
+        maxLength: 255
+        type: string
+    required:
+    - password
+    - url
+    - username
+    type: object
+  api.caldavLinkRequest:
+    properties:
+      calendar_name:
+        maxLength: 200
+        type: string
+      calendar_url:
+        maxLength: 1000
+        type: string
+      password:
+        maxLength: 500
+        type: string
+      url:
+        maxLength: 1000
+        type: string
+      username:
+        maxLength: 255
+        type: string
+    required:
+    - calendar_url
+    - password
+    - url
+    - username
+    type: object
+  api.caldavLinkResponse:
+    properties:
+      link:
+        $ref: '#/definitions/models.CalDAVLink'
+    type: object
   api.calendarResponse:
     properties:
       events:
@@ -1893,6 +1937,15 @@ definitions:
       s3_region:
         type: string
     type: object
+  caldav.Calendar:
+    properties:
+      color:
+        type: string
+      name:
+        type: string
+      url:
+        type: string
+    type: object
   gitsync.Label:
     properties:
       color:
@@ -2006,6 +2059,34 @@ definitions:
         type: string
       username:
         description: Username of the token's owner (admin list only).
+        type: string
+    type: object
+  models.CalDAVLink:
+    properties:
+      calendar_name:
+        type: string
+      calendar_url:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      event_count:
+        type: integer
+      host:
+        description: shown
+        type: string
+      id:
+        type: string
+      last_error:
+        type: string
+      synced_at:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+      workspace_id:
         type: string
     type: object
   models.CalendarSubscription:
@@ -5768,6 +5849,118 @@ paths:
       summary: A workspace's activity
       tags:
       - workspaces
+  /workspaces/{ws}/caldav:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Stop syncing with the CalDAV calendar
+      tags:
+      - calendar
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.caldavLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: A workspace's CalDAV sync
+      tags:
+      - calendar
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The account and the calendar picked
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.caldavLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.caldavLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: Sync a workspace's calendar with a CalDAV calendar
+      tags:
+      - calendar
+  /workspaces/{ws}/caldav/calendars:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Server, username, (app) password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.caldavAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/caldav.Calendar'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Find a CalDAV account's calendars
+      tags:
+      - calendar
+  /workspaces/{ws}/caldav/sync:
+    post:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.caldavLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: Sync with the CalDAV calendar now
+      tags:
+      - calendar
   /workspaces/{ws}/calendar:
     get:
       parameters:

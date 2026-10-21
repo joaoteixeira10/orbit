@@ -11,6 +11,7 @@ import (
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/audit"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/caldav"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
@@ -45,6 +46,7 @@ type Deps struct {
 	CalSync  *calsync.Syncer // nil: built here
 	Inbox    *inbox.Service  // nil: built here
 	Git      *gitsync.Engine // nil: built here
+	CalDAV   *caldav.Syncer  // nil: built here
 }
 
 // Handlers holds the wired dependencies and implements the route handlers.
@@ -66,17 +68,21 @@ type Handlers struct {
 	calsync   *calsync.Syncer
 	inbox     *inbox.Service
 	git       *gitsync.Engine
+	dav       *caldav.Syncer
 }
 
 // New builds the configured *gin.Engine.
 func New(d Deps) *gin.Engine {
 	gin.SetMode(d.Cfg.GinMode)
-	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git}
+	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV}
 	if h.calsync == nil {
 		h.calsync = calsync.New(d.DB, d.Sealer, d.Log)
 	}
 	if h.inbox == nil {
 		h.inbox = inbox.New(d.DB, d.Events, d.Notify, d.Sealer, d.Log, d.Cfg.PublicURL)
+	}
+	if h.dav == nil {
+		h.dav = caldav.New(d.DB, d.Sealer, d.Log).NotifyHub(d.Events)
 	}
 	if h.git == nil {
 		h.git = gitsync.New(d.DB, d.Sealer, d.Cfg.GitServers, d.Log)
@@ -262,6 +268,11 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/workspaces/:ws/members/:uid", h.setMemberRole)
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)
 			authed.GET("/workspaces/:ws/activity", h.workspaceActivity)
+			authed.GET("/workspaces/:ws/caldav", h.getCalDAV)
+			authed.PUT("/workspaces/:ws/caldav", h.setCalDAV)
+			authed.DELETE("/workspaces/:ws/caldav", h.deleteCalDAV)
+			authed.POST("/workspaces/:ws/caldav/calendars", h.caldavCalendars)
+			authed.POST("/workspaces/:ws/caldav/sync", h.syncCalDAV)
 			authed.GET("/holidays/countries", h.holidayCountries)
 			authed.GET("/workspaces/:ws/invites", h.listInvites)
 			authed.POST("/workspaces/:ws/invites", h.createInvite)

@@ -482,12 +482,16 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 	tx.Model(&models.CalendarSubscription{}).Where("workspace_id = ?", wsID).Pluck("id", &subs)
 	var pages []string
 	tx.Model(&models.Page{}).Where("workspace_id = ?", wsID).Pluck("id", &pages)
+	var davLinks []string
+	tx.Model(&models.CalDAVLink{}).Where("workspace_id = ?", wsID).Pluck("id", &davLinks)
 	steps := []func() error{
 		func() error {
 			return tx.Where("subscription_id IN ?", append(subs, "")).Delete(&models.ExternalEvent{}).Error
 		},
 		func() error { return tx.Where("page_id IN ?", append(pages, "")).Delete(&models.PageFavorite{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.CalendarSubscription{}).Error },
+		func() error { return tx.Where("link_id IN ?", append(davLinks, "")).Delete(&models.CalDAVItem{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.CalDAVLink{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Event{}).Error },
 		func() error { return uploads.Delete(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskComment{}).Error },

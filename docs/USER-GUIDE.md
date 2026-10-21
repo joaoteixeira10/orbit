@@ -618,6 +618,28 @@ Orbit stores the address encrypted and shows only its host. **Refresh now**
 fetches again; a failed refresh shows its error in red and keeps the last good
 events.
 
+**Sync both ways with iCloud, Nextcloud…** (owners; **Calendars** in a
+workspace's calendar → **Sync with iCloud, Nextcloud…**): the workspace's
+calendar and one calendar on a CalDAV server become one — add, change or
+delete an event on either side and it shows on the other (right away from
+Orbit, within five minutes from the other app; **Sync now** to not wait).
+
+1. **Server**: **iCloud** (`https://caldav.icloud.com`), **Fastmail**, or your
+   Nextcloud's address (`https://cloud.example.org/remote.php/dav`); any
+   CalDAV server works (Radicale, Baïkal, mailbox.org…).
+2. **Username** and an **app password** — iCloud needs an *app-specific
+   password* (account.apple.com → Sign-In and Security → App-Specific
+   Passwords); Nextcloud: *Settings → Security → App passwords*. Orbit keeps
+   it encrypted.
+3. **Find calendars**, pick one, **Sync**. The first sync brings both
+   together: that calendar's events come in, this workspace's go up.
+
+Edited in both places before a sync, the later change wins. What Orbit
+doesn't keep — another app's alerts, invitees, an occurrence moved on its own
+— stays on the server as it was. Classes of courses stay in Orbit only.
+**Stop syncing** leaves the events in both places. Google Calendar needs a
+sign-in Orbit doesn't do yet: subscribe to its secret address instead.
+
 **See Orbit in your phone's calendar**: Settings → [Calendar
 feeds](#calendar-feeds).
 

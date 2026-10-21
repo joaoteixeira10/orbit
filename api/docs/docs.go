@@ -5440,6 +5440,188 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/caldav": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "A workspace's CalDAV sync",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Sync a workspace's calendar with a CalDAV calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The account and the calendar picked",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Stop syncing with the CalDAV calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/caldav/calendars": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Find a CalDAV account's calendars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Server, username, (app) password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/caldav.Calendar"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/caldav/sync": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Sync with the CalDAV calendar now",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/calendar": {
             "get": {
                 "security": [
@@ -6771,6 +6953,67 @@ const docTemplate = `{
                 "show_logo": {
                     "description": "show the sidebar/login logo mark",
                     "type": "boolean"
+                }
+            }
+        },
+        "api.caldavAccountRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "url",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "api.caldavLinkRequest": {
+            "type": "object",
+            "required": [
+                "calendar_url",
+                "password",
+                "url",
+                "username"
+            ],
+            "properties": {
+                "calendar_name": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "calendar_url": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "api.caldavLinkResponse": {
+            "type": "object",
+            "properties": {
+                "link": {
+                    "$ref": "#/definitions/models.CalDAVLink"
                 }
             }
         },
@@ -9290,6 +9533,20 @@ const docTemplate = `{
                 }
             }
         },
+        "caldav.Calendar": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "gitsync.Label": {
             "type": "object",
             "properties": {
@@ -9460,6 +9717,48 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "Username of the token's owner (admin list only).",
+                    "type": "string"
+                }
+            }
+        },
+        "models.CalDAVLink": {
+            "type": "object",
+            "properties": {
+                "calendar_name": {
+                    "type": "string"
+                },
+                "calendar_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "event_count": {
+                    "type": "integer"
+                },
+                "host": {
+                    "description": "shown",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "synced_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "workspace_id": {
                     "type": "string"
                 }
             }

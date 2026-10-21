@@ -17,7 +17,8 @@ Orbit. Every setting named here is in [CONFIGURATION.md](CONFIGURATION.md).
    household plans. It must be visible only to the workspace's members.
 2. **Accounts** — passwords, second factors, sessions, API tokens.
 3. **Secrets entrusted to it** — the secret addresses of subscribed calendars
-   (a Google / iCloud address gives read access to that calendar), the SSO
+   (a Google / iCloud address gives read access to that calendar), the app
+   passwords of synced CalDAV calendars (sealed; never shown again), the SSO
    client secret, notification credentials.
 4. **The record of who did what** with accounts, roles, workspaces and their
    memberships, in a tamper-evident audit log.
@@ -286,7 +287,9 @@ user. Release mode refuses either secret under 32 characters.
 - **Recorded:** sign-ins and failures, lockouts, refresh-token reuse; user,
   role, token and settings changes; owner actions and backups; workspace
   **creation, archiving, deletion**, **members** added, removed and re-roled;
-  calendar **subscriptions** created; calendar **feeds** created and revoked.
+  calendar **subscriptions** created; **CalDAV syncs** set up and stopped;
+  calendar **feeds** created and revoked; workspaces **exported** and
+  **imported**.
   Each entry has the user, the real admin when impersonating, the client IP
   and the time.
 - **Not recorded:** edits to content (pages, tasks, events). There are too
@@ -368,6 +371,13 @@ user. Release mode refuses either secret under 32 characters.
   **8 MiB**; a **30 s** timeout. A failure is shown to the editors without the
   address. The scheduler refreshes each subscription at its interval (at least
   every 15 minutes, by default hourly).
+- **Synced CalDAV calendars** (owners set them up; the `caldav_sync` flag) are
+  reached through the guarded dialer too (LAN servers allowed — a home
+  Nextcloud is the point), redirects followed by hand (three at most, the
+  method kept, `http`/`https` only); answers are capped (32 MiB a listing,
+  1 MiB an object). Writes are conditional (`If-Match` / `If-None-Match`), so
+  a change made on the server meanwhile is never overwritten blindly. Errors
+  shown never carry the URL.
 - **Images from other sites** in pages are shown only after a click (or always,
   if the reader chooses so): the CSP allows `https:` images so that pages can
   show them, and a remote image would otherwise tell its site who reads a page

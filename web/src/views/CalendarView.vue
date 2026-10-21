@@ -47,7 +47,7 @@ const canEditWs = (w?: Workspace) => !!w && w.role !== 'viewer' && !w.archived_a
 const choices = computed(() => (wsId.value ? [] : wss.active.filter((w) => canEditWs(w) && w.modules.includes('calendar'))))
 const canCreate = computed(() => (wsId.value ? canEditWs(workspace.value) : choices.value.length > 0))
 const readOnly = computed(() => !!wsId.value && !!workspace.value && !canEditWs(workspace.value))
-const showSubs = computed(() => !!wsId.value && canEditWs(workspace.value) && auth.features.calendar_subscriptions !== false)
+const showSubs = computed(() => !!wsId.value && canEditWs(workspace.value) && (auth.features.calendar_subscriptions !== false || auth.features.caldav_sync !== false))
 function defaultWs(): string {
   if (wsId.value) return wsId.value
   let saved = ''
@@ -626,7 +626,16 @@ const views: CalView[] = ['day', 'week', 'month']
       @cancelled="(detailOpen = false), load()"
     />
     <TaskDetailSheet :open="!!taskOpen" :ws="taskOpen?.ws ?? ''" :task-id="taskOpen?.id ?? ''" @close="closeTask" />
-    <SubscriptionsSheet v-if="showSubs" :open="subsOpen" :ws="wsId" @close="subsOpen = false" @changed="onSubsChanged" />
+    <SubscriptionsSheet
+      v-if="showSubs"
+      :open="subsOpen"
+      :ws="wsId"
+      :owner="workspace?.role === 'owner'"
+      :subscriptions="auth.features.calendar_subscriptions !== false"
+      :caldav="auth.features.caldav_sync !== false"
+      @close="subsOpen = false"
+      @changed="onSubsChanged"
+    />
   </div>
 </template>
 

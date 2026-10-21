@@ -711,6 +711,7 @@ const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() 
   { key: 'sessions', label: t('adm.owner.feature.sessions'), hint: t('adm.owner.feature.sessionsHint') },
   { key: 'impersonation', label: t('adm.owner.feature.impersonation'), hint: t('adm.owner.feature.impersonationHint') },
   { key: 'calendar_subscriptions', label: t('adm.owner.feature.calSubs'), hint: t('adm.owner.feature.calSubsHint') },
+  { key: 'caldav_sync', label: t('adm.owner.feature.caldav'), hint: t('adm.owner.feature.caldavHint') },
   { key: 'calendar_feeds', label: t('adm.owner.feature.calFeeds'), hint: t('adm.owner.feature.calFeedsHint') },
   { key: 'git_integration', label: t('adm.owner.feature.git'), hint: t('adm.owner.feature.gitHint') },
   { key: 'workspace_invites', label: t('adm.owner.feature.invites'), hint: t('adm.owner.feature.invitesHint') },

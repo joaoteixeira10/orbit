@@ -237,6 +237,7 @@ type FeedEvent struct {
 	RRule    string
 	ExDates  []time.Time
 	Updated  time.Time
+	Zoned    bool // a timed event written in its zone even when it doesn't repeat
 }
 
 // FeedTask is an open task with a due date, written as an event: all-day, or
@@ -294,46 +295,7 @@ func BuildFeed(name string, events []FeedEvent, tasks []FeedTask, now time.Time)
 	w("X-PUBLISHED-TTL:PT30M")
 	stamp := now.UTC().Format(icsUTC)
 	for _, e := range events {
-		w("BEGIN:VEVENT")
-		w("UID:" + e.UID)
-		w("DTSTAMP:" + stamp)
-		if !e.Updated.IsZero() {
-			w("LAST-MODIFIED:" + e.Updated.UTC().Format(icsUTC))
-		}
-		switch {
-		case e.AllDay:
-			w("DTSTART;VALUE=DATE:" + e.Start.UTC().Format(icsDate))
-			w("DTEND;VALUE=DATE:" + e.End.UTC().Format(icsDate))
-		case e.RRule != "" && e.TZ != "" && e.TZ != "UTC":
-			// A timed series repeats in its own zone (keeps 09:00 across DST).
-			loc := location(e.TZ)
-			w("DTSTART;TZID=" + e.TZ + ":" + e.Start.In(loc).Format(icsLocal))
-			w("DTEND;TZID=" + e.TZ + ":" + e.End.In(loc).Format(icsLocal))
-		default:
-			w("DTSTART:" + e.Start.UTC().Format(icsUTC))
-			w("DTEND:" + e.End.UTC().Format(icsUTC))
-		}
-		if e.RRule != "" {
-			w("RRULE:" + e.RRule)
-			for _, x := range e.ExDates {
-				switch {
-				case e.AllDay:
-					w("EXDATE;VALUE=DATE:" + x.UTC().Format(icsDate))
-				case e.TZ != "" && e.TZ != "UTC":
-					w("EXDATE;TZID=" + e.TZ + ":" + x.In(location(e.TZ)).Format(icsLocal))
-				default:
-					w("EXDATE:" + x.UTC().Format(icsUTC))
-				}
-			}
-		}
-		w("SUMMARY:" + icsEscape(e.Title))
-		if e.Location != "" {
-			w("LOCATION:" + icsEscape(e.Location))
-		}
-		if e.Notes != "" {
-			w("DESCRIPTION:" + icsEscape(e.Notes))
-		}
-		w("END:VEVENT")
+		writeEvent(w, e, stamp)
 	}
 	for _, t := range tasks {
 		d, err := time.Parse(DateLayout, t.Due)
@@ -364,4 +326,49 @@ func BuildFeed(name string, events []FeedEvent, tasks []FeedTask, now time.Time)
 	}
 	w("END:VCALENDAR")
 	return []byte(b.String())
+}
+
+// writeEvent writes one VEVENT.
+func writeEvent(w func(string), e FeedEvent, stamp string) {
+	w("BEGIN:VEVENT")
+	w("UID:" + e.UID)
+	w("DTSTAMP:" + stamp)
+	if !e.Updated.IsZero() {
+		w("LAST-MODIFIED:" + e.Updated.UTC().Format(icsUTC))
+	}
+	switch {
+	case e.AllDay:
+		w("DTSTART;VALUE=DATE:" + e.Start.UTC().Format(icsDate))
+		w("DTEND;VALUE=DATE:" + e.End.UTC().Format(icsDate))
+	case (e.RRule != "" || e.Zoned) && e.TZ != "" && e.TZ != "UTC":
+		// A timed series repeats in its own zone (keeps 09:00 across DST);
+		// a calendar object keeps any event's zone.
+		loc := location(e.TZ)
+		w("DTSTART;TZID=" + e.TZ + ":" + e.Start.In(loc).Format(icsLocal))
+		w("DTEND;TZID=" + e.TZ + ":" + e.End.In(loc).Format(icsLocal))
+	default:
+		w("DTSTART:" + e.Start.UTC().Format(icsUTC))
+		w("DTEND:" + e.End.UTC().Format(icsUTC))
+	}
+	if e.RRule != "" {
+		w("RRULE:" + e.RRule)
+		for _, x := range e.ExDates {
+			switch {
+			case e.AllDay:
+				w("EXDATE;VALUE=DATE:" + x.UTC().Format(icsDate))
+			case e.TZ != "" && e.TZ != "UTC":
+				w("EXDATE;TZID=" + e.TZ + ":" + x.In(location(e.TZ)).Format(icsLocal))
+			default:
+				w("EXDATE:" + x.UTC().Format(icsUTC))
+			}
+		}
+	}
+	w("SUMMARY:" + icsEscape(e.Title))
+	if e.Location != "" {
+		w("LOCATION:" + icsEscape(e.Location))
+	}
+	if e.Notes != "" {
+		w("DESCRIPTION:" + icsEscape(e.Notes))
+	}
+	w("END:VEVENT")
 }

@@ -44,6 +44,7 @@ func (s *Scheduler) startPlanner() {
 		{"@daily", s.inbox.Cleanup, "old notifications"},
 		{"@daily", s.oldActivity, "old workspace activity"},
 		{"@every 3m", s.syncGit, "git-linked lists"},
+		{"@every 5m", s.syncCalDAV, "CalDAV calendars"},
 	}
 	for _, j := range jobs {
 		if _, err := s.cron.AddFunc(j.spec, j.fn); err != nil {

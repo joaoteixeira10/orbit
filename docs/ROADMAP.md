@@ -40,8 +40,10 @@ What Orbit could do next, roughly in the order it would pay off. The
 ## Calendar
 
 - Editing one occurrence of a series ("this and following").
-- Two-way **CalDAV** sync (iCloud, Google, Nextcloud) — `emersion/go-ical`
-  is already the parser, and `go-webdav` speaks CalDAV.
+- Two-way sync with **Google Calendar** (it needs OAuth, not an app
+  password; CalDAV with iCloud, Nextcloud and others is there).
+- Carrying occurrences edited on their own (RECURRENCE-ID) both ways, and
+  alerts (VALARM) as Orbit reminders.
 - Dragging repeating events (asking: this one or all).
 - Regional holidays (by district / state); more countries.
 

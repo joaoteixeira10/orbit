@@ -33,6 +33,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/audit"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/backup"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/caldav"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/db"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
@@ -222,6 +223,8 @@ func main() {
 	// Git: lists that hold a repository's issues, kept in step both ways.
 	git := gitsync.New(gdb, sealer, cfg.GitServers, log)
 	git.NotifyHub(hub)
+	// CalDAV: workspace calendars kept in step with iCloud / Nextcloud ones.
+	dav := caldav.New(gdb, sealer, log).NotifyHub(hub)
 	router := api.New(api.Deps{
 		Cfg:      cfg,
 		DB:       gdb,
@@ -236,11 +239,12 @@ func main() {
 		Events:   hub,
 		Inbox:    notes,
 		Git:      git,
+		CalDAV:   dav,
 	})
 
 	// Background scheduler: update checks, token sweeps, backups, calendar
 	// subscriptions and reminders.
-	scheduler := jobs.NewScheduler(gdb, notifier, updates, log).UseBackups(sealer).UsePlanner(sealer, hub).UseInbox(notes).UseGit(git)
+	scheduler := jobs.NewScheduler(gdb, notifier, updates, log).UseBackups(sealer).UsePlanner(sealer, hub).UseInbox(notes).UseGit(git).UseCalDAV(dav)
 	scheduler.Start()
 	defer scheduler.Stop()
 

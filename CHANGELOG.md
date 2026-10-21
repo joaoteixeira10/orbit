@@ -111,6 +111,10 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Week and Day views: drag events** to another time or day, and their
+  bottom edge to change the length (15-minute steps).
+- **A time zone per event**: times typed in the event's zone ("10:00, New
+  York"), shown in yours, with "Your time" in the sheet.
 - **Public holidays on the calendar**: a workspace picks a country
   (Portugal, Spain, France, Italy, Germany, UK, Netherlands, Belgium, US,
   Brazil); its national holidays show as all-day entries, computed from

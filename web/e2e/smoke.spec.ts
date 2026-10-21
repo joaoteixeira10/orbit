@@ -540,6 +540,43 @@ test('calendar: the small month, calendars to hide, and a task dragged onto a da
   await expect(page.locator(`.mg-cell[data-day="${day}"]`)).toContainText('Plan me')
 })
 
+test('calendar Week view: an event drags to another day and time, its bottom edge makes it longer', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = (await (await request.get('/api/v1/workspaces', { headers: H })).json())[0]
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  // Wednesday 9 December 2026, 10:00 – 11:00 in the browser's zone.
+  const at = (h: number, d = 9) => new Date(2026, 11, d, h).toISOString()
+  const ev = await (await request.post(`/api/v1/workspaces/${ws.id}/events`, { headers: H, data: { title: 'Design review', starts_at: at(10), ends_at: at(11), tz } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1500, height: 900 })
+  await page.goto(`/w/${ws.id}/calendar?date=2026-12-10`)
+  await page.getByRole('tab', { name: 'Week' }).click()
+  const block = page.locator('.tg-ev', { hasText: 'Design review' })
+  const b = (await block.boundingBox())!
+  const colW = (await page.locator('.tg-col').first().boundingBox())!.width
+  // One day right, two hours (2 × 48 px) down.
+  await page.mouse.move(b.x + b.width / 2, b.y + 10)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width / 2 + colW / 2, b.y + 60, { steps: 5 })
+  await page.mouse.move(b.x + b.width / 2 + colW, b.y + 106, { steps: 5 })
+  await page.mouse.up()
+  await expect.poll(async () => (await (await request.get(`/api/v1/events/${ev.id}`, { headers: H })).json()).starts_at).toBe(at(12, 10).replace('.000Z', 'Z'))
+
+  // The bottom edge, one hour down.
+  const b2 = (await block.boundingBox())!
+  await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height - 2)
+  await page.mouse.down()
+  await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height + 20, { steps: 4 })
+  await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height + 46, { steps: 4 })
+  await page.mouse.up()
+  await expect.poll(async () => (await (await request.get(`/api/v1/events/${ev.id}`, { headers: H })).json()).ends_at).toBe(at(14, 10).replace('.000Z', 'Z'))
+  // A drag doesn't open the event.
+  await expect(page.getByTestId('event-tz')).toHaveCount(0)
+  await request.delete(`/api/v1/events/${ev.id}`, { headers: H })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

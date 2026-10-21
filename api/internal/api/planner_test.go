@@ -341,6 +341,9 @@ func TestCalendar(t *testing.T) {
 	if got := cal.Events[3].Start.UTC().Format("15:04"); got != "09:00" {
 		t.Errorf("after DST the class starts at %s UTC", got)
 	}
+	if cal.Events[0].TZ != "Europe/Lisbon" {
+		t.Errorf("an occurrence carries its event's zone: %q", cal.Events[0].TZ)
+	}
 	expect(t, authdo(r, "DELETE", "/api/v1/events/"+ev.ID+"?occurrence=2026-10-12T08:00:00Z", "", alice), http.StatusNoContent, "remove one")
 	decode(t, authdo(r, "GET", "/api/v1/calendar"+rng, "", alice), &cal)
 	if len(cal.Events) != 3 {

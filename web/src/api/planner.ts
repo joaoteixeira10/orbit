@@ -222,6 +222,7 @@ export interface Occurrence {
   color: string
   recurring: boolean
   course_id?: string // a class of a course (changed in Courses)
+  tz?: string // an Orbit event's own time zone
 }
 export interface CalendarData {
   events: Occurrence[]

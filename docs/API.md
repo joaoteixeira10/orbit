@@ -56,8 +56,10 @@ last 14 days; `?state=done` every completed one, `?state=all` everything,
 curl -s "${auth[@]}" "$ORBIT/api/v1/workspaces/$WS/tasks" | jq -r '.[] | select(.done | not) | "\(.due // "-")\t\(.title)"'
 ```
 
-**Add an event** (instants in RFC 3339; `tz` is the zone a repeat keeps its
-local time in; `remind_minutes` alerts the members before each occurrence):
+**Add an event** (instants in RFC 3339; `tz` is the event's own zone — the
+one its times are typed in, and a repeat keeps its local time in; calendar
+occurrences carry it as `tz`; `remind_minutes` alerts the members before
+each occurrence):
 
 ```sh
 curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/events \

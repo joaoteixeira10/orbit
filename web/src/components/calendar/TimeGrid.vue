@@ -2,7 +2,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Repeat, MapPin } from 'lucide-vue-next'
-import { dateStr, sameDay, fmtDate, fmtTime, fmtClock } from '@/lib/dates'
+import { addDays, dateStr, sameDay, fmtDate, fmtTime, fmtClock } from '@/lib/dates'
 import { layoutBars, layoutDay, tasksByDay, eventColor, type Entry, type TaskItem } from './model'
 import { startTaskDrag, isTaskDrag, readTaskDrag, type DraggedTask } from '@/lib/taskDrag'
 
@@ -10,6 +10,8 @@ import { startTaskDrag, isTaskDrag, readTaskDrag, type DraggedTask } from '@/lib
 // strip on top, timed events placed by start and end (side by side when they
 // overlap), and the red line at the current time. Clicking an empty slot
 // creates an event there; dragging down with the mouse picks its length.
+// With a mouse, single Orbit events drag to another time or day, and their
+// bottom edge drags to change how long they last (15-minute steps).
 const props = defineProps<{
   days: Date[]
   entries: Entry[]
@@ -23,6 +25,8 @@ const emit = defineEmits<{
   create: [range: { start: Date; end: Date; allDay: boolean }]
   openDay: [day: string]
   dropTask: [task: DraggedTask, day: string, time: string | null]
+  move: [entry: Entry, days: number]
+  reschedule: [entry: Entry, start: Date, end: Date]
 }>()
 const { t } = useI18n()
 
@@ -118,6 +122,79 @@ function blockStyle(p: ReturnType<typeof layoutDay>[number]) {
   }
 }
 
+// ---- Drag an event: its block to move it, its bottom edge for the length ----
+// (an all-day bar moves by days). Pointer capture keeps the moves coming to
+// the block; the click that ends a drag doesn't open the event.
+const cols$ = ref<HTMLElement | null>(null)
+const drag = ref<{ key: string; col: number; start: Date; end: Date; days: number; color: string; title: string } | null>(null)
+let grabbed: { entry: Entry; mode: 'move' | 'end' | 'days'; col: number; x: number; y: number; moved: boolean } | null = null
+let swallowClick = false
+const SNAP = 15 * 60000
+const snap = (d: Date) => new Date(Math.round(d.getTime() / SNAP) * SNAP)
+
+function grab(ev: PointerEvent, entry: Entry, col: number, mode: 'move' | 'end' | 'days') {
+  if (!entry.movable || ev.button !== 0 || ev.pointerType === 'touch') return
+  ;(ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId)
+  ev.preventDefault()
+  grabbed = { entry, mode, col, x: ev.clientX, y: ev.clientY, moved: false }
+}
+function colUnder(x: number, el: HTMLElement | null) {
+  if (!el) return 0
+  const r = el.getBoundingClientRect()
+  return Math.min(cols.value - 1, Math.max(0, Math.floor(((x - r.left) / r.width) * cols.value)))
+}
+function dragMove(ev: PointerEvent) {
+  const g = grabbed
+  if (!g) return
+  if (!g.moved && Math.abs(ev.clientX - g.x) < 5 && Math.abs(ev.clientY - g.y) < 5) return
+  g.moved = true
+  const e = g.entry
+  const days = colUnder(ev.clientX, g.mode === 'days' ? (ev.currentTarget as HTMLElement).parentElement : cols$.value) - g.col
+  const mins = ((ev.clientY - g.y) / HOUR) * 60
+  const color = eventColor(e)
+  const title = e.occ.title || t('cal.untitled')
+  if (g.mode === 'days') {
+    drag.value = { key: e.key, col: g.col + days, start: e.start, end: e.end, days, color, title }
+  } else if (g.mode === 'move') {
+    const start = snap(new Date(addDays(e.start, days).getTime() + mins * 60000))
+    drag.value = { key: e.key, col: g.col + days, start, end: new Date(start.getTime() + (e.end.getTime() - e.start.getTime())), days, color, title }
+  } else {
+    const end = snap(new Date(e.end.getTime() + mins * 60000))
+    drag.value = { key: e.key, col: g.col, start: e.start, end: end.getTime() - e.start.getTime() < SNAP ? new Date(e.start.getTime() + SNAP) : end, days: 0, color, title }
+  }
+}
+function dragEnd() {
+  const g = grabbed
+  const d = drag.value
+  grabbed = null
+  drag.value = null
+  if (!g?.moved || !d) return
+  swallowClick = true
+  setTimeout(() => (swallowClick = false))
+  if (g.mode === 'days') {
+    if (d.days) emit('move', g.entry, d.days)
+  } else if (d.start.getTime() !== g.entry.start.getTime() || d.end.getTime() !== g.entry.end.getTime()) {
+    emit('reschedule', g.entry, d.start, d.end)
+  }
+}
+function dragCancel() {
+  grabbed = null
+  drag.value = null
+}
+function openBlock(e: Entry) {
+  if (!swallowClick) emit('open', e)
+}
+// Where the dragged block shows while it moves, on the day it's over.
+const ghost = computed(() => {
+  const d = drag.value
+  if (!d || grabbed?.mode === 'days') return null
+  const day = props.days[d.col]
+  if (!day) return null
+  const top = Math.max(0, ((d.start.getTime() - day.getTime()) / 3600000) * HOUR)
+  const bottom = Math.min(24 * HOUR, ((d.end.getTime() - day.getTime()) / 3600000) * HOUR)
+  return { col: d.col, top, height: Math.max(18, bottom - top), color: d.color, title: d.title, label: `${fmtTime(d.start)} – ${fmtTime(d.end)}` }
+})
+
 // ---- Click or drag on an empty slot to create ----
 const sel = ref<{ col: number; a: number; b: number } | null>(null)
 let press: { col: number; el: HTMLElement; y: number; at: number; moved: boolean; mouse: boolean } | null = null
@@ -205,11 +282,15 @@ const selLabel = computed(() => {
           :key="b.entry.key"
           class="tg-bar"
           :class="{ allday: b.entry.allDay, cs: b.clipStart, ce: b.clipEnd }"
-          :style="{ ...span(b.col, b.span), top: `${b.lane * LANE + 3}px`, '--c': eventColor(b.entry) }"
+          :style="{ ...span(b.col + (drag?.key === b.entry.key ? drag.days : 0), b.span), top: `${b.lane * LANE + 3}px`, '--c': eventColor(b.entry) }"
           role="button"
           tabindex="0"
           :title="b.entry.occ.title"
-          @click.stop="emit('open', b.entry)"
+          @pointerdown="grab($event, b.entry, colUnder($event.clientX, ($event.currentTarget as HTMLElement).parentElement), 'days')"
+          @pointermove="dragMove"
+          @pointerup="dragEnd"
+          @pointercancel="dragCancel"
+          @click.stop="openBlock(b.entry)"
           @keydown.enter="emit('open', b.entry)"
         >
           <span v-if="!b.entry.allDay && !b.clipStart" class="opacity-80">{{ fmtTime(b.entry.start) }}</span>
@@ -251,7 +332,7 @@ const selLabel = computed(() => {
           <span v-for="h in hours" v-show="!h.hidden" :key="h.h" :style="{ top: `${h.h * HOUR}px` }">{{ h.label }}</span>
           <span v-if="todayIdx >= 0" class="now-label" :style="{ top: `${(nowMin / 60) * HOUR}px` }">{{ fmtTime(now) }}</span>
         </div>
-        <div class="tg-grid tg-cols" :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, backgroundSize: `100% ${HOUR}px` }">
+        <div ref="cols$" class="tg-grid tg-cols" :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, backgroundSize: `100% ${HOUR}px` }">
           <div
             v-for="(_d, i) in days"
             :key="keys[i]"
@@ -270,17 +351,32 @@ const selLabel = computed(() => {
               v-for="p in placed[i]"
               :key="p.entry.key"
               class="tg-ev"
-              :class="{ ext: p.entry.occ.kind === 'external', short: p.height < 34 }"
+              :class="{ ext: p.entry.occ.kind === 'external', short: p.height < 34, dragging: drag?.key === p.entry.key, movable: p.entry.movable }"
               :style="blockStyle(p)"
               role="button"
               tabindex="0"
-              @click.stop="emit('open', p.entry)"
+              @click.stop="openBlock(p.entry)"
               @keydown.enter="emit('open', p.entry)"
-              @pointerdown.stop
+              @pointerdown.stop="grab($event, p.entry, i, 'move')"
+              @pointermove="dragMove"
+              @pointerup="dragEnd"
+              @pointercancel="dragCancel"
             >
               <span class="ttl">{{ p.entry.occ.title || t('cal.untitled') }}<Repeat v-if="p.entry.occ.recurring" class="ml-1 inline h-2.5 w-2.5 opacity-70" /></span>
               <span class="tm">{{ fmtTime(p.entry.start) }}<template v-if="p.height >= 34"> – {{ fmtTime(p.entry.end) }}</template></span>
               <span v-if="p.height >= 56 && p.entry.occ.location" class="loc"><MapPin class="mr-0.5 inline h-2.5 w-2.5" />{{ p.entry.occ.location }}</span>
+              <span
+                v-if="p.entry.movable && !p.clipBottom"
+                class="rs"
+                @pointerdown.stop="grab($event, p.entry, i, 'end')"
+                @pointermove="dragMove"
+                @pointerup="dragEnd"
+                @pointercancel="dragCancel"
+                @click.stop
+              />
+            </div>
+            <div v-if="ghost && ghost.col === i" class="tg-ghost" :style="{ top: `${ghost.top}px`, height: `${ghost.height}px`, '--c': ghost.color }">
+              <span class="block truncate">{{ ghost.title }}</span><span class="block font-normal">{{ ghost.label }}</span>
             </div>
             <div v-if="sel && sel.col === i" class="tg-sel" :style="{ top: `${(sel.a / 60) * HOUR}px`, height: `${((sel.b - sel.a) / 60) * HOUR}px` }">
               {{ selLabel }}
@@ -527,6 +623,35 @@ const selLabel = computed(() => {
   white-space: nowrap;
   flex: 0 1 auto;
   min-width: 0;
+}
+.tg-ev.dragging {
+  opacity: 0.35;
+}
+/* The bottom edge: drag it to change the length. */
+.tg-ev .rs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+.tg-ghost {
+  position: absolute;
+  left: 0;
+  right: 3px;
+  z-index: 3;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--c, var(--accent)) 30%, var(--bg));
+  box-shadow: inset 3px 0 0 var(--c, var(--accent)), 0 4px 14px rgba(0, 0, 0, 0.14);
+  color: color-mix(in srgb, var(--c, var(--accent)) 58%, var(--text));
+  overflow: hidden;
+  line-height: 1.3;
+  pointer-events: none;
 }
 .tg-sel {
   position: absolute;

@@ -148,6 +148,56 @@ export function fromLocalInput(v: string): Date {
   d.setHours(h, m, 0, 0)
   return d
 }
+// ---- Time zones: an event's times typed in its own zone ----
+
+// zoneOffset is how far tz's wall clock is ahead of UTC at instant ms.
+export function zoneOffset(ms: number, tz: string): number {
+  const p: Record<string, number> = {}
+  for (const x of new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms))) {
+    if (x.type !== 'literal') p[x.type] = Number(x.value)
+  }
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second) - Math.floor(ms / 1000) * 1000
+}
+// toZoneInput: an instant as tz's wall clock, for <input type="datetime-local">.
+export function toZoneInput(d: Date, tz: string): string {
+  const w = new Date(d.getTime() + zoneOffset(d.getTime(), tz))
+  return `${w.getUTCFullYear()}-${pad(w.getUTCMonth() + 1)}-${pad(w.getUTCDate())}T${pad(w.getUTCHours())}:${pad(w.getUTCMinutes())}`
+}
+// fromZoneInput: tz's wall clock ("YYYY-MM-DDTHH:MM") as an instant. A time
+// that doesn't exist (the hour skipped in spring) lands just after the gap.
+export function fromZoneInput(v: string, tz: string): Date {
+  const [date, time = '00:00'] = v.split('T')
+  const [y, m, d] = date.split('-').map(Number)
+  const [h, mi] = time.split(':').map(Number)
+  const wall = Date.UTC(y, m - 1, d, h, mi)
+  let t = wall - zoneOffset(wall, tz)
+  t = wall - zoneOffset(t, tz)
+  return new Date(t)
+}
+// zoneName: "America/New_York" → "New York"; with the offset when asked.
+export function zoneName(tz: string, at?: Date): string {
+  const city = (tz.split('/').pop() ?? tz).replace(/_/g, ' ')
+  if (!at) return city
+  try {
+    const off = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(at).find((x) => x.type === 'timeZoneName')?.value
+    return off ? `${city} (${off})` : city
+  } catch {
+    return city
+  }
+}
+// allZones: every zone the browser knows (a short list where it can't say).
+export function allZones(): string[] {
+  try {
+    const list = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone')
+    if (list?.length) return list
+  } catch {
+    /* older browsers */
+  }
+  return ['UTC', 'Europe/Lisbon', 'Europe/London', 'Europe/Madrid', 'Europe/Paris', 'Europe/Berlin', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'America/Sao_Paulo', 'Asia/Tokyo', 'Australia/Sydney']
+}
+// sameZoneTime: whether two zones show the same clock at an instant.
+export const sameZoneTime = (a: string, b: string, at: Date) => zoneOffset(at.getTime(), a) === zoneOffset(at.getTime(), b)
+
 // utcMidnight is the instant the server uses for an all-day date.
 export function utcMidnight(s: string): string {
   return `${s}T00:00:00Z`

@@ -37,6 +37,7 @@ type occurrence struct {
 	Color          string    `json:"color"`
 	Recurring      bool      `json:"recurring"`
 	CourseID       string    `json:"course_id,omitempty"` // a class of a course
+	TZ             string    `json:"tz,omitempty"`        // an Orbit event's own time zone
 }
 
 type calendarResponse struct {
@@ -107,7 +108,7 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 		for _, s := range planner.Occurrences(ev, from, to) {
 			resp.Events = append(resp.Events, occurrence{
 				Kind: "event", ID: ev.ID, WorkspaceID: ev.WorkspaceID, Title: ev.Title, Location: ev.Location, Notes: ev.Notes,
-				Start: s, End: s.Add(dur), AllDay: ev.AllDay, Color: color, Recurring: ev.RRule != "", CourseID: ev.CourseID,
+				Start: s, End: s.Add(dur), AllDay: ev.AllDay, Color: color, Recurring: ev.RRule != "", CourseID: ev.CourseID, TZ: ev.TZ,
 			})
 		}
 	}

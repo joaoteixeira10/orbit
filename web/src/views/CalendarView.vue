@@ -355,14 +355,21 @@ function openEntry(e: Entry) {
 }
 
 // Dragging a single event to another day keeps its time and length.
-async function moveEntry(e: Entry, days: number) {
+function moveEntry(e: Entry, days: number) {
   const o = e.occ
-  const body: EventInput = o.all_day
-    ? {
-        starts_at: utcMidnight(dateStr(addDays(parseDate(allDayDate(o.start)), days))),
-        ends_at: utcMidnight(dateStr(addDays(parseDate(allDayDate(o.end)), days))),
-      }
-    : { starts_at: addDays(e.start, days).toISOString(), ends_at: addDays(e.end, days).toISOString(), tz: deviceTZ() }
+  if (!o.all_day) return reschedule(e, addDays(e.start, days), addDays(e.end, days))
+  return saveTiming(e, {
+    starts_at: utcMidnight(dateStr(addDays(parseDate(allDayDate(o.start)), days))),
+    ends_at: utcMidnight(dateStr(addDays(parseDate(allDayDate(o.end)), days))),
+  })
+}
+// Dragged in Week / Day view to another time, or made longer or shorter. It
+// keeps its own time zone.
+function reschedule(e: Entry, start: Date, end: Date) {
+  return saveTiming(e, { starts_at: start.toISOString(), ends_at: end.toISOString(), tz: e.occ.tz || deviceTZ() })
+}
+async function saveTiming(e: Entry, body: EventInput) {
+  const o = e.occ
   const prev = { start: o.start, end: o.end }
   o.start = body.starts_at!
   o.end = body.ends_at!
@@ -587,6 +594,8 @@ const views: CalView[] = ['day', 'week', 'month']
         @create="create"
         @open-day="openDay"
         @drop-task="dropTask"
+        @move="moveEntry"
+        @reschedule="reschedule"
       />
     </div>
    </div>

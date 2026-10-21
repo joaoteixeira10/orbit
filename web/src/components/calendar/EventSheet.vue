@@ -10,12 +10,13 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
 import { COLORS } from '@/lib/icons'
 import {
-  REPEAT_RULES, repeatPreset, type RepeatPreset, toLocalInput, fromLocalInput, utcMidnight, allDayDate, dateStr, parseDate,
-  addDays, deviceTZ,
+  REPEAT_RULES, repeatPreset, type RepeatPreset, toLocalInput, utcMidnight, allDayDate, dateStr, parseDate,
+  addDays, deviceTZ, toZoneInput, fromZoneInput, zoneName, allZones, sameZoneTime, fmtTime, fmtDate,
 } from '@/lib/dates'
 
 // Calendar's event sheet: title and location, all-day, when it starts and
-// ends, repeat, alert, colour and notes. Editing a repeating event edits its
+// ends (typed in the event's time zone — the device's unless changed; the
+// calendar shows it in the device's), repeat, alert, colour and notes. Editing a repeating event edits its
 // whole series; deleting one asks whether to drop just that occurrence.
 // choices (in the all-workspaces calendar) adds a workspace picker on create.
 const props = defineProps<{
@@ -39,7 +40,8 @@ const title = ref('')
 const location = ref('')
 const notes = ref('')
 const allDay = ref(false)
-const startIn = ref('') // YYYY-MM-DD when all-day, else YYYY-MM-DDTHH:MM
+const tz = ref(deviceTZ()) // the zone the times are typed in
+const startIn = ref('') // YYYY-MM-DD when all-day, else YYYY-MM-DDTHH:MM (in tz)
 const endIn = ref('') // all-day: the last day (inclusive)
 const repeat = ref<RepeatPreset>('')
 const customRule = ref('')
@@ -60,6 +62,7 @@ function reset() {
   customRule.value = ''
   color.value = ''
   remind.value = ''
+  tz.value = deviceTZ()
   lastTimed = null
 }
 
@@ -82,8 +85,10 @@ watch(
           const last = dateStr(addDays(parseDate(allDayDate(e.ends_at)), -1))
           endIn.value = last < startIn.value ? startIn.value : last
         } else {
-          startIn.value = toLocalInput(new Date(e.starts_at))
-          endIn.value = toLocalInput(new Date(e.ends_at))
+          tz.value = e.tz && e.tz !== 'Local' && e.tz !== 'UTC' ? e.tz : deviceTZ()
+          if (!zones.value.includes(tz.value)) tz.value = deviceTZ()
+          startIn.value = toZoneInput(new Date(e.starts_at), tz.value)
+          endIn.value = toZoneInput(new Date(e.ends_at), tz.value)
         }
         repeat.value = repeatPreset(e.rrule)
         customRule.value = e.rrule
@@ -138,20 +143,36 @@ function setStart(v: string) {
     const days = Math.round((parseDate(endIn.value).getTime() - parseDate(prevS).getTime()) / 86400000)
     endIn.value = dateStr(addDays(parseDate(v), Math.max(0, days)))
   } else {
-    const dur = Math.max(0, fromLocalInput(endIn.value).getTime() - fromLocalInput(prevS).getTime())
-    endIn.value = toLocalInput(new Date(fromLocalInput(v).getTime() + dur))
+    const dur = Math.max(0, fromZoneInput(endIn.value, tz.value).getTime() - fromZoneInput(prevS, tz.value).getTime())
+    endIn.value = toZoneInput(new Date(fromZoneInput(v, tz.value).getTime() + dur), tz.value)
   }
 }
 const endBeforeStart = computed(() => {
   if (!startIn.value || !endIn.value) return false
-  return allDay.value ? endIn.value < startIn.value : fromLocalInput(endIn.value) < fromLocalInput(startIn.value)
+  return allDay.value ? endIn.value < startIn.value : endIn.value < startIn.value
 })
 function timing(): EventInput {
   if (allDay.value) {
     return { all_day: true, starts_at: utcMidnight(startIn.value), ends_at: utcMidnight(dateStr(addDays(parseDate(endIn.value), 1))) }
   }
-  return { all_day: false, starts_at: fromLocalInput(startIn.value).toISOString(), ends_at: fromLocalInput(endIn.value).toISOString() }
+  return { all_day: false, starts_at: fromZoneInput(startIn.value, tz.value).toISOString(), ends_at: fromZoneInput(endIn.value, tz.value).toISOString(), tz: tz.value }
 }
+
+// ---- Time zone ----
+// Changing it keeps the typed times: "10:00, New York".
+const zones = computed(() => {
+  const all = allZones()
+  const here = deviceTZ()
+  return all.includes(here) ? all : [here, ...all]
+})
+// When the zone isn't the device's: the same times in the device's.
+const localTimes = computed(() => {
+  if (allDay.value || !startIn.value || !endIn.value || endBeforeStart.value) return ''
+  const a = fromZoneInput(startIn.value, tz.value)
+  if (sameZoneTime(tz.value, deviceTZ(), a)) return ''
+  const b = fromZoneInput(endIn.value, tz.value)
+  return `${fmtDate(a, { weekday: 'short', day: 'numeric', month: 'short' })}, ${fmtTime(a)} – ${fmtTime(b)}`
+})
 
 // ---- Repeat, alert ----
 const rule = computed(() => (repeat.value === 'custom' ? customRule.value : repeat.value ? REPEAT_RULES[repeat.value] : ''))
@@ -182,7 +203,7 @@ async function save() {
       const body: EventInput = { title: title.value.trim(), location: location.value.trim(), notes: notes.value }
       // Timing only when it changed: the server forgets the deleted
       // occurrences of a series whose timing changes.
-      if (JSON.stringify(tm) !== origTiming) Object.assign(body, tm, tm.all_day ? {} : { tz: deviceTZ() })
+      if (JSON.stringify(tm) !== origTiming) Object.assign(body, tm)
       if (rule.value !== e.rrule) body.rrule = rule.value
       if (color.value !== e.color) body.color = color.value
       const before = e.remind_minutes == null ? '' : String(e.remind_minutes)
@@ -190,7 +211,6 @@ async function save() {
       await calendarApi.updateEvent(e.id, body)
     } else {
       const body: EventInput = { title: title.value.trim(), location: location.value.trim(), notes: notes.value, ...tm }
-      if (!tm.all_day) body.tz = deviceTZ()
       if (rule.value) body.rrule = rule.value
       if (color.value) body.color = color.value
       if (remind.value !== '') body.remind_minutes = Number(remind.value)
@@ -260,6 +280,12 @@ async function remove(onlyThis: boolean) {
             required
           />
         </label>
+        <label v-if="!allDay" class="group-row">
+          <span class="flex-1 text-[14px]">{{ t('cal.timeZone') }}</span>
+          <select v-model="tz" class="input !w-auto max-w-[60%] !py-1 text-[13.5px]" data-testid="event-tz">
+            <option v-for="z in zones" :key="z" :value="z">{{ z === deviceTZ() ? t('cal.tzHere', { zone: zoneName(z) }) : z.replace(/_/g, ' ') }}</option>
+          </select>
+        </label>
         <label class="group-row">
           <span class="flex-1 text-[14px]">{{ t('cal.repeat') }}</span>
           <select v-model="repeat" class="input !w-auto !py-1 text-[13.5px]">
@@ -275,6 +301,7 @@ async function remove(onlyThis: boolean) {
         </label>
       </div>
       <p v-if="endBeforeStart" class="-mt-2 px-1 text-[12.5px] text-crit-text">{{ t('cal.endBeforeStart') }}</p>
+      <p v-else-if="localTimes" class="-mt-2 px-1 text-[12.5px] text-text-3" data-testid="local-times">{{ t('cal.yourTime', { when: localTimes }) }}</p>
 
       <div class="group">
         <label v-if="showPicker" class="group-row">

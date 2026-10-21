@@ -8014,6 +8014,10 @@ const docTemplate = `{
                 "title": {
                     "type": "string"
                 },
+                "tz": {
+                    "description": "an Orbit event's own time zone",
+                    "type": "string"
+                },
                 "workspace_id": {
                     "type": "string"
                 }

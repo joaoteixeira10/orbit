@@ -7,6 +7,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import { calendarApi } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
 import { whenLines, eventColor, type Entry } from './model'
+import { deviceTZ, fmtTime, sameZoneTime, toZoneInput, zoneName } from '@/lib/dates'
 
 // A read-only look at an event: one from a subscribed calendar (changed
 // where it comes from), one in a workspace the user can only view, or a
@@ -18,6 +19,17 @@ const router = useRouter()
 const toast = useToastStore()
 
 const when = computed(() => (props.entry ? whenLines(props.entry) : []))
+// An event set in another zone: its times there too ("10:00 – 11:00 New York").
+const zoneLine = computed(() => {
+  const e = props.entry
+  const tz = e?.occ.tz
+  if (!e || e.allDay || !tz || tz === 'UTC' || sameZoneTime(tz, deviceTZ(), e.start)) return ''
+  const clock = (d: Date) => {
+    const [h, m] = toZoneInput(d, tz).slice(11).split(':').map(Number)
+    return fmtTime(new Date(2000, 0, 1, h, m))
+  }
+  return `${clock(e.start)} – ${clock(e.end)} ${zoneName(tz, e.start)}`
+})
 const external = computed(() => props.entry?.occ.kind === 'external')
 const course = computed(() => props.entry?.occ.course_id ?? '')
 
@@ -46,6 +58,7 @@ async function cancelClass() {
         <div class="min-w-0 flex-1">
           <h2 class="title-2 break-words">{{ entry.occ.title || t('cal.untitled') }}</h2>
           <p v-for="(l, i) in when" :key="i" class="mt-0.5 text-[14px]" :class="i ? 'text-text-2' : ''">{{ l }}</p>
+          <p v-if="zoneLine" class="mt-0.5 text-[13px] text-text-2">{{ zoneLine }}</p>
           <p v-if="entry.occ.recurring" class="mt-0.5 flex items-center gap-1 text-[13px] text-text-2"><Repeat class="h-3.5 w-3.5" />{{ t('cal.repeats') }}</p>
         </div>
       </div>

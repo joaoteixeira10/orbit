@@ -530,13 +530,22 @@ workspace together, in each workspace's colour (the key is under the title).
 - **Day**, **Week**, **Month** (top right), **‹ Today ›** to move. Today is
   the red circle; in Day and Week a red line marks the time.
 - **New event**: **+**, or click an empty slot (Week, Day) or a day (Month).
-  Title, location, **All-day**, **Starts** / **Ends**, **Repeat**, **Alert**
+  Title, location, **All-day**, **Starts** / **Ends**, **Time zone**, **Repeat**, **Alert**
   (none, at time of event, 5–30 minutes, 1 hour, 1 day before), colour (or the
   workspace's), notes. From the merged calendar you also choose the workspace.
 - **Open an event** to edit it. Editing a repeating event changes the whole
   series. **Delete** on a repeating event asks: **Delete this event only** or
   **Delete all events**.
 - **Drag** an event to another day in Month to move it (not repeating ones).
+  In Week and Day, drag it to another time or day (15-minute steps; it shows
+  where it will land), or drag its **bottom edge** to make it longer or
+  shorter. With a mouse or a pen; on a touch screen, open it and change the
+  times.
+- **Time zone**: an event's times are typed in its zone — this device's
+  unless you pick another ("10:00, New York"). The calendar always shows
+  events in your time; when the zone is another, the sheet shows **Your
+  time** under the times, and people who can only view the event see its
+  times there too. Repeats keep their time in the event's zone.
 - **Tasks** appear on their due date with a checkbox; tick them right there.
 
 **The side panes**, as in Outlook (on a wide window; narrower, they open over

@@ -1,5 +1,5 @@
 // Package gitsync keeps task lists and git issues in step, both ways, on
-// Gitea and Forgejo (GitHub later: a second client with the same methods).
+// Gitea, Forgejo and GitHub (github.com and GitHub Enterprise).
 //
 // A list linked to a repository (models.GitLink) holds its issues as tasks:
 // the background sync pulls what changed on git (titles, descriptions, due
@@ -104,7 +104,30 @@ func normalize(raw string) (string, error) {
 	if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") {
 		return "", errors.New("give the server's address, like https://gitea.example.org")
 	}
-	return u.Scheme + "://" + strings.ToLower(u.Host) + strings.TrimRight(u.Path, "/"), nil
+	host := strings.ToLower(u.Host)
+	if host == "www.github.com" {
+		host = "github.com"
+	}
+	return u.Scheme + "://" + host + strings.TrimRight(u.Path, "/"), nil
+}
+
+// newClient is a client for a server, of the kind it is: github.com, a
+// GitHub Enterprise someone connected (its accounts say so), else Gitea /
+// Forgejo.
+func (e *Engine) newClient(base, token string) *Client {
+	return &Client{base: base, kind: e.kindOf(base), token: token, http: e.clientFor(base)}
+}
+
+func (e *Engine) kindOf(base string) string {
+	if isGitHubCom(base) {
+		return KindGitHub
+	}
+	var n int64
+	e.db.Model(&models.GitAccount{}).Where("base_url = ? AND kind = ?", base, KindGitHub).Count(&n)
+	if n > 0 {
+		return KindGitHub
+	}
+	return KindGitea
 }
 
 // NormalizeBase checks and normalises a server address a user gives: https,
@@ -131,7 +154,11 @@ func (e *Engine) client(acc models.GitAccount) (*Client, error) {
 	if err != nil {
 		return nil, errors.New("this git token can't be read; connect the account again")
 	}
-	return &Client{base: acc.BaseURL, token: string(tok), http: e.clientFor(acc.BaseURL)}, nil
+	kind := acc.Kind
+	if kind != KindGitHub {
+		kind = KindGitea
+	}
+	return &Client{base: acc.BaseURL, kind: kind, token: string(tok), http: e.clientFor(acc.BaseURL)}, nil
 }
 
 // Connect checks a token against the server and saves (or refreshes) the
@@ -145,8 +172,15 @@ func (e *Engine) Connect(ctx context.Context, userID, base, token string) (model
 	if token == "" {
 		return models.GitAccount{}, errors.New("give a personal access token")
 	}
-	c := &Client{base: base, token: token, http: e.clientFor(base)}
+	c := e.newClient(base, token)
 	me, err := c.Me(ctx)
+	if err != nil && !c.GitHub() && (isStatus(err, http.StatusNotFound) || isNotJSON(err)) {
+		// No Gitea API there: GitHub Enterprise keeps its API at /api/v3.
+		gh := &Client{base: base, kind: KindGitHub, token: token, http: c.http}
+		if m, err2 := gh.Me(ctx); err2 == nil || isStatus(err2, http.StatusUnauthorized) {
+			c, me, err = gh, m, err2
+		}
+	}
 	if err != nil {
 		if isStatus(err, http.StatusUnauthorized) || isStatus(err, http.StatusForbidden) {
 			return models.GitAccount{}, errors.New("the server refused this token")
@@ -158,9 +192,9 @@ func (e *Engine) Connect(ctx context.Context, userID, base, token string) (model
 		return models.GitAccount{}, err
 	}
 	now := time.Now()
-	acc := models.GitAccount{UserID: userID, Kind: "gitea", BaseURL: base}
+	acc := models.GitAccount{UserID: userID, BaseURL: base}
 	e.db.Where("user_id = ? AND base_url = ?", userID, base).First(&acc)
-	acc.Login, acc.TokenSealed, acc.LastError, acc.CheckedAt = me.Login, sealed, "", &now
+	acc.Kind, acc.Login, acc.TokenSealed, acc.LastError, acc.CheckedAt = c.kind, me.Login, sealed, "", &now
 	acc.Via, acc.RefreshSealed, acc.ExpiresAt = "token", nil, nil
 	return acc, e.db.Save(&acc).Error
 }
@@ -233,7 +267,7 @@ func (e *Engine) botClient(link models.GitLink) (*Client, error) {
 	if err != nil {
 		return nil, errors.New("the list's bot token can't be read; set it again")
 	}
-	return &Client{base: link.Host, token: string(tok), http: e.clientFor(link.Host)}, nil
+	return e.newClient(link.Host, string(tok)), nil
 }
 
 // SetBot checks a bot account's token against the list's server and keeps
@@ -244,7 +278,7 @@ func (e *Engine) SetBot(ctx context.Context, link *models.GitLink, token string)
 		link.BotTokenSealed, link.BotLogin = nil, ""
 		return e.db.Model(link).Updates(map[string]any{"bot_token_sealed": nil, "bot_login": ""}).Error
 	}
-	c := &Client{base: link.Host, token: token, http: e.clientFor(link.Host)}
+	c := e.newClient(link.Host, token)
 	me, err := c.Me(ctx)
 	if err != nil {
 		if isStatus(err, http.StatusUnauthorized) || isStatus(err, http.StatusForbidden) {
@@ -537,9 +571,11 @@ func (e *Engine) pull(ctx context.Context, link models.GitLink) error {
 			t.Title = fmt.Sprintf("#%d", is.Number)
 		}
 		t.Notes = is.Body
-		t.Due = is.Due()
-		if t.Due == nil {
-			t.DueTime = nil
+		if c.HasDue() { // GitHub's issues have none: the date stays Orbit's
+			t.Due = is.Due()
+			if t.Due == nil {
+				t.DueTime = nil
+			}
 		}
 		var tags []string
 		for _, l := range is.Labels {
@@ -719,7 +755,7 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 		}
 		in.State, edit = &state, true
 	}
-	if ch.Due {
+	if ch.Due && c.HasDue() {
 		if t.Due != nil {
 			d := DueTime(*t.Due)
 			in.DueDate = &d
@@ -883,18 +919,18 @@ func (e *Engine) createIssue(ctx context.Context, actor string, link models.GitL
 
 // ---- Linking a task by hand -------------------------------------------------------
 
-var issueURL = regexp.MustCompile(`^(https?://[^/]+(?:/[^/]+)*?)/([^/]+)/([^/]+)/(issues|pulls)/(\d+)(?:/[^?#]*)?(?:[?#].*)?$`)
+var issueURL = regexp.MustCompile(`^(https?://[^/]+(?:/[^/]+)*?)/([^/]+)/([^/]+)/(issues|pulls|pull)/(\d+)(?:/[^?#]*)?(?:[?#].*)?$`)
 
 // ParseIssueURL splits an issue or pull request address: the server's base
 // URL, owner, repository, number, and whether it's a pull request.
 func ParseIssueURL(raw string) (base, owner, repo string, number int64, pull bool, err error) {
 	m := issueURL.FindStringSubmatch(strings.TrimSpace(raw))
 	if m == nil {
-		return "", "", "", 0, false, errors.New("paste the address of an issue or pull request, like https://gitea.example.org/owner/repo/issues/12")
+		return "", "", "", 0, false, errors.New("paste the address of an issue or pull request, like https://github.com/owner/repo/issues/12")
 	}
 	number, _ = strconv.ParseInt(m[5], 10, 64)
 	base, err = normalize(m[1])
-	return base, m[2], m[3], number, m[4] == "pulls", err
+	return base, m[2], m[3], number, m[4] != "issues", err
 }
 
 // LinkTask points a task at an issue or pull request (by its address), as

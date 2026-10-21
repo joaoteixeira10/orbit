@@ -111,6 +111,11 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **GitHub in the git integration**: connect a GitHub (or GitHub
+  Enterprise) account by token or by signing in; lists from repositories
+  (open / closed, or labels as columns), tasks linked to issues and pull
+  requests, comments — both ways, as on Gitea. GitHub's issues have no due
+  dates (they stay in Orbit) and its boards no REST API (use labels).
 - **Two-way calendar sync (CalDAV)**: a workspace's calendar and a calendar
   in iCloud, Nextcloud, Fastmail or any CalDAV server stay in step — new,
   changed and deleted events both ways, right away from Orbit and every five

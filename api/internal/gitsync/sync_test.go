@@ -1,9 +1,11 @@
 package gitsync
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -33,6 +35,10 @@ type fakeGitea struct {
 	comments    map[int64][]Comment
 	nextComment int64
 	refreshes   int // OAuth refresh-token grants answered
+	// As GitHub (githubHandler): a pull request listed among the issues, and
+	// whether a due date was sent (GitHub has none).
+	pr      *Issue
+	dueSent bool
 }
 
 func newFake() *fakeGitea {
@@ -292,7 +298,11 @@ type fixture struct {
 	bo   string           // a member with no account there
 }
 
-func setup(t *testing.T) *fixture {
+func setup(t *testing.T) *fixture { return setupAs(t, false) }
+
+// setupAs builds the fixture against the fake as Gitea, or as GitHub
+// Enterprise (its API at /api/v3: Connect finds it there).
+func setupAs(t *testing.T, github bool) *fixture {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -306,7 +316,11 @@ func setup(t *testing.T) *fixture {
 	}
 	sealer, _ := keystore.New("git-test-master-key-0123456789abcdef", []byte("0123456789abcdef"))
 	fake := newFake()
-	srv := httptest.NewServer(fake.handler())
+	h := fake.handler()
+	if github {
+		h = fake.githubHandler()
+	}
+	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 	f := &fixture{db: db, fake: fake, srv: srv, e: New(db, sealer, []string{srv.URL}, zap.NewNop())}
 
@@ -700,5 +714,196 @@ func TestOAuthSignIn(t *testing.T) {
 	// A pasted token makes it a plain token account again.
 	if acc, err = f.e.Connect(ctx, f.bo, f.srv.URL, "good"); err != nil || acc.Via != "token" || acc.ExpiresAt != nil {
 		t.Fatalf("pasted: %+v %v", acc, err)
+	}
+}
+
+// githubHandler serves the same repository as GitHub (Enterprise, /api/v3)
+// does: Bearer tokens and the API version header, labels set by name, a
+// pull request among the issues, no /api/v1. A due date sent is noted.
+func (f *fakeGitea) githubHandler() http.Handler {
+	inner := f.handler()
+	writeJSON := func(w http.ResponseWriter, v any) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(v)
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/v3/") {
+			http.Error(w, "<html>Not Found</html>", http.StatusNotFound)
+			return
+		}
+		if r.Header.Get("Authorization") != "Bearer good" {
+			http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
+			return
+		}
+		if r.Header.Get("X-GitHub-Api-Version") == "" || r.URL.Query().Get("limit") != "" {
+			http.Error(w, `{"message":"not GitHub's way"}`, http.StatusBadRequest)
+			return
+		}
+		path := "/api/v1" + strings.TrimPrefix(r.URL.Path, "/api/v3")
+		body, _ := io.ReadAll(r.Body)
+		byName := func(names []string) []int64 {
+			var ids []int64
+			for _, n := range names {
+				ids = append(ids, f.label(n).ID)
+			}
+			return ids
+		}
+		switch {
+		case r.Method == "GET" && path == "/api/v1/user/repos":
+			writeJSON(w, []Repo{{ID: 7, FullName: "o/r", Name: "r", Owner: User{Login: "o"}}, {ID: 8, FullName: "o/other", Name: "other"}})
+			return
+		case r.Method == "GET" && path == "/api/v1/repos/o/r/issues":
+			rec := httptest.NewRecorder()
+			inner.ServeHTTP(rec, forward(r, path, body))
+			var out []Issue
+			_ = json.Unmarshal(rec.Body.Bytes(), &out)
+			f.mu.Lock()
+			if f.pr != nil && r.URL.Query().Get("page") == "1" {
+				out = append(out, *f.pr)
+			}
+			f.mu.Unlock()
+			writeJSON(w, out)
+			return
+		case r.Method == "PUT" && strings.HasSuffix(path, "/labels"):
+			var in struct {
+				Labels []string `json:"labels"`
+			}
+			if json.Unmarshal(body, &in) != nil {
+				http.Error(w, `{"message":"labels are names"}`, http.StatusUnprocessableEntity)
+				return
+			}
+			body, _ = json.Marshal(map[string]any{"labels": byName(in.Labels)})
+		case r.Method == "POST" && path == "/api/v1/repos/o/r/issues":
+			var in map[string]any
+			_ = json.Unmarshal(body, &in)
+			if raw, ok := in["labels"].([]any); ok {
+				var names []string
+				for _, v := range raw {
+					s, ok := v.(string)
+					if !ok {
+						http.Error(w, `{"message":"labels are names"}`, http.StatusUnprocessableEntity)
+						return
+					}
+					names = append(names, s)
+				}
+				in["labels"] = byName(names)
+			}
+			if _, ok := in["due_date"]; ok {
+				f.mu.Lock()
+				f.dueSent = true
+				f.mu.Unlock()
+			}
+			body, _ = json.Marshal(in)
+		case r.Method == "PATCH" && strings.Contains(string(body), "due_date"):
+			f.mu.Lock()
+			f.dueSent = true
+			f.mu.Unlock()
+		}
+		inner.ServeHTTP(w, forward(r, path, body))
+	})
+}
+
+// forward is r on the Gitea fake's path, with its token.
+func forward(r *http.Request, path string, body []byte) *http.Request {
+	r2 := r.Clone(r.Context())
+	r2.URL.Path = path
+	r2.Header.Set("Authorization", "token good")
+	r2.Body = io.NopCloser(bytes.NewReader(body))
+	r2.ContentLength = int64(len(body))
+	return r2
+}
+
+// TestGitHub: the same sync on GitHub — found at /api/v3 (Enterprise),
+// labels set by name, pull requests left out of the list, due dates
+// staying Orbit's (GitHub's issues have none), /pull/ addresses, and the
+// OAuth scope asked for on github.com.
+func TestGitHub(t *testing.T) {
+	f := setupAs(t, true)
+	var acc models.GitAccount
+	f.db.First(&acc, "user_id = ?", f.ana)
+	if acc.Kind != KindGitHub || acc.Login != "ana" {
+		t.Fatalf("account %+v", acc)
+	}
+	f.fake.add("Fix login", "Review", "bug")
+	f.fake.pr = &Issue{ID: 9999, Number: 99, Title: "A pull request", State: "open", UpdatedAt: time.Now()}
+	f.fake.pr.PullRequest = &struct {
+		Merged   bool       `json:"merged"`
+		MergedAt *time.Time `json:"merged_at"`
+	}{}
+	f.sync(t)
+	var n int64
+	f.db.Model(&models.Task{}).Where("list_id = ?", f.link.ListID).Count(&n)
+	task := f.task(t)
+	if n != 1 || task.ColumnID != f.cols[2].ID || task.Tags != `["bug"]` {
+		t.Fatalf("pull: %d tasks, %+v", n, task)
+	}
+
+	// A due date and a new title: the title goes up, the date stays here.
+	due := "2026-12-01"
+	task.Due, task.Title = &due, "Fix the login"
+	f.db.Save(&task)
+	if err := f.e.Push(context.Background(), f.ana, &task, Change{Title: true, Due: true}); err != nil {
+		t.Fatal(err)
+	}
+	if f.fake.get(1).Title != "Fix the login" || f.fake.dueSent {
+		t.Fatalf("push: %+v (due sent: %v)", f.fake.get(1), f.fake.dueSent)
+	}
+	f.fake.edit(1, func(is *Issue) { is.Body = "steps" })
+	f.sync(t)
+	if task = f.task(t); task.Due == nil || *task.Due != due || task.Notes != "steps" {
+		t.Fatalf("the date was lost on pull: %+v", task)
+	}
+
+	// Moved to Doing with another tag: labels by name.
+	task.ColumnID, task.Tags = f.cols[1].ID, `["bug"]`
+	f.db.Save(&task)
+	if err := f.e.Push(context.Background(), f.ana, &task, Change{Column: true, Tags: true}); err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, l := range f.fake.get(1).Labels {
+		names = append(names, l.Name)
+	}
+	if strings.Join(names, ",") != "bug,Doing" {
+		t.Fatalf("labels: %v", names)
+	}
+
+	// A new task opens an issue, its tag a label by name.
+	nt := models.Task{WorkspaceID: f.link.WorkspaceID, ListID: f.link.ListID, ColumnID: f.cols[0].ID, Title: "New one", Tags: `["bug"]`, Due: &due, CreatedBy: f.ana}
+	f.db.Create(&nt)
+	if err := f.e.CreateIssue(context.Background(), f.ana, &nt); err != nil {
+		t.Fatal(err)
+	}
+	f.db.First(&nt, "id = ?", nt.ID)
+	if is := f.fake.get(nt.GitNumber); is.Title != "New one" || len(is.Labels) != 1 || is.Labels[0].Name != "bug" || f.fake.dueSent {
+		t.Fatalf("created: %+v (due sent: %v)", is, f.fake.dueSent)
+	}
+
+	// Comments go both ways as on Gitea.
+	f.fake.comment(1, "ana", "On it")
+	f.sync(t)
+	var cs []models.TaskComment
+	f.db.Where("task_id = ?", task.ID).Find(&cs)
+	if len(cs) != 1 || cs[0].Body != "On it" {
+		t.Fatalf("comments: %+v", cs)
+	}
+
+	c, _ := f.e.ClientFor(f.ana, f.srv.URL)
+	if repos, err := c.SearchRepos(context.Background(), "o/r"); err != nil || len(repos) != 1 || repos[0].FullName != "o/r" {
+		t.Fatalf("repos: %+v %v", repos, err)
+	}
+	if _, err := c.Projects(context.Background(), "o", "r"); !errors.Is(err, ErrNoProjects) {
+		t.Errorf("projects on GitHub: %v", err)
+	}
+
+	base, owner, repo, num, pull, err := ParseIssueURL("https://www.github.com/o/r/pull/5#discussion")
+	if err != nil || base != "https://github.com" || owner != "o" || repo != "r" || num != 5 || !pull {
+		t.Errorf("parse: %q %q %q %d %v %v", base, owner, repo, num, pull, err)
+	}
+	if f.e.kindOf("https://github.com") != KindGitHub || apiRoot("https://github.com", KindGitHub) != "https://api.github.com" {
+		t.Error("github.com isn't GitHub")
+	}
+	if u := AuthorizeURL(OAuthApp{BaseURL: "https://github.com", ClientID: "x"}, "https://orbit/cb", "s", "v"); !strings.Contains(u, "scope=repo+read%3Auser") {
+		t.Errorf("authorize: %s", u)
 	}
 }

@@ -129,6 +129,11 @@ func AuthorizeURL(app OAuthApp, redirect, state, verifier string) string {
 		"code_challenge":        {Challenge(verifier)},
 		"code_challenge_method": {"S256"},
 	}
+	if isGitHubCom(app.BaseURL) {
+		// GitHub grants what's asked: the repositories (issues, labels,
+		// comments) and who the person is.
+		q.Set("scope", "repo read:user")
+	}
 	return app.BaseURL + "/login/oauth/authorize?" + q.Encode()
 }
 
@@ -144,12 +149,23 @@ type oauthToken struct {
 func (e *Engine) tokenCall(ctx context.Context, app OAuthApp, body map[string]string) (oauthToken, error) {
 	var tok oauthToken
 	body["client_id"], body["client_secret"] = app.ClientID, app.ClientSecret
-	b, _ := json.Marshal(body)
-	req, err := http.NewRequestWithContext(ctx, "POST", app.BaseURL+"/login/oauth/access_token", bytes.NewReader(b))
+	var payload []byte
+	ctype := "application/json"
+	if isGitHubCom(app.BaseURL) {
+		// GitHub's token endpoint takes a form.
+		form := url.Values{}
+		for k, v := range body {
+			form.Set(k, v)
+		}
+		payload, ctype = []byte(form.Encode()), "application/x-www-form-urlencoded"
+	} else {
+		payload, _ = json.Marshal(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", app.BaseURL+"/login/oauth/access_token", bytes.NewReader(payload))
 	if err != nil {
 		return tok, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", ctype)
 	req.Header.Set("Accept", "application/json")
 	resp, err := e.clientFor(app.BaseURL).Do(req)
 	if err != nil {
@@ -180,13 +196,14 @@ func (e *Engine) ConnectOAuth(ctx context.Context, userID string, app OAuthApp, 
 	if err != nil {
 		return models.GitAccount{}, err
 	}
-	c := &Client{base: app.BaseURL, token: tok.AccessToken, http: e.clientFor(app.BaseURL)}
+	c := e.newClient(app.BaseURL, tok.AccessToken)
 	me, err := c.Me(ctx)
 	if err != nil {
 		return models.GitAccount{}, fmt.Errorf("couldn't read your account: %w", err)
 	}
-	acc := models.GitAccount{UserID: userID, Kind: "gitea", BaseURL: app.BaseURL}
+	acc := models.GitAccount{UserID: userID, BaseURL: app.BaseURL}
 	e.db.Where("user_id = ? AND base_url = ?", userID, app.BaseURL).First(&acc)
+	acc.Kind = c.kind
 	if err := e.storeTokens(&acc, tok); err != nil {
 		return acc, err
 	}

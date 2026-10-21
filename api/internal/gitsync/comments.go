@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,8 +32,24 @@ type Comment struct {
 
 func (c *Client) Comments(ctx context.Context, owner, repo string, number int64) ([]Comment, error) {
 	var out []Comment
-	err := c.do(ctx, "GET", fmt.Sprintf("%s/issues/%d/comments", repoPath(owner, repo), number), nil, nil, &out)
-	return out, err
+	path := fmt.Sprintf("%s/issues/%d/comments", repoPath(owner, repo), number)
+	if !c.GitHub() {
+		// Gitea answers them all at once (it has no paging here).
+		err := c.do(ctx, "GET", path, nil, nil, &out)
+		return out, err
+	}
+	for page := 1; page <= 20; page++ {
+		var batch []Comment
+		err := c.do(ctx, "GET", path, url.Values{"per_page": {"100"}, "page": {strconv.Itoa(page)}}, nil, &batch)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, batch...)
+		if len(batch) < 100 {
+			break
+		}
+	}
+	return out, nil
 }
 
 func (c *Client) CreateComment(ctx context.Context, owner, repo string, number int64, body string) (Comment, error) {

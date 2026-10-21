@@ -58,10 +58,10 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Tasks and boards
 
-- **GitHub** for the git integration: a second client with the same methods
-  as `internal/gitsync/gitea.go` (issues, labels, assignees; Projects v2 is
-  GraphQL-only, so boards there need their own mapping), and `Kind` on
-  `GitAccount` / per-link choosing it. GitLab after that.
+- **GitLab** for the git integration (a third client: its API differs more —
+  issues by `iid`, `state_event` to close, notes for comments, labels by
+  name, merge requests apart). GitHub's project boards (Projects v2, GraphQL
+  only) as a list layout.
 - Git: webhooks from the server for instant updates (today a 3-minute poll
   and **Sync now**), milestones as a field.
 - Git: an "only as me" choice — today every editor of a linked list writes

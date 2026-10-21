@@ -311,7 +311,7 @@ type PushSubscription struct {
 type GitAccount struct {
 	Base
 	UserID      string     `gorm:"size:36;not null;uniqueIndex:idx_git_account" json:"-"`
-	Kind        string     `gorm:"size:16;not null;default:gitea" json:"kind"` // gitea (github later)
+	Kind        string     `gorm:"size:16;not null;default:gitea" json:"kind"` // gitea (Gitea, Forgejo) | github
 	BaseURL     string     `gorm:"size:255;not null;uniqueIndex:idx_git_account" json:"base_url"`
 	Login       string     `gorm:"size:255" json:"login"`
 	TokenSealed []byte     `json:"-"`

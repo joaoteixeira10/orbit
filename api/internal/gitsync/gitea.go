@@ -14,8 +14,18 @@ import (
 	"time"
 )
 
-// The Gitea / Forgejo REST API (api/v1), as much as the sync needs. GitHub
-// would be a second implementation of the same methods (see docs/ROADMAP.md).
+// The REST API of Gitea / Forgejo (api/v1) and GitHub (api.github.com, or
+// /api/v3 on GitHub Enterprise), as much as the sync needs. Gitea's API was
+// modelled on GitHub's, so one client speaks both; where they differ it
+// asks c.kind: GitHub sets labels by name, pages with per_page, lists pull
+// requests among issues, has no due dates on issues, and no project-board
+// REST API (Projects are GraphQL now): labels stand for columns there.
+
+// Kinds of server.
+const (
+	KindGitea  = "gitea" // Gitea and Forgejo
+	KindGitHub = "github"
+)
 
 // Issue is an issue (or pull request) on the server.
 type Issue struct {
@@ -31,7 +41,8 @@ type Issue struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 	ClosedAt    *time.Time `json:"closed_at"`
 	PullRequest *struct {
-		Merged bool `json:"merged"`
+		Merged   bool       `json:"merged"`
+		MergedAt *time.Time `json:"merged_at"` // GitHub
 	} `json:"pull_request"`
 	Repository *struct {
 		FullName string `json:"full_name"`
@@ -49,7 +60,7 @@ func (i Issue) Due() *string {
 
 // GitState is open, closed or (a pull request) merged.
 func (i Issue) GitState() string {
-	if i.PullRequest != nil && i.PullRequest.Merged {
+	if i.PullRequest != nil && (i.PullRequest.Merged || i.PullRequest.MergedAt != nil) {
 		return "merged"
 	}
 	return i.State
@@ -114,12 +125,37 @@ func (e *APIError) Error() string {
 // Client talks to one server as one user.
 type Client struct {
 	base  string // https://host[/path], no trailing slash
+	kind  string // KindGitea | KindGitHub
 	token string
 	http  *http.Client
+
+	labelNames map[string]map[int64]string // GitHub: owner/repo → label id → name
 }
 
+// apiRoot is where a server's REST API is.
+func apiRoot(base, kind string) string {
+	if kind != KindGitHub {
+		return base + "/api/v1"
+	}
+	if isGitHubCom(base) {
+		return "https://api.github.com"
+	}
+	return base + "/api/v3" // GitHub Enterprise
+}
+
+func isGitHubCom(base string) bool {
+	u, err := url.Parse(base)
+	return err == nil && (u.Host == "github.com" || u.Host == "www.github.com")
+}
+
+// GitHub reports whether the client speaks to GitHub.
+func (c *Client) GitHub() bool { return c.kind == KindGitHub }
+
+// HasDue reports whether the server's issues have due dates (GitHub's don't).
+func (c *Client) HasDue() bool { return c.kind != KindGitHub }
+
 func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, out any) error {
-	u := c.base + "/api/v1" + path
+	u := apiRoot(c.base, c.kind) + path
 	if len(q) > 0 {
 		u += "?" + q.Encode()
 	}
@@ -135,8 +171,14 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, 
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "token "+c.token)
-	req.Header.Set("Accept", "application/json")
+	if c.GitHub() {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	} else {
+		req.Header.Set("Authorization", "token "+c.token)
+		req.Header.Set("Accept", "application/json")
+	}
 	if in != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -162,6 +204,12 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, 
 	return json.Unmarshal(data, out)
 }
 
+// isNotJSON: the answer wasn't the API's JSON (a web page, say).
+func isNotJSON(err error) bool {
+	var se *json.SyntaxError
+	return errors.As(err, &se)
+}
+
 func isStatus(err error, code int) bool {
 	var e *APIError
 	return errors.As(err, &e) && e.Status == code
@@ -177,6 +225,32 @@ func (c *Client) Me(ctx context.Context) (User, error) {
 // SearchRepos finds repositories the user can see (most recently updated
 // first).
 func (c *Client) SearchRepos(ctx context.Context, q string) ([]Repo, error) {
+	if c.GitHub() {
+		// The user's repositories (own, collaborator, organisations'), most
+		// recently updated first, filtered here.
+		q = strings.ToLower(strings.TrimSpace(q))
+		var out []Repo
+		for page := 1; page <= 3 && len(out) < 30; page++ {
+			var batch []Repo
+			err := c.do(ctx, "GET", "/user/repos", url.Values{"sort": {"updated"}, "per_page": {"100"}, "page": {strconv.Itoa(page)},
+				"affiliation": {"owner,collaborator,organization_member"}}, nil, &batch)
+			if err != nil {
+				return nil, err
+			}
+			for _, r := range batch {
+				if q == "" || strings.Contains(strings.ToLower(r.FullName), q) {
+					out = append(out, r)
+				}
+			}
+			if len(batch) < 100 {
+				break
+			}
+		}
+		if len(out) > 30 {
+			out = out[:30]
+		}
+		return out, nil
+	}
 	var res struct {
 		Data []Repo `json:"data"`
 	}
@@ -192,8 +266,18 @@ func repoPath(owner, repo string) string {
 // updated since (zero: all), every page.
 func (c *Client) Issues(ctx context.Context, owner, repo string, since time.Time) ([]Issue, error) {
 	var all []Issue
+	size := 50
+	if c.GitHub() {
+		size = 100
+	}
 	for page := 1; page <= 100; page++ {
-		q := url.Values{"state": {"all"}, "type": {"issues"}, "limit": {"50"}, "page": {strconv.Itoa(page)}}
+		q := url.Values{"state": {"all"}, "page": {strconv.Itoa(page)}}
+		if c.GitHub() {
+			q.Set("per_page", strconv.Itoa(size))
+		} else {
+			q.Set("type", "issues")
+			q.Set("limit", strconv.Itoa(size))
+		}
 		if !since.IsZero() {
 			q.Set("since", since.UTC().Format(time.RFC3339))
 		}
@@ -201,8 +285,12 @@ func (c *Client) Issues(ctx context.Context, owner, repo string, since time.Time
 		if err := c.do(ctx, "GET", repoPath(owner, repo)+"/issues", q, nil, &batch); err != nil {
 			return nil, err
 		}
-		all = append(all, batch...)
-		if len(batch) < 50 {
+		for _, is := range batch {
+			if is.PullRequest == nil { // GitHub lists pull requests too
+				all = append(all, is)
+			}
+		}
+		if len(batch) < size {
 			break
 		}
 	}
@@ -242,44 +330,109 @@ func DueTime(date string) string { return date + "T23:59:59Z" }
 // CreateIssue opens an issue.
 func (c *Client) CreateIssue(ctx context.Context, owner, repo string, in IssueInput) (Issue, error) {
 	var i Issue
-	err := c.do(ctx, "POST", repoPath(owner, repo)+"/issues", nil, in, &i)
+	var body any = in
+	if c.GitHub() {
+		names, err := c.names(ctx, owner, repo, in.Labels)
+		if err != nil {
+			return i, err
+		}
+		gh := map[string]any{"title": in.Title}
+		if in.Body != nil {
+			gh["body"] = *in.Body
+		}
+		if in.Assignees != nil {
+			gh["assignees"] = *in.Assignees
+		}
+		if len(names) > 0 {
+			gh["labels"] = names
+		}
+		body = gh
+	}
+	err := c.do(ctx, "POST", repoPath(owner, repo)+"/issues", nil, body, &i)
 	return i, err
 }
 
 // EditIssue changes an issue.
 func (c *Client) EditIssue(ctx context.Context, owner, repo string, number int64, in IssueInput) (Issue, error) {
 	var i Issue
+	if c.GitHub() {
+		in.DueDate, in.UnsetDue = nil, false
+	}
 	err := c.do(ctx, "PATCH", fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), nil, in, &i)
 	return i, err
 }
 
 // SetLabels replaces an issue's labels.
 func (c *Client) SetLabels(ctx context.Context, owner, repo string, number int64, ids []int64) error {
+	var labels any = ids
 	if ids == nil {
-		ids = []int64{}
+		labels = []int64{}
 	}
-	return c.do(ctx, "PUT", fmt.Sprintf("%s/issues/%d/labels", repoPath(owner, repo), number), nil, map[string]any{"labels": ids}, nil)
+	if c.GitHub() {
+		names, err := c.names(ctx, owner, repo, ids)
+		if err != nil {
+			return err
+		}
+		labels = names
+	}
+	return c.do(ctx, "PUT", fmt.Sprintf("%s/issues/%d/labels", repoPath(owner, repo), number), nil, map[string]any{"labels": labels}, nil)
+}
+
+// names turns label ids into names (GitHub sets labels by name).
+func (c *Client) names(ctx context.Context, owner, repo string, ids []int64) ([]string, error) {
+	out := []string{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	byID := c.labelNames[owner+"/"+repo]
+	if byID == nil {
+		if _, err := c.Labels(ctx, owner, repo); err != nil {
+			return nil, err
+		}
+		byID = c.labelNames[owner+"/"+repo]
+	}
+	for _, id := range ids {
+		if n, ok := byID[id]; ok {
+			out = append(out, n)
+		}
+	}
+	return out, nil
 }
 
 // Labels lists a repository's labels.
 func (c *Client) Labels(ctx context.Context, owner, repo string) ([]Label, error) {
 	var all []Label
+	size, sizeKey := 50, "limit"
+	if c.GitHub() {
+		size, sizeKey = 100, "per_page"
+	}
 	for page := 1; page <= 20; page++ {
 		var batch []Label
-		if err := c.do(ctx, "GET", repoPath(owner, repo)+"/labels", url.Values{"limit": {"50"}, "page": {strconv.Itoa(page)}}, nil, &batch); err != nil {
+		if err := c.do(ctx, "GET", repoPath(owner, repo)+"/labels", url.Values{sizeKey: {strconv.Itoa(size)}, "page": {strconv.Itoa(page)}}, nil, &batch); err != nil {
 			return nil, err
 		}
 		all = append(all, batch...)
-		if len(batch) < 50 {
+		if len(batch) < size {
 			break
 		}
 	}
+	byID := map[int64]string{}
+	for _, l := range all {
+		byID[l.ID] = l.Name
+	}
+	if c.labelNames == nil {
+		c.labelNames = map[string]map[int64]string{}
+	}
+	c.labelNames[owner+"/"+repo] = byID
 	return all, nil
 }
 
 // Projects lists a repository's open project boards (ErrNoProjects when
 // the server has no projects API).
 func (c *Client) Projects(ctx context.Context, owner, repo string) ([]Project, error) {
+	if c.GitHub() {
+		return nil, ErrNoProjects
+	}
 	var ps []Project
 	err := c.do(ctx, "GET", repoPath(owner, repo)+"/projects", url.Values{"state": {"open"}, "limit": {"50"}}, nil, &ps)
 	if isStatus(err, http.StatusNotFound) || isStatus(err, http.StatusMethodNotAllowed) {

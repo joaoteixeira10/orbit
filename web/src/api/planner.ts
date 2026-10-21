@@ -88,7 +88,7 @@ export interface TaskList {
   open_count: number
   git?: GitLink // the list holds a repository's issues
 }
-// A list's link to a repository on Gitea / Forgejo.
+// A list's link to a repository on Gitea / Forgejo or GitHub.
 export interface GitLink {
   host: string
   owner: string
@@ -403,7 +403,7 @@ export const pagesApi = {
 
 export interface GitAccount {
   id: string
-  kind: 'gitea'
+  kind: 'gitea' | 'github' // Gitea / Forgejo, or GitHub
   base_url: string
   login: string
   last_error?: string

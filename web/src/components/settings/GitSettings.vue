@@ -40,8 +40,11 @@ onMounted(async () => {
   }
 })
 
+// GitHub (github.com; an Enterprise server is told when connecting).
+const isGitHub = computed(() => /^https?:\/\/(www\.)?github\.com\/?$/i.test(base.value.trim()))
 // Where to make a token: the server's own page, once its address is typed.
 const tokenPage = computed(() => {
+  if (isGitHub.value) return 'https://github.com/settings/personal-access-tokens/new'
   try {
     const u = new URL(base.value.trim())
     return /^https?:$/.test(u.protocol) ? `${u.origin}${u.pathname.replace(/\/+$/, '')}/user/settings/applications` : ''
@@ -125,11 +128,19 @@ function host(u: string) {
         <datalist id="git-servers">
           <option v-for="s in servers" :key="s" :value="s" />
         </datalist>
+        <span class="mt-1.5 flex flex-wrap gap-1.5">
+          <button type="button" class="pill hover:bg-fill" @click="base = 'https://github.com'">GitHub</button>
+        </span>
       </label>
       <label class="block">
         <span class="mb-1 block text-[12.5px] font-medium text-text-2">{{ t('git.settings.token') }}</span>
         <input v-model="token" class="input font-mono" type="password" autocomplete="off" spellcheck="false" />
-        <I18nT keypath="git.settings.tokenHint" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">
+        <I18nT v-if="isGitHub" keypath="git.settings.tokenHintGitHub" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">
+          <template #link>
+            <a :href="tokenPage" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-accent-text hover:underline">{{ t('git.settings.tokenPageGitHub') }}<ExternalLink class="h-3 w-3" /></a>
+          </template>
+        </I18nT>
+        <I18nT v-else keypath="git.settings.tokenHint" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">
           <template #link>
             <a v-if="tokenPage" :href="tokenPage" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-accent-text hover:underline">{{ t('git.settings.tokenPage') }}<ExternalLink class="h-3 w-3" /></a>
             <span v-else>{{ t('git.settings.tokenPageGeneric') }}</span>

@@ -69,6 +69,8 @@ func (h *Handlers) commentResponses(cs []models.TaskComment) []commentResponse {
 		}
 		if c.AuthorID == "" && c.GitAuthor != "" {
 			name = c.GitAuthor
+		} else if c.AuthorID == "" && c.AuthorLabel != "" {
+			name = c.AuthorLabel
 		}
 		out = append(out, commentResponse{TaskComment: c, AuthorName: name, AuthorAvatar: u.AvatarURL})
 	}

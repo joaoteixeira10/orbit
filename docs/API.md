@@ -93,6 +93,18 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Move a workspace** to another Orbit: `GET /workspaces/{ws}/transfer`
+(owners) downloads all of it as a zip (`workspace.json`, format
+`orbit-workspace` v1, and `files/<id>`); `POST /workspaces/import` (multipart
+`file`; `people=false` to leave the members out) makes a new workspace from
+one and answers `{workspace, report}` — what came in, who was added, who has
+no account here, which files didn't fit:
+
+```sh
+curl -s "${auth[@]}" -o ws.orbit.zip "$ORBIT/api/v1/workspaces/$WS/transfer"
+curl -s "${auth[@]}" -F file=@ws.orbit.zip "$OTHER/api/v1/workspaces/import"
+```
+
 Saving a page's content needs the `version` you read (`PUT /pages/<id>` with
 `{"content": …, "version": 3}`); if someone saved in between you get `409`
 with the newer page in `page`.

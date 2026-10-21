@@ -101,7 +101,7 @@ func New(d Deps) *gin.Engine {
 	r.Use(securityHeaders(nil))
 	// Cap request bodies.
 	// Uploads have their own, larger limit (UPLOAD_MAX_MB, in the handler).
-	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool { return p == "/api/v1/uploads" }))
+	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool { return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" }))
 	r.Use(metricsMiddleware())
 
 	// Defence-in-depth brute-force throttle for credential/second-factor
@@ -252,6 +252,8 @@ func New(d Deps) *gin.Engine {
 
 			authed.GET("/workspaces", h.listWorkspaces)
 			authed.POST("/workspaces", h.auth.RequireGlobal(rbac.PWorkspacesCreate), h.createWorkspace)
+			authed.POST("/workspaces/import", h.auth.RequireGlobal(rbac.PWorkspacesCreate), h.importWorkspace)
+			authed.GET("/workspaces/:ws/transfer", h.exportWorkspace)
 			authed.GET("/workspaces/:ws", h.getWorkspace)
 			authed.PUT("/workspaces/:ws", h.updateWorkspace)
 			authed.DELETE("/workspaces/:ws", h.deleteWorkspace)

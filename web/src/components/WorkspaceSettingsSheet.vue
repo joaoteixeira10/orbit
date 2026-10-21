@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, UserPlus, Archive, ArchiveRestore, Trash2, LogOut } from 'lucide-vue-next'
+import { GripVertical, UserPlus, Archive, ArchiveRestore, Trash2, LogOut, Download } from 'lucide-vue-next'
 import Overlay from './ui/Overlay.vue'
 import Toggle from './ui/Toggle.vue'
 import Confirm from './ui/Confirm.vue'
@@ -16,6 +16,7 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { workspacesApi, type ModuleKey, type WSRole } from '@/api/planner'
+import { downloadAuthed } from '@/lib/api'
 
 // A workspace's settings: what it is (name, look, description), which
 // modules it has and in which order, who is in it, and archiving / deleting.
@@ -136,6 +137,16 @@ async function removeMember(uid: string) {
 }
 
 const confirmDelete = ref(false)
+// The whole workspace as a file, to import on another Orbit.
+async function exportWs() {
+  if (!ws.value) return
+  const slug = ws.value.name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace'
+  try {
+    await downloadAuthed(`/workspaces/${ws.value.id}/transfer`, `${slug}.orbit.zip`)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 async function archive(on: boolean) {
   await save({ archived: on })
   toast.success(on ? t('ws.archived') : t('ws.restored'))
@@ -192,6 +203,10 @@ async function destroy() {
               <component :is="ws.archived_at ? ArchiveRestore : Archive" class="h-4 w-4" />
               {{ ws.archived_at ? t('ws.unarchive') : t('ws.archive') }}
               <span class="ml-auto text-[12px] font-normal text-text-3">{{ ws.archived_at ? '' : t('ws.archiveHint') }}</span>
+            </button>
+            <button class="btn w-full justify-start" data-testid="export-ws" @click="exportWs">
+              <Download class="h-4 w-4" />{{ t('ws.export') }}
+              <span class="ml-auto text-[12px] font-normal text-text-3">{{ t('ws.exportHint') }}</span>
             </button>
             <button class="btn w-full justify-start !text-danger" @click="confirmDelete = true"><Trash2 class="h-4 w-4" />{{ t('ws.delete') }}</button>
           </template>

@@ -182,12 +182,29 @@ it you only see workspaces you're invited to.
 - **General** — name, description, colour and icon (saved as you type);
   **Archive workspace** (read-only, moved to Archived; **Restore workspace**
   brings it back); **Delete workspace** (type its name to confirm — everything
-  in it is deleted for everyone). Members who aren't owners see **Leave
-  workspace** instead.
+  in it is deleted for everyone); **Export workspace** (owners) — a
+  `.orbit.zip` with everything in it, to [move it to another
+  Orbit](#moving-a-workspace-to-another-orbit). Members who aren't owners see
+  **Leave workspace** instead.
 - **Modules** — turn modules on and off (turning one off hides it; nothing is
   deleted) and drag them to change their order in the sidebar.
 - **Members** — invite an existing account by **username or email** as
   **Owner**, **Editor** or **Viewer**; change roles; remove members.
+
+### Moving a workspace to another Orbit
+
+On the old one: Workspace settings → **Export workspace** downloads
+`<name>.orbit.zip`. On the new one: **New workspace** → **Import a
+workspace…** → choose the file → **Import**. It arrives as a new workspace
+with you as its owner: its lists and tasks (sub-tasks, notes, tags,
+assignees, comments), pages (links between them still work), notes, events,
+courses with their timetable, your own grades and goals, and the files on
+all of them. With **Add its members who have an account here** on, the
+people found here (by username, then email) join with the roles they had;
+who isn't found is left out — their comments keep their name. Not carried:
+calendar subscriptions (their addresses are secrets — add them again), git
+links, invite links, the trash, and other people's grades. Importing the same
+file twice makes two workspaces.
 - **Invite links** (under Members, for owners) — for people who don't have an
   account yet, or whose user name you don't know. Choose the role (**Editor**
   or **Viewer**), how long the link lasts (1 to 30 days) and how many people

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, Check } from 'lucide-vue-next'
+import { ChevronLeft, Check, Upload } from 'lucide-vue-next'
 import Overlay from './ui/Overlay.vue'
 import Toggle from './ui/Toggle.vue'
 import WsIcon from './ui/WsIcon.vue'
@@ -11,10 +11,11 @@ import { ICONS } from '@/lib/icons'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
 import { currentLocale } from '@/i18n'
-import type { Template, ModuleKey } from '@/api/planner'
+import { workspacesApi, type Template, type ModuleKey, type ImportReport, type Workspace } from '@/api/planner'
 
 // "New workspace": pick a template (School, Work, Personal, Shared, Blank),
-// then make it yours — name, colour, icon and which modules it has.
+// then make it yours — name, colour, icon and which modules it has. Or
+// import one exported from another Orbit (step 3).
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const wss = useWorkspacesStore()
@@ -22,7 +23,7 @@ const toast = useToastStore()
 const router = useRouter()
 const { t } = useI18n()
 
-const step = ref<1 | 2>(1)
+const step = ref<1 | 2 | 3>(1)
 const tpl = ref<Template | null>(null)
 const name = ref('')
 const icon = ref('')
@@ -37,6 +38,8 @@ watch(
     if (!o) return
     step.value = 1
     tpl.value = null
+    file.value = null
+    result.value = null
     await wss.loadCatalog().catch(() => {})
   },
 )
@@ -61,6 +64,49 @@ function toggleModule(k: ModuleKey, on: boolean) {
   } else if (!on) modules.value = modules.value.filter((m) => m !== k)
 }
 
+// ---- Import ----
+const file = ref<File | null>(null)
+const people = ref(true)
+const result = ref<{ workspace: Workspace; report: ImportReport } | null>(null)
+const picker = ref<HTMLInputElement | null>(null)
+function pick(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  file.value = input.files?.[0] ?? null
+  input.value = ''
+  result.value = null
+}
+async function runImport() {
+  if (!file.value) return
+  busy.value = true
+  try {
+    result.value = await workspacesApi.importFile(file.value, people.value)
+    await wss.load()
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    busy.value = false
+  }
+}
+const summary = computed(() => {
+  const r = result.value?.report
+  if (!r) return []
+  const list = (v: string[] | null) => (v ?? []).join(', ')
+  return [
+    (['lists', 'tasks', 'pages', 'notes', 'events', 'courses', 'files'] as const)
+      .filter((k) => r[k] > 0)
+      .map((k) => t(`ws.importCount.${k}`, { n: r[k] }, r[k]))
+      .join(' · '),
+    r.added?.length ? t('ws.importAdded', { names: list(r.added) }) : '',
+    r.missing?.length ? t('ws.importMissing', { names: list(r.missing) }) : '',
+    r.skipped?.length ? t('ws.importSkipped', { names: list(r.skipped) }) : '',
+  ].filter(Boolean)
+})
+function openImported() {
+  const ws = result.value?.workspace
+  emit('close')
+  if (ws) router.push({ name: 'ws', params: { ws: ws.id } })
+}
+
 async function create() {
   if (!tpl.value || !name.value.trim()) return
   busy.value = true
@@ -81,7 +127,7 @@ async function create() {
 </script>
 
 <template>
-  <Overlay :open="open" :title="step === 1 ? t('ws.new') : ''" size="lg" @close="emit('close')">
+  <Overlay :open="open" :title="step === 1 ? t('ws.new') : step === 3 ? t('ws.importTitle') : ''" size="lg" @close="emit('close')">
     <!-- Step 1: template -->
     <div v-if="step === 1">
       <p class="subhead -mt-1 mb-4">{{ t('ws.newHint') }}</p>
@@ -103,6 +149,7 @@ async function create() {
           </span>
         </button>
       </div>
+      <button class="btn-plain mt-4" data-testid="import-ws" @click="step = 3"><Upload class="h-4 w-4" />{{ t('ws.import') }}</button>
     </div>
 
     <!-- Step 2: make it yours -->
@@ -152,11 +199,48 @@ async function create() {
       </label>
     </div>
 
-    <template v-if="step === 2" #footer>
-      <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button class="btn-primary" :disabled="busy || !name.trim() || !modules.length" @click="create">
-        <Check class="h-4 w-4" />{{ t('ws.create') }}
-      </button>
+    <!-- Step 3: import an export -->
+    <div v-if="step === 3" class="space-y-4">
+      <div v-if="!result" class="-mt-2 flex items-center">
+        <button class="btn-plain -ml-2" @click="step = 1"><ChevronLeft class="h-4 w-4" />{{ t('ws.templates') }}</button>
+      </div>
+      <template v-if="!result">
+        <p class="subhead">{{ t('ws.importHint') }}</p>
+        <input ref="picker" type="file" accept=".zip,application/zip" class="hidden" data-testid="import-file" @change="pick" />
+        <div class="group">
+          <button class="group-row w-full text-left" @click="picker?.click()">
+            <Upload class="h-4 w-4 text-accent" />
+            <span class="flex-1 truncate text-[14px]">{{ file ? file.name : t('ws.importChoose') }}</span>
+          </button>
+          <div class="group-row">
+            <span class="flex-1">
+              <span class="block text-[14px]">{{ t('ws.importPeople') }}</span>
+              <span class="block text-[12px] text-text-3">{{ t('ws.importPeopleHint') }}</span>
+            </span>
+            <Toggle v-model="people" />
+          </div>
+        </div>
+        <p class="footnote px-1">{{ t('ws.importNotCarried') }}</p>
+      </template>
+      <div v-else class="text-center" data-testid="import-result">
+        <div class="flex justify-center"><WsIcon :icon="result.workspace.icon" :color="result.workspace.color" :size="56" :name="result.workspace.name" /></div>
+        <h2 class="title-3 mt-3">{{ t('ws.imported', { name: result.workspace.name }) }}</h2>
+        <p v-for="(l, i) in summary" :key="i" class="mt-1 text-[13px] text-text-2">{{ l }}</p>
+      </div>
+    </div>
+
+    <template v-if="step !== 1" #footer>
+      <template v-if="step === 3 && !result">
+        <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
+        <button class="btn-primary" :disabled="busy || !file" @click="runImport">{{ t('ws.importGo') }}</button>
+      </template>
+      <button v-else-if="step === 3" class="btn-primary" @click="openImported">{{ t('ws.open') }}</button>
+      <template v-else>
+        <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
+        <button class="btn-primary" :disabled="busy || !name.trim() || !modules.length" @click="create">
+          <Check class="h-4 w-4" />{{ t('ws.create') }}
+        </button>
+      </template>
     </template>
   </Overlay>
 </template>

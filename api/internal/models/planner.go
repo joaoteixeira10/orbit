@@ -438,6 +438,9 @@ type TaskComment struct {
 	GitCommentID int64  `gorm:"not null;default:0;index" json:"-"`
 	GitHash      string `gorm:"size:16" json:"-"`
 	GitAuthor    string `gorm:"size:100" json:"git_author,omitempty"`
+	// AuthorLabel names an author with no account here (a comment that came
+	// with an imported workspace); AuthorID is then empty.
+	AuthorLabel string `gorm:"size:100" json:"-"`
 }
 
 // TaskEvent is one line of a task's activity: who did what, when (created,

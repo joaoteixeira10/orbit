@@ -747,6 +747,13 @@ definitions:
           $ref: '#/definitions/api.taskResponse'
         type: array
     type: object
+  api.importResponse:
+    properties:
+      report:
+        $ref: '#/definitions/transfer.Report'
+      workspace:
+        $ref: '#/definitions/api.workspaceResponse'
+    type: object
   api.inboxResponse:
     properties:
       items:
@@ -2428,6 +2435,40 @@ definitions:
         type: string
       name:
         type: string
+    type: object
+  transfer.Report:
+    properties:
+      added:
+        description: members added (usernames)
+        items:
+          type: string
+        type: array
+      comments:
+        type: integer
+      courses:
+        type: integer
+      events:
+        type: integer
+      files:
+        type: integer
+      lists:
+        type: integer
+      missing:
+        description: people with no account here (names)
+        items:
+          type: string
+        type: array
+      notes:
+        type: integer
+      pages:
+        type: integer
+      skipped:
+        description: files not taken (too large, quota)
+        items:
+          type: string
+        type: array
+      tasks:
+        type: integer
     type: object
 info:
   contact: {}
@@ -6393,6 +6434,26 @@ paths:
       summary: Create a task
       tags:
       - tasks
+  /workspaces/{ws}/transfer:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export a workspace
+      tags:
+      - workspaces
   /workspaces/{ws}/trash:
     get:
       parameters:
@@ -6415,6 +6476,32 @@ paths:
       summary: Trashed pages
       tags:
       - pages
+  /workspaces/import:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: An Orbit workspace export (.orbit.zip)
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Add the members who have an account here (default true)
+        in: formData
+        name: people
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.importResponse'
+      security:
+      - BearerAuth: []
+      summary: Import a workspace
+      tags:
+      - workspaces
 securityDefinitions:
   BearerAuth:
     description: '"Bearer <access_token>"'

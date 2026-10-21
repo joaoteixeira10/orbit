@@ -310,6 +310,20 @@ export const plannerApi = {
   lookupUser: (q: string) => api<{ id: string; username: string; display_name: string; avatar_url: string }>(`/users/lookup?${qs({ q })}`),
 }
 
+export interface ImportReport {
+  lists: number
+  tasks: number
+  pages: number
+  notes: number
+  events: number
+  courses: number
+  comments: number
+  files: number
+  added: string[] | null
+  missing: string[] | null
+  skipped: string[] | null
+}
+
 export const workspacesApi = {
   list: () => api<Workspace[]>('/workspaces'),
   get: (id: string) => api<{ workspace: Workspace; members: Member[] }>(`/workspaces/${id}`),
@@ -318,6 +332,13 @@ export const workspacesApi = {
   update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean; grade_scale: number; holidays: string }>) =>
     api<Workspace>(`/workspaces/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/workspaces/${id}`, { method: 'DELETE' }),
+  // A whole workspace as a file (transfer) and back (import), between Orbits.
+  importFile: (file: File, people: boolean) => {
+    const form = new FormData()
+    form.append('file', file, file.name || 'workspace.orbit.zip')
+    form.append('people', String(people))
+    return api<{ workspace: Workspace; report: ImportReport }>('/workspaces/import', { method: 'POST', body: form })
+  },
   order: (ids: string[]) => api<void>('/me/workspace-order', { method: 'PUT', body: j({ ids }) }),
   mute: (id: string, muted: boolean) => api<void>(`/workspaces/${id}/mute`, { method: 'PUT', body: j({ muted }) }),
   members: (id: string) => api<Member[]>(`/workspaces/${id}/members`),

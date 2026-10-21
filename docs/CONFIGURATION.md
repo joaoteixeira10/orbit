@@ -123,6 +123,7 @@ the audit log and the runtime settings below. Back up the file and
 |---|---|---|---|
 | `UPLOAD_MAX_MB` | – | `25` | Largest file someone can add to a page, task or note. |
 | `UPLOAD_QUOTA_MB` | – | `2048` | All uploads together, for the instance; `0` = no limit. Past it, uploads answer `507`. |
+| `IMPORT_MAX_MB` | – | `512` | Largest workspace export someone can import (its files included). Files past `UPLOAD_MAX_MB`, or past the quota, are left out and listed. |
 
 Uploads are kept **in the database** (a table of their own), so backups and
 restores carry them with everything else. Plan the disk accordingly.

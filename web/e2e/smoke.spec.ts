@@ -588,6 +588,32 @@ test('calendar Week view: an event drags to another day and time, its bottom edg
   await request.delete(`/api/v1/events/${ev.id}`, { headers: H })
 })
 
+test('a workspace exported to a file comes back as a new one with its tasks', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Move me', kind: 'work' } })).json()
+  expect((await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Pack the boxes' } })).ok()).toBeTruthy()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.goto(`/w/${ws.id}`)
+  await page.getByRole('button', { name: 'Workspace settings' }).click()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-ws').click()])
+  expect(download.suggestedFilename()).toBe('Move-me.orbit.zip')
+  const file = await download.path()
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('button', { name: 'New workspace' }).first().click()
+  await page.getByTestId('import-ws').click()
+  await page.getByTestId('import-file').setInputFiles(file)
+  await page.getByRole('button', { name: 'Import', exact: true }).click()
+  await expect(page.getByTestId('import-result')).toContainText('Move me is here')
+  await expect(page.getByTestId('import-result')).toContainText('1 task ·')
+  await page.getByRole('button', { name: 'Open', exact: true }).click()
+  await expect(page).not.toHaveURL(new RegExp(ws.id))
+  await page.getByRole('link', { name: /^Tasks/ }).first().click()
+  await expect(page.getByText('Pack the boxes')).toBeVisible()
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

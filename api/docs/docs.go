@@ -5254,6 +5254,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Import a workspace",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "An Orbit workspace export (.orbit.zip)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Add the members who have an account here (default true)",
+                        "name": "people",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.importResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}": {
             "get": {
                 "security": [
@@ -6468,6 +6510,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/transfer": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Export a workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/trash": {
             "get": {
                 "security": [
@@ -7564,6 +7639,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.taskResponse"
                     }
+                }
+            }
+        },
+        "api.importResponse": {
+            "type": "object",
+            "properties": {
+                "report": {
+                    "$ref": "#/definitions/transfer.Report"
+                },
+                "workspace": {
+                    "$ref": "#/definitions/api.workspaceResponse"
                 }
             }
         },
@@ -9958,6 +10044,56 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "transfer.Report": {
+            "type": "object",
+            "properties": {
+                "added": {
+                    "description": "members added (usernames)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "comments": {
+                    "type": "integer"
+                },
+                "courses": {
+                    "type": "integer"
+                },
+                "events": {
+                    "type": "integer"
+                },
+                "files": {
+                    "type": "integer"
+                },
+                "lists": {
+                    "type": "integer"
+                },
+                "missing": {
+                    "description": "people with no account here (names)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "notes": {
+                    "type": "integer"
+                },
+                "pages": {
+                    "type": "integer"
+                },
+                "skipped": {
+                    "description": "files not taken (too large, quota)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tasks": {
+                    "type": "integer"
                 }
             }
         }

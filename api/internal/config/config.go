@@ -57,6 +57,8 @@ type Config struct {
 	// (0 = no limit).
 	UploadMaxBytes   int64 // UPLOAD_MAX_MB
 	UploadQuotaBytes int64 // UPLOAD_QUOTA_MB
+	// ImportMaxBytes caps a workspace export being imported (files included).
+	ImportMaxBytes int64 // IMPORT_MAX_MB
 
 	// WebAuthn / passkeys. RPID must be a registrable-domain suffix of every
 	// origin's host (exactly the public hostname behind the TLS proxy in prod;
@@ -160,6 +162,7 @@ func Load() (*Config, error) {
 		MaxBodyBytes:     int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
 		UploadMaxBytes:   int64(envInt("UPLOAD_MAX_MB", 25)) << 20,
 		UploadQuotaBytes: int64(envInt("UPLOAD_QUOTA_MB", 2048)) << 20,
+		ImportMaxBytes:   int64(envInt("IMPORT_MAX_MB", 512)) << 20,
 
 		WebAuthnRPID:          env("WEBAUTHN_RP_ID", ""),
 		WebAuthnRPOrigins:     splitNonEmpty(env("WEBAUTHN_RP_ORIGINS", "")),

@@ -252,7 +252,7 @@ func (h *Handlers) deleteDrawing(c *gin.Context) {
 //	@Success	200	{object}	models.Drawing
 //	@Router		/notes/{id}/drawing [post]
 func (h *Handlers) noteDrawingOf(c *gin.Context) {
-	n, ok := h.noteAccess(c, models.WSEditor)
+	n, ok := h.noteAccess(c)
 	if !ok {
 		return
 	}

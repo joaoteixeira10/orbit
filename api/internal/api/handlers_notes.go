@@ -137,8 +137,8 @@ func itemsToText(items []noteItem) string {
 
 // noteAccess loads the :id note: a workspace's note follows its roles; a
 // personal note is its owner's alone (anyone else gets 404).
-func (h *Handlers) noteAccess(c *gin.Context, need string) (models.Note, bool) {
-	return h.noteAccessID(c, c.Param("id"), need)
+func (h *Handlers) noteAccess(c *gin.Context) (models.Note, bool) {
+	return h.noteAccessID(c, c.Param("id"), models.WSEditor)
 }
 
 // noteAccessID is noteAccess for a note named otherwise (a drawing's).
@@ -396,7 +396,7 @@ func noteLink(n models.Note) string {
 //	@Success	200		{object}	noteResponse
 //	@Router		/notes/{id} [put]
 func (h *Handlers) updateNote(c *gin.Context) {
-	n, ok := h.noteAccess(c, models.WSEditor)
+	n, ok := h.noteAccess(c)
 	if !ok {
 		return
 	}
@@ -426,7 +426,7 @@ func (h *Handlers) updateNote(c *gin.Context) {
 //	@Success	204
 //	@Router		/notes/{id} [delete]
 func (h *Handlers) deleteNote(c *gin.Context) {
-	n, ok := h.noteAccess(c, models.WSEditor)
+	n, ok := h.noteAccess(c)
 	if !ok {
 		return
 	}
@@ -515,7 +515,7 @@ type moveNoteRequest struct {
 //	@Success	200		{object}	noteResponse
 //	@Router		/notes/{id}/move [post]
 func (h *Handlers) moveNote(c *gin.Context) {
-	n, ok := h.noteAccess(c, models.WSEditor)
+	n, ok := h.noteAccess(c)
 	if !ok {
 		return
 	}

@@ -195,10 +195,10 @@ func TestCleanColumns(t *testing.T) {
 	}
 }
 
-// TestModules: only available modules are kept, in order, once.
+// TestModules: only known, available modules are kept, in order, once.
 func TestModules(t *testing.T) {
 	got, ok := CleanModules([]string{"calendar", "pages", "calendar", "habits", "nope"})
-	if ok || strings.Join(got, ",") != "calendar,pages" {
+	if ok || strings.Join(got, ",") != "calendar,pages,habits" {
 		t.Errorf("got %v %v", got, ok)
 	}
 	if TemplateFor("school").Kind != "school" || TemplateFor("whatever").Kind != "custom" {

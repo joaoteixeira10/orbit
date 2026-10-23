@@ -126,6 +126,8 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Quick Draw**: your own sketches, like Quick Notes — a tile with a **+**
+  in the sidebar (and in the phone's tab bar, and ⌘K → New sketch).
 - **Whiteboards** (a new module) and **drawings on notes**, with Excalidraw:
   hand-drawn shapes, arrows, text and images; saved as you draw (a stale
   save never overwrites a newer one), shown as pictures on cards, found by

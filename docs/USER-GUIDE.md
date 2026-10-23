@@ -145,12 +145,15 @@ feature flags, ownership transfer and impersonation.
 The **sidebar** on the left (a drawer behind the ☰ button on narrow screens):
 
 - **Search ⌘K** (Ctrl+K on Windows and Linux) opens the **command palette**:
-  type to find pages, tasks, notes, events and comments in all your
-  workspaces — the best matches first; accents don't matter and the start of
+  type to find pages, tasks, notes, events, comments, whiteboards, bookmarks
+  and your journal in all your workspaces — the best matches first; accents don't matter and the start of
   a word is enough ("orc" finds "Orçamento") — jump
   to a workspace, or run an action (new page, new task, new note, new
-  workspace, light or dark appearance, settings). Arrows move, Enter opens, Esc closes.
+  sketch, new workspace, light or dark appearance, settings). Arrows move, Enter opens, Esc closes.
 - **Today** and **Calendar**: across every workspace.
+- **Quick Notes** and **Quick Draw**: your own notes and sketches, in no
+  workspace (see [Notes](#6-notes)); each has a **+** to start one at once.
+- A **focus session** running shows under them, with the time left.
 - **Favorites**: pages you starred.
 - **Workspaces**: each with its icon and colour. The chevron shows its modules
   (and, under **Pages**, its page tree); the `⋯` opens its settings, modules,
@@ -390,6 +393,15 @@ They work like any notes (pin, colour, checklist, search). Today shows the
 latest ones; pinned ones join **Pinned Notes**. When you know where one
 belongs, `⋯` → **Move to…** a workspace you edit (or back to Quick Notes), or
 **Turn into page** / **Turn into tasks** and pick the workspace.
+
+### Quick Draw (your own)
+
+**Quick Draw** (under Quick Notes in the sidebar) is the same for drawing:
+your own sketches, in no workspace, that only you see. Its **+** opens a new
+one straight away (or ⌘K → **New sketch**); it's Excalidraw, as on
+[whiteboards](#14-whiteboards) — shapes, arrows, a pen, text, images — and
+saves as you draw. Quick Draw lists them with their pictures (name, rename,
+delete), and search finds them by their name and the words on them.
 
 ## 7. Tasks
 
@@ -1181,8 +1193,8 @@ Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:
 
 - the sidebar is behind ☰ (top left); ⌕ (top right) opens search;
-- a **tab bar** at the bottom holds the current workspace's modules (or Today
-  and Calendar);
+- a **tab bar** at the bottom holds the current workspace's modules (or Today,
+  Calendar, Quick Notes and Quick Draw);
 - the calendar's Month shows dots, with the chosen day's list underneath;
 - Tasks show the lists first, then a list;
 - the Timeline keeps a narrow column of names; hold a bar to drag it;

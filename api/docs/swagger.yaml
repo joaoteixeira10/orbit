@@ -4574,6 +4574,44 @@ paths:
       summary: Test my own notification channel
       tags:
       - prefs
+  /me/drawings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.drawingSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My sketches (Quick Draw)
+      tags:
+      - drawings
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Title (and scene)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.drawingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Drawing'
+      security:
+      - BearerAuth: []
+      summary: New sketch (Quick Draw)
+      tags:
+      - drawings
   /me/favorites:
     get:
       produces:

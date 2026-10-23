@@ -2555,6 +2555,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/drawings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "My sketches (Quick Draw)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.drawingSummary"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "New sketch (Quick Draw)",
+                "parameters": [
+                    {
+                        "description": "Title (and scene)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.drawingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
+                    }
+                }
+            }
+        },
         "/me/favorites": {
             "get": {
                 "security": [

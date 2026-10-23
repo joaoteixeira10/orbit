@@ -16,10 +16,14 @@ const wss = useWorkspacesStore()
 const auth = useAuthStore()
 const { t } = useI18n()
 
-const ws = computed(() => String(route.params.ws))
+// No workspace in the address: a Quick Draw sketch (one's own).
+const personal = computed(() => !route.params.ws)
+const ws = computed(() => String(route.params.ws ?? ''))
 const id = computed(() => String(route.params.id))
 const workspace = computed(() => wss.byId(ws.value))
-const readonly = computed(() => !workspace.value || workspace.value.role === 'viewer' || !!workspace.value.archived_at || auth.privileges.read_only)
+const readonly = computed(() =>
+  personal.value ? auth.privileges.read_only : !workspace.value || workspace.value.role === 'viewer' || !!workspace.value.archived_at || auth.privileges.read_only,
+)
 
 const editor = ref<InstanceType<typeof DrawingEditor> | null>(null)
 const title = ref('')
@@ -34,7 +38,7 @@ async function saveTitle() {
 }
 async function back() {
   await editor.value?.flush()
-  void router.push({ name: 'ws-whiteboards', params: { ws: ws.value } })
+  void router.push(personal.value ? { name: 'my-drawings' } : { name: 'ws-whiteboards', params: { ws: ws.value } })
 }
 
 const fill = ref<HTMLElement | null>(null)
@@ -44,7 +48,7 @@ useFillHeight(fill, 420)
 <template>
   <div class="board-view">
     <header class="mb-3 flex items-center gap-2">
-      <button class="btn-plain -ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ t('draw.back') }}</button>
+      <button class="btn-plain -ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ personal ? t('draw.quick') : t('draw.back') }}</button>
       <input
         v-model="title"
         class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[20px] font-bold outline-none hover:bg-fill-2 focus:bg-fill-2"

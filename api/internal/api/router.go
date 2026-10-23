@@ -305,6 +305,8 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/habits/:id/checks/:date", h.checkHabit)
 			authed.POST("/workspaces/:ws/drawings", h.createDrawing)
 			authed.GET("/drawings/:id", h.getDrawing)
+			authed.GET("/me/drawings", h.listMyDrawings)
+			authed.POST("/me/drawings", h.createMyDrawing)
 			authed.PUT("/drawings/:id", h.updateDrawing)
 			authed.DELETE("/drawings/:id", h.deleteDrawing)
 			authed.POST("/notes/:id/drawing", h.noteDrawingOf)

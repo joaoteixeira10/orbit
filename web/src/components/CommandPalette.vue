@@ -10,6 +10,7 @@ import { usePagesStore } from '@/stores/pages'
 import { usePrefsStore } from '@/stores/prefs'
 import { useToastStore } from '@/stores/toast'
 import { relDay, fmtDate, parseDate } from '@/lib/dates'
+import { drawingsApi } from '@/components/draw/drawing'
 
 // ⌘K / Ctrl+K: search pages, tasks, notes and events in every workspace, jump to a
 // workspace, or run a quick action. Arrows move, Enter opens, Esc closes.
@@ -83,6 +84,7 @@ const actions = computed<Item[]>(() => {
       out.push({ key: 'a-note', label: t('cmd.newNote'), icon: Plus, run: () => router.push({ name: 'ws-notes', params: { ws: currentWs.value }, query: { new: '1' } }) })
   }
   out.push({ key: 'a-quick', label: t('notes.mine.action'), sub: '⌥N', icon: NotebookPen, run: () => emit('quickNote') })
+  out.push({ key: 'a-draw', label: t('draw.newSketch'), sub: t('draw.quick'), icon: Brush, run: () => void newSketch() })
   out.push({ key: 'a-ws', label: t('ws.new'), icon: Plus, run: () => emit('newWorkspace') })
   out.push({ key: 'a-theme', label: prefs.isDark() ? t('cmd.lightMode') : t('cmd.darkMode'), icon: prefs.isDark() ? Sun : Moon, run: () => prefs.setTheme(prefs.isDark() ? 'light' : 'dark') })
   out.push({ key: 'a-settings', label: t('nav.settings'), icon: Settings, run: () => router.push({ name: 'settings' }) })
@@ -107,12 +109,26 @@ const results = computed<Item[]>(() =>
       return { key: 'b-' + h.id, label: h.title, sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: Bookmark, run: () => window.open(h.snippet || '', '_blank', 'noopener,noreferrer') }
     if (h.kind === 'journal')
       return { key: 'j-' + h.id, label: fmtDate(parseDate(h.id), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: NotebookPen, run: () => router.push({ name: 'ws-journal', params: { ws: h.workspace_id }, query: { date: h.id } }) }
-    if (h.kind === 'drawing')
-      return { key: 'd-' + h.id, label: h.title || t('draw.untitled'), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: Brush, run: () => router.push({ name: 'ws-whiteboard', params: { ws: h.workspace_id, id: h.id } }) }
+    if (h.kind === 'drawing') {
+      // No workspace: a Quick Draw sketch.
+      const at = h.workspace_id ? where : t('draw.quick')
+      const to = h.workspace_id ? { name: 'ws-whiteboard', params: { ws: h.workspace_id, id: h.id } } : { name: 'my-drawing', params: { id: h.id } }
+      return { key: 'd-' + h.id, label: h.title || t('draw.untitled'), sub: h.snippet ? `${at} · ${h.snippet}` : at, icon: Brush, run: () => router.push(to) }
+    }
     return { key: 'e-' + h.id, label: h.title, sub: [where, h.start ? fmtDate(new Date(h.start), { day: 'numeric', month: 'short', year: 'numeric' }) : ''].filter(Boolean).join(' · '), icon: CalendarDays, run: () => router.push({ name: 'ws-calendar', params: { ws: h.workspace_id }, query: { date: h.start?.slice(0, 10) } }) }
   }),
 )
 const all = computed(() => [...results.value, ...actions.value])
+
+// A new Quick Draw sketch, open.
+async function newSketch() {
+  try {
+    const d = await drawingsApi.create('me', '')
+    router.push({ name: 'my-drawing', params: { id: d.id } })
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 
 async function newPage() {
   try {

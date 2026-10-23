@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -11,8 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Drawings (Excalidraw): the whiteboards of a workspace, and the drawing on a
-// note. The scene is the browser's JSON, kept as it comes (capped); a
+// Drawings (Excalidraw): the whiteboards of a workspace, the drawing on a
+// note, and Quick Draw — someone's own sketches (no workspace, like Quick
+// Notes). The scene is the browser's JSON, kept as it comes (capped); a
 // preview SVG is shown as an image only.
 
 const (
@@ -43,6 +45,18 @@ func (h *Handlers) drawingAccess(c *gin.Context, need string) (models.Drawing, b
 		_, ok := h.noteAccessID(c, d.NoteID, need)
 		return d, ok
 	}
+	if d.WorkspaceID == "" {
+		// Quick Draw: its owner's alone.
+		if d.OwnerID != auth.UserID(c) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "drawing not found"})
+			return d, false
+		}
+		if need != models.WSViewer && auth.Effective(c).ReadOnly {
+			c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+			return d, false
+		}
+		return d, true
+	}
 	_, _, ok := h.wsAccess(c, d.WorkspaceID, need)
 	return d, ok
 }
@@ -51,6 +65,9 @@ func (h *Handlers) publishDrawing(c *gin.Context, d models.Drawing) {
 	switch {
 	case d.NoteID != "":
 		h.publishNotes(c, models.Note{Base: models.Base{ID: d.NoteID}, WorkspaceID: d.WorkspaceID, OwnerID: d.OwnerID})
+	case d.WorkspaceID == "":
+		b, _ := json.Marshal(gin.H{"type": "ws", "ws": "me", "what": "drawings", "origin": c.GetHeader("X-Orbit-Client")})
+		h.events.Publish(d.OwnerID, string(b))
 	default:
 		h.publishWS(c, d.WorkspaceID, "drawings")
 	}
@@ -269,4 +286,56 @@ func (h *Handlers) noteDrawingOf(c *gin.Context) {
 	}
 	h.publishNotes(c, n)
 	c.JSON(http.StatusOK, d)
+}
+
+// listMyDrawings lists the caller's Quick Draw sketches (newest change first).
+//
+//	@Summary	My sketches (Quick Draw)
+//	@Tags		drawings
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Success	200	{array}	drawingSummary
+//	@Router		/me/drawings [get]
+func (h *Handlers) listMyDrawings(c *gin.Context) {
+	var ds []models.Drawing
+	h.db.Select("id", "title", "preview", "version", "updated_by", "updated_at").
+		Where("workspace_id = '' AND note_id = '' AND owner_id = ?", auth.UserID(c)).Order("updated_at DESC").Find(&ds)
+	out := make([]drawingSummary, 0, len(ds))
+	for _, d := range ds {
+		out = append(out, drawingSummary{ID: d.ID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: d.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z")})
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// createMyDrawing starts a Quick Draw sketch.
+//
+//	@Summary	New sketch (Quick Draw)
+//	@Tags		drawings
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		body	body		drawingRequest	true	"Title (and scene)"
+//	@Success	201		{object}	models.Drawing
+//	@Router		/me/drawings [post]
+func (h *Handlers) createMyDrawing(c *gin.Context) {
+	if auth.Effective(c).ReadOnly {
+		c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+		return
+	}
+	var req drawingRequest
+	if !h.bindDrawing(c, &req) {
+		return
+	}
+	uid := auth.UserID(c)
+	d := models.Drawing{OwnerID: uid, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	if err := req.apply(&d); err != nil {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.db.Create(&d).Error; err != nil {
+		h.internalError(c, err, "could not start the sketch")
+		return
+	}
+	h.publishDrawing(c, d)
+	c.JSON(http.StatusCreated, d)
 }

@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
-  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer,
+  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
@@ -16,6 +16,7 @@ import { wireTasksLive } from '@/stores/tasks'
 import { wireNotesLive } from '@/stores/notes'
 import { wireInboxLive } from '@/stores/inbox'
 import { useFocusStore, wireFocusLive, clockOf } from '@/stores/focus'
+import { drawingsApi } from '@/components/draw/drawing'
 import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
@@ -260,6 +261,15 @@ function onKey(e: KeyboardEvent) {
 // asking for it (orbit:quick-note).
 const quickNoteOpen = ref(false)
 const onQuickNote = () => (quickNoteOpen.value = true)
+// Quick Draw's +: a new sketch, open.
+async function newSketch() {
+  try {
+    const d = await drawingsApi.create('me', '')
+    void router.push({ name: 'my-drawing', params: { id: d.id } })
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 watch(() => route.fullPath, () => (drawerOpen.value = false))
 watch(drawerOpen, (open) => (document.documentElement.style.overflow = open ? 'hidden' : ''))
 
@@ -270,6 +280,7 @@ const tabs = computed(() => {
     { key: 'today', label: t('nav.today'), icon: House, to: { name: 'home' }, on: route.name === 'home' },
     { key: 'cal', label: t('nav.calendar'), icon: CalendarDays, to: { name: 'calendar' }, on: route.name === 'calendar' },
     { key: 'notes', label: t('notes.mine.title'), icon: NotebookPen, to: { name: 'my-notes' }, on: route.name === 'my-notes' },
+    { key: 'draw', label: t('draw.quick'), icon: Brush, to: { name: 'my-drawings' }, on: route.name === 'my-drawings' || route.name === 'my-drawing' },
   ]
   return w.modules.slice(0, 5).map((k) => ({
     key: k, label: t(`modules.${k}`), icon: moduleIcon(k), to: { name: moduleRoute[k] ?? 'ws', params: { ws: w.id } }, on: isModuleActive(w.id, k),
@@ -342,6 +353,15 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
               <span class="truncate">{{ t('notes.mine.title') }}</span>
             </RouterLink>
             <button class="jot" :title="t('notes.mine.action') + (isMac ? ' (⌥N)' : ' (Alt+N)')" :aria-label="t('notes.mine.action')" @click="quickNoteOpen = true">
+              <Plus class="h-4 w-4" :stroke-width="2.4" />
+            </button>
+          </div>
+          <div class="smart-tile wide" :class="{ on: route.name === 'my-drawings' || route.name === 'my-drawing' }">
+            <RouterLink :to="{ name: 'my-drawings' }" class="flex min-w-0 flex-1 items-center gap-2.5" data-testid="quick-draw">
+              <span class="tile h-7 w-7" style="--tile: #ff9500"><Brush class="h-4 w-4" :stroke-width="2.4" /></span>
+              <span class="truncate">{{ t('draw.quick') }}</span>
+            </RouterLink>
+            <button class="jot" :title="t('draw.newSketch')" :aria-label="t('draw.newSketch')" data-testid="quick-draw-new" @click="newSketch">
               <Plus class="h-4 w-4" :stroke-width="2.4" />
             </button>
           </div>

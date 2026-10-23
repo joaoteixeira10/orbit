@@ -919,6 +919,32 @@ test('bookmarks: a link kept, tagged, read later and read', async ({ page, reque
   await page.screenshot({ path: 'test-results/bookmarks.png' })
 })
 
+test('Quick Draw: the sidebar + opens a sketch of your own', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.getByTestId('quick-draw-new').click()
+  await page.waitForURL(/\/draw\/[^/]+$/)
+  const canvas = page.locator('.excalidraw canvas.interactive')
+  await expect(canvas).toBeVisible({ timeout: 20000 })
+  await page.getByTestId('whiteboard-title').fill('Napkin idea')
+  await page.getByTestId('whiteboard-title').press('Enter')
+  const box = (await canvas.boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 40)
+  await page.keyboard.press('d')
+  await page.mouse.move(box.x + 300, box.y + 200)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 450, box.y + 320, { steps: 8 })
+  await page.mouse.up()
+  await expect(page.getByTestId('draw-state')).toContainText('Saved', { timeout: 10000 })
+  await page.getByTestId('whiteboard-back').click()
+  await expect(page).toHaveURL(/\/draw$/)
+  await expect(page.getByTestId('whiteboard-card').filter({ hasText: 'Napkin idea' }).locator('img')).toBeVisible()
+  const mine = await (await request.get('/api/v1/me/drawings', { headers: H })).json()
+  expect(mine.map((d: { title: string }) => d.title)).toContain('Napkin idea')
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

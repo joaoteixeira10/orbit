@@ -1,4 +1,5 @@
-// Drawings (Excalidraw): whiteboards and the drawings on notes.
+// Drawings (Excalidraw): whiteboards, the drawings on notes, and Quick Draw
+// (one's own sketches, no workspace).
 import { api } from '@/lib/api'
 
 export interface Drawing {
@@ -25,8 +26,9 @@ export interface Snapshot {
 const j = (b: unknown) => JSON.stringify(b)
 
 export const drawingsApi = {
-  list: (ws: string) => api<Drawing[]>(`/workspaces/${ws}/drawings`),
-  create: (ws: string, title: string) => api<Drawing>(`/workspaces/${ws}/drawings`, { method: 'POST', body: j({ title }) }),
+  // ws "me": Quick Draw, the person's own sketches.
+  list: (ws: string) => api<Drawing[]>(ws === 'me' ? '/me/drawings' : `/workspaces/${ws}/drawings`),
+  create: (ws: string, title: string) => api<Drawing>(ws === 'me' ? '/me/drawings' : `/workspaces/${ws}/drawings`, { method: 'POST', body: j({ title }) }),
   get: (id: string) => api<Drawing>(`/drawings/${id}`),
   save: (id: string, b: Partial<Snapshot> & { title?: string; version: number }) => api<Drawing>(`/drawings/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/drawings/${id}`, { method: 'DELETE' }),

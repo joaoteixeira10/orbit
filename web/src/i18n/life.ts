@@ -140,6 +140,10 @@ export const lifeEn = {
   },
   draw: {
     new: 'New whiteboard',
+    quick: 'Quick Draw',
+    quickSub: 'Your own sketches — only you see them.',
+    newSketch: 'New sketch',
+    noneMine: 'No sketches yet',
     untitled: 'Untitled',
     none: 'No whiteboards yet',
     noneHint: 'Sketch a plan, a diagram, a mind map — by hand, as on paper.',
@@ -311,6 +315,10 @@ export const lifePt: typeof lifeEn = {
   },
   draw: {
     new: 'Novo quadro branco',
+    quick: 'Desenho Rápido',
+    quickSub: 'Os seus esboços — só você os vê.',
+    newSketch: 'Novo esboço',
+    noneMine: 'Ainda sem esboços',
     untitled: 'Sem título',
     none: 'Ainda sem quadros brancos',
     noneHint: 'Esboce um plano, um diagrama, um mapa mental — à mão, como no papel.',

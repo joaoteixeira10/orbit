@@ -107,3 +107,28 @@ func TestDrawings(t *testing.T) {
 		t.Fatalf("imported: %+v", list)
 	}
 }
+
+// TestQuickDraw: a sketch with no workspace is its owner's alone.
+func TestQuickDraw(t *testing.T) {
+	r, _, alice, bob := plannerSetup(t)
+	var d drawingResp
+	w := authdo(r, "POST", "/api/v1/me/drawings", `{"title":"Napkin"}`, alice)
+	expect(t, w, http.StatusCreated, "sketch")
+	decode(t, w, &d)
+	expect(t, authdo(r, "PUT", "/api/v1/drawings/"+d.ID, `{"version":1,"scene":"{}","text":"idea"}`, alice), http.StatusOK, "save")
+	var mine []drawingResp
+	decode(t, authdo(r, "GET", "/api/v1/me/drawings", "", alice), &mine)
+	if len(mine) != 1 || mine[0].Title != "Napkin" {
+		t.Fatalf("alice's sketches: %+v", mine)
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/drawings", "", bob), &mine)
+	if len(mine) != 0 {
+		t.Fatalf("bob sees: %+v", mine)
+	}
+	for _, m := range []string{"GET", "PUT", "DELETE"} {
+		if w := authdo(r, m, "/api/v1/drawings/"+d.ID, `{"version":2}`, bob); w.Code != http.StatusNotFound {
+			t.Errorf("bob %s alice's sketch: %d", m, w.Code)
+		}
+	}
+	expect(t, authdo(r, "DELETE", "/api/v1/drawings/"+d.ID, "", alice), http.StatusNoContent, "delete")
+}

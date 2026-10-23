@@ -5,26 +5,53 @@ school, work, home, a shared household — each with only the **modules** it
 needs — and keep everything in one place that looks and feels like an Apple
 app.
 
-- **Pages** — Notion-style documents: type `/` for headings, checklists,
-  tables, quotes, code; nest pages inside pages; favourites and a trash.
+- **Today** — what's late, due and coming up across every workspace, with
+  each shared workspace's activity ("Ana completed 3 tasks").
+- **Pages** — documents in Markdown, edited visually or as source: headings,
+  checklists, tables, callouts, code, images; pages inside pages,
+  favourites, a trash, export and import as Markdown. Sums work in them
+  (`120 + 35 =`).
 - **Tasks** — Reminders-style lists with due dates and times, repeats,
-  priorities, tags, sub-tasks and smart lists (Today, Scheduled, All,
-  Completed). Quick add understands “Essay tomorrow 14:30 !! #maths”.
-- **Boards** — the same tasks as kanban columns; drag a card into a done
-  column and it's done.
-- **Calendar** — month, week and day; events with repeats and reminders,
-  tasks on their due dates, and **subscribed calendars** (a school timetable,
-  Google / iCloud / Outlook via their secret ICS address). A private **feed**
-  puts Orbit in Apple Calendar, Google Calendar or Outlook.
-- **Today** — what's late, due and coming up across every workspace.
-- **Shared workspaces** — invite people as owner, editor or viewer; changes
-  appear live for everyone. A workspace is private to its members: instance
-  admins manage accounts, not your planner.
+  priorities, tags, sub-tasks, several people, notes in Markdown, files,
+  comments with @mentions and smart lists. Quick add understands
+  "Essay tomorrow 14:30 !! #maths".
+- **Boards, Timeline, Charts** — the same tasks as kanban columns, as bars on
+  a Gantt chart, and as charts.
+- **Calendar** — month, week and day (drag to move and resize); events with
+  repeats, reminders and their own time zone; public holidays; tasks on
+  their dates; subscribed calendars; a private feed for Apple, Google or
+  Outlook; and **two-way sync** with iCloud, Nextcloud or any CalDAV server.
+- **Notes** — sticky notes and checklists, with colours, pins, sums,
+  reminders, files and a drawing; your own **Quick Notes** and **Quick Draw**
+  sketches from anywhere, and things shared from your phone land there.
+- **Whiteboards** — hand-drawn sketches and diagrams (Excalidraw).
+- **School** — courses with their weekly timetable on the calendar, exams
+  with a countdown, grades with weighted averages and what you need to pass.
+- **Habits, Focus timer, Goals, Journal, Bookmarks** — streaks and a year
+  grid; Pomodoro sessions logged on tasks; goals with progress from their
+  tasks; a private page a day with a mood and "on this day"; links with a
+  preview, tags and read later.
+- **Git** — lists that are a GitHub, Gitea or Forgejo repository's issues,
+  kept in step both ways (comments, labels, milestones, webhooks for
+  instant updates); each person acts with their own account.
+- **Search** — full text across everything you can see (⌘K).
+- **Notifications** — a bell, push to your devices, and email, ntfy,
+  Telegram, Discord, Slack, Teams or Gotify; a daily summary; snooze; quiet
+  hours.
+- **Shared workspaces** — invite people (or send an invite link) as owner,
+  editor or viewer; changes appear live for everyone. A workspace is
+  private to its members: instance admins manage accounts, not your
+  planner. Move a whole workspace to another Orbit (export / import).
 - **Accounts** — passwords with two-factor (authenticator app or passkey),
-  passkeys, SSO (OpenID Connect), API tokens (optionally read-only), a
-  tamper-evident audit log, encrypted backups.
-- **Anywhere** — light and dark, English and Portuguese, and installable on a
-  phone (Add to Home Screen) with a bottom tab bar.
+  passkeys, SSO (OpenID Connect), sign in with Gitea or GitHub for the git
+  integration, API tokens (optionally read-only), a tamper-evident audit
+  log, encrypted backups.
+- **Anywhere** — light and dark, developer themes, English and Portuguese,
+  and installable on a phone (Add to Home Screen) with a bottom tab bar and
+  the share sheet.
+
+Each workspace turns on only the **modules** it needs (Workspace settings →
+Modules).
 
 ## What's where
 
@@ -107,7 +134,7 @@ SSRF-guarded client. Details: [docs/SECURITY.md](docs/SECURITY.md).
 
 | Doc | For |
 |---|---|
-| [USER-GUIDE.md](docs/USER-GUIDE.md) | Using Orbit: workspaces, pages, tasks, boards, calendars, sharing |
+| [USER-GUIDE.md](docs/USER-GUIDE.md) | Using Orbit: every module, notifications, sharing, settings |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | Every environment variable |
 | [SECURITY.md](docs/SECURITY.md) | Threat model, what's protected and how |
 | [API.md](docs/API.md) | Scripting Orbit with API tokens |

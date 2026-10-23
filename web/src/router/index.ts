@@ -25,6 +25,9 @@ const routes: RouteRecordRaw[] = [
       { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
       { path: 'calendar', name: 'calendar', component: () => import('@/views/CalendarView.vue') },
       { path: 'notes', name: 'my-notes', component: () => import('@/views/NotesView.vue') },
+      // Quick Draw: one's own sketches (Excalidraw), like Quick Notes.
+      { path: 'draw', name: 'my-drawings', component: () => import('@/views/WhiteboardsView.vue') },
+      { path: 'draw/:id', name: 'my-drawing', component: () => import('@/views/WhiteboardView.vue') },
       // Shared from another app (the share sheet): saved as a Quick Note.
       { path: 'share', name: 'share', component: () => import('@/views/ShareView.vue') },
       { path: 'w/:ws', name: 'ws', component: () => import('@/views/HomeView.vue') },

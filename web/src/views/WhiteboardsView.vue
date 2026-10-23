@@ -13,7 +13,8 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
-// A workspace's whiteboards: a card each with its picture, newest change
+// A workspace's whiteboards — or, with no workspace in the address, Quick
+// Draw: one's own sketches. A card each with its picture, newest change
 // first. A click opens it, full size.
 const route = useRoute()
 const router = useRouter()
@@ -22,9 +23,12 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const { t } = useI18n()
 
-const ws = computed(() => String(route.params.ws))
+const personal = computed(() => !route.params.ws)
+const ws = computed(() => (personal.value ? 'me' : String(route.params.ws)))
 const workspace = computed(() => wss.byId(ws.value))
-const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
+const editable = computed(() =>
+  personal.value ? !auth.privileges.read_only : !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only,
+)
 
 const list = ref<Drawing[]>([])
 const loaded = ref(false)
@@ -46,7 +50,8 @@ const off = onLiveEvent('ws', (e) => {
 })
 onUnmounted(off)
 
-const open = (d: Drawing) => router.push({ name: 'ws-whiteboard', params: { ws: ws.value, id: d.id } })
+const open = (d: Drawing) =>
+  personal.value ? router.push({ name: 'my-drawing', params: { id: d.id } }) : router.push({ name: 'ws-whiteboard', params: { ws: ws.value, id: d.id } })
 async function create() {
   try {
     const d = await drawingsApi.create(ws.value, '')
@@ -93,17 +98,17 @@ async function remove() {
   <div class="boards-view">
     <header class="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
       <div class="min-w-0 flex-1">
-        <h1 class="large-title">{{ t('modules.whiteboards') }}</h1>
-        <p class="subhead mt-0.5">{{ workspace?.name }} · {{ list.length }}</p>
+        <h1 class="large-title">{{ personal ? t('draw.quick') : t('modules.whiteboards') }}</h1>
+        <p class="subhead mt-0.5">{{ personal ? t('draw.quickSub') : `${workspace?.name} · ${list.length}` }}</p>
       </div>
-      <button v-if="editable" class="btn-primary" data-testid="new-whiteboard" @click="create"><Plus class="h-4 w-4" />{{ t('draw.new') }}</button>
+      <button v-if="editable" class="btn-primary" data-testid="new-whiteboard" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</button>
     </header>
 
     <div v-if="loaded && !list.length" class="flex flex-col items-center py-16 text-center">
       <span class="tile h-14 w-14" style="--tile: #ff9500"><Brush class="h-7 w-7" /></span>
-      <p class="mt-4 text-[15px] font-semibold">{{ t('draw.none') }}</p>
+      <p class="mt-4 text-[15px] font-semibold">{{ personal ? t('draw.noneMine') : t('draw.none') }}</p>
       <p class="mt-1 max-w-[340px] text-[13px] text-text-2">{{ t('draw.noneHint') }}</p>
-      <button v-if="editable" class="btn-primary mt-5" @click="create"><Plus class="h-4 w-4" />{{ t('draw.new') }}</button>
+      <button v-if="editable" class="btn-primary mt-5" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</button>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">

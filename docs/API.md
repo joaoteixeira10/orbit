@@ -127,6 +127,8 @@ makes whiteboards; `GET/PUT/DELETE /drawings/{id}` — a `PUT` carries the
 any of `title`, `scene` (Excalidraw JSON, images included, up to 16 MB),
 `preview` (an SVG) and `text` (its words, for search). `POST
 /notes/{id}/drawing` returns a note's drawing, made the first time.
+`GET/POST /me/drawings` are Quick Draw: the caller's own sketches (no
+workspace; only they can read or change them).
 
 **Notifications.** `POST /me/notifications/{id}/snooze` with `{until}` (RFC
 3339, within a month) or `{minutes}` puts one off; it comes back unread and

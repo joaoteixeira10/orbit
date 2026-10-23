@@ -9,6 +9,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/focus"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
@@ -221,6 +222,32 @@ func (s *Scheduler) notifications() {
 	now := time.Now()
 	s.inbox.Resurface(now)
 	s.inbox.ReleaseHeld(now)
+	s.focusDone(now)
+}
+
+// focusDone ends the focus sessions whose time is up and tells their person
+// (on their devices too: the tab may be closed).
+func (s *Scheduler) focusDone(now time.Time) {
+	for _, f := range focus.Due(s.db, now) {
+		if !focus.End(s.db, &f, now) {
+			continue
+		}
+		title := ""
+		if f.TaskID != "" {
+			var t models.Task
+			if s.db.Select("title").First(&t, "id = ?", f.TaskID).Error == nil {
+				title = t.Title
+			}
+		}
+		s.inbox.Notify(inbox.Message{
+			UserID: f.UserID, Kind: inbox.Reminder, Verb: "focus_done", WorkspaceID: f.WorkspaceID,
+			Params: map[string]any{"title": title, "minutes": f.Spent},
+			Link:   fmt.Sprintf("/w/%s/focus", f.WorkspaceID),
+		})
+		if s.hub != nil {
+			s.hub.Publish(f.UserID, `{"type":"focus"}`)
+		}
+	}
 }
 
 func humanLead(d time.Duration) string {

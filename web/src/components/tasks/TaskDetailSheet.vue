@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer } from 'lucide-vue-next'
+import { durationOf } from '@/stores/focus'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -48,6 +49,7 @@ const gitReadOnly = computed(() => !!list.value?.git && list.value.git.write ===
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !gitReadOnly.value)
 const members = computed(() => wss.members[props.ws] ?? [])
 const auth = useAuthStore()
+const focusWs = computed(() => !!workspace.value?.modules.includes('focus'))
 const schoolWs = computed(() => !!workspace.value && (workspace.value.modules.includes('courses') || workspace.value.modules.includes('grades')))
 const assigned = computed(() => (task.value?.assignee_ids ?? []).map((id) => members.value.find((m) => m.user_id === id)).filter((m) => !!m))
 const unassigned = computed(() => members.value.filter((m) => !task.value?.assignee_ids.includes(m.user_id)))
@@ -404,6 +406,12 @@ async function remove() {
             <input v-if="editable" v-model="tagDraft" class="min-w-[90px] flex-1 bg-transparent py-1 text-[14px] outline-none" :placeholder="t('tasks.addTag')" @keydown.enter="addTag" @blur="addTag" />
           </div>
         </div>
+      </div>
+
+      <!-- Focus: the time spent on it, and a timer for it -->
+      <div v-if="focusWs && !task.parent_id && !task.done" class="mt-4 flex items-center gap-2 px-1" data-testid="task-focus">
+        <span v-if="task.focus_minutes" class="flex items-center gap-1.5 text-[13px] text-text-2"><Timer class="h-4 w-4" />{{ t('focus.spent', { t: durationOf(task.focus_minutes) }) }}</span>
+        <RouterLink :to="{ name: 'ws-focus', params: { ws }, query: { task: task.id } }" class="btn-plain ml-auto !text-[13px]" @click="emit('close')"><Timer class="h-4 w-4" />{{ t('focus.onTask') }}</RouterLink>
       </div>
 
       <!-- Its issue -->

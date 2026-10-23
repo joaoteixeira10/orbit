@@ -24,11 +24,12 @@ the [API](API.md).
 13. [Grades](#13-grades)
 14. [Whiteboards](#14-whiteboards)
 15. [Habits](#15-habits)
-16. [Notifications](#16-notifications)
-17. [Your settings](#17-your-settings)
-18. [Administration](#18-administration)
-19. [Owner controls](#19-owner-controls)
-20. [On a phone](#20-on-a-phone)
+16. [Focus timer](#16-focus-timer)
+17. [Notifications](#17-notifications)
+18. [Your settings](#18-your-settings)
+19. [Administration](#19-administration)
+20. [Owner controls](#20-owner-controls)
+21. [On a phone](#21-on-a-phone)
 
 ---
 
@@ -772,7 +773,23 @@ sees anyone else's.
   **Edit** changes it; **Archive** puts it away (with its history; **Bring
   back** later), **Delete** removes it and its history.
 
-## 16. Notifications
+## 16. Focus timer
+
+**Focus timer** (a module) is for working in focused stretches — the
+Pomodoro way: 25 minutes on one thing, then a break.
+
+- Pick a **length** (15, 25 or 50 minutes) and, if you like, **a task** of
+  the workspace, then **Start**. The dial counts down; the sidebar shows
+  what's running and how long is left, wherever you are in Orbit. It goes on
+  in your other tabs and devices, and survives closing the page.
+- When the time is up you're told (*Time for a break*), on your devices too.
+  **Stop** ends it early: the time so far still counts.
+- The time is **logged on the task**: its details say *Focused 1 h 25 min*,
+  and have **Focus on this** to start a session on it. Below the dial,
+  **Today** lists today's sessions; the top says how long you focused today.
+- One session runs at a time: starting another ends the one running.
+
+## 17. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -835,7 +852,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 17. Your settings
+## 18. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -873,7 +890,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 18. Administration
+## 19. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -968,7 +985,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 19. Owner controls
+## 20. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1106,7 +1123,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 20. On a phone
+## 21. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

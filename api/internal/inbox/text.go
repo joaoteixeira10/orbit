@@ -37,6 +37,7 @@ var phrases = map[string]map[string]phrase{
 		"held":          {title: "{n} notifications while it was quiet", body: "{lines}"},
 		"note_reminder": {title: "{title}", body: "Note · {ws}"},
 		"habit_due":     {title: "{title}", body: "Not done yet today · {ws}"},
+		"focus_done":    {title: "Time for a break", body: "{minutes} min of focus · {title}"},
 	},
 	"pt": {
 		"test":          {title: "As notificações estão ligadas", body: "Este dispositivo vai receber as notificações do Orbit."},
@@ -59,6 +60,7 @@ var phrases = map[string]map[string]phrase{
 		"held":          {title: "{n} notificações durante o silêncio", body: "{lines}"},
 		"note_reminder": {title: "{title}", body: "Nota · {ws}"},
 		"habit_due":     {title: "{title}", body: "Ainda por fazer hoje · {ws}"},
+		"focus_done":    {title: "Hora de uma pausa", body: "{minutes} min de foco · {title}"},
 	},
 }
 

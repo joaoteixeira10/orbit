@@ -2460,6 +2460,98 @@
                 }
             }
         },
+        "/me/focus": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "focus"
+                ],
+                "summary": "My focus timer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Only this workspace's sessions today",
+                        "name": "ws",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.focusState"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "focus"
+                ],
+                "summary": "Start focusing",
+                "parameters": [
+                    {
+                        "description": "Where, on what, how long",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.focusStartRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.focusState"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/focus/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "focus"
+                ],
+                "summary": "Stop focusing",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.focusState"
+                        }
+                    }
+                }
+            }
+        },
         "/me/git": {
             "get": {
                 "security": [
@@ -8187,6 +8279,83 @@
                 }
             }
         },
+        "api.focusSessionView": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "ended_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "minutes": {
+                    "type": "integer"
+                },
+                "spent": {
+                    "description": "minutes it lasted",
+                    "type": "integer"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "task_title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.focusStartRequest": {
+            "type": "object",
+            "required": [
+                "minutes",
+                "workspace_id"
+            ],
+            "properties": {
+                "minutes": {
+                    "type": "integer",
+                    "maximum": 180,
+                    "minimum": 1
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.focusState": {
+            "type": "object",
+            "properties": {
+                "minutes": {
+                    "type": "integer"
+                },
+                "running": {
+                    "$ref": "#/definitions/api.focusSessionView"
+                },
+                "today": {
+                    "description": "ended today (the caller's zone), newest first",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.focusSessionView"
+                    }
+                }
+            }
+        },
         "api.gitAccountResponse": {
             "type": "object",
             "properties": {
@@ -9817,6 +9986,10 @@
                 "due_time": {
                     "description": "HH:MM",
                     "type": "string"
+                },
+                "focus_minutes": {
+                    "description": "FocusMinutes is the time focused on it (focus sessions).",
+                    "type": "integer"
                 },
                 "git_dirty": {
                     "description": "a change didn't reach git yet (retried by the sync)",

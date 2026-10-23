@@ -814,6 +814,29 @@ test('habits: one made, today ticked, a streak', async ({ page, request }) => {
   await page.screenshot({ path: 'test-results/habits.png' })
 })
 
+test('focus timer: a session on a task runs (with a pill in the sidebar) and stops', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Deep work', kind: 'work', modules: ['home', 'tasks', 'focus'] } })).json()
+  const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Write the report' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/focus?task=${task.id}`)
+  await expect(page.getByTestId('focus-task')).toHaveValue(task.id)
+  await page.getByRole('radio', { name: '50 min' }).or(page.getByRole('button', { name: '50 min' })).click()
+  await page.getByTestId('focus-start').click()
+  await expect(page.getByTestId('focus-clock')).toHaveText(/^(50:00|49:5\d)$/)
+  await expect(page.getByTestId('focus-pill')).toContainText('Write the report')
+  await page.screenshot({ path: 'test-results/focus.png' })
+  const st = await (await request.get('/api/v1/me/focus', { headers: H })).json()
+  expect(st.running.task_id).toBe(task.id)
+  expect(st.running.minutes).toBe(50)
+  await page.getByTestId('focus-stop').click()
+  await expect(page.getByTestId('focus-pill')).toHaveCount(0)
+  await expect(page.getByTestId('focus-clock')).toHaveText('50:00')
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

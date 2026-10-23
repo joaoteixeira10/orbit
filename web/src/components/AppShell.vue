@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
-  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen,
+  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
@@ -15,6 +15,7 @@ import { usePagesStore, wirePagesLive } from '@/stores/pages'
 import { wireTasksLive } from '@/stores/tasks'
 import { wireNotesLive } from '@/stores/notes'
 import { wireInboxLive } from '@/stores/inbox'
+import { useFocusStore, wireFocusLive, clockOf } from '@/stores/focus'
 import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
@@ -35,6 +36,7 @@ const prefs = usePrefsStore()
 const branding = useBrandingStore()
 const toast = useToastStore()
 const wss = useWorkspacesStore()
+const focus = useFocusStore()
 const pages = usePagesStore()
 const router = useRouter()
 const route = useRoute()
@@ -53,6 +55,7 @@ watch(
     wireTasksLive()
     wireNotesLive()
     wireInboxLive()
+    wireFocusLive()
     void refreshPush().catch(() => {})
     try {
       await Promise.all([wss.load(), wss.loadFavorites(), wss.loadCatalog()])
@@ -344,6 +347,13 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           </div>
         </div>
 
+        <!-- A focus session running: how long is left, a click away. -->
+        <RouterLink v-if="focus.running" :to="{ name: 'ws-focus', params: { ws: focus.running.workspace_id } }" class="focus-pill" :title="t('focus.open')" data-testid="focus-pill">
+          <Timer class="h-4 w-4" />
+          <span class="min-w-0 flex-1 truncate">{{ focus.running.task_title || t('focus.running') }}</span>
+          <span class="tabular-nums">{{ clockOf(focus.left) }}</span>
+        </RouterLink>
+
         <template v-if="wss.favorites.length">
           <div class="sec-title">{{ t('nav.favorites') }}</div>
           <RouterLink
@@ -507,6 +517,18 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 </template>
 
 <style scoped>
+.focus-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 10px 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+}
 .app {
   --side-w: 264px;
   display: grid;

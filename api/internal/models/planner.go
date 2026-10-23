@@ -143,6 +143,8 @@ type Task struct {
 	// server names it (Gitea: its id; GitHub: its number). 0: none.
 	GitMilestone   string `gorm:"size:255" json:"git_milestone,omitempty"`
 	GitMilestoneID int64  `gorm:"not null;default:0" json:"git_milestone_id,omitempty"`
+	// FocusMinutes is the time focused on it (focus sessions).
+	FocusMinutes int `gorm:"not null;default:0" json:"focus_minutes,omitempty"`
 }
 
 // ---- Quick notes ------------------------------------------------------------
@@ -200,6 +202,23 @@ type HabitCheck struct {
 	Base
 	HabitID string `gorm:"size:36;not null;uniqueIndex:idx_habit_day" json:"habit_id"`
 	Date    string `gorm:"size:10;not null;uniqueIndex:idx_habit_day" json:"date"`
+}
+
+// ---- Focus ------------------------------------------------------------------
+
+// FocusSession is a stretch of focused work (a Pomodoro): Minutes planned
+// from StartedAt, on a task or not. EndedAt is set when it's stopped (early:
+// the time so far counts) or its time is up (the scheduler ends it and tells
+// its person). Its minutes are added to the task's FocusMinutes.
+type FocusSession struct {
+	Base
+	UserID      string     `gorm:"size:36;not null;index" json:"user_id"`
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	TaskID      string     `gorm:"size:36;index" json:"task_id,omitempty"`
+	Minutes     int        `gorm:"not null" json:"minutes"`
+	StartedAt   time.Time  `gorm:"not null;index" json:"started_at"`
+	EndedAt     *time.Time `gorm:"index" json:"ended_at,omitempty"`
+	Spent       int        `gorm:"not null;default:0" json:"spent"` // minutes it lasted
 }
 
 // ---- Drawings ---------------------------------------------------------------

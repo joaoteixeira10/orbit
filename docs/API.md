@@ -93,6 +93,11 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Focus timer**: `GET /me/focus` (`?ws=`) is the running session and today's;
+`POST /me/focus` `{workspace_id, task_id?, minutes}` starts one (ending the
+one running), `POST /me/focus/stop` stops it (the time so far counts). A
+task's `focus_minutes` is the time focused on it.
+
 **Habits** (each person's own): `GET/POST /workspaces/{ws}/habits`, `PUT/DELETE
 /habits/{id}` (`title`, `icon`, `color`, `schedule` daily | weekly, `days`
 seven 0/1 from Monday, `target` per week, `remind_at` HH:MM, `archived`),

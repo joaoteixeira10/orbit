@@ -577,6 +577,58 @@ definitions:
           type: string
         type: array
     type: object
+  api.focusSessionView:
+    properties:
+      created_at:
+        type: string
+      ended_at:
+        type: string
+      id:
+        type: string
+      minutes:
+        type: integer
+      spent:
+        description: minutes it lasted
+        type: integer
+      started_at:
+        type: string
+      task_id:
+        type: string
+      task_title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.focusStartRequest:
+    properties:
+      minutes:
+        maximum: 180
+        minimum: 1
+        type: integer
+      task_id:
+        type: string
+      workspace_id:
+        type: string
+    required:
+    - minutes
+    - workspace_id
+    type: object
+  api.focusState:
+    properties:
+      minutes:
+        type: integer
+      running:
+        $ref: '#/definitions/api.focusSessionView'
+      today:
+        description: ended today (the caller's zone), newest first
+        items:
+          $ref: '#/definitions/api.focusSessionView'
+        type: array
+    type: object
   api.gitAccountResponse:
     properties:
       base_url:
@@ -1709,6 +1761,9 @@ definitions:
       due_time:
         description: HH:MM
         type: string
+      focus_minutes:
+        description: FocusMinutes is the time focused on it (focus sessions).
+        type: integer
       git_dirty:
         description: a change didn't reach git yet (retried by the sync)
         type: boolean
@@ -4292,6 +4347,61 @@ paths:
       summary: Revoke a calendar feed
       tags:
       - calendar
+  /me/focus:
+    get:
+      parameters:
+      - description: Only this workspace's sessions today
+        in: query
+        name: ws
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.focusState'
+      security:
+      - BearerAuth: []
+      summary: My focus timer
+      tags:
+      - focus
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Where, on what, how long
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.focusStartRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.focusState'
+      security:
+      - BearerAuth: []
+      summary: Start focusing
+      tags:
+      - focus
+  /me/focus/stop:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.focusState'
+      security:
+      - BearerAuth: []
+      summary: Stop focusing
+      tags:
+      - focus
   /me/git:
     get:
       produces:

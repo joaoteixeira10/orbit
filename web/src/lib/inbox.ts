@@ -23,7 +23,8 @@ function digestLines(p: Record<string, any>): string {
 // renderNotification is a notification's title and body.
 export function renderNotification(n: Pick<InboxItem, 'verb' | 'params' | 'count'>): { title: string; body: string } {
   const p = n.params ?? {}
-  const vars: Record<string, unknown> = { ...p, n: n.count, title: p.title || t('inbox.untitled') }
+  // A focus session needn't be on a task: no "Untitled" then.
+  const vars: Record<string, unknown> = { ...p, n: n.count, title: p.title || (n.verb === 'focus_done' ? '' : t('inbox.untitled')) }
   if (typeof p.role === 'string' && has(`inbox.role.${p.role}`)) vars.role = t(`inbox.role.${p.role}`)
   if (n.verb === 'daily') {
     const tasks = Number(p.tasks ?? 0)

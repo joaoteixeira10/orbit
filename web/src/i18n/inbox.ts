@@ -36,6 +36,7 @@ export const inboxEn = {
       held: { title: '{n} notifications while it was quiet', body: '{lines}' },
       note_reminder: { title: '{title}', body: 'Note · {ws}' },
       habit_due: { title: '{title}', body: 'Not done yet today · {ws}' },
+      focus_done: { title: 'Time for a break', body: '{minutes} min of focus · {title}' },
     },
     digest: {
       tasks: 'no tasks | 1 task | {n} tasks',
@@ -146,6 +147,7 @@ export const inboxPt: typeof inboxEn = {
       held: { title: '{n} notificações durante o silêncio', body: '{lines}' },
       note_reminder: { title: '{title}', body: 'Nota · {ws}' },
       habit_due: { title: '{title}', body: 'Ainda por fazer hoje · {ws}' },
+      focus_done: { title: 'Hora de uma pausa', body: '{minutes} min de foco · {title}' },
     },
     digest: {
       tasks: 'sem tarefas | 1 tarefa | {n} tarefas',

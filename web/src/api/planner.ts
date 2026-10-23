@@ -148,6 +148,7 @@ export interface Task {
   git_error?: string // in a change's answer: saved, but git refused it
   git_milestone?: string // its issue's milestone (a linked list's task)
   git_milestone_id?: number
+  focus_minutes?: number // time focused on it
 }
 export interface TaskInput {
   list_id?: string

@@ -21,7 +21,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Modules
 
-- **Journal** — one page per day, with mood and a "this day last year".
 - **Bookmarks** — links with a preview, tags and a read-later state.
 - Focus timer: breaks between sessions (a long one every four), and a week
   of focus in Charts.

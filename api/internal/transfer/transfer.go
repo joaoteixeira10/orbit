@@ -96,6 +96,8 @@ type Archive struct {
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
 	HabitChecks []models.HabitCheck `json:"habit_checks,omitempty"`
+	// The exporter's own journal.
+	Journal []models.JournalEntry `json:"journal,omitempty"`
 }
 
 func raw(s string) json.RawMessage {
@@ -165,6 +167,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 		habitIDs = append(habitIDs, hb.ID)
 	}
 	db.Where("habit_id IN ?", habitIDs).Order("date").Find(&a.HabitChecks)
+	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("date").Find(&a.Journal)
 	a.People = people(db, wsID, &a)
 
 	z := zip.NewWriter(w)
@@ -587,6 +590,13 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			hb := x
 			hb.ID, hb.WorkspaceID, hb.OwnerID = ref(x.ID), ws.ID, me.ID
 			if err := tx.Create(&hb).Error; err != nil {
+				return err
+			}
+		}
+		for _, x := range a.Journal {
+			e := models.JournalEntry{WorkspaceID: ws.ID, OwnerID: me.ID, Date: x.Date, Content: rewrite(x.Content), Mood: x.Mood}
+			e.ContentText = planner.MarkdownText(e.Content)
+			if err := tx.Create(&e).Error; err != nil {
 				return err
 			}
 		}

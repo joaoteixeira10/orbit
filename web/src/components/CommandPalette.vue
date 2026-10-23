@@ -9,7 +9,7 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { usePagesStore } from '@/stores/pages'
 import { usePrefsStore } from '@/stores/prefs'
 import { useToastStore } from '@/stores/toast'
-import { relDay, fmtDate } from '@/lib/dates'
+import { relDay, fmtDate, parseDate } from '@/lib/dates'
 
 // ⌘K / Ctrl+K: search pages, tasks, notes and events in every workspace, jump to a
 // workspace, or run a quick action. Arrows move, Enter opens, Esc closes.
@@ -103,6 +103,8 @@ const results = computed<Item[]>(() =>
       const to = h.workspace_id ? { name: 'ws-notes', params: { ws: h.workspace_id }, query: { note: h.id } } : { name: 'my-notes', query: { note: h.id } }
       return { key: 'n-' + h.id, label: h.title || h.snippet || '', sub: h.title && h.snippet ? `${at} · ${h.snippet}` : at, icon: StickyNote, run: () => router.push(to) }
     }
+    if (h.kind === 'journal')
+      return { key: 'j-' + h.id, label: fmtDate(parseDate(h.id), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: NotebookPen, run: () => router.push({ name: 'ws-journal', params: { ws: h.workspace_id }, query: { date: h.id } }) }
     if (h.kind === 'drawing')
       return { key: 'd-' + h.id, label: h.title || t('draw.untitled'), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: Brush, run: () => router.push({ name: 'ws-whiteboard', params: { ws: h.workspace_id, id: h.id } }) }
     return { key: 'e-' + h.id, label: h.title, sub: [where, h.start ? fmtDate(new Date(h.start), { day: 'numeric', month: 'short', year: 'numeric' }) : ''].filter(Boolean).join(' · '), icon: CalendarDays, run: () => router.push({ name: 'ws-calendar', params: { ws: h.workspace_id }, query: { date: h.start?.slice(0, 10) } }) }

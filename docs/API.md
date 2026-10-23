@@ -93,6 +93,12 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Journal** (each person's own): `GET /workspaces/{ws}/journal?month=YYYY-MM`
+lists the days written (mood, a line); `GET /workspaces/{ws}/journal/{date}`
+is a day and `on_this_day` (the same date in earlier years); `PUT` it with
+`content` (Markdown) and / or `mood` (1–5, 0 none) — an empty day is
+removed.
+
 **Goals**: `GET/POST /workspaces/{ws}/goals`, `PUT/DELETE /goals/{id}`
 (`title`, `notes`, `icon`, `color`, `due`, `progress` 0–100 when it has no
 tasks, `achieved`); a goal answers its `tasks` and `done` counts. A task

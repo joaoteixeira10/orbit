@@ -6808,6 +6808,139 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/journal": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "journal"
+                ],
+                "summary": "My journal's days of a month",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM",
+                        "name": "month",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.journalDay"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/journal/{date}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "journal"
+                ],
+                "summary": "A day of my journal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.journalResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "journal"
+                ],
+                "summary": "Write a day of my journal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Text and / or mood",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.journalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.journalResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/lists": {
             "get": {
                 "security": [
@@ -9115,6 +9248,54 @@ const docTemplate = `{
                 }
             }
         },
+        "api.journalDay": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "excerpt": {
+                    "type": "string"
+                },
+                "mood": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.journalRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "maxLength": 200000
+                },
+                "mood": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 0
+                }
+            }
+        },
+        "api.journalResponse": {
+            "type": "object",
+            "properties": {
+                "entry": {
+                    "description": "null: nothing written that day",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.JournalEntry"
+                        }
+                    ]
+                },
+                "on_this_day": {
+                    "description": "The same day in earlier years.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.journalDay"
+                    }
+                }
+            }
+        },
         "api.listRequest": {
             "type": "object",
             "properties": {
@@ -9916,7 +10097,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "description": "page | task | event | note | drawing",
+                    "description": "page | task | event | note | drawing | journal (ID: its date)",
                     "type": "string"
                 },
                 "list_id": {
@@ -11211,6 +11392,35 @@ const docTemplate = `{
                 },
                 "weight": {
                     "type": "number"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.JournalEntry": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mood": {
+                    "type": "integer"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 },
                 "workspace_id": {
                     "type": "string"

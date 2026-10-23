@@ -206,6 +206,21 @@ type HabitCheck struct {
 	Date    string `gorm:"size:10;not null;uniqueIndex:idx_habit_day" json:"date"`
 }
 
+// ---- Journal ----------------------------------------------------------------
+
+// JournalEntry is one day of someone's journal in a workspace with the
+// Journal module: Markdown and a mood (1–5, 0 none). Entries are their
+// owner's alone. ContentText is the plain text, for search and excerpts.
+type JournalEntry struct {
+	Base
+	WorkspaceID string `gorm:"size:36;not null;uniqueIndex:idx_journal_day" json:"workspace_id"`
+	OwnerID     string `gorm:"size:36;not null;uniqueIndex:idx_journal_day" json:"owner_id"`
+	Date        string `gorm:"size:10;not null;uniqueIndex:idx_journal_day" json:"date"`
+	Content     string `gorm:"type:text" json:"content"`
+	ContentText string `gorm:"type:text" json:"-"`
+	Mood        int    `gorm:"not null;default:0" json:"mood"`
+}
+
 // ---- Goals ------------------------------------------------------------------
 
 // Goal is something a workspace works towards by a date (Due, floating):

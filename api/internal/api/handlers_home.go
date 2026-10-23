@@ -121,7 +121,7 @@ func (h *Handlers) home(c *gin.Context) {
 
 // searchHit is one search result.
 type searchHit struct {
-	Kind        string     `json:"kind"` // page | task | event | note | drawing
+	Kind        string     `json:"kind"` // page | task | event | note | drawing | journal (ID: its date)
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
 	Title       string     `json:"title"`
@@ -276,7 +276,15 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			events[r.ID] = r
 		}
 	}
-	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8}
+	journal := map[string]models.JournalEntry{}
+	if l := ids["journal"]; len(l) > 0 {
+		var rows []models.JournalEntry
+		h.db.Select("id", "workspace_id", "owner_id", "date", "content_text").Where("id IN ? AND owner_id = ?", l, uid).Find(&rows)
+		for _, r := range rows {
+			journal[r.ID] = r
+		}
+	}
+	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8, "journal": 8}
 	seen := map[string]bool{}
 	for _, x := range hits {
 		kind := x.Kind
@@ -315,6 +323,12 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			}
 			s := e.StartsAt
 			out = append(out, searchHit{Kind: "event", ID: e.ID, WorkspaceID: e.WorkspaceID, Title: e.Title, Start: &s})
+		case "journal":
+			e, ok := journal[x.Ref]
+			if !ok || (c.Query("ws") != "" && e.WorkspaceID != c.Query("ws")) {
+				continue
+			}
+			out = append(out, searchHit{Kind: "journal", ID: e.Date, WorkspaceID: e.WorkspaceID, Title: e.Date, Snippet: planner.Snippet(e.ContentText, q, 100)})
 		case "drawing":
 			d, ok := drawings[x.Ref]
 			if !ok {

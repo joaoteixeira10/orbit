@@ -868,6 +868,29 @@ test('goals: one with a date, two tasks towards it, half done', async ({ page, r
   await page.screenshot({ path: 'test-results/goals.png' })
 })
 
+test('journal: today written with a mood, kept, and last year on this day', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Diary', kind: 'personal', modules: ['home', 'journal'] } })).json()
+  const d = new Date()
+  const iso = (y: number) => `${y}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  await request.put(`/api/v1/workspaces/${ws.id}/journal/${iso(d.getFullYear() - 1)}`, { headers: H, data: { content: 'Snow in the mountains.', mood: 5 } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/journal`)
+  await expect(page.getByText('On this day')).toBeVisible()
+  await expect(page.getByText('Snow in the mountains.')).toBeVisible()
+  await page.getByTestId('journal-entry').locator('textarea').fill('Finished the **report**. Long walk after.')
+  await page.getByRole('radio', { name: 'Good' }).click()
+  await expect(page.getByTestId('journal-state')).toContainText('Saved')
+  await page.reload()
+  await expect(page.getByTestId('journal-entry')).toContainText('Finished the report')
+  await expect(page.getByRole('radio', { name: 'Good' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator(`.day[data-day="${iso(d.getFullYear())}"]`)).toContainText('🙂')
+  await page.screenshot({ path: 'test-results/journal.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

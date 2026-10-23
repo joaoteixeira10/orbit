@@ -18,7 +18,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "2"
+const version = "3"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -34,6 +34,9 @@ var sources = []struct {
 	// A whiteboard by its title and words; a note's drawing by its words
 	// (the hit opens the note).
 	{"drawings", "drawing", "@.id", "@.workspace_id", "@.owner_id", "@.title", "@.text"},
+	// A journal is its writer's alone: indexed as theirs (no workspace), so
+	// only they find it, as with their own notes.
+	{"journal_entries", "journal", "@.id", "''", "@.owner_id", "@.date", "@.content_text"},
 }
 
 var ready atomic.Bool

@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Journal** (a new module): a page a day, each person's own, with a mood;
+  a month of moods at a glance; "On this day" from earlier years; found by
+  search, by its writer only.
 - **Goals** (a new module): a date to reach, progress from the tasks
   towards it (or a slider), on track / behind / overdue, achieved; a task
   picks its goal in its details.

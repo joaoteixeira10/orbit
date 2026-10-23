@@ -26,11 +26,12 @@ the [API](API.md).
 15. [Habits](#15-habits)
 16. [Focus timer](#16-focus-timer)
 17. [Goals](#17-goals)
-18. [Notifications](#18-notifications)
-19. [Your settings](#19-your-settings)
-20. [Administration](#20-administration)
-21. [Owner controls](#21-owner-controls)
-22. [On a phone](#22-on-a-phone)
+18. [Journal](#18-journal)
+19. [Notifications](#19-notifications)
+20. [Your settings](#20-your-settings)
+21. [Administration](#21-administration)
+22. [Owner controls](#22-owner-controls)
+23. [On a phone](#23-on-a-phone)
 
 ---
 
@@ -806,7 +807,23 @@ launch, an exam, a trip.
 - **Mark achieved** puts it with the **Achieved** goals (folded at the
   bottom); **Delete** removes it — its tasks stay.
 
-## 18. Notifications
+## 18. Journal
+
+The **Journal** (a module) is a page a day — what happened, how it went.
+It's **yours alone**: in a shared workspace each member writes their own,
+and nobody reads anyone else's (search finds yours for you only).
+
+- It opens on **today**; pick another day in the month on the left (◀ ▶ for
+  other months). Each day you wrote shows its mood under its date.
+- **How it went**: one of five faces (tap again to take it off).
+- Write in the box — Markdown, as in pages (lists, `**bold**`, checklists).
+  It **saves as you write**; a day you've written opens to read, and
+  **Write** (or a double click) to change it. A day with nothing in it is
+  removed.
+- **On this day** shows the same date in earlier years — what you wrote a
+  year ago, two years ago…
+
+## 19. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -869,7 +886,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 19. Your settings
+## 20. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -907,7 +924,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 20. Administration
+## 21. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -1002,7 +1019,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 21. Owner controls
+## 22. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1140,7 +1157,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 22. On a phone
+## 23. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

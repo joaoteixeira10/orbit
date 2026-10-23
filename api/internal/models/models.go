@@ -359,6 +359,7 @@ func AllModels() []any {
 		&HabitCheck{},
 		&FocusSession{},
 		&Goal{},
+		&JournalEntry{},
 		&CalDAVLink{},
 		&CalDAVItem{},
 		&CalendarFeed{},

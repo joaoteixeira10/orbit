@@ -1050,6 +1050,37 @@ definitions:
       workspace_id:
         type: string
     type: object
+  api.journalDay:
+    properties:
+      date:
+        type: string
+      excerpt:
+        type: string
+      mood:
+        type: integer
+    type: object
+  api.journalRequest:
+    properties:
+      content:
+        maxLength: 200000
+        type: string
+      mood:
+        maximum: 5
+        minimum: 0
+        type: integer
+    type: object
+  api.journalResponse:
+    properties:
+      entry:
+        allOf:
+        - $ref: '#/definitions/models.JournalEntry'
+        description: 'null: nothing written that day'
+      on_this_day:
+        description: The same day in earlier years.
+        items:
+          $ref: '#/definitions/api.journalDay'
+        type: array
+    type: object
   api.listRequest:
     properties:
       color:
@@ -1599,7 +1630,7 @@ definitions:
       id:
         type: string
       kind:
-        description: page | task | event | note | drawing
+        description: 'page | task | event | note | drawing | journal (ID: its date)'
         type: string
       list_id:
         type: string
@@ -2504,6 +2535,25 @@ definitions:
         type: string
       weight:
         type: number
+      workspace_id:
+        type: string
+    type: object
+  models.JournalEntry:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        type: string
+      mood:
+        type: integer
+      owner_id:
+        type: string
+      updated_at:
+        type: string
       workspace_id:
         type: string
     type: object
@@ -7044,6 +7094,90 @@ paths:
       summary: Revoke an invite link
       tags:
       - workspaces
+  /workspaces/{ws}/journal:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: YYYY-MM
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.journalDay'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My journal's days of a month
+      tags:
+      - journal
+  /workspaces/{ws}/journal/{date}:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: YYYY-MM-DD
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.journalResponse'
+      security:
+      - BearerAuth: []
+      summary: A day of my journal
+      tags:
+      - journal
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: YYYY-MM-DD
+        in: path
+        name: date
+        required: true
+        type: string
+      - description: Text and / or mood
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.journalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.journalResponse'
+      security:
+      - BearerAuth: []
+      summary: Write a day of my journal
+      tags:
+      - journal
   /workspaces/{ws}/lists:
     get:
       parameters:

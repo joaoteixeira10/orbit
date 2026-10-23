@@ -19,6 +19,7 @@ const (
 	ModHabits   = "habits"      // daily / weekly habits with streaks
 	ModFocus    = "focus"       // a focus timer (Pomodoro), time logged on tasks
 	ModGoals    = "goals"       // goals with progress from their tasks
+	ModJournal  = "journal"     // a page a day, with a mood
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -43,7 +44,7 @@ var Catalog = []Module{
 	{Key: ModGrades, Icon: "award"},
 	{Key: ModBoards, Icon: "brush"},
 	{Key: ModHabits, Icon: "repeat"},
-	{Key: "journal", Icon: "notebook-pen", Soon: true},
+	{Key: ModJournal, Icon: "notebook-pen"},
 	{Key: ModGoals, Icon: "target"},
 	{Key: "bookmarks", Icon: "bookmark", Soon: true},
 	{Key: ModFocus, Icon: "timer"},

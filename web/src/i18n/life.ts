@@ -1,0 +1,63 @@
+// Reminders, snooze and quiet hours; the habits, focus, goals, journal,
+// bookmarks and whiteboards modules. Portuguese is European Portuguese.
+export const lifeEn = {
+  remind: {
+    title: 'Remind me',
+    inHour: 'In an hour',
+    later: 'Later today',
+    evening: 'This evening',
+    tomorrow: 'Tomorrow',
+    nextWeek: 'Next week',
+    pick: 'A date and time',
+    set: 'Set',
+    remove: 'No reminder',
+    at: 'Reminder: {when}',
+    setTo: 'I’ll remind you {when}',
+    removed: 'Reminder removed',
+  },
+  snooze: {
+    action: 'Remind me again…',
+    done: 'I’ll bring it back {when}',
+  },
+  quiet: {
+    title: 'Quiet hours',
+    hint: 'Between these hours nothing reaches your devices or channels: it waits in the bell, and one summary comes when they end.',
+    on: 'Quiet hours',
+    from: 'From',
+    to: 'To',
+    reminders: 'Let reminders through',
+    remindersHint: 'Tasks due and events starting still reach you.',
+    now: 'It’s quiet now',
+  },
+}
+
+export const lifePt: typeof lifeEn = {
+  remind: {
+    title: 'Lembrar-me',
+    inHour: 'Daqui a uma hora',
+    later: 'Mais logo',
+    evening: 'Ao fim do dia',
+    tomorrow: 'Amanhã',
+    nextWeek: 'Para a semana',
+    pick: 'Uma data e hora',
+    set: 'Definir',
+    remove: 'Sem lembrete',
+    at: 'Lembrete: {when}',
+    setTo: 'Lembro-o {when}',
+    removed: 'Lembrete removido',
+  },
+  snooze: {
+    action: 'Lembrar-me outra vez…',
+    done: 'Volta a aparecer {when}',
+  },
+  quiet: {
+    title: 'Horas de silêncio',
+    hint: 'Entre estas horas nada chega aos seus dispositivos nem canais: fica à espera no sino, e chega um resumo quando acabam.',
+    on: 'Horas de silêncio',
+    from: 'Das',
+    to: 'Às',
+    reminders: 'Deixar passar os lembretes',
+    remindersHint: 'As tarefas a terminar e os eventos a começar continuam a chegar.',
+    now: 'Agora está em silêncio',
+  },
+}

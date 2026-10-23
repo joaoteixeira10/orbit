@@ -336,6 +336,10 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
   **Delete** (with **Undo** for a few seconds).
 - Click a card to open it larger; it saves as you type. Emptying a note and
   closing it deletes it.
+- **Remind me** (🔔+ in an open note): later today, this evening, tomorrow at
+  9, next week, or a date and time. You get a reminder then (in the bell, on
+  your devices); the note shows when, and the card too. ✕ takes it off. In a
+  shared workspace's note, the reminder is yours alone.
 - **Drag** cards to reorder them (between Pinned and Others to pin or unpin).
 - **Search notes** and the colour dots at the top narrow the wall.
 
@@ -740,6 +744,13 @@ all as read** clears the count. What you get:
 - **Daily summary** — when turned on, every morning at the time you choose:
   today's events, the tasks due today and the overdue ones. Nothing is sent on
   an empty day.
+- **Note reminders** — the ones you set on a note.
+
+**Snooze**: the 🕒 on a notification in the bell (on a phone it's always
+there) → in an hour, later today, tomorrow, next week, or a date and time. It
+leaves the bell and comes back, unread and sent to your devices again, at
+that time. Where the system shows buttons on notifications (Android, Windows,
+macOS Chrome), a push has a **Snooze 1 h** button.
 
 **Settings → Notifications** chooses where each kind goes besides the bell:
 
@@ -752,6 +763,11 @@ all as read** clears the count. What you get:
   owner set up channels, one for **Channels**. By default, what's about you
   reaches your devices and others' activity stays in the bell.
 - **Daily summary** — on or off, and the time.
+- **Quiet hours** — from and to (22:00 – 07:00 by default, in your time
+  zone): in between, nothing reaches your devices or channels — it waits in
+  the bell, and when the quiet hours end one summary comes (*5 notifications
+  while it was quiet*, with the first ones). **Let reminders through** keeps
+  tasks due and events starting coming.
 - **Your channels** — which of the owner's channels (email, ntfy, Telegram,
   Discord, Slack, Teams, Gotify) to use. **Email** goes to your own address,
   with the full text. The others are one chat, topic or webhook the owner set

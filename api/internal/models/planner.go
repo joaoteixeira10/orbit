@@ -167,6 +167,9 @@ type Note struct {
 	Rank        float64 `gorm:"not null;default:0" json:"rank"`
 	CreatedBy   string  `gorm:"size:36" json:"created_by"`
 	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+	// RemindAt: a one-off reminder (to RemindBy, who set it); cleared once sent.
+	RemindAt *time.Time `gorm:"index" json:"remind_at,omitempty"`
+	RemindBy string     `gorm:"size:36" json:"-"`
 }
 
 // ---- Calendar ---------------------------------------------------------------
@@ -293,6 +296,11 @@ type Notification struct {
 	GroupKey    string     `gorm:"size:120;index" json:"-"`
 	Count       int        `gorm:"not null;default:1" json:"count"`
 	ReadAt      *time.Time `gorm:"index:idx_notif_user,priority:2" json:"read_at"`
+	// SnoozedUntil: put off until then (out of the list; it comes back
+	// unread, and is sent again). Held: it came during quiet hours and
+	// wasn't sent to devices or channels yet.
+	SnoozedUntil *time.Time `gorm:"index" json:"snoozed_until,omitempty"`
+	Held         bool       `gorm:"not null;default:false;index" json:"-"`
 }
 
 // PushSubscription is one browser (or installed app) that receives Web Push

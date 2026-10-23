@@ -72,12 +72,13 @@ type Service struct {
 	publicURL  string // the app's address, for a ping's link ("" = none)
 	vapidPub   string
 	vapidPriv  string
+	now        func() time.Time
 }
 
 // New builds the service and loads (or, the first time, creates) the Web
 // Push keys. publicURL identifies the instance to push services.
 func New(db *gorm.DB, hub *events.Hub, channels *notify.Service, sealer *keystore.Sealer, log *zap.Logger, publicURL string) *Service {
-	s := &Service{db: db, hub: hub, channels: channels, log: log, client: safedial.PublicClient(15 * time.Second)}
+	s := &Service{db: db, hub: hub, channels: channels, log: log, client: safedial.PublicClient(15 * time.Second), now: time.Now}
 	s.subscriber = "mailto:orbit@localhost"
 	s.publicURL = strings.TrimRight(publicURL, "/")
 	if strings.HasPrefix(publicURL, "https://") {
@@ -190,7 +191,8 @@ func (s *Service) publish(n models.Notification) {
 	s.hub.Publish(n.UserID, string(b))
 }
 
-// deliver sends it to the user's devices and channels, as they chose.
+// deliver sends it to the user's devices and channels, as they chose — or,
+// in their quiet hours, holds it for the summary when they end.
 func (s *Service) deliver(n models.Notification) {
 	var p models.UserPrefs
 	s.db.Where("user_id = ?", n.UserID).First(&p)
@@ -198,6 +200,20 @@ func (s *Service) deliver(n models.Notification) {
 	if !d.Push && !d.Channels {
 		return
 	}
+	if holds(p, n.Kind, s.now()) {
+		s.db.Model(&models.Notification{}).Where("id = ?", n.ID).Update("held", true)
+		return
+	}
+	s.sendAs(n, p, d)
+}
+
+// send delivers a notification now, as the user chose for its kind.
+func (s *Service) send(n models.Notification, p models.UserPrefs) {
+	s.sendAs(n, p, PrefsOf(p)[n.Kind])
+}
+
+// sendAs delivers to the user's devices and/or channels.
+func (s *Service) sendAs(n models.Notification, p models.UserPrefs, d Delivery) {
 	var u models.User
 	if s.db.Select("id", "email", "disabled").First(&u, "id = ?", n.UserID).Error != nil || u.Disabled {
 		return
@@ -205,7 +221,14 @@ func (s *Service) deliver(n models.Notification) {
 	v := ToView(n)
 	title, body := Render(p.Locale, v)
 	if d.Push && s.PushReady() {
-		go s.push(n.UserID, pushPayload{Title: title, Body: body, URL: n.Link, Tag: tagOf(n), Kind: n.Kind})
+		pl := pushPayload{Title: title, Body: body, URL: n.Link, Tag: tagOf(n), Kind: n.Kind}
+		if n.ID != "" {
+			pl.Snooze, pl.SnoozeLabel = s.snoozeURL(n.ID), "Snooze 1 h"
+			if lang(p.Locale) == "pt" {
+				pl.SnoozeLabel = "Adiar 1 h"
+			}
+		}
+		go s.push(n.UserID, pl)
 	}
 	if d.Channels && s.channels != nil {
 		var chans []string
@@ -281,6 +304,9 @@ func SplitChannels(chans []string) (personal, shared []string) {
 // tagOf lets a newer notification of the same thing replace an older one on
 // the device (a group, or the same task's reminder).
 func tagOf(n models.Notification) string {
+	if n.ID == "" {
+		return n.Verb
+	}
 	if n.GroupKey != "" {
 		return n.GroupKey
 	}

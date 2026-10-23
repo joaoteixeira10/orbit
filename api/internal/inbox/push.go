@@ -66,6 +66,9 @@ type pushPayload struct {
 	URL   string `json:"url"`
 	Tag   string `json:"tag"`
 	Kind  string `json:"kind"`
+	// Snooze is the signed address of the notification's "Snooze" button.
+	Snooze      string `json:"snooze,omitempty"`
+	SnoozeLabel string `json:"snooze_label,omitempty"`
 }
 
 // ValidEndpoint accepts only https push-service addresses (the dialer also

@@ -192,6 +192,7 @@ export interface Note {
   created_at: string
   updated_at: string
   attachments?: Upload[] // files on the note (in lists)
+  remind_at?: string | null // a one-off reminder
 }
 export interface NoteInput {
   title?: string
@@ -200,6 +201,7 @@ export interface NoteInput {
   items?: NoteItem[]
   color?: NoteColor
   pinned?: boolean
+  remind_at?: string // RFC 3339; "" takes it off
 }
 
 // One entry of the notification inbox. It says what happened (kind, verb,
@@ -506,6 +508,7 @@ export const notesApi = {
 export const inboxApi = {
   list: (before?: string) => api<{ items: InboxItem[]; unread: number; more: boolean }>(`/me/notifications?${qs({ before })}`),
   read: (b: { ids?: string[]; all?: boolean }) => api<void>('/me/notifications/read', { method: 'POST', body: j(b) }),
+  snooze: (id: string, until: string) => api<void>(`/me/notifications/${id}/snooze`, { method: 'POST', body: j({ until }) }),
 }
 
 export const pushApi = {

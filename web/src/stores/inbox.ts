@@ -43,6 +43,14 @@ export const useInboxStore = defineStore('inbox', {
       this.unread = Math.max(0, this.unread - fresh.length)
       await inboxApi.read({ ids: fresh.map((n) => n.id) }).catch(() => {})
     },
+    // snooze puts one off until then: it leaves the list (and comes back
+    // as a new notification).
+    async snooze(id: string, until: string) {
+      const n = this.items.find((x) => x.id === id)
+      await inboxApi.snooze(id, until)
+      this.items = this.items.filter((x) => x.id !== id)
+      if (n && !n.read) this.unread = Math.max(0, this.unread - 1)
+    },
     async markAll() {
       for (const n of this.items) n.read = true
       this.unread = 0

@@ -181,3 +181,93 @@ func TestPing(t *testing.T) {
 		t.Fatalf("split: %v %v", personal, shared)
 	}
 }
+
+// TestQuietHours: between the hours (past midnight too, in the user's zone)
+// nothing goes out — it waits; reminders only if let through; when the
+// hours end, what waited is released (once).
+func TestQuietHours(t *testing.T) {
+	p := models.UserPrefs{Timezone: "Europe/Lisbon", QuietFrom: "22:00", QuietTo: "07:00"}
+	at := func(h, m int) time.Time { return time.Date(2026, 12, 1, h, m, 0, 0, time.UTC) } // Lisbon = UTC in December
+	for _, c := range []struct {
+		t     time.Time
+		quiet bool
+	}{{at(21, 59), false}, {at(22, 0), true}, {at(3, 0), true}, {at(6, 59), true}, {at(7, 0), false}, {at(12, 0), false}} {
+		if Quiet(p, c.t) != c.quiet {
+			t.Errorf("%s: quiet %v", c.t.Format("15:04"), !c.quiet)
+		}
+	}
+	if Quiet(models.UserPrefs{QuietFrom: "22:00"}, at(23, 0)) {
+		t.Error("half set counts as quiet")
+	}
+
+	db := testDB(t)
+	s := New(db, nil, nil, nil, zap.NewNop(), "")
+	s.now = func() time.Time { return at(23, 30) }
+	p.UserID = "u1"
+	db.Create(&p)
+	s.Notify(Message{UserID: "u1", Kind: Assigned, Verb: "task_assigned", Params: map[string]any{"title": "A"}})
+	s.Notify(Message{UserID: "u1", Kind: Reminder, Verb: "task_due", Params: map[string]any{"title": "B"}})
+	var held int64
+	db.Model(&models.Notification{}).Where("held = ?", true).Count(&held)
+	if held != 2 {
+		t.Fatalf("held: %d", held)
+	}
+	// Reminders let through: not held.
+	db.Model(&models.UserPrefs{}).Where("user_id = ?", "u1").Update("quiet_reminders", true)
+	s.Notify(Message{UserID: "u1", Kind: Reminder, Verb: "task_due", Params: map[string]any{"title": "C"}})
+	db.Model(&models.Notification{}).Where("held = ?", true).Count(&held)
+	if held != 2 {
+		t.Fatalf("a let-through reminder was held: %d", held)
+	}
+	s.ReleaseHeld(at(5, 0))
+	db.Model(&models.Notification{}).Where("held = ?", true).Count(&held)
+	if held != 2 {
+		t.Fatalf("released while still quiet: %d", held)
+	}
+	s.ReleaseHeld(at(7, 1))
+	db.Model(&models.Notification{}).Where("held = ?", true).Count(&held)
+	if held != 0 {
+		t.Fatalf("not released after: %d", held)
+	}
+}
+
+// TestSnooze: a snoozed notification leaves the list, comes back unread at
+// its time (and is shown again); an action link is signed for its
+// notification only.
+func TestSnooze(t *testing.T) {
+	db := testDB(t)
+	hub := events.New()
+	s := New(db, hub, nil, nil, zap.NewNop(), "")
+	s.Notify(Message{UserID: "u1", Kind: Reminder, Verb: "task_due", Params: map[string]any{"title": "Essay"}})
+	var n models.Notification
+	db.First(&n)
+	until := time.Now().Add(time.Hour)
+	if err := s.Snooze("u2", n.ID, until); err == nil {
+		t.Fatal("someone else snoozed it")
+	}
+	if err := s.Snooze("u1", n.ID, until); err != nil {
+		t.Fatal(err)
+	}
+	db.First(&n, "id = ?", n.ID)
+	if n.SnoozedUntil == nil || n.ReadAt == nil {
+		t.Fatalf("snoozed: %+v", n)
+	}
+	ch, stop := hub.Subscribe("u1")
+	defer stop()
+	s.Resurface(time.Now())
+	if len(ch) != 0 {
+		t.Fatal("back too early")
+	}
+	s.Resurface(until.Add(time.Minute))
+	var back models.Notification
+	db.First(&back, "id = ?", n.ID)
+	if back.SnoozedUntil != nil || back.ReadAt != nil || len(ch) != 1 {
+		t.Fatalf("not back: %+v (%d events)", back, len(ch))
+	}
+
+	s.vapidPriv = "k"
+	tok := s.ActionToken(n.ID)
+	if !s.ValidAction(n.ID, tok) || s.ValidAction("other", tok) || s.ValidAction(n.ID, "00") {
+		t.Error("action tokens")
+	}
+}

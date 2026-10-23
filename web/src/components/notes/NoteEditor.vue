@@ -2,14 +2,15 @@
 import Attachments from '@/components/ui/Attachments.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X } from 'lucide-vue-next'
+import RemindPicker from '@/components/ui/RemindPicker.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Popover from '@/components/ui/Popover.vue'
 import NoteFields from './NoteFields.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
 import { useNotesStore } from '@/stores/notes'
 import { useToastStore } from '@/stores/toast'
-import { locale } from '@/lib/dates'
+import { locale, fmtDate, fmtTime } from '@/lib/dates'
 import { ago, draftOf, inputOf, isEmptyDraft, sameContent, toChecklist, toText, type Draft } from './noteModel'
 import type { Note } from '@/api/planner'
 
@@ -107,7 +108,30 @@ onBeforeUnmount(() => void save())
 // The toolbar.
 const colorBtn = ref<HTMLElement | null>(null)
 const moreBtn = ref<HTMLElement | null>(null)
-const menu = ref<'' | 'color' | 'more'>('')
+const menu = ref<'' | 'color' | 'more' | 'remind'>('')
+const remindBtn = ref<HTMLElement | null>(null)
+
+// A one-off reminder (to me): set, changed or taken off at once.
+const remindLabel = computed(() => {
+  const at = note.value?.remind_at
+  if (!at) return ''
+  const d = new Date(at)
+  return `${fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}, ${fmtTime(d)}`
+})
+async function remind(at: string) {
+  menu.value = ''
+  const n = note.value
+  if (!n) return
+  try {
+    await notes.update(props.ws, n.id, { remind_at: at })
+    if (at) {
+      const d = new Date(at)
+      toast.success(t('remind.setTo', { when: `${fmtDate(d, { weekday: 'short' })} ${fmtTime(d)}` }))
+    } else toast.info(t('remind.removed'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 function toggleChecklist() {
   if (draft.value.checklist) toText(draft.value)
   else toChecklist(draft.value)
@@ -153,6 +177,10 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
           compact
           @change="(f) => (note!.attachments = f)"
         />
+        <p v-if="note.remind_at" class="remind-chip" data-testid="note-reminder">
+          <BellRing class="h-3.5 w-3.5" />{{ t('remind.at', { when: remindLabel }) }}
+          <button v-if="editable" class="ml-0.5 opacity-70 hover:opacity-100" :aria-label="t('remind.remove')" :title="t('remind.remove')" @click="remind('')"><X class="h-3.5 w-3.5" /></button>
+        </p>
         <button
           v-if="editable"
           class="tb pin absolute -right-2 -top-1"
@@ -175,6 +203,9 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
             <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
             <SquareCheck v-else class="h-[18px] w-[18px]" />
           </button>
+          <button ref="remindBtn" class="tb" :class="{ on: menu === 'remind' || !!note.remind_at }" :aria-label="t('remind.title')" :title="t('remind.title')" data-testid="note-remind" @click="menu = menu === 'remind' ? '' : 'remind'">
+            <BellPlus class="h-[18px] w-[18px]" />
+          </button>
           <button class="tb" :aria-label="t('files.attach')" :title="t('files.attach')" @click="files?.pick()">
             <Paperclip class="h-[18px] w-[18px]" />
           </button>
@@ -187,6 +218,9 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
       </div>
       <Popover v-if="menu === 'color'" :anchor="colorBtn" placement="top-start" @close="menu = ''">
         <NoteColorPicker v-model="draft.color" />
+      </Popover>
+ <Popover v-if="menu === 'remind'" :anchor="remindBtn" placement="top-start" :width="270" @close="menu = ''">
+        <RemindPicker :current="note.remind_at" @pick="remind" />
       </Popover>
       <Popover v-if="menu === 'more'" :anchor="moreBtn" placement="top-start" :width="210" @close="menu = ''">
         <button class="menu-item" @click="act('move')"><FolderInput class="h-4 w-4 text-text-2" />{{ t('notes.mine.moveTo') }}</button>
@@ -201,6 +235,17 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
 </template>
 
 <style scoped>
+.remind-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font-size: 12.5px;
+  font-weight: 500;
+}
 .note-sheet {
   min-height: 0;
   padding-top: 10px;

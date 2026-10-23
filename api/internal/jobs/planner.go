@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
@@ -39,6 +40,7 @@ func (s *Scheduler) startPlanner() {
 	}{
 		{"@every 5m", s.syncCalendars, "calendar subscriptions"},
 		{"* * * * *", s.reminders, "reminders"}, // on each minute boundary
+		{"* * * * *", s.notifications, "snoozed and held notifications"},
 		{"* * * * *", s.digests, "daily summaries"},
 		{"@daily", s.emptyTrash, "trash"},
 		{"@daily", s.inbox.Cleanup, "old notifications"},
@@ -148,6 +150,29 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		}
 	}
 
+	// Notes: a one-off reminder, to whoever set it (missed minutes too).
+	var notes []models.Note
+	s.db.Where("remind_at IS NOT NULL AND remind_at < ?", end).Find(&notes)
+	for _, n := range notes {
+		s.db.Model(&models.Note{}).Where("id = ?", n.ID).Updates(map[string]any{"remind_at": nil, "remind_by": ""})
+		to := n.RemindBy
+		if to == "" {
+			to = n.OwnerID
+		}
+		title := n.Title
+		if title == "" {
+			title = firstLine(n.PlainText, 80)
+		}
+		link := "/notes?note=" + n.ID
+		if n.WorkspaceID != "" {
+			link = fmt.Sprintf("/w/%s/notes?note=%s", n.WorkspaceID, n.ID)
+		}
+		s.inbox.Notify(inbox.Message{
+			UserID: to, Kind: inbox.Reminder, Verb: "note_reminder", WorkspaceID: n.WorkspaceID,
+			Params: map[string]any{"title": title, "ws": wsName(n.WorkspaceID), "note": n.ID}, Link: link,
+		})
+	}
+
 	// Events: an occurrence starting RemindMinutes after this minute.
 	var evs []models.Event
 	s.db.Where("remind_minutes IS NOT NULL AND starts_at < ? AND (until IS NULL OR until > ?)", end.AddDate(0, 0, 8), minute).Find(&evs)
@@ -174,6 +199,14 @@ func (s *Scheduler) remindAt(minute time.Time) {
 	}
 }
 
+// notifications brings back snoozed notifications and, for those whose
+// quiet hours just ended, sends the summary of what waited.
+func (s *Scheduler) notifications() {
+	now := time.Now()
+	s.inbox.Resurface(now)
+	s.inbox.ReleaseHeld(now)
+}
+
 func humanLead(d time.Duration) string {
 	switch {
 	case d%(24*time.Hour) == 0:
@@ -188,4 +221,15 @@ func humanLead(d time.Duration) string {
 // oldActivity drops workspace feed lines older than 90 days.
 func (s *Scheduler) oldActivity() {
 	s.db.Where("created_at < ?", time.Now().AddDate(0, 0, -90)).Delete(&models.Activity{})
+}
+
+// firstLine is a text's first line, at most n runes.
+func firstLine(s string, n int) string {
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		s = s[:i]
+	}
+	if r := []rune(strings.TrimSpace(s)); len(r) > n {
+		return string(r[:n]) + "…"
+	}
+	return strings.TrimSpace(s)
 }

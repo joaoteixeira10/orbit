@@ -2,7 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Bell, AlarmClock, UserCheck, Users, Sparkles, Sun, CheckCheck, BellOff } from 'lucide-vue-next'
+import { Bell, AlarmClock, UserCheck, Users, Sparkles, Sun, CheckCheck, BellOff, Clock } from 'lucide-vue-next'
+import RemindPicker from '@/components/ui/RemindPicker.vue'
+import { useToastStore } from '@/stores/toast'
+import { fmtDate, fmtTime } from '@/lib/dates'
 import Popover from '@/components/ui/Popover.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import { useInboxStore } from '@/stores/inbox'
@@ -43,6 +46,22 @@ function go(n: InboxItem) {
   if (n.link) void router.push(n.link)
 }
 const badge = computed(() => (inbox.unread > 99 ? '99+' : String(inbox.unread)))
+
+// Snooze: "remind me again" in an hour, tomorrow…
+const toast = useToastStore()
+const snoozing = ref<{ id: string; el: HTMLElement } | null>(null)
+async function snooze(at: string) {
+  const s = snoozing.value
+  snoozing.value = null
+  if (!s || !at) return
+  try {
+    await inbox.snooze(s.id, at)
+    const d = new Date(at)
+    toast.info(t('snooze.done', { when: `${fmtDate(d, { weekday: 'short' })} ${fmtTime(d)}` }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 </script>
 
 <template>
@@ -72,7 +91,7 @@ const badge = computed(() => (inbox.unread > 99 ? '99+' : String(inbox.unread)))
       <template v-for="[label, list] in [[t('inbox.new'), fresh], [t('inbox.earlier'), earlier]] as const" :key="label">
         <template v-if="list.length">
           <div class="cap px-4 pb-1 pt-2.5">{{ label }}</div>
-          <button v-for="n in list" :key="n.id" class="item" :class="{ unread: !n.read }" @click="go(n)">
+          <div v-for="n in list" :key="n.id" class="item" :class="{ unread: !n.read }" role="button" tabindex="0" @click="go(n)" @keydown.enter="go(n)">
             <span class="kind" :style="{ background: kindColor[n.kind] }"><component :is="kindIcon[n.kind]" class="h-[15px] w-[15px]" :stroke-width="2.3" /></span>
             <span class="min-w-0 flex-1">
               <span class="block text-[13.5px] leading-snug" :class="n.read ? 'font-medium' : 'font-semibold'">{{ renderNotification(n).title }}</span>
@@ -83,13 +102,19 @@ const badge = computed(() => (inbox.unread > 99 ? '99+' : String(inbox.unread)))
               </span>
             </span>
             <span v-if="!n.read" class="dot" />
-          </button>
+            <button class="snooze icon-btn h-7 w-7" :title="t('snooze.action')" :aria-label="t('snooze.action')" @click.stop="snoozing = { id: n.id, el: $event.currentTarget as HTMLElement }">
+              <Clock class="h-4 w-4" />
+            </button>
+          </div>
         </template>
       </template>
       <div v-if="inbox.more" class="px-4 py-2 text-center">
         <button class="btn-plain !text-[13px]" @click="inbox.loadMore()">{{ t('inbox.more') }}</button>
       </div>
     </div>
+  </Popover>
+  <Popover v-if="snoozing" :anchor="snoozing.el" placement="bottom-end" :width="260" @close="snoozing = null">
+    <RemindPicker snooze @pick="snooze" />
   </Popover>
 </template>
 
@@ -122,6 +147,25 @@ const badge = computed(() => (inbox.unread > 99 ? '99+' : String(inbox.unread)))
 }
 .item:hover {
   background: var(--surface-hover);
+}
+.item {
+  position: relative;
+  cursor: pointer;
+}
+.item .snooze {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  opacity: 0;
+}
+.item:hover .snooze,
+.item:focus-within .snooze {
+  opacity: 1;
+}
+@media (hover: none) {
+  .item .snooze {
+    opacity: 0.6;
+  }
 }
 .kind {
   display: grid;

@@ -144,7 +144,8 @@ func (h *Handlers) listNotifications(c *gin.Context) {
 	if limit < 1 || limit > 100 {
 		limit = 30
 	}
-	q := h.db.Where("user_id = ?", uid)
+	// Snoozed ones are away until they come back.
+	q := h.db.Where("user_id = ? AND snoozed_until IS NULL", uid)
 	if b := c.Query("before"); b != "" {
 		if t, err := time.Parse(time.RFC3339Nano, b); err == nil {
 			q = q.Where("updated_at < ?", t)
@@ -193,6 +194,73 @@ func (h *Handlers) readNotifications(c *gin.Context) {
 	}
 	q.Update("read_at", time.Now())
 	h.events.Publish(uid, `{"type":"notifications-read"}`)
+	c.Status(http.StatusNoContent)
+}
+
+type snoozeRequest struct {
+	Minutes int    `json:"minutes" binding:"omitempty,min=1,max=43200"`
+	Until   string `json:"until"` // RFC 3339 (instead of minutes)
+}
+
+// snoozeNotification puts a notification off: it leaves the list and comes
+// back unread (and is sent again) at that time.
+//
+//	@Summary	Snooze a notification
+//	@Tags		notifications
+//	@Accept		json
+//	@Security	BearerAuth
+//	@Param		id		path	string			true	"Notification id"
+//	@Param		body	body	snoozeRequest	true	"For how long, or until when"
+//	@Success	204
+//	@Router		/me/notifications/{id}/snooze [post]
+func (h *Handlers) snoozeNotification(c *gin.Context) {
+	var req snoozeRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	until := time.Now().Add(time.Duration(req.Minutes) * time.Minute)
+	if req.Until != "" {
+		t, err := time.Parse(time.RFC3339, req.Until)
+		if err != nil || !t.After(time.Now()) || t.After(time.Now().AddDate(0, 1, 0)) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "until must be a time in the next month"})
+			return
+		}
+		until = t
+	} else if req.Minutes == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "give minutes or until"})
+		return
+	}
+	if err := h.inbox.Snooze(auth.UserID(c), c.Param("id"), until); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// snoozeByLink is a push notification's "Snooze" button (public; the link is
+// signed for that notification): an hour, or ?minutes=.
+//
+//	@Summary	Snooze from a push notification
+//	@Tags		notifications
+//	@Param		id		path	string	true	"Notification id"
+//	@Param		token	query	string	true	"The link's signature"
+//	@Param		minutes	query	int		false	"Default 60"
+//	@Success	204
+//	@Router		/notifications/{id}/snooze [post]
+func (h *Handlers) snoozeByLink(c *gin.Context) {
+	id := c.Param("id")
+	if !h.inbox.ValidAction(id, c.Query("token")) {
+		c.Status(http.StatusForbidden)
+		return
+	}
+	minutes, _ := strconv.Atoi(c.DefaultQuery("minutes", "60"))
+	if minutes < 1 || minutes > 43200 {
+		minutes = 60
+	}
+	if err := h.inbox.SnoozeOwner(id, time.Duration(minutes)*time.Minute); err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
 	c.Status(http.StatusNoContent)
 }
 

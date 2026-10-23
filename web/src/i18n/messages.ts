@@ -21,6 +21,7 @@ import { commentsEn, commentsPt } from './comments'
 import { feedEn, feedPt } from './feed'
 import { accountUiEn, accountUiPt } from './accountui'
 import { adminUiEn, adminUiPt } from './adminui'
+import { lifeEn, lifePt } from './life'
 
 export const SUPPORTED_LOCALES = [
   { code: 'en', label: 'English' },
@@ -47,6 +48,7 @@ const en = {
   ...feedEn,
   ...accountUiEn,
   ...adminUiEn,
+  ...lifeEn,
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -321,6 +323,7 @@ const pt: typeof en = {
   ...feedPt,
   ...accountUiPt,
   ...adminUiPt,
+  ...lifePt,
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',

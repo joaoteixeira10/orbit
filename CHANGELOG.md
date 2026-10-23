@@ -111,6 +111,12 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Snooze** a notification (in the bell, or the Snooze button on a push):
+  it comes back unread at that time.
+- **Quiet hours**: nothing reaches devices or channels between two times —
+  it waits, and one summary comes when they end; reminders can be let
+  through.
+- **Reminders on notes**: "remind me tomorrow at 9" on any note.
 - **Git: instant updates and milestones**: a webhook (added by Orbit when
   the account may, else by hand with the address and secret shown) syncs a
   linked list the moment an issue changes; a task shows its issue's

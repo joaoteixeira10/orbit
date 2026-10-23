@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
@@ -202,11 +203,25 @@ type noteRequest struct {
 	Items     *[]noteItem `json:"items"`
 	Color     *string     `json:"color"`
 	Pinned    *bool       `json:"pinned"`
+	// RemindAt: an RFC 3339 instant for a one-off reminder to whoever sets
+	// it; "" takes it off.
+	RemindAt *string `json:"remind_at"`
 }
 
 // applyNoteFields validates and copies a request onto n. Turning a text note
 // into a checklist makes each line an item (and back).
-func applyNoteFields(req noteRequest, n *models.Note) string {
+func applyNoteFields(req noteRequest, n *models.Note, uid string) string {
+	if req.RemindAt != nil {
+		n.RemindAt, n.RemindBy = nil, ""
+		if *req.RemindAt != "" {
+			at, err := time.Parse(time.RFC3339, *req.RemindAt)
+			if err != nil {
+				return "remind_at must be an RFC 3339 time"
+			}
+			at = at.UTC()
+			n.RemindAt, n.RemindBy = &at, uid
+		}
+	}
 	if req.Title != nil {
 		n.Title = strings.TrimSpace(*req.Title)
 	}
@@ -326,7 +341,7 @@ func (h *Handlers) addNote(c *gin.Context, n models.Note) (models.Note, bool) {
 		// A new checklist: no text to convert.
 		n.Checklist = true
 	}
-	if msg := applyNoteFields(req, &n); msg != "" {
+	if msg := applyNoteFields(req, &n, auth.UserID(c)); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return n, false
 	}
@@ -372,7 +387,7 @@ func (h *Handlers) updateNote(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	if msg := applyNoteFields(req, &n); msg != "" {
+	if msg := applyNoteFields(req, &n, auth.UserID(c)); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}

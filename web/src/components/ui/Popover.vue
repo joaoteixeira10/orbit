@@ -25,6 +25,9 @@ async function place() {
 function onDown(e: MouseEvent) {
   const t = e.target as Node
   if (el.value?.contains(t) || props.anchor?.contains(t)) return
+  // A popover opened from this one (later in the page): still "inside".
+  const other = (t instanceof Element ? t : t.parentElement)?.closest('.popover')
+  if (other && el.value && other !== el.value && el.value.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) return
   emit('close')
 }
 function onKey(e: KeyboardEvent) {

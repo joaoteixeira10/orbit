@@ -144,6 +144,10 @@ export interface NotifyPrefs {
   digest_enabled: boolean
   digest_time: string // HH:MM
   locale: string
+  quiet_from: string // HH:MM, "" = no quiet hours
+  quiet_to: string
+  quiet_reminders: boolean // reminders still come through
+  quiet: boolean // it's quiet now
 }
 
 export interface About {

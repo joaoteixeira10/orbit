@@ -2620,6 +2620,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/notifications/{id}/snooze": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Snooze a notification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "For how long, or until when",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.snoozeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/me/otp/backup-codes": {
             "post": {
                 "security": [
@@ -3601,6 +3640,41 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/notifications/{id}/snooze": {
+            "post": {
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Snooze from a push notification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "The link's signature",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Default 60",
+                        "name": "minutes",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -8363,6 +8437,10 @@ const docTemplate = `{
                 "pinned": {
                     "type": "boolean"
                 },
+                "remind_at": {
+                    "description": "RemindAt: an RFC 3339 instant for a one-off reminder to whoever sets\nit; \"\" takes it off.",
+                    "type": "string"
+                },
                 "title": {
                     "type": "string",
                     "maxLength": 300
@@ -8413,6 +8491,10 @@ const docTemplate = `{
                 },
                 "rank": {
                     "type": "number"
+                },
+                "remind_at": {
+                    "description": "RemindAt: a one-off reminder (to RemindBy, who set it); cleared once sent.",
+                    "type": "string"
                 },
                 "title": {
                     "type": "string"
@@ -8741,6 +8823,20 @@ const docTemplate = `{
                     "description": "visual | markdown",
                     "type": "string"
                 },
+                "quiet": {
+                    "description": "it's quiet now",
+                    "type": "boolean"
+                },
+                "quiet_from": {
+                    "description": "Quiet hours (\"\" = none): nothing to devices or channels between them.",
+                    "type": "string"
+                },
+                "quiet_reminders": {
+                    "type": "boolean"
+                },
+                "quiet_to": {
+                    "type": "string"
+                },
                 "remote_images": {
                     "description": "ask | always",
                     "type": "string"
@@ -8982,6 +9078,20 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 7,
                     "minimum": 1
+                }
+            }
+        },
+        "api.snoozeRequest": {
+            "type": "object",
+            "properties": {
+                "minutes": {
+                    "type": "integer",
+                    "maximum": 43200,
+                    "minimum": 1
+                },
+                "until": {
+                    "description": "RFC 3339 (instead of minutes)",
+                    "type": "string"
                 }
             }
         },
@@ -9323,6 +9433,16 @@ const docTemplate = `{
                         "visual",
                         "markdown"
                     ]
+                },
+                "quiet_from": {
+                    "description": "Quiet hours: \"HH:MM\" each (\"\" both = none); reminders through or not.",
+                    "type": "string"
+                },
+                "quiet_reminders": {
+                    "type": "boolean"
+                },
+                "quiet_to": {
+                    "type": "string"
                 },
                 "remote_images": {
                     "type": "string",
@@ -10251,6 +10371,16 @@ const docTemplate = `{
                 },
                 "page_editor": {
                     "description": "PageEditor is how this user edits pages: \"visual\" (blocks, the default)\nor \"markdown\" (the source). Pages are Markdown either way.",
+                    "type": "string"
+                },
+                "quiet_from": {
+                    "description": "Quiet hours, \"HH:MM\" to \"HH:MM\" in the user's zone (\"\" = none): nothing\nreaches devices or channels then (it waits in the inbox, and one\nsummary goes when they end) — reminders too, unless QuietReminders.",
+                    "type": "string"
+                },
+                "quiet_reminders": {
+                    "type": "boolean"
+                },
+                "quiet_to": {
                     "type": "string"
                 },
                 "remote_images": {

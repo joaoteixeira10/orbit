@@ -190,6 +190,12 @@ type UserPrefs struct {
 	// ("always") or only after a click ("ask", the default): such an image
 	// tells its site who reads the page, and when.
 	RemoteImages string `gorm:"size:8" json:"remote_images"`
+	// Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
+	// reaches devices or channels then (it waits in the inbox, and one
+	// summary goes when they end) — reminders too, unless QuietReminders.
+	QuietFrom      string `gorm:"size:5" json:"quiet_from"`
+	QuietTo        string `gorm:"size:5" json:"quiet_to"`
+	QuietReminders bool   `gorm:"not null;default:false" json:"quiet_reminders"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.

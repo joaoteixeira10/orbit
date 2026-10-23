@@ -177,6 +177,32 @@ test('share target: a link shared from another app becomes a Quick Note (after s
   await expect(page.locator('.note-card', { hasText: 'Trail map' })).toContainText('https://example.com/trail')
 })
 
+test('a reminder on a note, and quiet hours in the notification settings', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const note = await (await request.post('/api/v1/me/notes', { headers: H, data: { title: 'Call the dentist', body: 'Ask about Friday' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.goto(`/notes?note=${note.id}`)
+  await page.getByTestId('note-remind').click()
+  await page.getByTestId('remind-picker').getByRole('button', { name: /^Tomorrow/ }).click()
+  await expect(page.getByTestId('note-reminder')).toContainText('Reminder:')
+  const saved = await (await request.get('/api/v1/me/notes', { headers: H })).json()
+  const at = new Date(saved.find((n: { id: string }) => n.id === note.id).remind_at)
+  expect(at.getTime()).toBeGreaterThan(Date.now())
+  await page.getByRole('button', { name: 'No reminder' }).click()
+  await expect(page.getByTestId('note-reminder')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+
+  await page.goto('/settings')
+  const quiet = page.getByTestId('quiet-hours')
+  await quiet.getByRole('switch', { name: 'Quiet hours' }).click()
+  await expect(quiet.locator('input[type="time"]').first()).toHaveValue('22:00')
+  const prefs = await (await request.get('/api/v1/me/prefs', { headers: H })).json()
+  expect([prefs.quiet_from, prefs.quiet_to]).toEqual(['22:00', '07:00'])
+  await quiet.getByRole('switch', { name: 'Quiet hours' }).click()
+})
+
 test('timeline and charts show the tasks, and the filter narrows them', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.locator('.ws-row').first().click()

@@ -1036,6 +1036,11 @@ definitions:
         type: array
       pinned:
         type: boolean
+      remind_at:
+        description: |-
+          RemindAt: an RFC 3339 instant for a one-off reminder to whoever sets
+          it; "" takes it off.
+        type: string
       title:
         maxLength: 300
         type: string
@@ -1071,6 +1076,10 @@ definitions:
         type: boolean
       rank:
         type: number
+      remind_at:
+        description: 'RemindAt: a one-off reminder (to RemindBy, who set it); cleared
+          once sent.'
+        type: string
       title:
         type: string
       updated_at:
@@ -1295,6 +1304,17 @@ definitions:
       page_editor:
         description: visual | markdown
         type: string
+      quiet:
+        description: it's quiet now
+        type: boolean
+      quiet_from:
+        description: 'Quiet hours ("" = none): nothing to devices or channels between
+          them.'
+        type: string
+      quiet_reminders:
+        type: boolean
+      quiet_to:
+        type: string
       remote_images:
         description: ask | always
         type: string
@@ -1462,6 +1482,16 @@ definitions:
     required:
     - end
     - start
+    type: object
+  api.snoozeRequest:
+    properties:
+      minutes:
+        maximum: 43200
+        minimum: 1
+        type: integer
+      until:
+        description: RFC 3339 (instead of minutes)
+        type: string
     type: object
   api.subscriptionRequest:
     properties:
@@ -1714,6 +1744,14 @@ definitions:
         enum:
         - visual
         - markdown
+        type: string
+      quiet_from:
+        description: 'Quiet hours: "HH:MM" each ("" both = none); reminders through
+          or not.'
+        type: string
+      quiet_reminders:
+        type: boolean
+      quiet_to:
         type: string
       remote_images:
         enum:
@@ -2378,6 +2416,16 @@ definitions:
         description: |-
           PageEditor is how this user edits pages: "visual" (blocks, the default)
           or "markdown" (the source). Pages are Markdown either way.
+        type: string
+      quiet_from:
+        description: |-
+          Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
+          reaches devices or channels then (it waits in the inbox, and one
+          summary goes when they end) — reminders too, unless QuietReminders.
+        type: string
+      quiet_reminders:
+        type: boolean
+      quiet_to:
         type: string
       remote_images:
         description: |-
@@ -4173,6 +4221,30 @@ paths:
       summary: My notifications
       tags:
       - notifications
+  /me/notifications/{id}/snooze:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Notification id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: For how long, or until when
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.snoozeRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Snooze a notification
+      tags:
+      - notifications
   /me/notifications/read:
     post:
       consumes:
@@ -4679,6 +4751,29 @@ paths:
       summary: Move a quick note
       tags:
       - notes
+  /notifications/{id}/snooze:
+    post:
+      parameters:
+      - description: Notification id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The link's signature
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Default 60
+        in: query
+        name: minutes
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Snooze from a push notification
+      tags:
+      - notifications
   /notifications/channels:
     get:
       produces:

@@ -34,6 +34,8 @@ var phrases = map[string]map[string]phrase{
 		"task_comment":  {title: "{actor} commented on {title}", body: "{excerpt}", titleMany: "{n} comments on {title}", bodyMany: "The latest, by {actor}: {excerpt}"},
 		"mentioned":     {title: "{actor} mentioned you", body: "{title}: {excerpt}"},
 		"daily":         {title: "Your day: {summary}", body: "{lines}"},
+		"held":          {title: "{n} notifications while it was quiet", body: "{lines}"},
+		"note_reminder": {title: "{title}", body: "Note · {ws}"},
 	},
 	"pt": {
 		"test":          {title: "As notificações estão ligadas", body: "Este dispositivo vai receber as notificações do Orbit."},
@@ -53,6 +55,8 @@ var phrases = map[string]map[string]phrase{
 		"task_comment":  {title: "{actor} comentou {title}", body: "{excerpt}", titleMany: "{n} comentários em {title}", bodyMany: "O mais recente, de {actor}: {excerpt}"},
 		"mentioned":     {title: "{actor} mencionou-o", body: "{title}: {excerpt}"},
 		"daily":         {title: "O seu dia: {summary}", body: "{lines}"},
+		"held":          {title: "{n} notificações durante o silêncio", body: "{lines}"},
+		"note_reminder": {title: "{title}", body: "Nota · {ws}"},
 	},
 }
 

@@ -33,6 +33,8 @@ export const inboxEn = {
       event_added: { title: '{actor} added an event', body: '{title} · {ws}', titleMany: '{actor} added {n} events', bodyMany: 'The latest: {title} · {ws}' },
       member_joined: { title: '{actor} joined {ws}', body: 'As {role}' },
       daily: { title: 'Your day: {summary}', body: '{lines}' },
+      held: { title: '{n} notifications while it was quiet', body: '{lines}' },
+      note_reminder: { title: '{title}', body: 'Note · {ws}' },
     },
     digest: {
       tasks: 'no tasks | 1 task | {n} tasks',
@@ -140,6 +142,8 @@ export const inboxPt: typeof inboxEn = {
       event_added: { title: '{actor} adicionou um evento', body: '{title} · {ws}', titleMany: '{actor} adicionou {n} eventos', bodyMany: 'O mais recente: {title} · {ws}' },
       member_joined: { title: '{actor} entrou em {ws}', body: 'Como {role}' },
       daily: { title: 'O seu dia: {summary}', body: '{lines}' },
+      held: { title: '{n} notificações durante o silêncio', body: '{lines}' },
+      note_reminder: { title: '{title}', body: 'Nota · {ws}' },
     },
     digest: {
       tasks: 'sem tarefas | 1 tarefa | {n} tarefas',

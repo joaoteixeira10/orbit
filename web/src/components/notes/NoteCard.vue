@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip } from 'lucide-vue-next'
+import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellRing } from 'lucide-vue-next'
+import { fmtDate, fmtTime } from '@/lib/dates'
 import { uploadBlobUrl } from '@/lib/uploads'
 import Popover from '@/components/ui/Popover.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
@@ -123,6 +124,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
 
     <p v-else-if="empty" class="n-body text-text-3">…</p>
     <p v-if="otherFiles" class="n-files"><Paperclip class="h-3 w-3" />{{ otherFiles }}</p>
+    <p v-if="note.remind_at" class="n-files"><BellRing class="h-3 w-3" />{{ fmtDate(new Date(note.remind_at), { weekday: 'short', day: 'numeric', month: 'short' }) }}, {{ fmtTime(new Date(note.remind_at)) }}</p>
 
     <footer v-if="editable" class="bar" @click.stop>
       <button ref="colorBtn" class="tb" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">

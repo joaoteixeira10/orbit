@@ -178,6 +178,29 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
       </div>
     </div>
 
+    <!-- Quiet hours -->
+    <div class="border-t border-border pt-5" data-testid="quiet-hours">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold">{{ t('quiet.title') }}<span v-if="prefs.quiet" class="pill ml-2 !py-0 text-[11px]">{{ t('quiet.now') }}</span></div>
+          <div class="text-[12px] text-text-3">{{ t('quiet.hint') }}</div>
+        </div>
+        <Toggle :model-value="!!prefs.quiet_from" :aria-label="t('quiet.on')" @update:model-value="(v) => save(v ? { quiet_from: '22:00', quiet_to: '07:00' } : { quiet_from: '', quiet_to: '' })" />
+      </div>
+      <div v-if="prefs.quiet_from" class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-text-2">
+        <label class="flex items-center gap-1.5">{{ t('quiet.from') }}
+          <input type="time" class="input !w-auto !py-1 text-[13px]" :value="prefs.quiet_from" @change="save({ quiet_from: ($event.target as HTMLInputElement).value })" />
+        </label>
+        <label class="flex items-center gap-1.5">{{ t('quiet.to') }}
+          <input type="time" class="input !w-auto !py-1 text-[13px]" :value="prefs.quiet_to" @change="save({ quiet_to: ($event.target as HTMLInputElement).value })" />
+        </label>
+        <label class="ml-auto flex items-center gap-2" :title="t('quiet.remindersHint')">
+          {{ t('quiet.reminders') }}
+          <Toggle :model-value="prefs.quiet_reminders" :aria-label="t('quiet.reminders')" @update:model-value="(v) => save({ quiet_reminders: v })" />
+        </label>
+      </div>
+    </div>
+
     <!-- What reaches you -->
     <div class="border-t border-border pt-5">
       <div class="mb-2 flex items-end gap-3">

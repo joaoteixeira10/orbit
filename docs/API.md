@@ -93,6 +93,12 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Notifications.** `POST /me/notifications/{id}/snooze` with `{until}` (RFC
+3339, within a month) or `{minutes}` puts one off; it comes back unread and
+is sent again. Quiet hours are prefs (`PUT /me/prefs`: `quiet_from`,
+`quiet_to` as `HH:MM`, `""` for none; `quiet_reminders`). A note takes a
+reminder with `remind_at` (RFC 3339; `""` removes it) on `PUT /notes/{id}`.
+
 **Git: instant updates and milestones.** `POST /lists/{id}/git/hook` turns
 on a webhook for a linked list — `{auto: true}` when Orbit made it, else
 `{url, secret}` to add by hand; `DELETE` turns it off. The server posts to

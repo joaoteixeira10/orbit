@@ -29,12 +29,11 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Notifications
 
-- Snooze ("remind me again in an hour") from the notification itself.
-- Quiet hours: nothing reaches devices or channels at night.
+- Quiet hours by day of the week (weekends quiet longer); a snooze on iOS
+  pushes (Safari shows no buttons).
 
 ## Notes
 
-- Reminders on a note ("remind me tomorrow at 9").
 - Drawings on a note (images and files are there).
 
 ## Calendar

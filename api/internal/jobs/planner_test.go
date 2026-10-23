@@ -80,11 +80,27 @@ func TestReminders(t *testing.T) {
 			t.Errorf("%s event reminder: %v", name, got)
 		}
 	}
+	// A note's reminder goes to whoever set it, once.
+	when := time.Date(2026, 10, 13, 10, 0, 0, 0, time.UTC)
+	note := models.Note{OwnerID: "u2", Title: "Call the dentist", RemindAt: &when, RemindBy: "u2"}
+	db.Create(&note)
+	s.remindAt(time.Date(2026, 10, 13, 9, 59, 0, 0, time.UTC))
+	if got := drain(u2); len(got) != 0 {
+		t.Errorf("note reminded early: %v", got)
+	}
+	s.remindAt(when)
+	if got := drain(u2); len(got) != 1 || !strings.Contains(got[0], "Call the dentist") || !strings.Contains(got[0], "/notes?note=") {
+		t.Errorf("note reminder: %v", got)
+	}
+	s.remindAt(when.Add(time.Minute))
+	if got := drain(u2); len(got) != 0 {
+		t.Errorf("note reminded twice: %v", got)
+	}
 	// Each reminder is also in the inbox.
 	var n int64
 	db.Model(&models.Notification{}).Where("kind = ?", inbox.Reminder).Count(&n)
-	if n != 3 {
-		t.Errorf("reminders in the inbox: %d, want 3", n)
+	if n != 4 {
+		t.Errorf("reminders in the inbox: %d, want 4", n)
 	}
 }
 

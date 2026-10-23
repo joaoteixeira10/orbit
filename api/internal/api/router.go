@@ -148,6 +148,8 @@ func New(d Deps) *gin.Engine {
 		v1.GET("/git/oauth/callback", authLimit, h.gitOAuthCallback)
 		// A repository's webhook (signed with the list's secret).
 		v1.POST("/git/hook/:link", feedLimit, h.gitHook)
+		// A push notification's "Snooze" button (a signed link).
+		v1.POST("/notifications/:id/snooze", feedLimit, h.snoozeByLink)
 		v1.POST("/invites/:token/signup", authLimit, h.signupInvite)
 		// Passwordless / second-factor passkey assertion (pre-auth).
 		v1.POST("/auth/webauthn/login/begin", authLimit, h.webauthnLoginBegin)
@@ -208,6 +210,7 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/me/webauthn/:id", notImpersonating(), h.deleteWebAuthnCredential)
 			authed.GET("/me/notifications", h.listNotifications)
 			authed.POST("/me/notifications/read", h.readNotifications)
+			authed.POST("/me/notifications/:id/snooze", h.snoozeNotification)
 			authed.GET("/me/push", h.pushInfo)
 			authed.POST("/me/push", notImpersonating(), h.subscribePush)
 			authed.POST("/me/push/remove", h.unsubscribePush)

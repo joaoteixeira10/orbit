@@ -30,6 +30,11 @@ type prefsResponse struct {
 	PageEditor    string                    `json:"page_editor"`   // visual | markdown
 	DevTheme      string                    `json:"dev_theme"`     // "" (as the instance) | none | a theme id
 	RemoteImages  string                    `json:"remote_images"` // ask | always
+	// Quiet hours ("" = none): nothing to devices or channels between them.
+	QuietFrom      string `json:"quiet_from"`
+	QuietTo        string `json:"quiet_to"`
+	QuietReminders bool   `json:"quiet_reminders"`
+	Quiet          bool   `json:"quiet"` // it's quiet now
 }
 
 func toPrefsResponse(p models.UserPrefs) prefsResponse {
@@ -53,6 +58,10 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		PageEditor:     orDefault(p.PageEditor, "visual"),
 		DevTheme:       p.DevTheme,
 		RemoteImages:   orDefault(p.RemoteImages, "ask"),
+		QuietFrom:      p.QuietFrom,
+		QuietTo:        p.QuietTo,
+		QuietReminders: p.QuietReminders,
+		Quiet:          inbox.Quiet(p, time.Now()),
 	}
 }
 
@@ -155,6 +164,22 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.RemoteImages != nil {
 		updates["remote_images"] = *req.RemoteImages
+	}
+	for _, q := range []struct {
+		v   *string
+		col string
+	}{{req.QuietFrom, "quiet_from"}, {req.QuietTo, "quiet_to"}} {
+		if q.v == nil {
+			continue
+		}
+		if *q.v != "" && !inbox.ValidClock(*q.v) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "quiet hours are HH:MM"})
+			return
+		}
+		updates[q.col] = *q.v
+	}
+	if req.QuietReminders != nil {
+		updates["quiet_reminders"] = *req.QuietReminders
 	}
 	if req.DevTheme != nil {
 		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {

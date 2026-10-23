@@ -93,8 +93,8 @@ func TestWorkspaceFromTemplate(t *testing.T) {
 	if strings.Join(ws2.Modules, ",") != "board,calendar" {
 		t.Errorf("modules: %v", ws2.Modules)
 	}
-	if w := authdo(r, "POST", "/api/v1/workspaces", `{"name":"x","modules":["habits"]}`, alice); w.Code != http.StatusBadRequest {
-		t.Errorf("a module that isn't available yet: %d", w.Code)
+	if w := authdo(r, "POST", "/api/v1/workspaces", `{"name":"x","modules":["teleporter"]}`, alice); w.Code != http.StatusBadRequest {
+		t.Errorf("an unknown module: %d", w.Code)
 	}
 }
 

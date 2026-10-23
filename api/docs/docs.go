@@ -10323,6 +10323,10 @@ const docTemplate = `{
                 "rank": {
                     "type": "number"
                 },
+                "template": {
+                    "description": "Template: offered when a new page starts empty (its title and\ndocument, its placeholders — the date and the like — filled in).",
+                    "type": "boolean"
+                },
                 "title": {
                     "type": "string"
                 },
@@ -10360,6 +10364,9 @@ const docTemplate = `{
                 },
                 "rank": {
                     "type": "number"
+                },
+                "template": {
+                    "type": "boolean"
                 },
                 "title": {
                     "type": "string"
@@ -11089,6 +11096,10 @@ const docTemplate = `{
                 "icon": {
                     "type": "string",
                     "maxLength": 64
+                },
+                "template": {
+                    "description": "Template offers the page as a template for new pages.",
+                    "type": "boolean"
                 },
                 "title": {
                     "type": "string",

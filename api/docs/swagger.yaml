@@ -1488,6 +1488,11 @@ definitions:
         type: string
       rank:
         type: number
+      template:
+        description: |-
+          Template: offered when a new page starts empty (its title and
+          document, its placeholders — the date and the like — filled in).
+        type: boolean
       title:
         type: string
       trashed_at:
@@ -1513,6 +1518,8 @@ definitions:
         type: string
       rank:
         type: number
+      template:
+        type: boolean
       title:
         type: string
       trashed_at:
@@ -2033,6 +2040,9 @@ definitions:
       icon:
         maxLength: 64
         type: string
+      template:
+        description: Template offers the page as a template for new pages.
+        type: boolean
       title:
         maxLength: 300
         type: string

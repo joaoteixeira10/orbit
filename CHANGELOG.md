@@ -126,6 +126,9 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Page templates**: a new, empty page starts as meeting notes, class
+  notes or a weekly review, or from any page made a template (`⋯` → Use as a
+  template); `{{date}}`, `{{weekday}}`, `{{week}}`, `{{me}}`… are filled in.
 - **Smart lists**: a task filter saved with a name, colour and icon, shown
   with Today and Scheduled (with its count). Yours, or shared with the
   workspace; its filter changes in place and is kept on the server; a task

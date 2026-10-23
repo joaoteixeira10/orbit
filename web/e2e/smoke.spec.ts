@@ -997,6 +997,38 @@ test('smart lists: a filter saved with a name, kept on the server; quick add rea
   await page.screenshot({ path: 'test-results/smart-lists.png' })
 })
 
+test('page templates: a new page starts as meeting notes, or from a page made a template', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Docs', kind: 'work', modules: ['home', 'pages'] } })).json()
+  const mk = async (data: object) => (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data })).json()
+  const content = async (id: string) => (await (await request.get(`/api/v1/pages/${id}`, { headers: H })).json()) as { title: string; content: string }
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  const blank = await mk({ title: '' })
+  await page.goto(`/w/${ws.id}/p/${blank.id}`)
+  await page.getByTestId('page-templates').getByRole('button', { name: 'Meeting notes' }).click()
+  await expect(page.getByTestId('page-templates')).toBeHidden()
+  await expect(page.getByRole('textbox', { name: 'Name' })).toHaveValue(/^Meeting — \d/)
+  await expect.poll(async () => (await content(blank.id)).content).toContain('## Action items')
+  await expect.poll(async () => (await content(blank.id)).title).toMatch(/^Meeting — \d/)
+
+  // A page of ours becomes a template (from its menu).
+  const tpl = await mk({ title: 'Standup {{weekday}}', content: '## Yesterday\n\n- {{me}}\n' })
+  await page.goto(`/w/${ws.id}/p/${tpl.id}`)
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-template-toggle').click()
+  await expect(page.locator('.tpl-note')).toBeVisible()
+
+  const next = await mk({ title: '' })
+  await page.goto(`/w/${ws.id}/p/${next.id}`)
+  await page.getByTestId('page-templates').getByRole('button', { name: 'Standup {{weekday}}' }).click()
+  await expect.poll(async () => (await content(next.id)).content).toMatch(/## Yesterday\s+- admin/)
+  await expect.poll(async () => (await content(next.id)).title).toMatch(/^Standup [A-Z][a-z]+day$/)
+  await page.screenshot({ path: 'test-results/page-templates.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

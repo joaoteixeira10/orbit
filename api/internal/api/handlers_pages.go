@@ -31,6 +31,7 @@ type pageSummary struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 	TrashedAt   *time.Time `json:"trashed_at,omitempty"`
 	Favorite    bool       `json:"favorite"`
+	Template    bool       `json:"template"`
 }
 
 // pageResponse is a full page plus what the caller may do with it.
@@ -51,7 +52,7 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID]}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template}
 }
 
 // pageAccess loads a page and checks the caller's role in its workspace.
@@ -257,10 +258,12 @@ func (h *Handlers) getPage(c *gin.Context) {
 }
 
 type updatePageRequest struct {
-	Title   *string `json:"title" binding:"omitempty,max=300"`
-	Icon    *string `json:"icon" binding:"omitempty,max=64"`
-	Cover   *string `json:"cover" binding:"omitempty,max=64"`
-	Content *string `json:"content"`
+	Title *string `json:"title" binding:"omitempty,max=300"`
+	Icon  *string `json:"icon" binding:"omitempty,max=64"`
+	Cover *string `json:"cover" binding:"omitempty,max=64"`
+	// Template offers the page as a template for new pages.
+	Template *bool   `json:"template"`
+	Content  *string `json:"content"`
 	// Version is the version the editor started from; required with content.
 	// A newer save by someone else makes this a 409 with the current page.
 	Version int `json:"version"`
@@ -302,6 +305,9 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	}
 	if req.Cover != nil {
 		up["cover"] = *req.Cover
+	}
+	if req.Template != nil {
+		up["template"] = *req.Template
 	}
 	if req.Content != nil {
 		md := planner.PageMarkdown(*req.Content)

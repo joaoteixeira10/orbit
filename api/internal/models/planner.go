@@ -72,6 +72,9 @@ type Page struct {
 	CreatedBy   string     `gorm:"size:36" json:"created_by"`
 	UpdatedBy   string     `gorm:"size:36" json:"updated_by"`
 	TrashedAt   *time.Time `gorm:"index" json:"trashed_at,omitempty"`
+	// Template: offered when a new page starts empty (its title and
+	// document, its placeholders — the date and the like — filled in).
+	Template bool `gorm:"not null;default:false" json:"template"`
 }
 
 // PageFavorite pins a page to one user's Favorites.

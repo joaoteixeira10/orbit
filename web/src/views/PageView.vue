@@ -2,11 +2,13 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check } from 'lucide-vue-next'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate } from 'lucide-vue-next'
 import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
 import { locale } from '@/lib/dates'
+import { builtInTemplates, fill, type PageTemplate } from '@/lib/pageTemplates'
+import { currentLocale } from '@/i18n'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
@@ -148,6 +150,7 @@ async function load(id: string) {
     mode.value = prefs.pageEditor
     // An empty page opens ready to write; others open as they read.
     editing.value = editable.value && !p.content.trim()
+    hasText.value = !!p.content.trim()
     await nextTick()
     autosize()
     // A brand-new page: start with its title.
@@ -164,6 +167,7 @@ async function load(id: string) {
 watch(pageId, (id) => id && void load(id), { immediate: true })
 
 function onEditorChange() {
+  if (!hasText.value) hasText.value = !!currentContent().trim()
   editGen++
   dirty.value = true
   justSaved.value = false
@@ -335,6 +339,46 @@ async function refresh() {
   page.value = next
   await nextTick()
   autosize()
+}
+
+// ---- Templates ----
+// An empty page offers to start from a template: the built-in ones and the
+// workspace's pages marked as templates. It fills the title (if none), the
+// document, and a template page's icon and cover.
+const hasText = ref(false)
+const PLACEHOLDERS = ['date', 'time', 'weekday', 'week', 'monday', 'me'].map((k) => `{{${k}}}`).join(', ')
+const BUILT_IN_ICONS: Record<string, unknown> = { meeting: CalendarDays, class: GraduationCap, weekly: CalendarCheck }
+const ownTemplates = computed(() => (pages.byWs[wsId.value] ?? []).filter((p) => p.template && !p.trashed_at && p.id !== pageId.value))
+// Whether this page is a template (its menu changes the tree's copy).
+const isTemplate = computed(() => pages.find(pageId.value)?.template ?? page.value?.template ?? false)
+const offerTemplates = computed(() => editable.value && !hasText.value && !isTemplate.value)
+async function useTemplate(tpl: PageTemplate | { id: string }) {
+  const p = page.value
+  if (!p) return
+  let src: { title: string; content: string; icon?: string; cover?: string }
+  if ('id' in tpl) {
+    try {
+      src = await pagesApi.get(tpl.id)
+    } catch (e: any) {
+      toast.error(e.message)
+      return
+    }
+  } else src = tpl
+  if (page.value?.id !== p.id) return
+  const c = { now: new Date(), locale: locale(), me: auth.user?.display_name || auth.user?.username, workspace: ws.value?.name }
+  const content = fill(src.content, c)
+  if (!title.value.trim() && src.title) {
+    title.value = fill(src.title, c)
+    onTitleInput()
+  }
+  if (src.icon && !p.icon) setIcon(src.icon)
+  if (src.cover && !p.cover) setCover(src.cover)
+  draft.value = content
+  if (editing.value) editorRef.value?.setContent(content)
+  else await startEdit(false)
+  hasText.value = true
+  onEditorChange()
+  schedule(0)
 }
 
 // ---- Header ----
@@ -685,6 +729,17 @@ onUnmounted(() => {
             />
           </header>
 
+          <div v-if="offerTemplates" class="templates" data-testid="page-templates">
+            <span class="cap">{{ t('pages.startWith') }}</span>
+            <button v-for="b in builtInTemplates(currentLocale())" :key="b.key" type="button" class="btn btn-sm" @click="useTemplate(b)">
+              <component :is="BUILT_IN_ICONS[b.key]" class="h-3.5 w-3.5" />{{ t(`pages.tpl.${b.key}`) }}
+            </button>
+            <button v-for="o in ownTemplates" :key="o.id" type="button" class="btn btn-sm" @click="useTemplate({ id: o.id })">
+              <span v-if="o.icon">{{ o.icon }}</span><LayoutTemplate v-else class="h-3.5 w-3.5" />{{ o.title || t('pages.untitled') }}
+            </button>
+          </div>
+          <p v-if="isTemplate && editable" class="tpl-note"><LayoutTemplate class="h-3.5 w-3.5 shrink-0" />{{ t('pages.isTemplate', { fields: PLACEHOLDERS }) }}</p>
+
           <component
             :is="mode === 'markdown' ? MarkdownEditor : PageEditor"
             v-if="editing"
@@ -733,6 +788,24 @@ onUnmounted(() => {
 .page-col {
   max-width: 740px;
   margin: 0 auto;
+}
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 18px;
+}
+.templates .cap {
+  margin-right: 4px;
+}
+.tpl-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 14px;
+  font-size: 12.5px;
+  color: var(--text-3);
 }
 .empty-read {
   display: flex;

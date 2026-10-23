@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate } from 'lucide-vue-next'
 import Popover from './ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import { usePagesStore } from '@/stores/pages'
@@ -79,6 +79,14 @@ const copyMd = () => run(async () => {
   await navigator.clipboard.writeText((await asMarkdown()).text)
   toast.success(t('editor.copied'))
 })
+// A template is offered when a new page starts empty.
+const toggleTemplate = () =>
+  run(async () => {
+    const on = !page.value?.template
+    await pagesApi.update(props.pageId, { template: on })
+    pages.patch({ id: props.pageId, template: on })
+    toast.success(on ? t('pages.templateOn') : t('pages.templateOff'))
+  })
 const moveTo = (parent: string | null) =>
   run(async () => {
     await pagesApi.move(props.pageId, parent, '')
@@ -107,6 +115,9 @@ const trash = () =>
       <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
+      <button class="menu-item" data-testid="page-template-toggle" @click="toggleTemplate">
+        <LayoutTemplate class="h-4 w-4 text-text-2" />{{ page?.template ? t('pages.templateStop') : t('pages.templateUse') }}
+      </button>
       <div class="menu-sep" />
       <button class="menu-item danger" @click="trash"><Trash2 class="h-4 w-4" />{{ t('pages.toTrash') }}</button>
     </template>

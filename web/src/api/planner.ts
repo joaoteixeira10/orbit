@@ -67,6 +67,7 @@ export interface PageSummary {
   updated_at: string
   trashed_at?: string | null
   favorite: boolean
+  template?: boolean // offered when a new page starts empty
 }
 export interface Page extends PageSummary {
   cover: string
@@ -413,7 +414,7 @@ export const pagesApi = {
     api<Page>(`/workspaces/${ws}/pages`, { method: 'POST', body: j(b) }),
   // An empty page comes without "content"; the app always has a string.
   get: (id: string) => api<Page>(`/pages/${id}`).then(withContent),
-  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number }) =>
+  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean }) =>
     api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b) }).then(withContent),
   move: (id: string, parent_id: string | null, after_id: string) => api<PageSummary>(`/pages/${id}/move`, { method: 'POST', body: j({ parent_id, after_id }) }),
   trashPage: (id: string) => api<void>(`/pages/${id}`, { method: 'DELETE' }),

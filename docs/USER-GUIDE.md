@@ -275,6 +275,19 @@ rendered like a README on GitHub — and you can tick its checkboxes right
 there. **Edit** (or the **E** key, or a double click) opens it for writing;
 **Done** goes back to reading. A new page opens ready to write.
 
+**Templates.** A new, empty page offers **Start with**: **Meeting notes**
+(agenda, notes, decisions, action items), **Class notes** (key ideas,
+questions, a summary, what to review) or **Weekly review** (what went well,
+what didn't, next week's priorities) — and any page of the workspace made a
+template. Pick one and it fills the page (and its title, if it has none);
+start typing instead and the choice goes away. To make your own, write a
+page and choose `⋯` → **Use as a template** (again to stop). In a template's
+title and text, `{{date}}`, `{{time}}`, `{{weekday}}`, `{{week}}` (ISO week
+number), `{{monday}}` (this week's Monday), `{{year}}`, `{{iso}}`
+(2026-10-23), `{{me}}` and `{{workspace}}` are filled in when it's used —
+*Standup {{weekday}}* becomes *Standup Friday*. A template page's icon and
+cover come along too.
+
 You write in one of two editors, and switch any time with **Visual |
 Markdown** at the top while editing. Your default is in **Settings →
 Language & time → Edit pages in**. Others can use the other editor on the

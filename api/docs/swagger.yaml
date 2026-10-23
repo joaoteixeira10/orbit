@@ -87,6 +87,28 @@ definitions:
     - role
     - user
     type: object
+  api.backlinkTask:
+    properties:
+      done:
+        type: boolean
+      id:
+        type: string
+      list_id:
+        type: string
+      title:
+        type: string
+    type: object
+  api.backlinksResponse:
+    properties:
+      pages:
+        items:
+          $ref: '#/definitions/api.pageSummary'
+        type: array
+      tasks:
+        items:
+          $ref: '#/definitions/api.backlinkTask'
+        type: array
+    type: object
   api.backupExportRequest:
     properties:
       passphrase:
@@ -5805,6 +5827,26 @@ paths:
       security:
       - BearerAuth: []
       summary: Save a page
+      tags:
+      - pages
+  /pages/{id}/backlinks:
+    get:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.backlinksResponse'
+      security:
+      - BearerAuth: []
+      summary: What links to a page
       tags:
       - pages
   /pages/{id}/duplicate:

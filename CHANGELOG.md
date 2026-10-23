@@ -126,6 +126,10 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **@-mentions in pages**: type @ for a person (told once), a page (a link,
+  opened in the app) or a date (a chip opening the calendar); in both
+  editors, as plain Markdown. **Linked from** at the bottom of a page lists
+  the pages and tasks that link to it.
 - **Page templates**: a new, empty page starts as meeting notes, class
   notes or a weekly review, or from any page made a template (`⋯` → Use as a
   template); `{{date}}`, `{{weekday}}`, `{{week}}`, `{{me}}`… are filled in.

@@ -275,6 +275,18 @@ rendered like a README on GitHub — and you can tick its checkboxes right
 there. **Edit** (or the **E** key, or a double click) opens it for writing;
 **Done** goes back to reading. A new page opens ready to write.
 
+**@-mentions.** Type **@** in either editor for people, pages and dates:
+- a **person** of the workspace goes in as `@username` — they're told
+  (in the bell, and where they get comments), once per page;
+- a **page** goes in as a link to it; clicking it opens the page here;
+- a **date** — *today*, *tomorrow*, *yesterday*, a weekday (*friday*,
+  *sexta*) or one written out (*2026-11-05*) — goes in as `@2026-11-05` and
+  reads as a chip (*Thu 5 Nov*) that opens the calendar on that day.
+
+It's all plain Markdown, so it reads the same anywhere. At the bottom of a
+page, **Linked from** lists the pages that link to it, and the tasks whose
+notes do.
+
 **Templates.** A new, empty page offers **Start with**: **Meeting notes**
 (agenda, notes, decisions, action items), **Class notes** (key ideas,
 questions, a summary, what to review) or **Weekly review** (what went well,

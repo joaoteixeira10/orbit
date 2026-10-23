@@ -5,6 +5,11 @@
 // characters in messages as syntax.
 
 export const edEn = {
+  mention: {
+    label: 'Mention',
+    none: 'No one, no page, no date by that name',
+    page: 'Page',
+  },
   editor: {
     edit: 'Edit',
     doneEditing: 'Done',
@@ -14,6 +19,7 @@ export const edEn = {
     mdPlaceholder: 'Write in Markdown…',
     mdLabel: 'Page (Markdown)',
     emptyRead: 'Nothing here yet.',
+    linkedFrom: 'Linked from',
     download: 'Download as Markdown',
     copyMd: 'Copy as Markdown',
     copied: 'Copied as Markdown',
@@ -92,6 +98,11 @@ export const edEn = {
 }
 
 export const edPt: typeof edEn = {
+  mention: {
+    label: 'Mencionar',
+    none: 'Ninguém, nenhuma página, nenhuma data com esse nome',
+    page: 'Página',
+  },
   editor: {
     edit: 'Editar',
     doneEditing: 'Concluído',
@@ -101,6 +112,7 @@ export const edPt: typeof edEn = {
     mdPlaceholder: 'Escreva em Markdown…',
     mdLabel: 'Página (Markdown)',
     emptyRead: 'Ainda não há nada aqui.',
+    linkedFrom: 'Mencionada em',
     download: 'Transferir em Markdown',
     copyMd: 'Copiar como Markdown',
     copied: 'Copiado como Markdown',

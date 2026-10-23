@@ -1029,6 +1029,50 @@ test('page templates: a new page starts as meeting notes, or from a page made a 
   await page.screenshot({ path: 'test-results/page-templates.png' })
 })
 
+test('mentions: @ links a page and a date (in both editors); the page shows what links to it', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Wiki', kind: 'work', modules: ['home', 'pages'] } })).json()
+  const mk = async (data: object) => (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data })).json()
+  const content = async (id: string) => ((await (await request.get(`/api/v1/pages/${id}`, { headers: H })).json()) as { content: string }).content
+  const roadmap = await mk({ title: 'Roadmap', content: 'Plans.' })
+  const notes = await mk({ title: 'Notes' })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/p/${notes.id}`)
+  await page.getByRole('tab', { name: 'Visual' }).click()
+  await page.locator('.ProseMirror').click()
+  await page.keyboard.type('See @road')
+  await expect(page.locator('.slash-menu')).toContainText('Roadmap')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('by @tomo')
+  await expect(page.locator('.slash-menu')).toContainText('Tomorrow')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.ProseMirror .md-date')).toBeVisible()
+  await expect.poll(() => content(notes.id)).toMatch(new RegExp(`^See \\[Roadmap\\]\\(/w/${ws.id}/p/${roadmap.id}\\) by @\\d{4}-\\d{2}-\\d{2}`))
+
+  // The Markdown editor offers the same.
+  await page.getByRole('tab', { name: 'Markdown' }).click()
+  const src = page.locator('textarea.md-source')
+  await src.click()
+  await src.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Also @roa')
+  await expect(page.locator('.slash-menu')).toContainText('Roadmap')
+  await page.keyboard.press('Enter')
+  await expect.poll(() => content(notes.id)).toContain(`Also [Roadmap](/w/${ws.id}/p/${roadmap.id})`)
+
+  // Reading: the date is a chip; the page link opens here; Roadmap shows Notes links to it.
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect(page.locator('.md-view a.md-date')).toBeVisible()
+  await page.locator('.md-view a.md-page').first().click()
+  await page.waitForURL(new RegExp(`/p/${roadmap.id}$`))
+  await expect(page.getByTestId('backlinks')).toContainText('Notes')
+  await page.screenshot({ path: 'test-results/mentions.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

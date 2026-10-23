@@ -1,18 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, markRaw, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { normalizeMarkdown } from '@/lib/markdown'
 import { markdownFor, uploadFile } from '@/lib/uploads'
 import { useToastStore } from '@/stores/toast'
 import { acceptAnswer, evaluate } from '@/lib/mathnotes'
 import MathGhost from '@/components/ui/MathGhost.vue'
+import SlashMenu from './SlashMenu.vue'
+import type { SlashItem, SlashState } from './slash'
+import { mentionItems, markdownOf, type MentionItem } from '@/lib/mentions'
+import { caretRect } from '@/lib/caret'
+import { useWorkspacesStore } from '@/stores/workspaces'
+import { usePagesStore } from '@/stores/pages'
+import { AtSign, CalendarDays, FileText } from 'lucide-vue-next'
 
 // The page body, edited as Markdown source: a plain text area that grows with
 // the page, with the small helps of a Markdown editor — Enter continues a
 // list, task or quote (and ends it on an empty item), Tab / ⇧Tab indent,
 // ⌘B ⌘I ⌘E ⌘K wrap the selection in bold, italic, code, a link. Same
 // contract as PageEditor: the parent saves; this hands out the Markdown.
-const props = defineProps<{ content: string; editable: boolean; pageId?: string }>()
+const props = defineProps<{ content: string; editable: boolean; pageId?: string; ws?: string }>()
 const emit = defineEmits<{ change: [] }>()
 const { t } = useI18n()
 const toast = useToastStore()
@@ -63,6 +70,42 @@ watch(text, () => nextTick(grow))
 
 function onInput() {
   emit('change')
+  findMention()
+}
+
+// ---- @-mentions: the word at the caret, when it starts with "@" ----
+const wss = useWorkspacesStore()
+const pagesStore = usePagesStore()
+const mention = reactive<SlashState>({ open: false, items: [], index: 0, rect: null, pick: () => {} })
+const ICONS = { person: markRaw(AtSign), page: markRaw(FileText), date: markRaw(CalendarDays) }
+let mentionAt = -1
+function closeMention() {
+  mention.open = false
+  mention.items = []
+  mentionAt = -1
+}
+function findMention() {
+  const el = area.value
+  if (!el || !props.ws || el.selectionStart !== el.selectionEnd) return closeMention()
+  const upto = text.value.slice(0, el.selectionStart)
+  const m = /(?:^|[\s([“"])@([^\s@[\]()]{0,40})$/.exec(upto)
+  if (!m) return closeMention()
+  mentionAt = upto.length - m[1].length - 1
+  const items = mentionItems(m[1], { ws: props.ws, members: wss.members[props.ws] ?? [], pages: pagesStore.byWs[props.ws] ?? [], self: props.pageId }, t)
+  mention.items = items.map((it): SlashItem => ({ key: it.key, title: it.title, desc: it.desc, icon: ICONS[it.kind], aliases: [], run: () => pickMention(it) }))
+  mention.index = 0
+  const at = mentionAt
+  mention.rect = () => caretRect(el, at)
+  mention.pick = (it) => it.run(null as any, null as any)
+  mention.open = true
+}
+function pickMention(it: MentionItem) {
+  const el = area.value
+  if (!el || mentionAt < 0) return
+  const s = markdownOf(it) + ' '
+  const from = mentionAt
+  closeMention()
+  replace(from, el.selectionStart, s, from + s.length)
 }
 
 // replace swaps [from, to) for s and puts the caret (or selection) at
@@ -141,6 +184,25 @@ function takeAnswer(): boolean {
 }
 function onKey(e: KeyboardEvent) {
   if (!props.editable) return
+  if (mention.open) {
+    const n = mention.items.length
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (n) mention.index = (mention.index + (e.key === 'ArrowDown' ? 1 : n - 1)) % n
+      return
+    }
+    if ((e.key === 'Enter' || e.key === 'Tab') && n) {
+      e.preventDefault()
+      mention.pick(mention.items[mention.index])
+      return
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      closeMention()
+      return
+    }
+  }
   const mod = e.metaKey || e.ctrlKey
   if (e.key === 'Enter' && !mod && !e.shiftKey && !e.isComposing) onEnter(e)
   else if (e.key === 'Tab' && !mod && !e.shiftKey && takeAnswer()) e.preventDefault()
@@ -188,7 +250,10 @@ defineExpose({ getContent, setContent, focusStart })
     @keydown="onKey"
     @paste="onPaste"
     @drop="onDrop"
+    @click="findMention"
+    @blur="closeMention"
   />
+  <SlashMenu :state="mention" :context="area" :label="t('mention.label')" :empty="t('mention.none')" @hover="(i) => (mention.index = i)" />
   <MathGhost class="md-source" :text="text" :answers="answers" />
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { renderMarkdown } from '@/lib/markdown'
 import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
 import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
@@ -12,6 +13,7 @@ import { evaluate } from '@/lib/mathnotes'
 const props = defineProps<{ content: string; editable: boolean; math?: boolean }>()
 const emit = defineEmits<{ toggle: [index: number]; edit: [] }>()
 const { t } = useI18n()
+const router = useRouter()
 
 const html = computed(() => renderMarkdown(props.content))
 const root = ref<HTMLElement | null>(null)
@@ -135,6 +137,13 @@ function onClick(e: MouseEvent) {
   if (file) {
     e.preventDefault()
     void downloadUpload(file.dataset.upload ?? '', file.dataset.name || 'file')
+    return
+  }
+  // A link within Orbit (a page, a date) opens here, not in a new tab.
+  const inner = target.closest('a.md-internal') as HTMLAnchorElement | null
+  if (inner && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+    e.preventDefault()
+    void router.push(inner.getAttribute('href') ?? '/')
     return
   }
   const copy = target.closest('.code-copy') as HTMLElement | null
@@ -394,6 +403,24 @@ function onDblClick(e: MouseEvent) {
 }
 .md-view :deep(a.md-file)::before {
   content: '📎 ';
+}
+/* @-mentions: a person, a date (opens the calendar), a page. */
+.md-view :deep(.md-mention),
+.md-view :deep(a.md-date) {
+  padding: 0 0.3em;
+  border-radius: 5px;
+  background: var(--accent-bg);
+  color: var(--accent-text);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.md-view :deep(a.md-date)::before {
+  content: '@';
+  opacity: 0.6;
+}
+.md-view :deep(a.md-page) {
+  text-decoration-style: dotted;
 }
 .md-view :deep(img) {
   max-width: 100%;

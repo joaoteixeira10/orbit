@@ -414,6 +414,8 @@ export const pagesApi = {
     api<Page>(`/workspaces/${ws}/pages`, { method: 'POST', body: j(b) }),
   // An empty page comes without "content"; the app always has a string.
   get: (id: string) => api<Page>(`/pages/${id}`).then(withContent),
+  // What links to a page: other pages, and tasks whose notes do.
+  backlinks: (id: string) => api<{ pages: PageSummary[]; tasks: { id: string; title: string; list_id: string; done: boolean }[] }>(`/pages/${id}/backlinks`),
   update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean }) =>
     api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b) }).then(withContent),
   move: (id: string, parent_id: string | null, after_id: string) => api<PageSummary>(`/pages/${id}/move`, { method: 'POST', body: j({ parent_id, after_id }) }),

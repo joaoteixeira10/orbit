@@ -49,7 +49,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 ## Pages
 
 - Drag handles on blocks, block menu ("turn into", duplicate, colour).
-- @-mentions of people, pages and dates; backlinks.
 - Databases: a table of pages with properties, filtered views.
 - Export to PDF; import from Notion and Apple Notes exports (Markdown
   export and import are there).

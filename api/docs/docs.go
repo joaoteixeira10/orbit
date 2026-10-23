@@ -4448,6 +4448,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/pages/{id}/backlinks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "What links to a page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.backlinksResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pages/{id}/duplicate": {
             "post": {
                 "security": [
@@ -8302,6 +8335,40 @@ const docTemplate = `{
                 "user": {
                     "description": "username or email",
                     "type": "string"
+                }
+            }
+        },
+        "api.backlinkTask": {
+            "type": "object",
+            "properties": {
+                "done": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "list_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.backlinksResponse": {
+            "type": "object",
+            "properties": {
+                "pages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.pageSummary"
+                    }
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.backlinkTask"
+                    }
                 }
             }
         },

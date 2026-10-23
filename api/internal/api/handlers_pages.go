@@ -224,6 +224,7 @@ func (h *Handlers) createPage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "pages")
+	h.notifyPageMentions(c, p, "")
 	// A page made with a title (a copy, a note turned into a page) is news
 	// now; a blank one when it gets its title (updatePage).
 	if p.Title != "" {
@@ -296,6 +297,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		return
 	}
 	wasUntitled := p.Title == ""
+	before := p.Content
 	up := map[string]any{"updated_by": auth.UserID(c)}
 	if req.Title != nil {
 		up["title"] = strings.TrimSpace(*req.Title)
@@ -335,6 +337,9 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
+	if req.Content != nil {
+		h.notifyPageMentions(c, p, before)
+	}
 	// A new page's first title: tell the others it exists.
 	if wasUntitled && p.Title != "" && p.CreatedBy == auth.UserID(c) && time.Since(p.CreatedAt) < 24*time.Hour {
 		h.notifyActivity(c, h.workspaceOf(p.WorkspaceID), "page_added", p.Title, pageLink(p))

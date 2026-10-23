@@ -352,6 +352,7 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/pages/:id/move", h.movePage)
 			authed.POST("/pages/:id/restore", h.restorePage)
 			authed.POST("/pages/:id/duplicate", h.duplicatePage)
+			authed.GET("/pages/:id/backlinks", h.pageBacklinks)
 			authed.POST("/pages/:id/favorite", h.favoritePage)
 			authed.DELETE("/pages/:id/favorite", h.favoritePage)
 

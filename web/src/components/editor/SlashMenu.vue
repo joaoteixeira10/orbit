@@ -6,7 +6,8 @@ import type { SlashState } from './slash'
 
 // The "/" block menu, anchored to the typed slash. The SlashCommand extension
 // fills `state`; this only renders and positions it.
-const props = defineProps<{ state: SlashState; context: HTMLElement | null }>()
+// label / empty: the heading and the no-match text (the blocks' by default).
+const props = defineProps<{ state: SlashState; context: HTMLElement | null; label?: string; empty?: string }>()
 const emit = defineEmits<{ hover: [index: number] }>()
 const { t } = useI18n()
 const el = ref<HTMLElement | null>(null)
@@ -66,9 +67,9 @@ onBeforeUnmount(() => stop?.())
 <template>
   <Teleport to="body">
     <Transition name="pop">
-      <div v-if="state.open" ref="el" class="slash-menu popover" role="listbox" :aria-label="t('editor.blocks')" @mousedown.prevent>
+      <div v-if="state.open" ref="el" class="slash-menu popover" role="listbox" :aria-label="label || t('editor.blocks')" @mousedown.prevent>
         <div ref="list" class="slash-scroll">
-          <div class="cap px-2.5 pb-1 pt-1.5">{{ t('editor.blocks') }}</div>
+          <div class="cap px-2.5 pb-1 pt-1.5">{{ label || t('editor.blocks') }}</div>
           <button
             v-for="(it, i) in state.items"
             :key="it.key"
@@ -86,7 +87,7 @@ onBeforeUnmount(() => stop?.())
               <span class="block truncate text-[12px] text-text-3">{{ it.desc }}</span>
             </span>
           </button>
-          <div v-if="!state.items.length" class="px-2.5 py-2 text-[13px] text-text-3">{{ t('editor.noResults') }}</div>
+          <div v-if="!state.items.length" class="px-2.5 py-2 text-[13px] text-text-3">{{ empty || t('editor.noResults') }}</div>
         </div>
       </div>
     </Transition>

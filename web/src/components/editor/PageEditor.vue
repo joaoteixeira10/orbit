@@ -16,11 +16,16 @@ import SlashMenu from './SlashMenu.vue'
 import BubbleToolbar from './BubbleToolbar.vue'
 import './editor.css'
 import { MathAnswers } from './math'
+import { MentionCommand } from './mention'
+import { mentionItems } from '@/lib/mentions'
+import { useWorkspacesStore } from '@/stores/workspaces'
+import { usePagesStore } from '@/stores/pages'
 
 // The page body, edited visually: a TipTap editor that reads and writes the
 // page's Markdown (extensions.ts). The parent owns saving; this reports
 // changes and hands out the Markdown on request ("" = empty page).
-const props = defineProps<{ content: string; editable: boolean; pageId?: string }>()
+// ws: the workspace, for @-mentions of its people and pages.
+const props = defineProps<{ content: string; editable: boolean; pageId?: string; ws?: string }>()
 const toast = useToastStore()
 const emit = defineEmits<{ change: []; invalid: [] }>()
 const { t } = useI18n()
@@ -29,6 +34,11 @@ const root = ref<HTMLElement | null>(null)
 const bubble = ref<InstanceType<typeof BubbleToolbar> | null>(null)
 const invalid = ref(false)
 const slash = reactive<SlashState>({ open: false, items: [], index: 0, rect: null, pick: () => {} })
+const mention = reactive<SlashState>({ open: false, items: [], index: 0, rect: null, pick: () => {} })
+const wss = useWorkspacesStore()
+const pagesStore = usePagesStore()
+const mentionsFor = (q: string) =>
+  props.ws ? mentionItems(q, { ws: props.ws, members: wss.members[props.ws] ?? [], pages: pagesStore.byWs[props.ws] ?? [], self: props.pageId }, t) : []
 
 // valid reports whether the document the Markdown became fits the schema;
 // one that doesn't must never be saved over.
@@ -67,6 +77,7 @@ const editor = useEditor({
       Placeholder.configure({ placeholder, includeChildren: true }),
       MathAnswers,
       SlashCommand.configure({ state: slash, items: (q: string) => filterItems(slashItems(t), q) }),
+      MentionCommand.configure({ state: props.ws ? mention : null, items: mentionsFor }),
       FileUpload.configure({
         upload: props.pageId ? (f: File) => (toast.info(t('editor.uploading', { name: f.name })), uploadFile('page', props.pageId!, f)) : null,
         onError: (e: any) => toast.error(e?.message ?? String(e)),
@@ -158,5 +169,6 @@ defineExpose({ getContent, setContent, focusStart })
     <EditorContent :editor="editor" />
     <BubbleToolbar v-if="editor" ref="bubble" :editor="editor" />
     <SlashMenu :state="slash" :context="root" @hover="(i) => (slash.index = i)" />
+    <SlashMenu :state="mention" :context="root" :label="t('mention.label')" :empty="t('mention.none')" @hover="(i) => (mention.index = i)" />
   </div>
 </template>

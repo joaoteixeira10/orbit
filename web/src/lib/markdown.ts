@@ -9,6 +9,7 @@ import { i18n } from '@/i18n'
 import { highlightCode, labelOf } from './syntax'
 import { remoteHost } from './media'
 import { isUploadSrc } from './uploads'
+import { MENTION, dateLabel, isDate } from './mentions'
 
 // ---- Normalising ----------------------------------------------------------
 
@@ -111,6 +112,8 @@ function reader(): Marked {
           const name = attr(this.parser.parseInline(tokens, this.parser.textRenderer))
           return `<a href="${attr(href)}"${t} data-upload="${attr(href)}" data-name="${name}" class="md-file">${text}</a>`
         }
+        // A link within Orbit (a page, the calendar) opens here.
+        if (/^\/(?!\/)/.test(href)) return `<a href="${href}"${t} class="md-internal${/^\/w\/[^/]+\/p\//.test(href) ? ' md-page' : ''}">${text}</a>`
         return `<a href="${href}"${t} target="_blank" rel="noopener noreferrer nofollow">${text}</a>`
       },
     },
@@ -125,10 +128,54 @@ let cached: Marked | null = null
 export function renderMarkdown(md: string): string {
   cached ??= reader()
   const html = cached.parse(md, { async: false }) as string
-  return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'data-task', 'data-kind', 'data-lang', 'data-upload', 'data-name'],
-    FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'iframe'],
-  })
+  return mentionize(
+    DOMPurify.sanitize(html, {
+      ADD_ATTR: ['target', 'data-task', 'data-kind', 'data-lang', 'data-upload', 'data-name'],
+      FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'iframe'],
+    }),
+  )
+}
+
+// mentionize shows @username as a chip and @2026-10-23 as a date that opens
+// the calendar on it — in text, not in links or code.
+function mentionize(html: string): string {
+  if (!html.includes('@')) return html
+  const tpl = document.createElement('template')
+  tpl.innerHTML = html
+  const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT)
+  const found: Text[] = []
+  while (walker.nextNode()) {
+    const n = walker.currentNode as Text
+    if (n.data.includes('@') && !n.parentElement?.closest('a, code, pre')) found.push(n)
+  }
+  for (const n of found) {
+    const frag = document.createDocumentFragment()
+    let last = 0
+    for (const m of n.data.matchAll(MENTION)) {
+      const at = m.index! + m[1].length
+      const word = m[2]
+      let chip: HTMLElement
+      if (/^\d{4}-/.test(word)) {
+        if (!isDate(word)) continue
+        const a = document.createElement('a')
+        a.href = `/calendar?date=${word}`
+        a.className = 'md-internal md-date'
+        a.textContent = dateLabel(word)
+        a.title = word
+        chip = a
+      } else {
+        chip = document.createElement('span')
+        chip.className = 'md-mention'
+        chip.textContent = '@' + word
+      }
+      frag.append(n.data.slice(last, at), chip)
+      last = at + 1 + word.length
+    }
+    if (!last) continue
+    frag.append(n.data.slice(last))
+    n.replaceWith(frag)
+  }
+  return tpl.innerHTML
 }
 
 // ---- Ticking a task in the reading view ------------------------------------

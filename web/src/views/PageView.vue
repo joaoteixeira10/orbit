@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate } from 'lucide-vue-next'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2 } from 'lucide-vue-next'
 import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
@@ -325,6 +325,7 @@ async function refresh() {
     return
   }
   if (s !== session || !page.value) return
+  void loadBacklinks(cur.id)
   const editingTitle = titleDirty || document.activeElement === titleEl.value
   if (!editingTitle) title.value = p.title
   const next: Page = { ...page.value, title: editingTitle ? page.value.title : p.title, icon: p.icon, cover: p.cover, can_edit: p.can_edit, trashed_at: p.trashed_at, favorite: p.favorite }
@@ -523,6 +524,22 @@ async function restore() {
     toast.error(e.message)
   }
 }
+
+// ---- Linked from: pages and tasks that link here ----
+const backlinks = ref<{ pages: { id: string; title: string; icon: string }[]; tasks: { id: string; title: string; done: boolean }[] }>({ pages: [], tasks: [] })
+async function loadBacklinks(id: string) {
+  try {
+    const b = await pagesApi.backlinks(id)
+    if (pageId.value === id) backlinks.value = b
+  } catch {
+    if (pageId.value === id) backlinks.value = { pages: [], tasks: [] }
+  }
+}
+watch(pageId, (id) => {
+  backlinks.value = { pages: [], tasks: [] }
+  if (id) void loadBacklinks(id)
+}, { immediate: true })
+const linkedFrom = computed(() => backlinks.value.pages.length + backlinks.value.tasks.length)
 
 // ---- Pages inside ----
 const children = computed(() =>
@@ -748,6 +765,7 @@ onUnmounted(() => {
             :content="draft"
             :editable="editable"
             :page-id="page.id"
+            :ws="wsId"
             @change="onEditorChange"
             @invalid="onInvalid"
           />
@@ -756,6 +774,20 @@ onUnmounted(() => {
             {{ t('editor.emptyRead') }}
             <button v-if="editable" class="btn-plain" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</button>
           </p>
+
+          <!-- Linked from -->
+          <section v-if="linkedFrom" class="subpages" data-testid="backlinks">
+            <h2 class="cap mb-1.5 px-2">{{ t('editor.linkedFrom') }}</h2>
+            <RouterLink v-for="b in backlinks.pages" :key="b.id" :to="{ name: 'ws-page', params: { ws: wsId, page: b.id } }" class="sub-row">
+              <span v-if="b.icon" class="sub-icon">{{ b.icon }}</span>
+              <FileText v-else class="h-[18px] w-[18px] shrink-0 text-text-3" :stroke-width="1.8" />
+              <span class="truncate" :class="{ 'text-text-3': !b.title }">{{ b.title || t('pages.untitled') }}</span>
+            </RouterLink>
+            <RouterLink v-for="b in backlinks.tasks" :key="b.id" :to="{ name: 'ws-tasks', params: { ws: wsId, list: 'all' }, query: { task: b.id } }" class="sub-row">
+              <CheckCircle2 class="h-[18px] w-[18px] shrink-0" :class="b.done ? 'text-ok' : 'text-text-3'" :stroke-width="1.8" />
+              <span class="truncate" :class="{ 'text-text-3 line-through': b.done }">{{ b.title }}</span>
+            </RouterLink>
+          </section>
 
           <!-- Pages inside -->
           <section v-if="children.length || editable" class="subpages">

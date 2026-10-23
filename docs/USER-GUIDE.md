@@ -25,11 +25,12 @@ the [API](API.md).
 14. [Whiteboards](#14-whiteboards)
 15. [Habits](#15-habits)
 16. [Focus timer](#16-focus-timer)
-17. [Notifications](#17-notifications)
-18. [Your settings](#18-your-settings)
-19. [Administration](#19-administration)
-20. [Owner controls](#20-owner-controls)
-21. [On a phone](#21-on-a-phone)
+17. [Goals](#17-goals)
+18. [Notifications](#18-notifications)
+19. [Your settings](#19-your-settings)
+20. [Administration](#20-administration)
+21. [Owner controls](#21-owner-controls)
+22. [On a phone](#22-on-a-phone)
 
 ---
 
@@ -789,7 +790,23 @@ Pomodoro way: 25 minutes on one thing, then a break.
   **Today** lists today's sessions; the top says how long you focused today.
 - One session runs at a time: starting another ends the one running.
 
-## 17. Notifications
+## 17. Goals
+
+**Goals** (a module) are what a workspace works towards by a date — a
+launch, an exam, a trip.
+
+- **New goal**: a name, an emoji, a colour, **By** (the date; or none) and
+  why. Each goal is a card: how far along it is, the date and the days left
+  (or past), and how it's doing — **On track**, **Behind** (well under
+  where the time gone says it should be), **Overdue**, **All done**.
+- Its progress comes from its **tasks**: open the goal to add a **New task**
+  towards it, add one you have (**Add a task towards it…**), tick them, or
+  take one away. In any task's details, **Goal** picks the goal it counts
+  towards. A goal with no tasks has a **Progress** slider instead.
+- **Mark achieved** puts it with the **Achieved** goals (folded at the
+  bottom); **Delete** removes it — its tasks stay.
+
+## 18. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -852,7 +869,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 18. Your settings
+## 19. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -890,7 +907,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 19. Administration
+## 20. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -985,7 +1002,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 20. Owner controls
+## 21. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1123,7 +1140,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 21. On a phone
+## 22. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

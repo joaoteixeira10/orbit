@@ -1703,6 +1703,10 @@ definitions:
           A linked list's task: its issue's milestone (a ref from
           GET /lists/{id}/git/milestones; 0 = none) and its title.
         type: integer
+      goal_id:
+        description: 'GoalID: a goal of the task''s workspace it counts towards (""
+          none).'
+        type: string
       kind:
         description: '"task" clears'
         enum:
@@ -1795,6 +1799,9 @@ definitions:
         description: open | closed | merged
         type: string
       git_url:
+        type: string
+      goal_id:
+        description: 'GoalID: the goal it counts towards ("" none).'
         type: string
       id:
         type: string
@@ -2109,6 +2116,64 @@ definitions:
       role:
         type: string
       updated_at:
+        type: string
+    type: object
+  api.wsGoalRequest:
+    properties:
+      achieved:
+        type: boolean
+      color:
+        type: string
+      due:
+        description: YYYY-MM-DD, "" none
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      notes:
+        maxLength: 20000
+        type: string
+      progress:
+        description: 0–100, by hand
+        type: integer
+      title:
+        maxLength: 200
+        type: string
+    type: object
+  api.wsGoalResponse:
+    properties:
+      achieved_at:
+        type: string
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      done:
+        description: of which done
+        type: integer
+      due:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      progress:
+        description: by hand, when it has no tasks
+        type: integer
+      rank:
+        type: number
+      tasks:
+        description: its tasks (top-level)
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
         type: string
     type: object
   audit.VerifyResult:
@@ -3739,6 +3804,49 @@ paths:
       summary: Git sign-in callback
       tags:
       - git
+  /goals/{id}:
+    delete:
+      parameters:
+      - description: Goal id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a goal
+      tags:
+      - goals
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Goal id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.wsGoalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.wsGoalResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a goal
+      tags:
+      - goals
   /grades/{id}:
     delete:
       parameters:
@@ -6746,6 +6854,55 @@ paths:
       summary: Create an event
       tags:
       - calendar
+  /workspaces/{ws}/goals:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.wsGoalResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's goals
+      tags:
+      - goals
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The goal
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.wsGoalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.wsGoalResponse'
+      security:
+      - BearerAuth: []
+      summary: New goal
+      tags:
+      - goals
   /workspaces/{ws}/grades:
     get:
       parameters:

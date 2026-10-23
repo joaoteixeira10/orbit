@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer, Target } from 'lucide-vue-next'
 import { durationOf } from '@/stores/focus'
+import { goalsApi, type Goal } from '@/lib/goals'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -50,6 +51,21 @@ const editable = computed(() => !!workspace.value && workspace.value.role !== 'v
 const members = computed(() => wss.members[props.ws] ?? [])
 const auth = useAuthStore()
 const focusWs = computed(() => !!workspace.value?.modules.includes('focus'))
+// Goals of the workspace, for the Goal row (loaded when it has the module).
+const goalsWs = computed(() => !!workspace.value?.modules.includes('goals'))
+const goalList = ref<Goal[]>([])
+watch(
+  () => [props.ws, goalsWs.value, props.open] as const,
+  async ([ws, on, o]) => {
+    if (!on || !o) return
+    try {
+      goalList.value = (await goalsApi.list(ws)).filter((g) => !g.achieved_at)
+    } catch {
+      goalList.value = []
+    }
+  },
+  { immediate: true },
+)
 const schoolWs = computed(() => !!workspace.value && (workspace.value.modules.includes('courses') || workspace.value.modules.includes('grades')))
 const assigned = computed(() => (task.value?.assignee_ids ?? []).map((id) => members.value.find((m) => m.user_id === id)).filter((m) => !!m))
 const unassigned = computed(() => members.value.filter((m) => !task.value?.assignee_ids.includes(m.user_id)))
@@ -407,6 +423,16 @@ async function remove() {
           </div>
         </div>
       </div>
+
+      <!-- The goal it counts towards -->
+      <label v-if="goalsWs && !task.parent_id && (goalList.length || task.goal_id)" class="mt-4 flex items-center gap-2 px-1" data-testid="task-goal">
+        <Target class="h-4 w-4 text-text-3" />
+        <span class="text-[13.5px] text-text-2">{{ t('goals.field') }}</span>
+        <select class="input ml-auto !w-auto max-w-[60%] !py-1 text-[13.5px]" :value="task.goal_id || ''" :disabled="!editable" @change="save({ goal_id: ($event.target as HTMLSelectElement).value })">
+          <option value="">{{ t('goals.noGoal') }}</option>
+          <option v-for="g in goalList" :key="g.id" :value="g.id">{{ g.icon ? `${g.icon} ` : '' }}{{ g.title }}</option>
+        </select>
+      </label>
 
       <!-- Focus: the time spent on it, and a timer for it -->
       <div v-if="focusWs && !task.parent_id && !task.done" class="mt-4 flex items-center gap-2 px-1" data-testid="task-focus">

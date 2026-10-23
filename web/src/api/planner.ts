@@ -149,6 +149,7 @@ export interface Task {
   git_milestone?: string // its issue's milestone (a linked list's task)
   git_milestone_id?: number
   focus_minutes?: number // time focused on it
+  goal_id?: string // the goal it counts towards
 }
 export interface TaskInput {
   list_id?: string
@@ -159,6 +160,7 @@ export interface TaskInput {
   priority?: number
   kind?: 'task' | 'exam' // "task" makes it a plain task again
   git_milestone_id?: number // a linked list's task: a milestone's ref (0 = none)
+  goal_id?: string // a goal of its workspace ("" none)
   git_milestone?: string
   tags?: string[]
   start?: string // "" clears

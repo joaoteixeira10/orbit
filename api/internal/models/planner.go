@@ -145,6 +145,8 @@ type Task struct {
 	GitMilestoneID int64  `gorm:"not null;default:0" json:"git_milestone_id,omitempty"`
 	// FocusMinutes is the time focused on it (focus sessions).
 	FocusMinutes int `gorm:"not null;default:0" json:"focus_minutes,omitempty"`
+	// GoalID: the goal it counts towards ("" none).
+	GoalID string `gorm:"size:36;index" json:"goal_id,omitempty"`
 }
 
 // ---- Quick notes ------------------------------------------------------------
@@ -202,6 +204,25 @@ type HabitCheck struct {
 	Base
 	HabitID string `gorm:"size:36;not null;uniqueIndex:idx_habit_day" json:"habit_id"`
 	Date    string `gorm:"size:10;not null;uniqueIndex:idx_habit_day" json:"date"`
+}
+
+// ---- Goals ------------------------------------------------------------------
+
+// Goal is something a workspace works towards by a date (Due, floating):
+// its progress is the share of its tasks (Task.GoalID) that are done, or —
+// with no tasks — Progress (0–100) set by hand. AchievedAt marks it reached.
+type Goal struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	Title       string     `gorm:"size:200;not null" json:"title"`
+	Notes       string     `gorm:"type:text" json:"notes"`
+	Icon        string     `gorm:"size:64" json:"icon"`
+	Color       string     `gorm:"size:9" json:"color"`
+	Due         *string    `gorm:"size:10" json:"due"`
+	Progress    int        `gorm:"not null;default:0" json:"progress"` // by hand, when it has no tasks
+	AchievedAt  *time.Time `json:"achieved_at,omitempty"`
+	Rank        float64    `gorm:"not null;default:0" json:"rank"`
+	CreatedBy   string     `gorm:"size:36" json:"created_by"`
 }
 
 // ---- Focus ------------------------------------------------------------------

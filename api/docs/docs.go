@@ -1476,6 +1476,76 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/goals/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goals"
+                ],
+                "summary": "Change a goal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Goal id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.wsGoalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.wsGoalResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "goals"
+                ],
+                "summary": "Delete a goal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Goal id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/grades/{id}": {
             "put": {
                 "security": [
@@ -6431,6 +6501,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/goals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goals"
+                ],
+                "summary": "A workspace's goals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.wsGoalResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goals"
+                ],
+                "summary": "New goal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The goal",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.wsGoalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.wsGoalResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/grades": {
             "get": {
                 "security": [
@@ -9912,6 +10061,10 @@ const docTemplate = `{
                     "description": "A linked list's task: its issue's milestone (a ref from\nGET /lists/{id}/git/milestones; 0 = none) and its title.",
                     "type": "integer"
                 },
+                "goal_id": {
+                    "description": "GoalID: a goal of the task's workspace it counts towards (\"\" none).",
+                    "type": "string"
+                },
                 "kind": {
                     "description": "\"task\" clears",
                     "type": "string",
@@ -10031,6 +10184,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "git_url": {
+                    "type": "string"
+                },
+                "goal_id": {
+                    "description": "GoalID: the goal it counts towards (\"\" none).",
                     "type": "string"
                 },
                 "id": {
@@ -10477,6 +10634,90 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.wsGoalRequest": {
+            "type": "object",
+            "properties": {
+                "achieved": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "due": {
+                    "description": "YYYY-MM-DD, \"\" none",
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 20000
+                },
+                "progress": {
+                    "description": "0–100, by hand",
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "api.wsGoalResponse": {
+            "type": "object",
+            "properties": {
+                "achieved_at": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "done": {
+                    "description": "of which done",
+                    "type": "integer"
+                },
+                "due": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "progress": {
+                    "description": "by hand, when it has no tasks",
+                    "type": "integer"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "tasks": {
+                    "description": "its tasks (top-level)",
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "workspace_id": {
                     "type": "string"
                 }
             }

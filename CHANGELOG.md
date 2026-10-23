@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Goals** (a new module): a date to reach, progress from the tasks
+  towards it (or a slider), on track / behind / overdue, achieved; a task
+  picks its goal in its details.
 - **Focus timer** (a new module): 15 / 25 / 50-minute sessions, on a task or
   not, kept on the server (across tabs and devices; the end is pushed); the
   time is logged on the task; the sidebar shows the session running.

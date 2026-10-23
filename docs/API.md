@@ -93,6 +93,11 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Goals**: `GET/POST /workspaces/{ws}/goals`, `PUT/DELETE /goals/{id}`
+(`title`, `notes`, `icon`, `color`, `due`, `progress` 0–100 when it has no
+tasks, `achieved`); a goal answers its `tasks` and `done` counts. A task
+counts towards one with `goal_id`.
+
 **Focus timer**: `GET /me/focus` (`?ws=`) is the running session and today's;
 `POST /me/focus` `{workspace_id, task_id?, minutes}` starts one (ending the
 one running), `POST /me/focus/stop` stops it (the time so far counts). A

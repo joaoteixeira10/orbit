@@ -404,6 +404,8 @@ type taskRequest struct {
 	// GET /lists/{id}/git/milestones; 0 = none) and its title.
 	GitMilestoneID *int64  `json:"git_milestone_id"`
 	GitMilestone   *string `json:"git_milestone" binding:"omitempty,max=255"`
+	// GoalID: a goal of the task's workspace it counts towards ("" none).
+	GoalID *string `json:"goal_id"`
 }
 
 // cleanTags trims, de-duplicates and bounds tags.
@@ -434,6 +436,17 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 	}
 	if req.Notes != nil {
 		t.Notes = *req.Notes
+	}
+	if req.GoalID != nil {
+		t.GoalID = ""
+		if *req.GoalID != "" {
+			var n int64
+			h.db.Model(&models.Goal{}).Where("id = ? AND workspace_id = ?", *req.GoalID, t.WorkspaceID).Count(&n)
+			if n == 0 {
+				return "that goal isn't in this workspace"
+			}
+			t.GoalID = *req.GoalID
+		}
 	}
 	if req.GitMilestoneID != nil {
 		t.GitMilestoneID = *req.GitMilestoneID

@@ -837,6 +837,37 @@ test('focus timer: a session on a task runs (with a pill in the sidebar) and sto
   await expect(page.getByTestId('focus-clock')).toHaveText('50:00')
 })
 
+test('goals: one with a date, two tasks towards it, half done', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Launch', kind: 'work', modules: ['home', 'tasks', 'goals'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/goals`)
+  await page.getByTestId('new-goal').first().click()
+  const sheet = page.getByTestId('goal-sheet')
+  await sheet.getByRole('textbox', { name: 'Name' }).fill('Ship the website')
+  const d = new Date(Date.now() + 30 * 86400000)
+  await sheet.locator('input[type="date"]').fill(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  const card = page.getByTestId('goal').filter({ hasText: 'Ship the website' })
+  await expect(card).toContainText('days left')
+
+  await card.click()
+  for (const title of ['Write the copy', 'Pick the photos']) {
+    await sheet.getByTestId('goal-new-task').fill(title)
+    await sheet.getByTestId('goal-new-task').press('Enter')
+    await expect(sheet.getByText(title)).toBeVisible()
+  }
+  await sheet.getByRole('checkbox', { name: 'Write the copy' }).click()
+  await expect(sheet).toContainText('50%')
+  await page.keyboard.press('Escape')
+  await expect(card).toContainText('1 of 2 tasks')
+  await expect(card).toContainText('50%')
+  await page.screenshot({ path: 'test-results/goals.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

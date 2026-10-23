@@ -74,24 +74,25 @@ type (
 
 // Archive is workspace.json.
 type Archive struct {
-	Format     string               `json:"format"`
-	Version    int                  `json:"version"`
-	ExportedAt time.Time            `json:"exported_at"`
-	App        string               `json:"app_version"`
-	Workspace  xWorkspace           `json:"workspace"`
-	People     []Person             `json:"people"`
-	Lists      []xList              `json:"lists"`
-	Tasks      []xTask              `json:"tasks"`
-	Pages      []models.Page        `json:"pages"`
-	Notes      []xNote              `json:"notes"`
-	Events     []xEvent             `json:"events"`
-	Courses    []models.Course      `json:"courses"`
-	Slots      []models.CourseSlot  `json:"course_slots"`
-	Comments   []models.TaskComment `json:"comments"`
-	Grades     []models.Grade       `json:"grades"`
-	Goals      []models.CourseGoal  `json:"goals"`
-	Files      []models.Upload      `json:"files"`
-	Drawings   []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
+	Format         string               `json:"format"`
+	Version        int                  `json:"version"`
+	ExportedAt     time.Time            `json:"exported_at"`
+	App            string               `json:"app_version"`
+	Workspace      xWorkspace           `json:"workspace"`
+	People         []Person             `json:"people"`
+	Lists          []xList              `json:"lists"`
+	Tasks          []xTask              `json:"tasks"`
+	Pages          []models.Page        `json:"pages"`
+	Notes          []xNote              `json:"notes"`
+	Events         []xEvent             `json:"events"`
+	Courses        []models.Course      `json:"courses"`
+	Slots          []models.CourseSlot  `json:"course_slots"`
+	Comments       []models.TaskComment `json:"comments"`
+	Grades         []models.Grade       `json:"grades"`
+	Goals          []models.CourseGoal  `json:"goals"`
+	Files          []models.Upload      `json:"files"`
+	Drawings       []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
+	WorkspaceGoals []models.Goal        `json:"workspace_goals,omitempty"`
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
 	HabitChecks []models.HabitCheck `json:"habit_checks,omitempty"`
@@ -157,6 +158,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	db.Where("course_id IN ? AND user_id = ?", courseIDs, uid).Find(&a.Goals)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Drawings)
+	db.Where("workspace_id = ?", wsID).Order("rank").Find(&a.WorkspaceGoals)
 	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("rank").Find(&a.Habits)
 	habitIDs := []string{""}
 	for _, hb := range a.Habits {
@@ -341,6 +343,9 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 	for _, x := range a.Habits {
 		fresh(x.ID)
 	}
+	for _, x := range a.WorkspaceGoals {
+		fresh(x.ID)
+	}
 	pairs := make([]string, 0, 2*len(newID))
 	for o, n := range newID {
 		if len(o) >= 8 { // ids, not stray short strings
@@ -435,6 +440,13 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			}
 		}
 
+		for _, x := range a.WorkspaceGoals {
+			g := x
+			g.ID, g.WorkspaceID, g.CreatedBy = ref(x.ID), ws.ID, who(x.CreatedBy)
+			if err := tx.Create(&g).Error; err != nil {
+				return err
+			}
+		}
 		for _, x := range a.Lists {
 			l := x.TaskList
 			l.ID, l.WorkspaceID, l.Columns = ref(x.ID), ws.ID, unraw(x.Columns)
@@ -472,6 +484,7 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			}
 			t.Assignees = encode(as)
 			t.GitDirty, t.GitDirtyBy = false, ""
+			t.GoalID = ref(x.GoalID)
 			if err := tx.Create(&t).Error; err != nil {
 				return err
 			}

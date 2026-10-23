@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Habits** (a new module): each person's own — every day, some weekdays
+  or N times a week; tap a day to mark it done; streaks, the best one, the
+  last 30 days, a year grid; a reminder at a time on the days it counts.
 - **Whiteboards** (a new module) and **drawings on notes**, with Excalidraw:
   hand-drawn shapes, arrows, text and images; saved as you draw (a stale
   save never overwrites a newer one), shown as pictures on cards, found by

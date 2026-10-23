@@ -35,6 +35,7 @@ export const inboxEn = {
       daily: { title: 'Your day: {summary}', body: '{lines}' },
       held: { title: '{n} notifications while it was quiet', body: '{lines}' },
       note_reminder: { title: '{title}', body: 'Note · {ws}' },
+      habit_due: { title: '{title}', body: 'Not done yet today · {ws}' },
     },
     digest: {
       tasks: 'no tasks | 1 task | {n} tasks',
@@ -144,6 +145,7 @@ export const inboxPt: typeof inboxEn = {
       daily: { title: 'O seu dia: {summary}', body: '{lines}' },
       held: { title: '{n} notificações durante o silêncio', body: '{lines}' },
       note_reminder: { title: '{title}', body: 'Nota · {ws}' },
+      habit_due: { title: '{title}', body: 'Ainda por fazer hoje · {ws}' },
     },
     digest: {
       tasks: 'sem tarefas | 1 tarefa | {n} tarefas',

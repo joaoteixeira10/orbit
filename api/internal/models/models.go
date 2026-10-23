@@ -355,6 +355,8 @@ func AllModels() []any {
 		&CalendarSubscription{},
 		&ExternalEvent{},
 		&Drawing{},
+		&Habit{},
+		&HabitCheck{},
 		&CalDAVLink{},
 		&CalDAVItem{},
 		&CalendarFeed{},

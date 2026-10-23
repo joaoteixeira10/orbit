@@ -1539,6 +1539,128 @@
                 }
             }
         },
+        "/habits/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "habits"
+                ],
+                "summary": "Change a habit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Habit id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.habitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.habitResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "habits"
+                ],
+                "summary": "Delete a habit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Habit id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/habits/{id}/checks/{date}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "habits"
+                ],
+                "summary": "Mark a habit done on a day",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Habit id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Done or not",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.habitCheckRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.habitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "produces": [
@@ -6246,6 +6368,85 @@
                 }
             }
         },
+        "/workspaces/{ws}/habits": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "habits"
+                ],
+                "summary": "My habits in a workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.habitResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "habits"
+                ],
+                "summary": "New habit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The habit",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.habitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.habitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/invites": {
             "get": {
                 "security": [
@@ -8272,6 +8473,108 @@
                     "type": "number",
                     "maximum": 1000,
                     "minimum": 0
+                }
+            }
+        },
+        "api.habitCheckRequest": {
+            "type": "object",
+            "properties": {
+                "done": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.habitRequest": {
+            "type": "object",
+            "properties": {
+                "archived": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "days": {
+                    "description": "seven 0/1, Monday first",
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "remind_at": {
+                    "type": "string"
+                },
+                "schedule": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly"
+                    ]
+                },
+                "target": {
+                    "description": "weekly: 1–7",
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "api.habitResponse": {
+            "type": "object",
+            "properties": {
+                "archived_at": {
+                    "type": "string"
+                },
+                "checks": {
+                    "description": "YYYY-MM-DD, oldest first",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "days": {
+                    "type": "string"
+                },
+                "icon": {
+                    "description": "an emoji (or empty)",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "remind_at": {
+                    "type": "string"
+                },
+                "schedule": {
+                    "description": "daily | weekly",
+                    "type": "string"
+                },
+                "target": {
+                    "description": "weekly: times a week",
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
                 }
             }
         },

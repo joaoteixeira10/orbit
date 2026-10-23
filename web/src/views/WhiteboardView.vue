@@ -42,7 +42,7 @@ useFillHeight(fill, 420)
 </script>
 
 <template>
-  <div>
+  <div class="board-view">
     <header class="mb-3 flex items-center gap-2">
       <button class="btn-plain -ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ t('draw.back') }}</button>
       <input
@@ -63,6 +63,9 @@ useFillHeight(fill, 420)
 </template>
 
 <style scoped>
+.board-view {
+  padding: 16px clamp(12px, 2vw, 24px) 0;
+}
 .board-frame {
   overflow: hidden;
   border-radius: 14px;

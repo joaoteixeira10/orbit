@@ -780,6 +780,76 @@ definitions:
         minimum: 0
         type: number
     type: object
+  api.habitCheckRequest:
+    properties:
+      done:
+        type: boolean
+    type: object
+  api.habitRequest:
+    properties:
+      archived:
+        type: boolean
+      color:
+        type: string
+      days:
+        description: seven 0/1, Monday first
+        type: string
+      icon:
+        maxLength: 64
+        type: string
+      remind_at:
+        type: string
+      schedule:
+        enum:
+        - daily
+        - weekly
+        type: string
+      target:
+        description: 'weekly: 1–7'
+        type: integer
+      title:
+        maxLength: 200
+        type: string
+    type: object
+  api.habitResponse:
+    properties:
+      archived_at:
+        type: string
+      checks:
+        description: YYYY-MM-DD, oldest first
+        items:
+          type: string
+        type: array
+      color:
+        type: string
+      created_at:
+        type: string
+      days:
+        type: string
+      icon:
+        description: an emoji (or empty)
+        type: string
+      id:
+        type: string
+      owner_id:
+        type: string
+      rank:
+        type: number
+      remind_at:
+        type: string
+      schedule:
+        description: daily | weekly
+        type: string
+      target:
+        description: 'weekly: times a week'
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   api.holidayCountry:
     properties:
       code:
@@ -3657,6 +3727,82 @@ paths:
       summary: Update a grade
       tags:
       - school
+  /habits/{id}:
+    delete:
+      parameters:
+      - description: Habit id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a habit
+      tags:
+      - habits
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Habit id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.habitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.habitResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a habit
+      tags:
+      - habits
+  /habits/{id}/checks/{date}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Habit id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: YYYY-MM-DD
+        in: path
+        name: date
+        required: true
+        type: string
+      - description: Done or not
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.habitCheckRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.habitResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark a habit done on a day
+      tags:
+      - habits
   /healthz:
     get:
       produces:
@@ -6512,6 +6658,55 @@ paths:
       summary: Your grades in a workspace
       tags:
       - school
+  /workspaces/{ws}/habits:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.habitResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My habits in a workspace
+      tags:
+      - habits
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The habit
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.habitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.habitResponse'
+      security:
+      - BearerAuth: []
+      summary: New habit
+      tags:
+      - habits
   /workspaces/{ws}/invites:
     get:
       parameters:

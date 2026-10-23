@@ -34,7 +34,7 @@ export const ICON_CHOICES = Object.keys(ICONS).filter((k) => k !== 'home')
 export const MODULE_ROUTES: Record<string, string> = {
   home: 'ws', notes: 'ws-notes', pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board',
   timeline: 'ws-timeline', charts: 'ws-charts', calendar: 'ws-calendar', courses: 'ws-courses', grades: 'ws-grades',
-  whiteboards: 'ws-whiteboards',
+  whiteboards: 'ws-whiteboards', habits: 'ws-habits',
 }
 
 // Apple's system colours (light values; tiles keep them in dark mode too).

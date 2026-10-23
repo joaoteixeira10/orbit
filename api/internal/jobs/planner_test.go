@@ -170,3 +170,41 @@ func TestEmptyTrash(t *testing.T) {
 		t.Errorf("left: %v", titles)
 	}
 }
+
+// TestHabitReminders: at its time, on a day it counts and not done yet; a
+// weekly one until its target for the week is met.
+func TestHabitReminders(t *testing.T) {
+	db := plannerDB(t)
+	hub := events.New()
+	s := &Scheduler{db: db, log: zap.NewNop(), hub: hub, inbox: inbox.New(db, hub, nil, nil, zap.NewNop(), "")}
+	db.Create(&models.UserPrefs{UserID: "u1", Timezone: "Europe/Lisbon"})
+	// Tuesday 1 December 2026, 21:00 in Lisbon (UTC in winter).
+	at := time.Date(2026, 12, 1, 21, 0, 0, 0, time.UTC)
+	weekdays := models.Habit{WorkspaceID: "w", OwnerID: "u1", Title: "Read", Schedule: "daily", Days: "1111100", Target: 1, RemindAt: "21:00"}
+	weekends := models.Habit{WorkspaceID: "w", OwnerID: "u1", Title: "Hike", Schedule: "daily", Days: "0000011", Target: 1, RemindAt: "21:00"}
+	weekly := models.Habit{WorkspaceID: "w", OwnerID: "u1", Title: "Gym", Schedule: "weekly", Days: "1111111", Target: 2, RemindAt: "21:00"}
+	for _, hb := range []*models.Habit{&weekdays, &weekends, &weekly} {
+		db.Create(hb)
+	}
+	ch, stop := hub.Subscribe("u1")
+	defer stop()
+	s.remindAt(at)
+	got := strings.Join(drain(ch), "\n")
+	if !strings.Contains(got, "Read") || strings.Contains(got, "Hike") || !strings.Contains(got, "Gym") {
+		t.Fatalf("first: %s", got)
+	}
+	// Read done today; Gym twice this week (Monday and today): nothing.
+	db.Create(&models.HabitCheck{HabitID: weekdays.ID, Date: "2026-12-01"})
+	db.Create(&models.HabitCheck{HabitID: weekly.ID, Date: "2026-11-30"})
+	db.Create(&models.HabitCheck{HabitID: weekly.ID, Date: "2026-12-01"})
+	s.remindAt(at.AddDate(0, 0, 0))
+	if got := drain(ch); len(got) != 0 {
+		t.Fatalf("reminded though done: %v", got)
+	}
+	// Wednesday: Read again; Gym's week is done.
+	s.remindAt(at.AddDate(0, 0, 1))
+	got = strings.Join(drain(ch), "\n")
+	if !strings.Contains(got, "Read") || strings.Contains(got, "Gym") {
+		t.Fatalf("wednesday: %s", got)
+	}
+}

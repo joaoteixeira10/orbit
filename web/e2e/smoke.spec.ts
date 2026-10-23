@@ -781,6 +781,39 @@ test('whiteboards and a note\'s drawing (Excalidraw): drawn, saved, shown', asyn
   await page.screenshot({ path: 'test-results/note-card.png' })
 })
 
+test('habits: one made, today ticked, a streak', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Me', kind: 'custom', modules: ['home', 'habits'], starter: false } })).json()
+  // One with a history already: done yesterday and the day before.
+  const old = await (await request.post(`/api/v1/workspaces/${ws.id}/habits`, { headers: H, data: { title: 'Stretch', icon: '🧘', color: '#34C759' } })).json()
+  const day = (n: number) => {
+    const d = new Date(Date.now() - n * 86400000)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  for (const n of [1, 2]) await request.put(`/api/v1/habits/${old.id}/checks/${day(n)}`, { headers: H, data: { done: true } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/habits`)
+  await expect(page.getByTestId('habit').filter({ hasText: 'Stretch' })).toContainText('2 days')
+  await page.getByTestId('new-habit').click()
+  const sheet = page.getByTestId('habit-sheet')
+  await sheet.getByRole('textbox', { name: 'Name' }).fill('Read')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  const read = page.getByTestId('habit').filter({ hasText: 'Read' })
+  await expect(read).toBeVisible()
+  // Today's circle.
+  await read.getByRole('button', { name: /^Mark .* done$/ }).and(page.locator('.today')).click()
+  await expect.poll(async () => {
+    const list = await (await request.get(`/api/v1/workspaces/${ws.id}/habits`, { headers: H })).json()
+    return list.find((h: { title: string }) => h.title === 'Read')?.checks ?? []
+  }).toEqual([day(0)])
+  await expect(read).toContainText('1 day')
+  await page.getByTestId('habit').filter({ hasText: 'Stretch' }).getByRole('button', { name: /Stretch/ }).click()
+  await page.screenshot({ path: 'test-results/habits.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

@@ -16,6 +16,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // TrashDays is how long a trashed page waits before it is deleted for good.
@@ -173,6 +174,21 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		})
 	}
 
+	// Habits: at their time on the days they count, unless done already.
+	var habits []models.Habit
+	s.db.Where("remind_at <> '' AND archived_at IS NULL").Find(&habits)
+	for _, hb := range habits {
+		local := minute.In(userZone(prefs(hb.OwnerID)))
+		if local.Format("15:04") != hb.RemindAt || !habitDue(s.db, hb, local) {
+			continue
+		}
+		s.inbox.Notify(inbox.Message{
+			UserID: hb.OwnerID, Kind: inbox.Reminder, Verb: "habit_due", WorkspaceID: hb.WorkspaceID,
+			Params: map[string]any{"title": strings.TrimSpace(hb.Icon + " " + hb.Title), "ws": wsName(hb.WorkspaceID), "habit": hb.ID},
+			Link:   fmt.Sprintf("/w/%s/habits", hb.WorkspaceID),
+		})
+	}
+
 	// Events: an occurrence starting RemindMinutes after this minute.
 	var evs []models.Event
 	s.db.Where("remind_minutes IS NOT NULL AND starts_at < ? AND (until IS NULL OR until > ?)", end.AddDate(0, 0, 8), minute).Find(&evs)
@@ -232,4 +248,25 @@ func firstLine(s string, n int) string {
 		return string(r[:n]) + "…"
 	}
 	return strings.TrimSpace(s)
+}
+
+// habitDue reports whether a habit still wants doing on a local day: it
+// counts that day (daily: its weekday; weekly: its target isn't met yet this
+// week, Monday first) and it isn't done yet.
+func habitDue(db *gorm.DB, hb models.Habit, local time.Time) bool {
+	day := local.Format(planner.DateLayout)
+	var done int64
+	db.Model(&models.HabitCheck{}).Where("habit_id = ? AND date = ?", hb.ID, day).Count(&done)
+	if done > 0 {
+		return false
+	}
+	if hb.Schedule == "weekly" {
+		wd := (int(local.Weekday()) + 6) % 7 // Monday 0
+		monday := local.AddDate(0, 0, -wd).Format(planner.DateLayout)
+		var week int64
+		db.Model(&models.HabitCheck{}).Where("habit_id = ? AND date >= ? AND date <= ?", hb.ID, monday, day).Count(&week)
+		return int(week) < hb.Target
+	}
+	wd := (int(local.Weekday()) + 6) % 7
+	return len(hb.Days) == 7 && hb.Days[wd] == '1'
 }

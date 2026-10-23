@@ -36,6 +36,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'w/:ws/calendar', name: 'ws-calendar', component: () => import('@/views/CalendarView.vue') },
       { path: 'w/:ws/courses', name: 'ws-courses', component: () => import('@/views/CoursesView.vue') },
       { path: 'w/:ws/grades', name: 'ws-grades', component: () => import('@/views/GradesView.vue') },
+      { path: 'w/:ws/habits', name: 'ws-habits', component: () => import('@/views/HabitsView.vue') },
       { path: 'w/:ws/whiteboards', name: 'ws-whiteboards', component: () => import('@/views/WhiteboardsView.vue') },
       { path: 'w/:ws/whiteboards/:id', name: 'ws-whiteboard', component: () => import('@/views/WhiteboardView.vue') },
       { path: 'w/:ws/pages', name: 'ws-pages', component: () => import('@/views/PagesView.vue') },

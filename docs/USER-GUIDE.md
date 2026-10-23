@@ -23,11 +23,12 @@ the [API](API.md).
 12. [Courses](#12-courses)
 13. [Grades](#13-grades)
 14. [Whiteboards](#14-whiteboards)
-15. [Notifications](#15-notifications)
-16. [Your settings](#16-your-settings)
-17. [Administration](#17-administration)
-18. [Owner controls](#18-owner-controls)
-19. [On a phone](#19-on-a-phone)
+15. [Habits](#15-habits)
+16. [Notifications](#16-notifications)
+17. [Your settings](#17-your-settings)
+18. [Administration](#18-administration)
+19. [Owner controls](#19-owner-controls)
+20. [On a phone](#20-on-a-phone)
 
 ---
 
@@ -749,7 +750,29 @@ floor plans, diagrams, mind maps. They use **Excalidraw**.
 
 A **drawing on a note** works the same way: see [Notes](#6-notes).
 
-## 15. Notifications
+## 15. Habits
+
+**Habits** (a module: turn it on in Workspace settings → Modules) are things
+you want to do again and again — read, run, practise the piano. They're
+**yours alone**: in a shared workspace each member has their own, and nobody
+sees anyone else's.
+
+- **New habit**: a name, an emoji, a colour, and how often — **Every day**,
+  **Some days** (pick the weekdays) or **Times a week** (say 3, any days).
+  **Remind me** at a time: on the days it counts, if it isn't done yet.
+- Each habit is a row with this week's days: **tap a circle** to mark that
+  day done (tap again to undo); today's has a ring while it's still to do.
+  Days a habit doesn't ask for are faded. The top says how many are done
+  today.
+- The **streak** (🔥) counts the days in a row it was done (only the days it
+  asks for), or for *times a week* the weeks in a row that reached it. Today
+  not done yet doesn't break it — the day isn't over.
+- Open a habit (click its name) for **the last year** — a square a day —,
+  its **best streak** and how often it was done in the **last 30 days**.
+  **Edit** changes it; **Archive** puts it away (with its history; **Bring
+  back** later), **Delete** removes it and its history.
+
+## 16. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -812,7 +835,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 16. Your settings
+## 17. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -850,7 +873,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 17. Administration
+## 18. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -945,7 +968,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 18. Owner controls
+## 19. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1083,7 +1106,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 19. On a phone
+## 20. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

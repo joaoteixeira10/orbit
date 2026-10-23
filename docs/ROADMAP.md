@@ -21,7 +21,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Modules
 
-- **Habits** — daily or weekly check-ins with streaks and a year grid.
 - **Journal** — one page per day, with mood and a "this day last year".
 - **Goals** — goals with progress from linked tasks, and a target date.
 - **Bookmarks** — links with a preview, tags and a read-later state.

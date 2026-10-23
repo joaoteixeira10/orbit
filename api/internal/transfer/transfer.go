@@ -92,6 +92,9 @@ type Archive struct {
 	Goals      []models.CourseGoal  `json:"goals"`
 	Files      []models.Upload      `json:"files"`
 	Drawings   []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
+	// The exporter's own habits and the days they were done.
+	Habits      []models.Habit      `json:"habits,omitempty"`
+	HabitChecks []models.HabitCheck `json:"habit_checks,omitempty"`
 }
 
 func raw(s string) json.RawMessage {
@@ -154,6 +157,12 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	db.Where("course_id IN ? AND user_id = ?", courseIDs, uid).Find(&a.Goals)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Drawings)
+	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("rank").Find(&a.Habits)
+	habitIDs := []string{""}
+	for _, hb := range a.Habits {
+		habitIDs = append(habitIDs, hb.ID)
+	}
+	db.Where("habit_id IN ?", habitIDs).Order("date").Find(&a.HabitChecks)
 	a.People = people(db, wsID, &a)
 
 	z := zip.NewWriter(w)
@@ -327,6 +336,9 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 		fresh(x.ID)
 	}
 	for _, x := range a.Drawings {
+		fresh(x.ID)
+	}
+	for _, x := range a.Habits {
 		fresh(x.ID)
 	}
 	pairs := make([]string, 0, 2*len(newID))
@@ -557,6 +569,21 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 				return err
 			}
 			rep.Drawings++
+		}
+		for _, x := range a.Habits {
+			hb := x
+			hb.ID, hb.WorkspaceID, hb.OwnerID = ref(x.ID), ws.ID, me.ID
+			if err := tx.Create(&hb).Error; err != nil {
+				return err
+			}
+		}
+		for _, x := range a.HabitChecks {
+			if ref(x.HabitID) == "" {
+				continue
+			}
+			if err := tx.Create(&models.HabitCheck{HabitID: ref(x.HabitID), Date: x.Date}).Error; err != nil {
+				return err
+			}
 		}
 		return importFiles(tx, a, z, o, ws.ID, ref, who, &rep)
 	})

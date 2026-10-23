@@ -90,7 +90,7 @@ async function remove() {
 </script>
 
 <template>
-  <div>
+  <div class="boards-view">
     <header class="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
       <div class="min-w-0 flex-1">
         <h1 class="large-title">{{ t('modules.whiteboards') }}</h1>
@@ -140,6 +140,9 @@ async function remove() {
 </template>
 
 <style scoped>
+.boards-view {
+  padding: 32px clamp(16px, 4vw, 48px) 96px;
+}
 .board {
   overflow: hidden;
   cursor: pointer;

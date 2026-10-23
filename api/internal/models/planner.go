@@ -172,6 +172,36 @@ type Note struct {
 	RemindBy string     `gorm:"size:36" json:"-"`
 }
 
+// ---- Habits -----------------------------------------------------------------
+
+// Habit is something someone does again and again (read, run, practise
+// piano), in a workspace with the Habits module. Habits are their owner's
+// alone, like grades. Schedule: "daily" (Days: which weekdays count, as
+// seven 0/1 for Monday…Sunday — "1111111" every day) or "weekly" (Target
+// times a week, any days). RemindAt ("HH:MM", the owner's zone) reminds on
+// the days it counts until it's done.
+type Habit struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	OwnerID     string     `gorm:"size:36;not null;index" json:"owner_id"`
+	Title       string     `gorm:"size:200;not null" json:"title"`
+	Icon        string     `gorm:"size:64" json:"icon"` // an emoji (or empty)
+	Color       string     `gorm:"size:9" json:"color"`
+	Schedule    string     `gorm:"size:8;not null;default:daily" json:"schedule"` // daily | weekly
+	Days        string     `gorm:"size:7;not null;default:1111111" json:"days"`
+	Target      int        `gorm:"not null;default:1" json:"target"` // weekly: times a week
+	RemindAt    string     `gorm:"size:5" json:"remind_at"`
+	Rank        float64    `gorm:"not null;default:0" json:"rank"`
+	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
+}
+
+// HabitCheck is one day a habit was done (a floating date).
+type HabitCheck struct {
+	Base
+	HabitID string `gorm:"size:36;not null;uniqueIndex:idx_habit_day" json:"habit_id"`
+	Date    string `gorm:"size:10;not null;uniqueIndex:idx_habit_day" json:"date"`
+}
+
 // ---- Drawings ---------------------------------------------------------------
 
 // Drawing is an Excalidraw scene: a whiteboard of a workspace, or — with

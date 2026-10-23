@@ -93,6 +93,12 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Habits** (each person's own): `GET/POST /workspaces/{ws}/habits`, `PUT/DELETE
+/habits/{id}` (`title`, `icon`, `color`, `schedule` daily | weekly, `days`
+seven 0/1 from Monday, `target` per week, `remind_at` HH:MM, `archived`),
+`PUT /habits/{id}/checks/{YYYY-MM-DD}` with `{done}`; a habit lists its
+`checks` of the last 400 days.
+
 **Drawings** (Excalidraw): `GET/POST /workspaces/{ws}/drawings` lists /
 makes whiteboards; `GET/PUT/DELETE /drawings/{id}` — a `PUT` carries the
 `version` it changes (a stale one answers `409` with the newer drawing) and

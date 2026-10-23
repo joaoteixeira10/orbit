@@ -16,6 +16,7 @@ const (
 	ModTimeline = "timeline"    // the tasks on a timeline (Gantt)
 	ModCharts   = "charts"      // the tasks in charts (status, lists, priority, people)
 	ModBoards   = "whiteboards" // Excalidraw whiteboards
+	ModHabits   = "habits"      // daily / weekly habits with streaks
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -39,7 +40,7 @@ var Catalog = []Module{
 	{Key: ModCourses, Icon: "graduation-cap"},
 	{Key: ModGrades, Icon: "award"},
 	{Key: ModBoards, Icon: "brush"},
-	{Key: "habits", Icon: "repeat", Soon: true},
+	{Key: ModHabits, Icon: "repeat"},
 	{Key: "journal", Icon: "notebook-pen", Soon: true},
 	{Key: "goals", Icon: "target", Soon: true},
 	{Key: "bookmarks", Icon: "bookmark", Soon: true},

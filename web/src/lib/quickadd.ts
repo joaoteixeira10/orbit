@@ -11,6 +11,7 @@ export interface Quick {
   due_time?: string
   priority?: number
   tags: string[]
+  repeat?: string // an RRULE, e.g. FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
 }
 
 const weekdays: Record<string, number> = {
@@ -21,6 +22,69 @@ const weekdays: Record<string, number> = {
   thursday: 4, thu: 4, quinta: 4, qui: 4,
   friday: 5, fri: 5, sexta: 5, sex: 5,
   saturday: 6, sat: 6, sábado: 6, sabado: 6, sáb: 6, sab: 6,
+}
+
+const BYDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+
+// A weekday in a repeat: a name or its short form, plural too ("tuesdays",
+// "terças", "terças-feiras").
+const WD = '(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|wed|thu|fri|sat|domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)s?(?:-feiras?)?'
+const DAYS = `${WD}(?:\\s*(?:,|and|&|e)\\s*${WD})*`
+const NUM: Record<string, number> = { two: 2, three: 3, four: 4, dois: 2, duas: 2, três: 3, tres: 3, quatro: 4 }
+const N = '(\\d{1,3}|two|three|four|dois|duas|três|tres|quatro)'
+const UNIT: Record<string, string> = { day: 'DAILY', dia: 'DAILY', week: 'WEEKLY', semana: 'WEEKLY', month: 'MONTHLY', mês: 'MONTHLY', mes: 'MONTHLY', year: 'YEARLY', ano: 'YEARLY' }
+const UNITS = '(days?|weeks?|months?|years?|dias?|semanas?|mês|mes(?:es)?|anos?)'
+
+const num = (s: string) => NUM[s] ?? +s
+const unit = (s: string) => UNIT[s.replace(/es$|s$/, '')] ?? UNIT[s]
+const dayCodes = (s: string) =>
+  [...new Set(s.split(/\s*(?:,|\band\b|&|\be\b)\s*/).map((d) => d.replace(/-feiras?$/, '').replace(/s$/, '')).filter((d) => d in weekdays).map((d) => BYDAY[weekdays[d]]))]
+const rule = (freq: string, interval = 1, days: string[] = []) =>
+  `FREQ=${freq}${interval > 1 ? `;INTERVAL=${interval}` : ''}${days.length ? `;BYDAY=${days.join(',')}` : ''}`
+
+// REPEATS: each phrase and the rule it means. Phrases are whole words (a
+// space or the ends around them). "daily", "weekly"… on their own count only
+// after the first word, so "Weekly review" stays a title.
+const REPEATS: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [new RegExp(`every\\s+other\\s+(${DAYS})`), (m) => rule('WEEKLY', 2, dayCodes(m[1]))],
+  [new RegExp(`every\\s+other\\s+(day|week|month|year)`), (m) => rule(UNIT[m[1]], 2)],
+  [new RegExp(`every\\s+${N}\\s+${UNITS}`), (m) => rule(unit(m[2]), num(m[1]))],
+  [/every\s+(?:weekday|workday)s?|(?:todos\s+os\s+)?dias\s+úteis|(?:todos\s+os\s+)?dias\s+uteis/, () => rule('WEEKLY', 1, ['MO', 'TU', 'WE', 'TH', 'FR'])],
+  [new RegExp(`every\\s+(${DAYS})`), (m) => rule('WEEKLY', 1, dayCodes(m[1]))],
+  [/every\s+(day|week|month|year)/, (m) => rule(UNIT[m[1]])],
+  [new RegExp(`(${WD})\\s+sim,?\\s+(${WD})\\s+não`), (m) => rule('WEEKLY', 2, dayCodes(m[1]))],
+  [/(dia|semana|mês|mes|ano)\s+sim,?\s+(?:dia|semana|mês|mes|ano)\s+não/, (m) => rule(UNIT[m[1]], 2)],
+  [new RegExp(`de\\s+${N}\\s+em\\s+\\S+\\s+${UNITS}`), (m) => rule(unit(m[2]), num(m[1]))],
+  [new RegExp(`(?:a\\s+)?cada\\s+${N}\\s+${UNITS}`), (m) => rule(unit(m[2]), num(m[1]))],
+  [new RegExp(`tod[oa]s\\s+(?:os|as)\\s+(${DAYS})`), (m) => rule('WEEKLY', 1, dayCodes(m[1]))],
+  [/tod[oa]s\s+(?:os|as)\s+(dias|semanas|meses|anos)/, (m) => rule(unit(m[1]))],
+  [/(?<=\S\s+)(?:daily|diariamente)/, () => rule('DAILY')],
+  [/(?<=\S\s+)(?:weekly|semanalmente)/, () => rule('WEEKLY')],
+  [/(?<=\S\s+)(?:biweekly|fortnightly|quinzenalmente)/, () => rule('WEEKLY', 2)],
+  [/(?<=\S\s+)(?:monthly|mensalmente)/, () => rule('MONTHLY')],
+  [/(?<=\S\s+)(?:yearly|annually|anualmente)/, () => rule('YEARLY')],
+]
+
+// takeRepeat finds a repeat phrase in input: the rule, and input without it.
+function takeRepeat(input: string): { repeat?: string; rest: string } {
+  const low = input.toLowerCase()
+  for (const [re, make] of REPEATS) {
+    const m = low.match(new RegExp(`(?<=^|\\s)(?:${re.source})(?=$|[\\s,.;!])`))
+    if (!m || m.index === undefined) continue
+    const r = make(m)
+    if (/BYDAY=(?:;|$)/.test(r) || r.includes('undefined')) continue
+    return { repeat: r, rest: (input.slice(0, m.index) + ' ' + input.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim() }
+  }
+  return { rest: input }
+}
+
+// firstDay is the first date a rule falls on, from today: its first weekday
+// (today included) or today.
+function firstDay(r: string, now: Date): string {
+  const days = r.match(/BYDAY=([A-Z,]+)/)?.[1].split(',').map((d) => BYDAY.indexOf(d)) ?? []
+  if (!days.length) return dateStr(now)
+  const diff = Math.min(...days.map((d) => (d - now.getDay() + 7) % 7))
+  return dateStr(addDays(now, diff))
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -46,7 +110,9 @@ function parseTime(w: string): string | undefined {
 
 export function parseQuick(input: string, now = new Date()): Quick {
   const out: Quick = { title: '', tags: [] }
-  const words = input.trim().split(/\s+/)
+  const { repeat, rest } = takeRepeat(input.trim())
+  if (repeat) out.repeat = repeat
+  const words = rest ? rest.split(/\s+/) : []
   const keep: string[] = []
   for (let i = 0; i < words.length; i++) {
     const raw = words[i]
@@ -76,6 +142,7 @@ export function parseQuick(input: string, now = new Date()): Quick {
       keep.push(raw)
     }
   }
+  if (out.repeat && !out.due) out.due = firstDay(out.repeat, now)
   if (out.due_time && !out.due) out.due = dateStr(now)
   out.title = keep.join(' ')
   return out

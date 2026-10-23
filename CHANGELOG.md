@@ -126,6 +126,11 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Repeats in quick add**: "every other Tuesday", "every Monday and
+  Friday", "every 3 days", "every weekday", and in Portuguese "terça sim,
+  terça não", "todas as quintas", "de 15 em 15 dias"… The task starts on the
+  first day the repeat falls on; custom rules show in words ("Every other
+  Tuesday") instead of "Custom".
 - **Quick Draw**: your own sketches, like Quick Notes — a tile with a **+**
   in the sidebar (and in the phone's tab bar, and ⌘K → New sketch).
 - **Whiteboards** (a new module) and **drawings on notes**, with Excalidraw:

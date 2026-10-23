@@ -243,6 +243,11 @@ export const plEn = {
     monthly: 'Every month',
     yearly: 'Every year',
     custom: 'Custom',
+    other: { day: 'Every other day', week: 'Every other week', month: 'Every other month', year: 'Every other year' },
+    every: { day: 'Every {n} days', week: 'Every {n} weeks', month: 'Every {n} months', year: 'Every {n} years' },
+    onDays: 'Every {days}',
+    otherDays: 'Every other {days}',
+    everyDays: 'Every {n} weeks on {days}',
   },
 }
 
@@ -487,5 +492,10 @@ export const plPt: typeof plEn = {
     monthly: 'Todos os meses',
     yearly: 'Todos os anos',
     custom: 'Personalizado',
+    other: { day: 'Dia sim, dia não', week: 'Semana sim, semana não', month: 'Mês sim, mês não', year: 'Ano sim, ano não' },
+    every: { day: 'De {n} em {n} dias', week: 'De {n} em {n} semanas', month: 'De {n} em {n} meses', year: 'De {n} em {n} anos' },
+    onDays: 'Cada {days}',
+    otherDays: '{days}, semana sim, semana não',
+    everyDays: '{days}, de {n} em {n} semanas',
   },
 }

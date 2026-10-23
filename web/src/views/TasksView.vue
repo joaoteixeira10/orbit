@@ -252,7 +252,7 @@ async function commitAdd(s: Section) {
       title: q.title, list_id: target?.id, column_id: s.columnId,
       // In Today and Scheduled a new task needs a date to show up there.
       due: q.due ?? (sel.value === 'today' ? today : sel.value === 'scheduled' ? (/^\d{4}-\d{2}-\d{2}$/.test(s.key) && s.key >= today ? s.key : today) : undefined),
-      due_time: q.due_time, priority: q.priority, tags: q.tags.length ? q.tags : undefined,
+      due_time: q.due_time, priority: q.priority, tags: q.tags.length ? q.tags : undefined, repeat: q.repeat,
       ...s.preset,
       // What was typed wins over the group's preset.
       ...(q.due ? { due: q.due } : {}), ...(q.priority ? { priority: q.priority } : {}),

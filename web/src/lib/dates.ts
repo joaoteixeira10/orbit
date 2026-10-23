@@ -129,9 +129,36 @@ export function repeatPreset(rule: string): RepeatPreset {
   for (const [k, v] of Object.entries(REPEAT_RULES)) if (v === rule) return k as RepeatPreset
   return 'custom'
 }
+// repeatLabel names a rule: a preset's name, or a simple custom rule in
+// words ("Every other Tuesday", "Every 3 days"); anything else is "Custom".
 export function repeatLabel(rule: string): string {
   const p = repeatPreset(rule)
-  return p ? i18n.global.t(`repeat.${p}`) : ''
+  if (p !== 'custom') return p ? i18n.global.t(`repeat.${p}`) : ''
+  const w = ruleWords(rule)
+  return w ? w.charAt(0).toUpperCase() + w.slice(1) : i18n.global.t('repeat.custom')
+}
+
+const UNITS: Record<string, string> = { DAILY: 'day', WEEKLY: 'week', MONTHLY: 'month', YEARLY: 'year' }
+const BYDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+
+function ruleWords(rule: string): string | undefined {
+  const parts: Record<string, string> = {}
+  for (const kv of rule.split(';')) {
+    const [k, v] = kv.split('=')
+    if (!k || v === undefined) return undefined
+    parts[k] = v
+  }
+  const unit = UNITS[parts.FREQ]
+  const n = parts.INTERVAL ? Number(parts.INTERVAL) : 1
+  if (!unit || !Number.isInteger(n) || n < 1 || Object.keys(parts).some((k) => !['FREQ', 'INTERVAL', 'BYDAY'].includes(k))) return undefined
+  const t = i18n.global.t
+  if (!parts.BYDAY) return n === 1 ? t(`repeat.${unit === 'day' ? 'daily' : `${unit}ly`}`) : n === 2 ? t(`repeat.other.${unit}`) : t(`repeat.every.${unit}`, { n })
+  const codes = parts.BYDAY.split(',')
+  if (unit !== 'week' || codes.some((c) => !BYDAY.includes(c))) return undefined
+  // Names from a week that starts on a Sunday (4 Oct 2026).
+  const name = new Intl.DateTimeFormat(locale(), { weekday: 'long' })
+  const days = new (Intl as any).ListFormat(locale(), { type: 'conjunction' }).format(codes.map((c) => name.format(new Date(2026, 9, 4 + BYDAY.indexOf(c)))))
+  return n === 1 ? t('repeat.onDays', { days }) : n === 2 ? t('repeat.otherDays', { days }) : t('repeat.everyDays', { n, days })
 }
 
 // toLocalInput / fromLocalInput convert between a Date and the value of an

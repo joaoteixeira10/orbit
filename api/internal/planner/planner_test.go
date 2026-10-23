@@ -95,6 +95,7 @@ func TestNextDue(t *testing.T) {
 		{"2026-10-13", "FREQ=DAILY;INTERVAL=3", "2026-10-16"},
 		{"2026-01-31", "FREQ=MONTHLY", "2026-03-31"}, // no 31 Feb
 		{"2026-10-13", "FREQ=WEEKLY;BYDAY=MO,FR", "2026-10-16"},
+		{"2026-10-13", "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU", "2026-10-27"}, // every other Tuesday
 	}
 	for _, c := range cases {
 		if got, ok := NextDue(c.due, c.rule); !ok || got != c.want {

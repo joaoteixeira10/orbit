@@ -19,7 +19,7 @@ import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
 import { acceptAnswer, evaluate } from '@/lib/mathnotes'
 import MathGhost from '@/components/ui/MathGhost.vue'
-import { todayStr, dateStr, addDays, REPEAT_RULES, repeatPreset, type RepeatPreset } from '@/lib/dates'
+import { todayStr, dateStr, addDays, REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
 // Everything about one task, Reminders' "Details": notes, start, date and
 // time, repeat, priority, tags, list and column, who it's for, sub-tasks.
@@ -349,7 +349,7 @@ async function remove() {
             <option value="biweekly">{{ t('repeat.biweekly') }}</option>
             <option value="monthly">{{ t('repeat.monthly') }}</option>
             <option value="yearly">{{ t('repeat.yearly') }}</option>
-            <option v-if="repeat === 'custom'" value="custom">{{ t('repeat.custom') }}</option>
+            <option v-if="repeat === 'custom'" value="custom">{{ repeatLabel(task?.repeat ?? '') }}</option>
           </select>
         </div>
       </div>

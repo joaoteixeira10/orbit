@@ -421,9 +421,15 @@ field stays for the next one). **Quick add** reads, in English or Portuguese:
 | `14:30`, `9h`, `2pm`, `at 18:00` / `às 18h` | the due time (today if no date) |
 | `!`, `!!`, `!!!` | priority low, medium, high |
 | `#maths` | a tag |
+| `every day`, `every week`, `every month`, `every year` / `todos os dias`, `todas as semanas`… | repeats (also `daily`, `weekly`, `diariamente`, `semanalmente`… after the first word) |
+| `every other Tuesday`, `every Monday and Friday`, `every weekday` / `terça sim, terça não`, `todas as quintas`, `dias úteis` | repeats on those days |
+| `every 3 days`, `every other week` / `de 15 em 15 dias`, `a cada duas semanas`, `quinzenalmente` | repeats every so often |
 
 So *Essay tomorrow 14:30 !! #maths* is "Essay", due tomorrow at 14:30, medium
-priority, tagged maths.
+priority, tagged maths. *Bins every other Tuesday 8h* repeats every second
+Tuesday at 08:00, from the next Tuesday (today, if it is one). A repeat with
+no date starts today, or on its first day. The task's **Repeat** shows the
+rule in words ("Every other Tuesday").
 
 **Complete** with the round checkbox (it fades after a moment; the eye button
 shows or hides completed tasks). **Click a task** (anywhere but its

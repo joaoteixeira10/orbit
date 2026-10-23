@@ -10,7 +10,7 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
 import { COLORS } from '@/lib/icons'
 import {
-  REPEAT_RULES, repeatPreset, type RepeatPreset, toLocalInput, utcMidnight, allDayDate, dateStr, parseDate,
+  REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset, toLocalInput, utcMidnight, allDayDate, dateStr, parseDate,
   addDays, deviceTZ, toZoneInput, fromZoneInput, zoneName, allZones, sameZoneTime, fmtTime, fmtDate,
 } from '@/lib/dates'
 
@@ -296,7 +296,7 @@ async function remove(onlyThis: boolean) {
             <option value="biweekly">{{ t('repeat.biweekly') }}</option>
             <option value="monthly">{{ t('repeat.monthly') }}</option>
             <option value="yearly">{{ t('repeat.yearly') }}</option>
-            <option v-if="customRule && repeatPreset(customRule) === 'custom'" value="custom">{{ t('repeat.custom') }}</option>
+            <option v-if="customRule && repeatPreset(customRule) === 'custom'" value="custom">{{ repeatLabel(customRule) }}</option>
           </select>
         </label>
       </div>

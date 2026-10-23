@@ -71,7 +71,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 - Dependencies on the timeline (finish-to-start arrows, moving a task moves
   what waits on it) and a critical path.
 - Exporting the charts (PNG / CSV) and a per-person workload view.
-- Natural-language repeat ("every other Tuesday") in quick add.
 - Swimlanes on boards (by assignee or priority); WIP limits per column.
 - Time estimates and a weekly planner view that fits tasks into free time.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fromZoneInput, sameZoneTime, toZoneInput, zoneName, zoneOffset } from './dates'
+import { fromZoneInput, repeatLabel, sameZoneTime, toZoneInput, zoneName, zoneOffset } from './dates'
 
 describe('time zones', () => {
   it('reads a wall clock in a zone as an instant, and back', () => {
@@ -26,5 +26,17 @@ describe('time zones', () => {
     expect(sameZoneTime('Europe/Lisbon', 'Europe/Madrid', summer)).toBe(false)
     expect(zoneName('America/New_York')).toBe('New York')
     expect(zoneName('America/New_York', summer)).toBe('New York (GMT-4)')
+  })
+})
+
+describe('repeatLabel', () => {
+  it('names presets and simple custom rules in words', () => {
+    expect(repeatLabel('')).toBe('')
+    expect(repeatLabel('FREQ=WEEKLY;INTERVAL=2')).toBe('Every 2 weeks')
+    expect(repeatLabel('FREQ=WEEKLY;INTERVAL=2;BYDAY=TU')).toBe('Every other Tuesday')
+    expect(repeatLabel('FREQ=WEEKLY;BYDAY=MO,FR')).toBe('Every Monday and Friday')
+    expect(repeatLabel('FREQ=DAILY;INTERVAL=3')).toBe('Every 3 days')
+    expect(repeatLabel('FREQ=MONTHLY;INTERVAL=2')).toBe('Every other month')
+    expect(repeatLabel('FREQ=MONTHLY;BYMONTHDAY=15')).toBe('Custom')
   })
 })

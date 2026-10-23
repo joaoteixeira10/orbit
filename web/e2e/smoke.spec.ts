@@ -619,6 +619,9 @@ test('calendar Week view: an event drags to another day and time, its bottom edg
   await page.goto(`/w/${ws.id}/calendar?date=2026-12-10`)
   await page.getByRole('tab', { name: 'Week' }).click()
   const block = page.locator('.tg-ev', { hasText: 'Design review' })
+  // The grid opens scrolled to the working day: measure after that.
+  await page.waitForFunction(() => (document.querySelector('.tg-scroll')?.scrollTop ?? 0) > 0)
+  await expect(block).toBeVisible()
   const b = (await block.boundingBox())!
   const colW = (await page.locator('.tg-col').first().boundingBox())!.width
   // One day right, two hours (2 × 48 px) down.
@@ -889,6 +892,31 @@ test('journal: today written with a mood, kept, and last year on this day', asyn
   await expect(page.getByRole('radio', { name: 'Good' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.locator(`.day[data-day="${iso(d.getFullYear())}"]`)).toContainText('🙂')
   await page.screenshot({ path: 'test-results/journal.png' })
+})
+
+test('bookmarks: a link kept, tagged, read later and read', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Reading', kind: 'personal', modules: ['home', 'bookmarks'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/bookmarks`)
+  // The test network has no internet: the link is kept as typed, without a preview.
+  await page.getByTestId('bookmark-url').fill('https://example.invalid/sourdough')
+  await page.getByRole('switch', { name: 'Read later' }).first().click()
+  await page.getByTestId('bookmark-add').click()
+  const card = page.getByTestId('bookmark').filter({ hasText: 'example.invalid' })
+  await expect(card).toBeVisible({ timeout: 20000 })
+  await page.getByRole('radio', { name: 'Read later' }).or(page.locator('.seg button', { hasText: 'Read later' })).click()
+  await expect(card).toBeVisible()
+  // Mark it read: it leaves "read later".
+  await card.getByTestId('bookmark-later').click()
+  await expect(card).toHaveCount(0)
+  const list = await (await request.get(`/api/v1/workspaces/${ws.id}/bookmarks`, { headers: H })).json()
+  expect(list[0].read_at).toBeTruthy()
+  await page.locator('.seg button', { hasText: 'All' }).click()
+  await page.screenshot({ path: 'test-results/bookmarks.png' })
 })
 
 test('an admin creates a role with instance privileges', async ({ page }) => {

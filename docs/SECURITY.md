@@ -371,6 +371,12 @@ user. Release mode refuses either secret under 32 characters.
   **8 MiB**; a **30 s** timeout. A failure is shown to the editors without the
   address. The scheduler refreshes each subscription at its interval (at least
   every 15 minutes, by default hourly).
+- **Bookmarks** read the page a member pastes (and its picture) through the
+  public-only guarded client — loopback, link-local and private networks
+  refused, each redirect hop (five at most) checked again; the page is read
+  up to 1 MiB, the picture up to 600 KiB and only as PNG, JPEG, GIF or
+  WebP (sniffed). The picture is served from Orbit to members, with
+  `Content-Security-Policy: sandbox`, so no viewer's browser calls the site.
 - **Drawings** (Excalidraw) are JSON stored as sent (capped at 16 MB); their
   preview must be an SVG and is only ever shown as an image (`<img>`, where an
   SVG runs nothing). Excalidraw and React load as their own chunk from this

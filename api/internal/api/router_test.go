@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/linkpreview"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -88,8 +89,13 @@ func routerOn(t *testing.T, db *gorm.DB, cfg *config.Config, syncer *calsync.Syn
 		Sealer:   sealer,
 		WebAuthn: wa,
 		Events:   events.New(),
+		Links:    testLinks,
 	})
 }
+
+// testLinks, when set, reads bookmark previews (tests reach httptest on
+// loopback, which the guarded fetcher refuses).
+var testLinks *linkpreview.Fetcher
 
 // routerWithOpenClient is the test instance over db with a calendar syncer
 // that may reach loopback (httptest servers).

@@ -111,6 +111,9 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Bookmarks** (a new module): paste a link, Orbit reads its title,
+  description and picture (fetched once by the server, public sites only —
+  viewers never call the site); tags, notes, read later; found by search.
 - **Journal** (a new module): a page a day, each person's own, with a mood;
   a month of moods at a glance; "On this day" from earlier years; found by
   search, by its writer only.

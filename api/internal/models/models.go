@@ -360,6 +360,8 @@ func AllModels() []any {
 		&FocusSession{},
 		&Goal{},
 		&JournalEntry{},
+		&Bookmark{},
+		&BookmarkImage{},
 		&CalDAVLink{},
 		&CalDAVItem{},
 		&CalendarFeed{},

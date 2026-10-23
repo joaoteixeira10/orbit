@@ -27,11 +27,12 @@ the [API](API.md).
 16. [Focus timer](#16-focus-timer)
 17. [Goals](#17-goals)
 18. [Journal](#18-journal)
-19. [Notifications](#19-notifications)
-20. [Your settings](#20-your-settings)
-21. [Administration](#21-administration)
-22. [Owner controls](#22-owner-controls)
-23. [On a phone](#23-on-a-phone)
+19. [Bookmarks](#19-bookmarks)
+20. [Notifications](#20-notifications)
+21. [Your settings](#21-your-settings)
+22. [Administration](#22-administration)
+23. [Owner controls](#23-owner-controls)
+24. [On a phone](#24-on-a-phone)
 
 ---
 
@@ -823,7 +824,24 @@ and nobody reads anyone else's (search finds yours for you only).
 - **On this day** shows the same date in earlier years — what you wrote a
   year ago, two years ago…
 
-## 19. Notifications
+## 19. Bookmarks
+
+**Bookmarks** (a module) keep links worth coming back to.
+
+- **Paste a link…** and **Keep**: Orbit reads the page — its title,
+  description, site and picture — and shows it as a card. Tick **Read
+  later** first to keep it for later. (Orbit fetches the page and its
+  picture itself, once: looking at your bookmarks never tells the site. Only
+  public sites are read; a link to your own network is kept as typed.)
+- A **click** opens the link in a new tab; a *read later* one is then read.
+  The 🔖 on a card marks it *read later* or read.
+- **All / Read later** and the **#tags** narrow the wall. `⋯` → **Edit**
+  (title, description, tags, notes, read later), **Read the page again**,
+  **Delete**.
+- Search (⌘K) finds bookmarks by their title, description, site, address
+  and notes; choosing one opens the link.
+
+## 20. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -886,7 +904,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 20. Your settings
+## 21. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -924,7 +942,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 21. Administration
+## 22. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -1019,7 +1037,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 22. Owner controls
+## 23. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1157,7 +1175,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 23. On a phone
+## 24. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

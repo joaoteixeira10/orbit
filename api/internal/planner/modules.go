@@ -7,19 +7,20 @@ package planner
 
 // Module keys. A workspace turns on any subset, in its own order.
 const (
-	ModHome     = "home"        // overview: today, upcoming, recent pages
-	ModPages    = "pages"       // block-editor pages
-	ModTasks    = "tasks"       // task lists (Reminders-style)
-	ModBoard    = "board"       // the same tasks as kanban boards
-	ModCalendar = "calendar"    // events, due tasks, subscribed calendars
-	ModNotes    = "notes"       // quick notes (sticky notes)
-	ModTimeline = "timeline"    // the tasks on a timeline (Gantt)
-	ModCharts   = "charts"      // the tasks in charts (status, lists, priority, people)
-	ModBoards   = "whiteboards" // Excalidraw whiteboards
-	ModHabits   = "habits"      // daily / weekly habits with streaks
-	ModFocus    = "focus"       // a focus timer (Pomodoro), time logged on tasks
-	ModGoals    = "goals"       // goals with progress from their tasks
-	ModJournal  = "journal"     // a page a day, with a mood
+	ModHome      = "home"        // overview: today, upcoming, recent pages
+	ModPages     = "pages"       // block-editor pages
+	ModTasks     = "tasks"       // task lists (Reminders-style)
+	ModBoard     = "board"       // the same tasks as kanban boards
+	ModCalendar  = "calendar"    // events, due tasks, subscribed calendars
+	ModNotes     = "notes"       // quick notes (sticky notes)
+	ModTimeline  = "timeline"    // the tasks on a timeline (Gantt)
+	ModCharts    = "charts"      // the tasks in charts (status, lists, priority, people)
+	ModBoards    = "whiteboards" // Excalidraw whiteboards
+	ModHabits    = "habits"      // daily / weekly habits with streaks
+	ModFocus     = "focus"       // a focus timer (Pomodoro), time logged on tasks
+	ModGoals     = "goals"       // goals with progress from their tasks
+	ModJournal   = "journal"     // a page a day, with a mood
+	ModBookmarks = "bookmarks"   // links with a preview, tags, read later
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -46,7 +47,7 @@ var Catalog = []Module{
 	{Key: ModHabits, Icon: "repeat"},
 	{Key: ModJournal, Icon: "notebook-pen"},
 	{Key: ModGoals, Icon: "target"},
-	{Key: "bookmarks", Icon: "bookmark", Soon: true},
+	{Key: ModBookmarks, Icon: "bookmark"},
 	{Key: ModFocus, Icon: "timer"},
 }
 

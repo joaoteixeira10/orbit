@@ -21,7 +21,8 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Modules
 
-- **Bookmarks** — links with a preview, tags and a read-later state.
+- Bookmarks: saving a link from the phone's share sheet straight into
+  Bookmarks (today it goes to Quick Notes); importing browser bookmarks.
 - Focus timer: breaks between sessions (a long one every four), and a week
   of focus in Charts.
 

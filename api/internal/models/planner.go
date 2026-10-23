@@ -206,6 +206,34 @@ type HabitCheck struct {
 	Date    string `gorm:"size:10;not null;uniqueIndex:idx_habit_day" json:"date"`
 }
 
+// ---- Bookmarks --------------------------------------------------------------
+
+// Bookmark is a link worth keeping, in a workspace with the Bookmarks module:
+// what the page says about itself (fetched once, through the public-only
+// client), tags, a note, and "read later" (ReadAt set once opened). Its
+// picture is kept in BookmarkImage, so viewers never call the site.
+type Bookmark struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	URL         string     `gorm:"size:2000;not null" json:"url"`
+	Title       string     `gorm:"size:300" json:"title"`
+	Description string     `gorm:"size:700" json:"description"`
+	SiteName    string     `gorm:"size:120" json:"site_name"`
+	Tags        string     `gorm:"type:text" json:"-"` // JSON []string
+	Notes       string     `gorm:"type:text" json:"notes"`
+	ReadLater   bool       `gorm:"not null;default:false" json:"read_later"`
+	ReadAt      *time.Time `json:"read_at,omitempty"`
+	HasImage    bool       `gorm:"not null;default:false" json:"has_image"`
+	CreatedBy   string     `gorm:"size:36" json:"created_by"`
+}
+
+// BookmarkImage is a bookmark's picture (ID = the bookmark's).
+type BookmarkImage struct {
+	ID   string `gorm:"primaryKey;size:36"`
+	Type string `gorm:"size:20;not null"`
+	Data []byte `gorm:"not null"`
+}
+
 // ---- Journal ----------------------------------------------------------------
 
 // JournalEntry is one day of someone's journal in a workspace with the

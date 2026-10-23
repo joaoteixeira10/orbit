@@ -91,6 +91,62 @@ definitions:
       s3_region:
         type: string
     type: object
+  api.bookmarkRequest:
+    properties:
+      description:
+        maxLength: 700
+        type: string
+      notes:
+        maxLength: 20000
+        type: string
+      read:
+        description: 'opened: true sets ReadAt, false clears it'
+        type: boolean
+      read_later:
+        type: boolean
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        maxLength: 300
+        type: string
+      url:
+        type: string
+    type: object
+  api.bookmarkResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      has_image:
+        type: boolean
+      id:
+        type: string
+      notes:
+        type: string
+      read_at:
+        type: string
+      read_later:
+        type: boolean
+      site_name:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   api.brandingResponse:
     properties:
       accent_color:
@@ -1630,7 +1686,8 @@ definitions:
       id:
         type: string
       kind:
-        description: 'page | task | event | note | drawing | journal (ID: its date)'
+        description: 'page | task | event | note | drawing | bookmark | journal (ID:
+          its date)'
         type: string
       list_id:
         type: string
@@ -3402,6 +3459,89 @@ paths:
       summary: Set scheduled backups
       tags:
       - backup
+  /bookmarks/{id}:
+    delete:
+      parameters:
+      - description: Bookmark id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a bookmark
+      tags:
+      - bookmarks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bookmark id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.bookmarkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.bookmarkResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a bookmark
+      tags:
+      - bookmarks
+  /bookmarks/{id}/image:
+    get:
+      parameters:
+      - description: Bookmark id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: A bookmark's picture
+      tags:
+      - bookmarks
+  /bookmarks/{id}/refresh:
+    post:
+      parameters:
+      - description: Bookmark id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.bookmarkResponse'
+      security:
+      - BearerAuth: []
+      summary: Read a bookmark's preview again
+      tags:
+      - bookmarks
   /branding:
     get:
       produces:
@@ -6628,6 +6768,55 @@ paths:
       summary: A workspace's activity
       tags:
       - workspaces
+  /workspaces/{ws}/bookmarks:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.bookmarkResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's bookmarks
+      tags:
+      - bookmarks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The link (and tags, read later)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.bookmarkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.bookmarkResponse'
+      security:
+      - BearerAuth: []
+      summary: Add a bookmark
+      tags:
+      - bookmarks
   /workspaces/{ws}/caldav:
     delete:
       parameters:

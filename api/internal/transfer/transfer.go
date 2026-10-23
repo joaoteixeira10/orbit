@@ -93,6 +93,7 @@ type Archive struct {
 	Files          []models.Upload      `json:"files"`
 	Drawings       []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
 	WorkspaceGoals []models.Goal        `json:"workspace_goals,omitempty"`
+	Bookmarks      []models.Bookmark    `json:"bookmarks,omitempty"` // their pictures are read again
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
 	HabitChecks []models.HabitCheck `json:"habit_checks,omitempty"`
@@ -161,6 +162,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Drawings)
 	db.Where("workspace_id = ?", wsID).Order("rank").Find(&a.WorkspaceGoals)
+	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Bookmarks)
 	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("rank").Find(&a.Habits)
 	habitIDs := []string{""}
 	for _, hb := range a.Habits {
@@ -443,6 +445,13 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			}
 		}
 
+		for _, x := range a.Bookmarks {
+			b := x
+			b.ID, b.WorkspaceID, b.CreatedBy, b.HasImage = "", ws.ID, who(x.CreatedBy), false
+			if err := tx.Create(&b).Error; err != nil {
+				return err
+			}
+		}
 		for _, x := range a.WorkspaceGoals {
 			g := x
 			g.ID, g.WorkspaceID, g.CreatedBy = ref(x.ID), ws.ID, who(x.CreatedBy)

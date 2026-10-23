@@ -736,6 +736,142 @@
                 }
             }
         },
+        "/bookmarks/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "Change a bookmark",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bookmark id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.bookmarkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.bookmarkResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "Delete a bookmark",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bookmark id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/bookmarks/{id}/image": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "A bookmark's picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bookmark id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookmarks/{id}/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "Read a bookmark's preview again",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bookmark id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.bookmarkResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/branding": {
             "get": {
                 "produces": [
@@ -6050,6 +6186,85 @@
                 }
             }
         },
+        "/workspaces/{ws}/bookmarks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "A workspace's bookmarks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.bookmarkResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "Add a bookmark",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The link (and tags, read later)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.bookmarkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.bookmarkResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/caldav": {
             "get": {
                 "security": [
@@ -7867,6 +8082,89 @@
                     "type": "string"
                 },
                 "s3_region": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.bookmarkRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 700
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 20000
+                },
+                "read": {
+                    "description": "opened: true sets ReadAt, false clears it",
+                    "type": "boolean"
+                },
+                "read_later": {
+                    "type": "boolean"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.bookmarkResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "has_image": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "read_at": {
+                    "type": "string"
+                },
+                "read_later": {
+                    "type": "boolean"
+                },
+                "site_name": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "workspace_id": {
                     "type": "string"
                 }
             }
@@ -10090,7 +10388,7 @@
                     "type": "string"
                 },
                 "kind": {
-                    "description": "page | task | event | note | drawing | journal (ID: its date)",
+                    "description": "page | task | event | note | drawing | bookmark | journal (ID: its date)",
                     "type": "string"
                 },
                 "list_id": {

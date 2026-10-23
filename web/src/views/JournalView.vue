@@ -64,7 +64,7 @@ async function loadDay() {
     content.value = r.entry?.content ?? ''
     mood.value = r.entry?.mood ?? 0
     past.value = r.on_this_day
-    editing.value = !content.value.trim() && editable.value
+    editing.value = false
     state.value = ''
     loadedFor = d
     if (dateStr(month.value).slice(0, 7) !== d.slice(0, 7)) month.value = parseDate(d)
@@ -76,6 +76,7 @@ watch([ws, date], loadDay, { immediate: true })
 
 function changed() {
   if (!editable.value || !loadedFor) return
+  editing.value = true // stays open while writing (the first save fills it)
   state.value = 'saving'
   clearTimeout(timer)
   timer = setTimeout(() => void save(), 800)
@@ -110,6 +111,10 @@ function tick(i: number) {
   content.value = toggleTask(content.value, i)
   changed()
 }
+
+// An empty day opens ready to write (once it's known the person may);
+// a written one to read, until Write.
+const writing = computed(() => editable.value && (editing.value || !content.value.trim()))
 
 const title = computed(() => {
   const d = parseDate(date.value)
@@ -176,14 +181,14 @@ const yearsAgo = (d: string) => Number(date.value.slice(0, 4)) - Number(d.slice(
         </div>
 
         <div class="card mt-4 min-h-[240px] p-4" data-testid="journal-entry">
-          <MarkdownEditor v-if="editing" :key="date" ref="editor" :content="content" :editable="editable" @change="changed" />
+          <MarkdownEditor v-if="writing" :key="date" ref="editor" :content="content" :editable="editable" @change="changed" />
           <template v-else>
             <MarkdownView v-if="content.trim()" :content="content" :editable="editable" @toggle="tick" @edit="editing = true" />
             <p v-else class="text-[14px] text-text-3">{{ t('journal.empty') }}</p>
             <button v-if="editable" class="btn-plain mt-3 !text-[13px]" @click="editing = true"><Pencil class="h-3.5 w-3.5" />{{ t('journal.edit') }}</button>
           </template>
         </div>
-        <p v-if="editing && !content" class="mt-2 px-1 text-[12.5px] text-text-3">{{ t('journal.write') }}</p>
+        <p v-if="writing && !content" class="mt-2 px-1 text-[12.5px] text-text-3">{{ t('journal.write') }}</p>
 
         <div v-if="past.length" class="mt-8">
           <h3 class="cap mb-2 px-1">{{ t('journal.onThisDay') }}</h3>

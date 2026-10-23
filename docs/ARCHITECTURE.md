@@ -27,6 +27,7 @@ TipTap 3 (ProseMirror) · SortableJS · `emersion/go-ical` + `teambition/rrule-g
 | `api/internal/calsync/` | Fetching subscribed calendars (guarded client, limits, sealed addresses) |
 | `api/internal/caldav/` | Two-way CalDAV sync: a small client (discovery, listing, multiget, conditional PUT / DELETE) and the sync (ETags and stamps, later change wins) |
 | `web/src/components/draw/` | Drawings: Excalidraw (React) mounted in Vue, loaded on demand; saving with versions |
+| `api/internal/linkpreview/` | A link's title, description, site and picture (bookmarks), through the public-only client |
 | `api/internal/transfer/` | A workspace as a zip and back (export / import between instances) |
 | `api/internal/api/handlers_{workspaces,pages,tasks,calendar,feeds,home}.go` | The planner API |
 | `api/internal/jobs/planner.go` | Calendar refresh, reminders, trash |

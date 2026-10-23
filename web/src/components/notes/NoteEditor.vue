@@ -255,7 +255,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
             <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
             <SquareCheck v-else class="h-[18px] w-[18px]" />
           </button>
- <button class="tb" :class="{ on: !!note.drawing }" :aria-label="t('draw.onNote')" :title="t('draw.onNote')" data-testid="note-draw" @click="openDrawing">
+          <button class="tb" :class="{ on: !!note.drawing }" :aria-label="t('draw.onNote')" :title="t('draw.onNote')" data-testid="note-draw" @click="openDrawing">
             <Brush class="h-[18px] w-[18px]" />
           </button>
           <button ref="remindBtn" class="tb" :class="{ on: menu === 'remind' || !!note.remind_at }" :aria-label="t('remind.title')" :title="t('remind.title')" data-testid="note-remind" @click="menu = menu === 'remind' ? '' : 'remind'">
@@ -274,7 +274,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
       <Popover v-if="menu === 'color'" :anchor="colorBtn" placement="top-start" @close="menu = ''">
         <NoteColorPicker v-model="draft.color" />
       </Popover>
- <Popover v-if="menu === 'remind'" :anchor="remindBtn" placement="top-start" :width="270" @close="menu = ''">
+      <Popover v-if="menu === 'remind'" :anchor="remindBtn" placement="top-start" :width="270" @close="menu = ''">
         <RemindPicker :current="note.remind_at" @pick="remind" />
       </Popover>
       <DrawingSheet :open="!!drawingId" :id="drawingId" :title="draft.title" :readonly="!editable" @close="drawingClosed" @saved="drawn" @remove="removeDrawing" />

@@ -93,6 +93,12 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Bookmarks**: `GET/POST /workspaces/{ws}/bookmarks` (`url`, and `tags`,
+`read_later`; the page's title, description, site and picture are read
+then), `PUT/DELETE /bookmarks/{id}` (`title`, `description`, `tags`,
+`notes`, `read_later`, `read`), `POST /bookmarks/{id}/refresh` reads the
+page again, `GET /bookmarks/{id}/image` is its picture.
+
 **Journal** (each person's own): `GET /workspaces/{ws}/journal?month=YYYY-MM`
 lists the days written (mood, a line); `GET /workspaces/{ws}/journal/{date}`
 is a day and `on_this_day` (the same date in earlier years); `PUT` it with

@@ -19,6 +19,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/linkpreview"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/version"
@@ -43,10 +44,11 @@ type Deps struct {
 	OIDC     *auth.OIDC
 	WebAuthn *auth.WebAuthn
 	Events   *events.Hub
-	CalSync  *calsync.Syncer // nil: built here
-	Inbox    *inbox.Service  // nil: built here
-	Git      *gitsync.Engine // nil: built here
-	CalDAV   *caldav.Syncer  // nil: built here
+	CalSync  *calsync.Syncer      // nil: built here
+	Inbox    *inbox.Service       // nil: built here
+	Git      *gitsync.Engine      // nil: built here
+	CalDAV   *caldav.Syncer       // nil: built here
+	Links    *linkpreview.Fetcher // nil: the public-only guarded one
 }
 
 // Handlers holds the wired dependencies and implements the route handlers.
@@ -69,12 +71,13 @@ type Handlers struct {
 	inbox     *inbox.Service
 	git       *gitsync.Engine
 	dav       *caldav.Syncer
+	links     *linkpreview.Fetcher // nil: the public-only guarded one
 }
 
 // New builds the configured *gin.Engine.
 func New(d Deps) *gin.Engine {
 	gin.SetMode(d.Cfg.GinMode)
-	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV}
+	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV, links: d.Links}
 	if h.calsync == nil {
 		h.calsync = calsync.New(d.DB, d.Sealer, d.Log)
 	}
@@ -282,6 +285,12 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/workspaces/:ws/habits", h.listHabits)
 			authed.GET("/workspaces/:ws/goals", h.listGoals)
 			authed.GET("/workspaces/:ws/journal", h.listJournal)
+			authed.GET("/workspaces/:ws/bookmarks", h.listBookmarks)
+			authed.POST("/workspaces/:ws/bookmarks", h.createBookmark)
+			authed.PUT("/bookmarks/:id", h.updateBookmark)
+			authed.DELETE("/bookmarks/:id", h.deleteBookmark)
+			authed.POST("/bookmarks/:id/refresh", h.refreshBookmark)
+			authed.GET("/bookmarks/:id/image", h.bookmarkImage)
 			authed.GET("/workspaces/:ws/journal/:date", h.getJournalDay)
 			authed.PUT("/workspaces/:ws/journal/:date", h.putJournalDay)
 			authed.POST("/workspaces/:ws/goals", h.createGoal)

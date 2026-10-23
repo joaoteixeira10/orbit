@@ -91,6 +91,7 @@ type Archive struct {
 	Grades     []models.Grade       `json:"grades"`
 	Goals      []models.CourseGoal  `json:"goals"`
 	Files      []models.Upload      `json:"files"`
+	Drawings   []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
 }
 
 func raw(s string) json.RawMessage {
@@ -152,6 +153,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	}
 	db.Where("course_id IN ? AND user_id = ?", courseIDs, uid).Find(&a.Goals)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
+	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Drawings)
 	a.People = people(db, wsID, &a)
 
 	z := zip.NewWriter(w)
@@ -222,6 +224,10 @@ func people(db *gorm.DB, wsID string, a *Archive) []Person {
 	for _, u := range a.Files {
 		add(u.OwnerID)
 	}
+	for _, d := range a.Drawings {
+		add(d.CreatedBy)
+		add(d.UpdatedBy)
+	}
 	var users []models.User
 	db.Where("id IN ?", append(ids, "")).Order("username").Find(&users)
 	out := make([]Person, 0, len(users))
@@ -276,6 +282,7 @@ type Report struct {
 	Courses  int      `json:"courses"`
 	Comments int      `json:"comments"`
 	Files    int      `json:"files"`
+	Drawings int      `json:"drawings"`
 	Added    []string `json:"added"`   // members added (usernames)
 	Missing  []string `json:"missing"` // people with no account here (names)
 	Skipped  []string `json:"skipped"` // files not taken (too large, quota)
@@ -317,6 +324,9 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 		fresh(x.ID)
 	}
 	for _, x := range a.Files {
+		fresh(x.ID)
+	}
+	for _, x := range a.Drawings {
 		fresh(x.ID)
 	}
 	pairs := make([]string, 0, 2*len(newID))
@@ -535,6 +545,18 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			if err := tx.Create(&models.CourseGoal{CourseID: ref(x.CourseID), UserID: me.ID, Target: x.Target}).Error; err != nil {
 				return err
 			}
+		}
+		for _, x := range a.Drawings {
+			d := x
+			if x.NoteID != "" && ref(x.NoteID) == "" {
+				continue
+			}
+			d.ID, d.WorkspaceID, d.OwnerID, d.NoteID = ref(x.ID), ws.ID, "", ref(x.NoteID)
+			d.CreatedBy, d.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
+			if err := tx.Create(&d).Error; err != nil {
+				return err
+			}
+			rep.Drawings++
 		}
 		return importFiles(tx, a, z, o, ws.ID, ref, who, &rep)
 	})

@@ -2,7 +2,9 @@
 import Attachments from '@/components/ui/Attachments.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush } from 'lucide-vue-next'
+import DrawingSheet from '@/components/draw/DrawingSheet.vue'
+import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
 import RemindPicker from '@/components/ui/RemindPicker.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Popover from '@/components/ui/Popover.vue'
@@ -118,6 +120,53 @@ const remindLabel = computed(() => {
   const d = new Date(at)
   return `${fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}, ${fmtTime(d)}`
 })
+// Its drawing: made the first time it's opened; its picture shows here and
+// on the card.
+const drawingId = ref('')
+async function openDrawing() {
+  const n = note.value
+  if (!n) return
+  if (n.drawing) {
+    drawingId.value = n.drawing.id
+    return
+  }
+  if (!props.editable) return
+  try {
+    const d = await drawingsApi.ofNote(n.id)
+    n.drawing = { id: d.id, preview: d.preview ?? '' }
+    drawingId.value = d.id
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+function drawn(d: Drawing) {
+  const n = note.value
+  if (n) n.drawing = { id: d.id, preview: d.preview ?? '' }
+}
+async function removeDrawing() {
+  const n = note.value
+  const id = drawingId.value
+  drawingId.value = ''
+  if (!n || !id) return
+  try {
+    await drawingsApi.remove(id)
+    n.drawing = undefined
+    toast.info(t('draw.removed'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+// Closing an empty drawing leaves no picture behind.
+function drawingClosed() {
+  const n = note.value
+  const id = drawingId.value
+  drawingId.value = ''
+  if (n?.drawing && n.drawing.id === id && !n.drawing.preview && props.editable) {
+    void drawingsApi.remove(id).catch(() => {})
+    n.drawing = undefined
+  }
+}
+
 async function remind(at: string) {
   menu.value = ''
   const n = note.value
@@ -177,6 +226,9 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
           compact
           @change="(f) => (note!.attachments = f)"
         />
+        <button v-if="note.drawing?.preview" class="drawing-pic" data-testid="note-drawing" :aria-label="t('draw.noteTitle')" @click="openDrawing">
+          <img :src="previewSrc(note.drawing.preview)" alt="" draggable="false" />
+        </button>
         <p v-if="note.remind_at" class="remind-chip" data-testid="note-reminder">
           <BellRing class="h-3.5 w-3.5" />{{ t('remind.at', { when: remindLabel }) }}
           <button v-if="editable" class="ml-0.5 opacity-70 hover:opacity-100" :aria-label="t('remind.remove')" :title="t('remind.remove')" @click="remind('')"><X class="h-3.5 w-3.5" /></button>
@@ -203,6 +255,9 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
             <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
             <SquareCheck v-else class="h-[18px] w-[18px]" />
           </button>
+ <button class="tb" :class="{ on: !!note.drawing }" :aria-label="t('draw.onNote')" :title="t('draw.onNote')" data-testid="note-draw" @click="openDrawing">
+            <Brush class="h-[18px] w-[18px]" />
+          </button>
           <button ref="remindBtn" class="tb" :class="{ on: menu === 'remind' || !!note.remind_at }" :aria-label="t('remind.title')" :title="t('remind.title')" data-testid="note-remind" @click="menu = menu === 'remind' ? '' : 'remind'">
             <BellPlus class="h-[18px] w-[18px]" />
           </button>
@@ -222,6 +277,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
  <Popover v-if="menu === 'remind'" :anchor="remindBtn" placement="top-start" :width="270" @close="menu = ''">
         <RemindPicker :current="note.remind_at" @pick="remind" />
       </Popover>
+      <DrawingSheet :open="!!drawingId" :id="drawingId" :title="draft.title" :readonly="!editable" @close="drawingClosed" @saved="drawn" @remove="removeDrawing" />
       <Popover v-if="menu === 'more'" :anchor="moreBtn" placement="top-start" :width="210" @close="menu = ''">
         <button class="menu-item" @click="act('move')"><FolderInput class="h-4 w-4 text-text-2" />{{ t('notes.mine.moveTo') }}</button>
         <button class="menu-item" @click="act('page')"><FileText class="h-4 w-4 text-text-2" />{{ t('notes.toPage') }}</button>
@@ -235,6 +291,21 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
 </template>
 
 <style scoped>
+.drawing-pic {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.08);
+}
+.drawing-pic img {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  margin: 0 auto;
+}
 .remind-chip {
   display: inline-flex;
   align-items: center;

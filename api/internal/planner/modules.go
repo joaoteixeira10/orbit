@@ -7,14 +7,15 @@ package planner
 
 // Module keys. A workspace turns on any subset, in its own order.
 const (
-	ModHome     = "home"     // overview: today, upcoming, recent pages
-	ModPages    = "pages"    // block-editor pages
-	ModTasks    = "tasks"    // task lists (Reminders-style)
-	ModBoard    = "board"    // the same tasks as kanban boards
-	ModCalendar = "calendar" // events, due tasks, subscribed calendars
-	ModNotes    = "notes"    // quick notes (sticky notes)
-	ModTimeline = "timeline" // the tasks on a timeline (Gantt)
-	ModCharts   = "charts"   // the tasks in charts (status, lists, priority, people)
+	ModHome     = "home"        // overview: today, upcoming, recent pages
+	ModPages    = "pages"       // block-editor pages
+	ModTasks    = "tasks"       // task lists (Reminders-style)
+	ModBoard    = "board"       // the same tasks as kanban boards
+	ModCalendar = "calendar"    // events, due tasks, subscribed calendars
+	ModNotes    = "notes"       // quick notes (sticky notes)
+	ModTimeline = "timeline"    // the tasks on a timeline (Gantt)
+	ModCharts   = "charts"      // the tasks in charts (status, lists, priority, people)
+	ModBoards   = "whiteboards" // Excalidraw whiteboards
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -37,6 +38,7 @@ var Catalog = []Module{
 	{Key: ModCalendar, Icon: "calendar"},
 	{Key: ModCourses, Icon: "graduation-cap"},
 	{Key: ModGrades, Icon: "award"},
+	{Key: ModBoards, Icon: "brush"},
 	{Key: "habits", Icon: "repeat", Soon: true},
 	{Key: "journal", Icon: "notebook-pen", Soon: true},
 	{Key: "goals", Icon: "target", Soon: true},

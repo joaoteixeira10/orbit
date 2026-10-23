@@ -121,7 +121,7 @@ func (h *Handlers) home(c *gin.Context) {
 
 // searchHit is one search result.
 type searchHit struct {
-	Kind        string     `json:"kind"` // page | task | event | note
+	Kind        string     `json:"kind"` // page | task | event | note | drawing
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
 	Title       string     `json:"title"`
@@ -250,6 +250,25 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			notes[r.ID] = r
 		}
 	}
+	drawings := map[string]models.Drawing{}
+	if l := ids["drawing"]; len(l) > 0 {
+		var rows []models.Drawing
+		h.db.Select("id", "workspace_id", "note_id", "title", "text").Where("id IN ?", l).Find(&rows)
+		var noteIDs []string
+		for _, r := range rows {
+			drawings[r.ID] = r
+			if r.NoteID != "" {
+				noteIDs = append(noteIDs, r.NoteID)
+			}
+		}
+		if len(noteIDs) > 0 {
+			var ns []models.Note
+			h.db.Where("id IN ?", noteIDs).Find(&ns)
+			for _, r := range ns {
+				notes[r.ID] = r
+			}
+		}
+	}
 	if l := ids["event"]; len(l) > 0 {
 		var rows []models.Event
 		h.db.Where("id IN ?", l).Find(&rows)
@@ -257,12 +276,15 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			events[r.ID] = r
 		}
 	}
-	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8}
+	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8}
 	seen := map[string]bool{}
 	for _, x := range hits {
 		kind := x.Kind
 		if kind == "comment" {
 			kind = "task" // a comment opens its task
+		}
+		if d, ok := drawings[x.Ref]; ok && kind == "drawing" && d.NoteID != "" {
+			kind, x.Ref = "note", d.NoteID // a note's drawing opens the note
 		}
 		if seen[kind+x.Ref] || caps[kind] == 0 {
 			continue
@@ -293,6 +315,12 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			}
 			s := e.StartsAt
 			out = append(out, searchHit{Kind: "event", ID: e.ID, WorkspaceID: e.WorkspaceID, Title: e.Title, Start: &s})
+		case "drawing":
+			d, ok := drawings[x.Ref]
+			if !ok {
+				continue
+			}
+			out = append(out, searchHit{Kind: "drawing", ID: d.ID, WorkspaceID: d.WorkspaceID, Title: d.Title, Snippet: planner.Snippet(d.Text, q, 100)})
 		}
 		seen[kind+x.Ref] = true
 		caps[kind]--

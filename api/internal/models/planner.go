@@ -172,6 +172,29 @@ type Note struct {
 	RemindBy string     `gorm:"size:36" json:"-"`
 }
 
+// ---- Drawings ---------------------------------------------------------------
+
+// Drawing is an Excalidraw scene: a whiteboard of a workspace, or — with
+// NoteID — the drawing on a note (personal notes' drawings have no
+// WorkspaceID and their note's OwnerID). Scene is Excalidraw's JSON
+// (elements, app state, embedded files); Preview an SVG of it for cards
+// (shown as an image, so it runs nothing); Text its words, for search.
+// Version counts saves, as on pages (a stale save is refused).
+type Drawing struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;default:'';index" json:"workspace_id"`
+	OwnerID     string  `gorm:"size:36;not null;default:'';index" json:"owner_id,omitempty"`
+	NoteID      string  `gorm:"size:36;not null;default:'';index" json:"note_id,omitempty"`
+	Title       string  `gorm:"size:300" json:"title"`
+	Scene       string  `gorm:"type:text" json:"scene,omitempty"`
+	Preview     string  `gorm:"type:text" json:"preview,omitempty"`
+	Text        string  `gorm:"type:text" json:"-"`
+	Version     int     `gorm:"not null;default:1" json:"version"`
+	Rank        float64 `gorm:"not null;default:0" json:"rank"`
+	CreatedBy   string  `gorm:"size:36" json:"created_by"`
+	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+}
+
 // ---- Calendar ---------------------------------------------------------------
 
 // Event is a calendar entry. StartsAt / EndsAt are instants (UTC); an

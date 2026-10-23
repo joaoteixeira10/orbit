@@ -722,6 +722,65 @@ test('CalDAV: a workspace calendar syncs both ways with a calendar on a CalDAV s
   }).toBe('Daily standup,Dentist (moved)')
 })
 
+test('whiteboards and a note\'s drawing (Excalidraw): drawn, saved, shown', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio', kind: 'custom', modules: ['home', 'notes', 'whiteboards'], starter: false } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto(`/w/${ws.id}/whiteboards`)
+  await page.getByTestId('new-whiteboard').first().click()
+  await page.waitForURL(/\/whiteboards\/[^/]+$/)
+  const id = page.url().split('/').pop()!
+  const canvas = page.locator('.excalidraw canvas.interactive')
+  await expect(canvas).toBeVisible({ timeout: 20000 })
+  await page.getByTestId('whiteboard-title').fill('Floor plan')
+  await page.getByTestId('whiteboard-title').press('Enter')
+
+  // A rectangle: R, then drag.
+  const box = (await canvas.boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 40)
+  await page.keyboard.press('r')
+  await page.mouse.move(box.x + 300, box.y + 200)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 520, box.y + 360, { steps: 8 })
+  await page.mouse.up()
+  await expect(page.getByTestId('draw-state')).toContainText('Saved', { timeout: 10000 })
+  const d = await (await request.get(`/api/v1/drawings/${id}`, { headers: H })).json()
+  expect(d.title).toBe('Floor plan')
+  expect(d.scene).toContain('"rectangle"')
+  expect(d.preview.startsWith('<svg')).toBeTruthy()
+  await page.screenshot({ path: 'test-results/whiteboard.png' })
+
+  // Back in the list: its card, with the picture.
+  await page.getByTestId('whiteboard-back').click()
+  await expect(page.getByTestId('whiteboard-card').filter({ hasText: 'Floor plan' }).locator('img')).toBeVisible()
+
+  // A note's drawing: its picture shows in the note and on the card.
+  const note = await (await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Sketch' } })).json()
+  await page.goto(`/w/${ws.id}/notes?note=${note.id}`)
+  await page.getByTestId('note-draw').click()
+  const sheet = page.getByTestId('drawing-sheet')
+  const c2 = sheet.locator('.excalidraw canvas.interactive')
+  await expect(c2).toBeVisible({ timeout: 20000 })
+  const b2 = (await c2.boundingBox())!
+  await page.mouse.click(b2.x + b2.width / 2, b2.y + b2.height - 40)
+  await page.keyboard.press('o')
+  await page.mouse.move(b2.x + 250, b2.y + 150)
+  await page.mouse.down()
+  await page.mouse.move(b2.x + 450, b2.y + 300, { steps: 8 })
+  await page.mouse.up()
+  await expect(sheet.getByTestId('draw-state')).toContainText('Saved', { timeout: 10000 })
+  await page.screenshot({ path: 'test-results/note-drawing.png' })
+  await sheet.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByTestId('note-drawing')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('drawing-sheet')).toHaveCount(0)
+  await expect(page.getByTestId('card-drawing')).toBeVisible()
+  await page.screenshot({ path: 'test-results/note-card.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

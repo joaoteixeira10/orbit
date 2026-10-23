@@ -447,6 +447,36 @@ definitions:
     required:
     - name
     type: object
+  api.drawingRequest:
+    properties:
+      preview:
+        type: string
+      scene:
+        type: string
+      text:
+        type: string
+      title:
+        maxLength: 300
+        type: string
+      version:
+        description: 'the version saved over (0: don''t check)'
+        type: integer
+    type: object
+  api.drawingSummary:
+    properties:
+      id:
+        type: string
+      preview:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
+    type: object
   api.eventRequest:
     properties:
       all_day:
@@ -1012,6 +1042,13 @@ definitions:
       muted:
         type: boolean
     type: object
+  api.noteDrawing:
+    properties:
+      id:
+        type: string
+      preview:
+        type: string
+    type: object
   api.noteItem:
     properties:
       done:
@@ -1063,6 +1100,10 @@ definitions:
         type: string
       created_by:
         type: string
+      drawing:
+        allOf:
+        - $ref: '#/definitions/api.noteDrawing'
+        description: Its drawing (an SVG preview for the card), in lists.
       id:
         type: string
       items:
@@ -1436,7 +1477,7 @@ definitions:
       id:
         type: string
       kind:
-        description: page | task | event | note
+        description: page | task | event | note | drawing
         type: string
       list_id:
         type: string
@@ -2221,6 +2262,35 @@ definitions:
       workspace_id:
         type: string
     type: object
+  models.Drawing:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      note_id:
+        type: string
+      owner_id:
+        type: string
+      preview:
+        type: string
+      rank:
+        type: number
+      scene:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
+      workspace_id:
+        type: string
+    type: object
   models.Grade:
     properties:
       course_id:
@@ -2614,6 +2684,8 @@ definitions:
       comments:
         type: integer
       courses:
+        type: integer
+      drawings:
         type: integer
       events:
         type: integer
@@ -3310,6 +3382,72 @@ paths:
       summary: A course's notes page
       tags:
       - school
+  /drawings/{id}:
+    delete:
+      parameters:
+      - description: Drawing id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a drawing
+      tags:
+      - drawings
+    get:
+      parameters:
+      - description: Drawing id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Drawing'
+      security:
+      - BearerAuth: []
+      summary: A drawing
+      tags:
+      - drawings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Drawing id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changed
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.drawingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Drawing'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.Drawing'
+      security:
+      - BearerAuth: []
+      summary: Save a drawing
+      tags:
+      - drawings
   /events/{id}:
     delete:
       parameters:
@@ -4723,6 +4861,26 @@ paths:
       summary: Update a quick note
       tags:
       - notes
+  /notes/{id}/drawing:
+    post:
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Drawing'
+      security:
+      - BearerAuth: []
+      summary: A note's drawing
+      tags:
+      - drawings
   /notes/{id}/move:
     post:
       consumes:
@@ -6255,6 +6413,55 @@ paths:
       summary: Create a course
       tags:
       - school
+  /workspaces/{ws}/drawings:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.drawingSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's whiteboards
+      tags:
+      - drawings
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Title (and scene)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.drawingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Drawing'
+      security:
+      - BearerAuth: []
+      summary: New whiteboard
+      tags:
+      - drawings
   /workspaces/{ws}/events:
     post:
       consumes:

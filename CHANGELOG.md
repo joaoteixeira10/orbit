@@ -111,6 +111,11 @@ merge, not at release time.
   workspace its events, tasks and each subscription); on the right the
   agenda of the next two weeks and the open tasks, which drag onto a day or
   an hour to plan them.
+- **Whiteboards** (a new module) and **drawings on notes**, with Excalidraw:
+  hand-drawn shapes, arrows, text and images; saved as you draw (a stale
+  save never overwrites a newer one), shown as pictures on cards, found by
+  their words, carried by workspace export / import. Excalidraw (and React)
+  load only when a drawing opens; its fonts come from Orbit itself.
 - **Snooze** a notification (in the bell, or the Snooze button on a push):
   it comes back unread at that time.
 - **Quiet hours**: nothing reaches devices or channels between two times —

@@ -1,5 +1,5 @@
-// Package search is Orbit's full-text index: pages, tasks, notes, events and
-// task comments in one SQLite FTS5 table, ranked (bm25), accent-insensitive
+// Package search is Orbit's full-text index: pages, tasks, notes, events,
+// task comments and drawings in one SQLite FTS5 table, ranked (bm25), accent-insensitive
 // ("acao" finds "ação") and by word prefix ("rep" finds "report"). SQLite
 // triggers keep it in step with every write — the app's, the git and
 // calendar syncs', an import's — so nothing has to remember to index.
@@ -18,7 +18,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "1"
+const version = "2"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -31,6 +31,9 @@ var sources = []struct {
 	{"notes", "note", "@.id", "@.workspace_id", "@.owner_id", "@.title", "@.plain_text"},
 	{"events", "event", "@.id", "@.workspace_id", "''", "@.title", "coalesce(@.location,'') || ' ' || coalesce(@.notes,'')"},
 	{"task_comments", "comment", "@.task_id", "@.workspace_id", "''", "''", "@.body"},
+	// A whiteboard by its title and words; a note's drawing by its words
+	// (the hit opens the note).
+	{"drawings", "drawing", "@.id", "@.workspace_id", "@.owner_id", "@.title", "@.text"},
 }
 
 var ready atomic.Bool

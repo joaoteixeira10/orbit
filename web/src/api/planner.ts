@@ -193,6 +193,7 @@ export interface Note {
   updated_at: string
   attachments?: Upload[] // files on the note (in lists)
   remind_at?: string | null // a one-off reminder
+  drawing?: { id: string; preview: string } // its drawing (Excalidraw)
 }
 export interface NoteInput {
   title?: string
@@ -305,7 +306,7 @@ export interface Home {
   exams: Task[] // the next ones (60 days), soonest first
 }
 export interface SearchHit {
-  kind: 'page' | 'task' | 'event' | 'note'
+  kind: 'page' | 'task' | 'event' | 'note' | 'drawing'
   id: string
   workspace_id: string
   title: string

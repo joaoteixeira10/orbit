@@ -32,9 +32,10 @@ What Orbit could do next, roughly in the order it would pay off. The
 - Quiet hours by day of the week (weekends quiet longer); a snooze on iOS
   pushes (Safari shows no buttons).
 
-## Notes
+## Notes and whiteboards
 
-- Drawings on a note (images and files are there).
+- Drawing together live on a whiteboard (today: saves don't overwrite each
+  other, and others' saves show when you aren't drawing).
 
 ## Calendar
 

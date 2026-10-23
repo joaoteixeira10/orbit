@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellRing } from 'lucide-vue-next'
 import { fmtDate, fmtTime } from '@/lib/dates'
+import { previewSrc } from '@/components/draw/drawing'
 import { uploadBlobUrl } from '@/lib/uploads'
 import Popover from '@/components/ui/Popover.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
@@ -99,6 +100,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     </button>
 
     <img v-if="cover" :src="cover" alt="" class="n-cover" />
+    <img v-if="note.drawing?.preview" :src="previewSrc(note.drawing.preview)" alt="" class="n-drawing" data-testid="card-drawing" draggable="false" />
     <h3 v-if="note.title" class="n-title" :class="{ 'pr-7': editable }">{{ note.title }}</h3>
 
     <div v-if="!note.checklist && note.body" ref="bodyEl" class="n-body" :class="{ clamped, big: !note.title && note.body.length < 80 }"><template v-if="answers.size"><template v-for="(l, i) in bodyLines" :key="i">{{ l }}<b v-if="answers.get(i)" class="n-calc">{{ /\s$/.test(l) ? '' : ' ' }}{{ answers.get(i) }}</b>{{ i < bodyLines.length - 1 ? '\n' : '' }}</template></template><template v-else>{{ note.body }}</template></div>
@@ -154,6 +156,15 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
 </template>
 
 <style scoped>
+.n-drawing {
+  display: block;
+  width: calc(100% + 24px);
+  max-height: 180px;
+  margin: -2px -12px 8px;
+  padding: 8px;
+  object-fit: contain;
+  background: #fff;
+}
 .n-cover {
   display: block;
   width: calc(100% + 32px);

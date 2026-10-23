@@ -10,6 +10,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // decode unmarshals a response body into v, failing the test on bad JSON.
@@ -32,11 +33,18 @@ func expect(t *testing.T, w *httptest.ResponseRecorder, code int, what string) {
 // (alice and bob, created with the default member role).
 func plannerSetup(t *testing.T) (r *gin.Engine, admin, alice, bob string) {
 	t.Helper()
-	r, _ = newTestRouterDB(t, false)
+	r, _, admin, alice, bob = plannerSetupDB(t)
+	return
+}
+
+// plannerSetupDB is plannerSetup with the database.
+func plannerSetupDB(t *testing.T) (r *gin.Engine, db *gorm.DB, admin, alice, bob string) {
+	t.Helper()
+	r, db = newTestRouterDB(t, false)
 	admin = loginTok(t, r, "admin", "adminpass")
 	createUserVia(t, r, admin, `{"username":"alice","email":"alice@example.org","password":"alicepassword"}`)
 	createUserVia(t, r, admin, `{"username":"bob","password":"bobpassword"}`)
-	return r, admin, loginTok(t, r, "alice", "alicepassword"), loginTok(t, r, "bob", "bobpassword")
+	return r, db, admin, loginTok(t, r, "alice", "alicepassword"), loginTok(t, r, "bob", "bobpassword")
 }
 
 type wsResp struct {

@@ -502,6 +502,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.GitLink{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Page{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Note{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Drawing{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Notification{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceInvite{}).Error },
 		func() error { return deleteCourses(tx, "workspace_id = ?", wsID) },

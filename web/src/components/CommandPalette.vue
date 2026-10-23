@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen } from 'lucide-vue-next'
+import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush } from 'lucide-vue-next'
 import WsIcon from './ui/WsIcon.vue'
 import { plannerApi, pagesApi, type SearchHit } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -103,6 +103,8 @@ const results = computed<Item[]>(() =>
       const to = h.workspace_id ? { name: 'ws-notes', params: { ws: h.workspace_id }, query: { note: h.id } } : { name: 'my-notes', query: { note: h.id } }
       return { key: 'n-' + h.id, label: h.title || h.snippet || '', sub: h.title && h.snippet ? `${at} · ${h.snippet}` : at, icon: StickyNote, run: () => router.push(to) }
     }
+    if (h.kind === 'drawing')
+      return { key: 'd-' + h.id, label: h.title || t('draw.untitled'), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: Brush, run: () => router.push({ name: 'ws-whiteboard', params: { ws: h.workspace_id, id: h.id } }) }
     return { key: 'e-' + h.id, label: h.title, sub: [where, h.start ? fmtDate(new Date(h.start), { day: 'numeric', month: 'short', year: 'numeric' }) : ''].filter(Boolean).join(' · '), icon: CalendarDays, run: () => router.push({ name: 'ws-calendar', params: { ws: h.workspace_id }, query: { date: h.start?.slice(0, 10) } }) }
   }),
 )

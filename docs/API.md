@@ -93,6 +93,13 @@ curl -s "${auth[@]}" -X POST $ORBIT/api/v1/workspaces/$WS/pages -d '{
 curl -s "${auth[@]}" -o pages.zip "$ORBIT/api/v1/workspaces/$WS/export"
 ```
 
+**Drawings** (Excalidraw): `GET/POST /workspaces/{ws}/drawings` lists /
+makes whiteboards; `GET/PUT/DELETE /drawings/{id}` — a `PUT` carries the
+`version` it changes (a stale one answers `409` with the newer drawing) and
+any of `title`, `scene` (Excalidraw JSON, images included, up to 16 MB),
+`preview` (an SVG) and `text` (its words, for search). `POST
+/notes/{id}/drawing` returns a note's drawing, made the first time.
+
 **Notifications.** `POST /me/notifications/{id}/snooze` with `{until}` (RFC
 3339, within a month) or `{minutes}` puts one off; it comes back unread and
 is sent again. Quiet hours are prefs (`PUT /me/prefs`: `quiet_from`,

@@ -41,6 +41,13 @@ type noteResponse struct {
 	Items []noteItem `json:"items"`
 	// Files on the note (images show on its card), in lists.
 	Attachments []uploadResponse `json:"attachments,omitempty"`
+	// Its drawing (an SVG preview for the card), in lists.
+	Drawing *noteDrawing `json:"drawing,omitempty"`
+}
+
+type noteDrawing struct {
+	ID      string `json:"id"`
+	Preview string `json:"preview"`
 }
 
 // withAttachments fills in the files of listed notes, in one query.
@@ -57,6 +64,11 @@ func (h *Handlers) withAttachments(out []noteResponse) []noteResponse {
 	h.db.Where("target = ? AND target_id IN ?", uploads.Note, ids).Order("created_at").Find(&files)
 	for _, f := range files {
 		out[at[f.TargetID]].Attachments = append(out[at[f.TargetID]].Attachments, toUploadResponse(f))
+	}
+	var drawings []models.Drawing
+	h.db.Select("id", "note_id", "preview").Where("note_id IN ?", ids).Find(&drawings)
+	for _, d := range drawings {
+		out[at[d.NoteID]].Drawing = &noteDrawing{ID: d.ID, Preview: d.Preview}
 	}
 	return out
 }
@@ -126,8 +138,13 @@ func itemsToText(items []noteItem) string {
 // noteAccess loads the :id note: a workspace's note follows its roles; a
 // personal note is its owner's alone (anyone else gets 404).
 func (h *Handlers) noteAccess(c *gin.Context, need string) (models.Note, bool) {
+	return h.noteAccessID(c, c.Param("id"), need)
+}
+
+// noteAccessID is noteAccess for a note named otherwise (a drawing's).
+func (h *Handlers) noteAccessID(c *gin.Context, id, need string) (models.Note, bool) {
 	var n models.Note
-	if err := h.db.First(&n, "id = ?", c.Param("id")).Error; err != nil {
+	if err := h.db.First(&n, "id = ?", id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
 		return n, false
 	}
@@ -414,6 +431,7 @@ func (h *Handlers) deleteNote(c *gin.Context) {
 		return
 	}
 	_ = uploads.DeleteFor(h.db, uploads.Note, []string{n.ID})
+	h.db.Where("note_id = ?", n.ID).Delete(&models.Drawing{})
 	if err := h.db.Delete(&models.Note{}, "id = ?", n.ID).Error; err != nil {
 		h.internalError(c, err, "could not delete the note")
 		return
@@ -534,6 +552,8 @@ func (h *Handlers) moveNote(c *gin.Context) {
 		moved["owner_id"] = n.OwnerID
 	}
 	h.db.Model(&models.Upload{}).Where("target = ? AND target_id = ?", uploads.Note, n.ID).Updates(moved)
+	// Its drawing follows (a personal one is its owner's).
+	h.db.Model(&models.Drawing{}).Where("note_id = ?", n.ID).Updates(map[string]any{"workspace_id": n.WorkspaceID, "owner_id": n.OwnerID})
 	h.publishNotes(c, from)
 	h.publishNotes(c, n)
 	if target.ID != "" {

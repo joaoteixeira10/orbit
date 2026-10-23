@@ -1099,6 +1099,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/drawings/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "A drawing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Drawing id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "Save a drawing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Drawing id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changed",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.drawingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "Delete a drawing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Drawing id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/events/{id}": {
             "get": {
                 "security": [
@@ -3417,6 +3524,39 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/notes/{id}/drawing": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "A note's drawing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Note id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
                     }
                 }
             }
@@ -5953,6 +6093,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/drawings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "A workspace's whiteboards",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.drawingSummary"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "New whiteboard",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Title (and scene)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.drawingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/events": {
             "post": {
                 "security": [
@@ -7589,6 +7808,51 @@ const docTemplate = `{
                 }
             }
         },
+        "api.drawingRequest": {
+            "type": "object",
+            "properties": {
+                "preview": {
+                    "type": "string"
+                },
+                "scene": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "version": {
+                    "description": "the version saved over (0: don't check)",
+                    "type": "integer"
+                }
+            }
+        },
+        "api.drawingSummary": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "preview": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.eventRequest": {
             "type": "object",
             "properties": {
@@ -8401,6 +8665,17 @@ const docTemplate = `{
                 }
             }
         },
+        "api.noteDrawing": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "preview": {
+                    "type": "string"
+                }
+            }
+        },
         "api.noteItem": {
             "type": "object",
             "properties": {
@@ -8472,6 +8747,14 @@ const docTemplate = `{
                 },
                 "created_by": {
                     "type": "string"
+                },
+                "drawing": {
+                    "description": "Its drawing (an SVG preview for the card), in lists.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.noteDrawing"
+                        }
+                    ]
                 },
                 "id": {
                     "type": "string"
@@ -9012,7 +9295,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "description": "page | task | event | note",
+                    "description": "page | task | event | note | drawing",
                     "type": "string"
                 },
                 "list_id": {
@@ -10134,6 +10417,50 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Drawing": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "preview": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "scene": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Grade": {
             "type": "object",
             "properties": {
@@ -10659,6 +10986,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "courses": {
+                    "type": "integer"
+                },
+                "drawings": {
                     "type": "integer"
                 },
                 "events": {

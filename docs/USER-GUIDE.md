@@ -22,11 +22,12 @@ the [API](API.md).
 11. [Calendar](#11-calendar)
 12. [Courses](#12-courses)
 13. [Grades](#13-grades)
-14. [Notifications](#14-notifications)
-15. [Your settings](#15-your-settings)
-16. [Administration](#16-administration)
-17. [Owner controls](#17-owner-controls)
-18. [On a phone](#18-on-a-phone)
+14. [Whiteboards](#14-whiteboards)
+15. [Notifications](#15-notifications)
+16. [Your settings](#16-your-settings)
+17. [Administration](#17-administration)
+18. [Owner controls](#18-owner-controls)
+19. [On a phone](#19-on-a-phone)
 
 ---
 
@@ -336,6 +337,10 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
   **Delete** (with **Undo** for a few seconds).
 - Click a card to open it larger; it saves as you type. Emptying a note and
   closing it deletes it.
+- **Draw** (🖌 in an open note): a drawing on the note — Excalidraw, nearly the
+  whole window (see [Whiteboards](#14-whiteboards)); **Done** closes it, and
+  its picture shows in the note and on its card (click it to draw more).
+  **Remove the drawing** takes it off.
 - **Remind me** (🔔+ in an open note): later today, this evening, tomorrow at
   9, next week, or a date and time. You get a reminder then (in the bell, on
   your devices); the note shows when, and the card too. ✕ takes it off. In a
@@ -723,7 +728,28 @@ included, don't see them. Viewers keep their own too.
 - **Marks out of** — 20 (Portugal), 100, 10 or 5. The workspace's owners set
   it; averages and goals follow.
 
-## 14. Notifications
+## 14. Whiteboards
+
+**Whiteboards** (turn the module on in Workspace settings → Modules) are
+drawings you make by hand, as on paper or a real whiteboard: sketches,
+floor plans, diagrams, mind maps. They use **Excalidraw**.
+
+- **New whiteboard** opens an empty one, as big as the window; name it at the
+  top. The toolbar has shapes (rectangle, diamond, ellipse), arrows and
+  lines, a pen, text, images and the eraser — each with its key (R, D, O, A,
+  L, P, T, E); the panel on the left sets colours, line width, style and
+  roughness. Scroll or pinch to zoom; hold Space and drag to move around.
+- It **saves itself** a moment after each change (*Saving… / Saved* at the
+  bottom). If someone else saved it meanwhile, theirs wins and you're told;
+  what others save shows by itself when you aren't drawing.
+- The list shows each one's picture; `⋯` → **Rename** or **Delete**. ☰ →
+  **Export image** saves it as PNG or SVG.
+- Search (⌘K) finds a whiteboard by its name and the words written on it.
+- Viewers see whiteboards without changing them.
+
+A **drawing on a note** works the same way: see [Notes](#6-notes).
+
+## 15. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -786,7 +812,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 15. Your settings
+## 16. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -824,7 +850,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 16. Administration
+## 17. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -919,7 +945,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 17. Owner controls
+## 18. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1057,7 +1083,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 18. On a phone
+## 19. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

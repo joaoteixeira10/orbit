@@ -371,6 +371,13 @@ user. Release mode refuses either secret under 32 characters.
   **8 MiB**; a **30 s** timeout. A failure is shown to the editors without the
   address. The scheduler refreshes each subscription at its interval (at least
   every 15 minutes, by default hourly).
+- **Drawings** (Excalidraw) are JSON stored as sent (capped at 16 MB); their
+  preview must be an SVG and is only ever shown as an image (`<img>`, where an
+  SVG runs nothing). Excalidraw and React load as their own chunk from this
+  origin, its fonts too (no CDN); the CSP allows `blob:` images for the
+  pictures drawn into a drawing. (A known advisory in KaTeX, which Excalidraw
+  pulls in through its Mermaid import, only concerns math in a Mermaid
+  diagram someone pastes into their own drawing.)
 - **Git webhooks** (instant updates) post to a public endpoint per linked
   list; a post counts only if signed (HMAC-SHA256 of the body) with the
   list's secret — random, sealed, shown once when added by hand — and it

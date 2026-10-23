@@ -107,7 +107,11 @@ func New(d Deps) *gin.Engine {
 	r.Use(securityHeaders(nil))
 	// Cap request bodies.
 	// Uploads have their own, larger limit (UPLOAD_MAX_MB, in the handler).
-	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool { return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" }))
+	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool {
+		// These keep their own, larger caps (files; drawings with their images).
+		return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" ||
+			strings.HasPrefix(p, "/api/v1/drawings/") || strings.HasSuffix(p, "/drawings")
+	}))
 	r.Use(metricsMiddleware())
 
 	// Defence-in-depth brute-force throttle for credential/second-factor
@@ -274,6 +278,12 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)
 			authed.GET("/workspaces/:ws/activity", h.workspaceActivity)
 			authed.GET("/workspaces/:ws/caldav", h.getCalDAV)
+			authed.GET("/workspaces/:ws/drawings", h.listDrawings)
+			authed.POST("/workspaces/:ws/drawings", h.createDrawing)
+			authed.GET("/drawings/:id", h.getDrawing)
+			authed.PUT("/drawings/:id", h.updateDrawing)
+			authed.DELETE("/drawings/:id", h.deleteDrawing)
+			authed.POST("/notes/:id/drawing", h.noteDrawingOf)
 			authed.PUT("/workspaces/:ws/caldav", h.setCalDAV)
 			authed.DELETE("/workspaces/:ws/caldav", h.deleteCalDAV)
 			authed.POST("/workspaces/:ws/caldav/calendars", h.caldavCalendars)
@@ -456,6 +466,7 @@ func registerSPA(r *gin.Engine) {
 	// Go's built-in table has no .webmanifest; it only comes from the host's
 	// /etc/mime.types, so without this it's sniffed as text/plain on some hosts.
 	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+	_ = mime.AddExtensionType(".woff2", "font/woff2") // drawings' fonts
 	dist := webui.FS()
 	fileServer := http.FileServer(http.FS(dist))
 

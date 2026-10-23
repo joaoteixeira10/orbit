@@ -268,6 +268,23 @@ type Goal struct {
 	CreatedBy   string     `gorm:"size:36" json:"created_by"`
 }
 
+// ---- Smart lists ------------------------------------------------------------
+
+// SmartList is a saved task filter, shown with Today and Scheduled in Tasks:
+// its owner's alone, or (Shared) every member's. Filter is the filter as
+// JSON (keyword, due buckets, priorities, progress, people, tags, lists).
+type SmartList struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	OwnerID     string  `gorm:"size:36;not null;index" json:"owner_id"`
+	Name        string  `gorm:"size:100;not null" json:"name"`
+	Color       string  `gorm:"size:9" json:"color"`
+	Icon        string  `gorm:"size:64" json:"icon"`
+	Shared      bool    `gorm:"not null;default:false" json:"shared"`
+	Filter      string  `gorm:"type:text" json:"-"`
+	Rank        float64 `gorm:"not null;default:0" json:"rank"`
+}
+
 // ---- Focus ------------------------------------------------------------------
 
 // FocusSession is a stretch of focused work (a Pomodoro): Minutes planned

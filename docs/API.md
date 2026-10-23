@@ -110,6 +110,15 @@ removed.
 tasks, `achieved`); a goal answers its `tasks` and `done` counts. A task
 counts towards one with `goal_id`.
 
+**Smart lists** (saved task filters): `GET/POST /workspaces/{ws}/smart-lists`,
+`PUT/DELETE /smart-lists/{id}` (`name`, `color`, `icon`, `shared`, `filter`:
+`{q, due[], priority[], progress[], assignee[], tags[], lists[]}` — due
+buckets `overdue|today|week|next|later|none`, progress
+`notStarted|inProgress|done`, assignees user ids or `me` / `none`). The list
+is yours and the shared ones; each answers `can_edit`. Anyone in a workspace
+keeps their own; sharing takes an editor; a shared one is changed by its
+owner or the workspace's owners.
+
 **Focus timer**: `GET /me/focus` (`?ws=`) is the running session and today's;
 `POST /me/focus` `{workspace_id, task_id?, minutes}` starts one (ending the
 one running), `POST /me/focus/stop` stops it (the time so far counts). A

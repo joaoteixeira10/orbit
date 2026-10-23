@@ -7,6 +7,7 @@ import TaskRow from '@/components/tasks/TaskRow.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import ListSheet from '@/components/tasks/ListSheet.vue'
 import TaskFilter from '@/components/tasks/TaskFilter.vue'
+import SmartListSheet from '@/components/tasks/SmartListSheet.vue'
 import Popover from '@/components/ui/Popover.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -17,10 +18,11 @@ import { useSortable } from '@/lib/sortable'
 import { parseQuick } from '@/lib/quickadd'
 import { todayStr, relDay } from '@/lib/dates'
 import { tasksApi, type Member, type Task, type TaskList, type TaskInput } from '@/api/planner'
-import { useTaskFilter, dueBucket, dueEdges, DUE_BUCKETS, type DueBucket } from '@/lib/taskFilter'
+import { useTaskFilter, useTaskFilterStore, dueBucket, dueEdges, emptyFilter, matchContext, matchTask, DUE_BUCKETS, type DueBucket, type TaskFilter as Filter } from '@/lib/taskFilter'
+import type { SmartList } from '@/api/planner'
 
-// Tasks, Reminders-style: smart lists (Today, Scheduled, All, Completed) and
-// the workspace's own lists on the left; the chosen one on the right, its open
+// Tasks, Reminders-style: smart lists (Today, Scheduled, All, Completed, and
+// saved filters) and the workspace's own lists on the left; the chosen one on the right, its open
 // tasks grouped by status column (or, Planner-style, by due date, priority or
 // person), completed ones on demand, narrowed by the workspace's filter. On
 // phones the two panes are two screens.
@@ -43,6 +45,9 @@ type Smart = 'today' | 'scheduled' | 'all' | 'completed'
 const SMART: Smart[] = ['today', 'scheduled', 'all', 'completed']
 const sel = computed(() => (typeof route.params.list === 'string' ? route.params.list : ''))
 const list = computed(() => lists.value.find((l) => l.id === sel.value))
+// A saved smart list (a filter with a name), when one is open.
+const smartLists = computed(() => tasks.smartOf(ws.value))
+const saved = computed(() => smartLists.value.find((l) => l.id === sel.value))
 const narrowMq = window.matchMedia('(max-width: 767px)')
 const narrow = ref(narrowMq.matches)
 narrowMq.addEventListener('change', (e) => (narrow.value = e.matches))
@@ -51,7 +56,7 @@ narrowMq.addEventListener('change', (e) => (narrow.value = e.matches))
 const doneTasks = ref<Task[]>([]) // every completed task, for "Completed"
 async function load() {
   try {
-    await tasks.load(ws.value)
+    await Promise.all([tasks.load(ws.value), tasks.loadSmart(ws.value).catch(() => {})])
     if ((workspace.value?.member_count ?? 1) > 1) void wss.loadMembers(ws.value)
   } catch (e: any) {
     toast.error(e.message)
@@ -86,9 +91,50 @@ watch(showDone, (v) => localStorage.setItem('orbit_show_done', v ? '1' : '0'))
 // Tasks ticked a moment ago stay visible briefly, so ticking feels done.
 const justDone = ref(new Set<string>())
 
-// The workspace's filter (shared with the Board, Timeline and Charts).
+// The workspace's filter (shared with the Board, Timeline and Charts) — or,
+// in a smart list, the smart list's own, saved as it changes.
 const me = computed(() => auth.user?.id ?? '')
-const { active: filterOn, matches, clear: clearFilter } = useTaskFilter(ws, lists, me)
+const filterKey = computed(() => (saved.value ? `${ws.value}#${saved.value.id}` : ws.value))
+const { active: filterOn, matches, clear: clearFilter } = useTaskFilter(filterKey, lists, me)
+const filters = useTaskFilterStore()
+const canon = (f: Partial<Filter>) => JSON.stringify({ ...emptyFilter(), ...f })
+// Per smart list: a change waiting to be saved (or being saved), and
+// whether its server copy has been taken in yet.
+const pending = new Map<string, ReturnType<typeof setTimeout> | 'saving'>()
+const seeded = new Set<string>()
+watch(
+  () => saved.value && canon(saved.value.filter),
+  () => {
+    // The server's copy, unless a change of ours is on its way.
+    const l = saved.value
+    if (!l || pending.has(filterKey.value)) return
+    filters.byWs[filterKey.value] = JSON.parse(canon(l.filter))
+    seeded.add(filterKey.value)
+  },
+  { immediate: true },
+)
+watch(
+  () => saved.value && canon(filters.byWs[filterKey.value] ?? {}),
+  (now) => {
+    const l = saved.value
+    const key = filterKey.value
+    if (!l || !now || !l.can_edit || !seeded.has(key) || now === canon(l.filter)) return
+    const was = pending.get(key)
+    if (was && was !== 'saving') clearTimeout(was)
+    pending.set(key, setTimeout(async () => {
+      pending.set(key, 'saving')
+      try {
+        await tasks.saveSmart(ws.value, l.id, { filter: JSON.parse(now) })
+      } catch (e: any) {
+        toast.error(e.message)
+      } finally {
+        if (pending.get(key) === 'saving') pending.delete(key)
+      }
+    }, 600))
+  },
+)
+const ctxAll = computed(() => matchContext(me.value, lists.value))
+const smartCount = (l: SmartList) => open.value.filter((x) => matchTask(x, { ...emptyFilter(), ...l.filter }, ctxAll.value)).length
 const visible = (x: Task) => !x.parent_id && (!x.done || showDone.value || justDone.value.has(x.id)) && matches(x)
 
 // Grouping of a list (and of All): its natural one (status columns, or
@@ -96,7 +142,7 @@ const visible = (x: Task) => !x.parent_id && (!x.done || showDone.value || justD
 type GroupBy = 'default' | 'due' | 'priority' | 'assignee'
 const groupBy = ref<GroupBy>((localStorage.getItem('orbit_tasks_group') as GroupBy) || 'default')
 watch(groupBy, (v) => localStorage.setItem('orbit_tasks_group', v))
-const canGroup = computed(() => !!list.value || sel.value === 'all')
+const canGroup = computed(() => !!list.value || sel.value === 'all' || !!saved.value)
 const grouping = computed<GroupBy>(() => (!canGroup.value || (groupBy.value === 'assignee' && members.value.length < 2) ? 'default' : groupBy.value))
 const groupOptions = computed<GroupBy[]>(() => ['default', 'due', 'priority', ...(members.value.length > 1 ? (['assignee'] as GroupBy[]) : [])])
 const groupLabel = (g: GroupBy) => t(`tasks.group.${g === 'default' ? (list.value ? 'status' : 'list') : g}`)
@@ -143,6 +189,16 @@ const sections = computed<Section[]>(() => {
         })).filter((s) => s.tasks.length)
     }
   }
+  const byList = (preset?: TaskInput) =>
+    lists.value.map((l) => ({ key: l.id, title: l.name, color: l.color, listId: l.id, columnId: l.columns.find((c) => !c.done)?.id, preset, tasks: all.value.filter((x) => x.list_id === l.id && visible(x)).sort(byRank) })).filter((s) => s.tasks.length)
+  if (saved.value) {
+    const sl = saved.value
+    const s = byList(smartPreset(sl.filter))
+    // An empty smart list still offers a place to add a task.
+    if (s.length || !lists.value.length) return s
+    const l = (sl.filter.lists?.length ? lists.value.find((x) => sl.filter.lists.includes(x.id)) : undefined) ?? lists.value[0]
+    return [{ key: l.id, title: l.name, color: l.color, listId: l.id, columnId: l.columns.find((c) => !c.done)?.id, preset: smartPreset(sl.filter), tasks: [] }]
+  }
   if (list.value) {
     const l = list.value
     const mine = all.value.filter((x) => x.list_id === l.id && visible(x))
@@ -165,7 +221,7 @@ const sections = computed<Section[]>(() => {
       return [...groups].map(([d, ts]) => ({ key: d, title: relDay(d), overdue: d < today, tasks: ts }))
     }
     case 'all':
-      return lists.value.map((l) => ({ key: l.id, title: l.name, color: l.color, listId: l.id, columnId: l.columns.find((c) => !c.done)?.id, tasks: all.value.filter((x) => x.list_id === l.id && visible(x)).sort(byRank) })).filter((s) => s.tasks.length)
+      return byList()
     case 'completed': {
       const groups = new Map<string, Task[]>()
       for (const x of doneTasks.value.filter((x) => !x.parent_id)) {
@@ -178,7 +234,19 @@ const sections = computed<Section[]>(() => {
   return []
 })
 
+// smartPreset is what a task added in a smart list gets, so it shows there:
+// its one priority, its tags, "me" when it's for me.
+function smartPreset(f: Filter): TaskInput | undefined {
+  const p: TaskInput = {}
+  if (f.priority?.length === 1) p.priority = f.priority[0]
+  if (f.tags?.length) p.tags = [f.tags[0]]
+  const who = (f.assignee ?? []).filter((a) => a !== 'none')
+  if (who.length === 1) p.assignee_ids = [who[0] === 'me' ? me.value : who[0]]
+  return Object.keys(p).length ? p : undefined
+}
+
 const heading = computed(() => {
+  if (saved.value) return { title: saved.value.name, color: saved.value.color || '#FF9500', icon: saved.value.icon || 'star' }
   if (list.value) return { title: list.value.name, color: list.value.color, icon: list.value.icon }
   const meta: Record<Smart, { color: string; icon: string }> = {
     today: { color: '#007AFF', icon: 'calendar' }, scheduled: { color: '#FF3B30', icon: 'calendar' },
@@ -241,11 +309,14 @@ async function startAdd(key: string) {
   el?.focus()
 }
 async function commitAdd(s: Section) {
-  const q = parseQuick(draft.value)
+  const text = draft.value
+  const q = parseQuick(text)
   if (!q.title) {
     adding.value = ''
     return
   }
+  // Cleared at once: a blur while this saves mustn't add it again.
+  draft.value = ''
   const target = s.listId ? listById.value.get(s.listId) : list.value ?? lists.value[0]
   try {
     await tasks.create(ws.value, {
@@ -254,11 +325,12 @@ async function commitAdd(s: Section) {
       due: q.due ?? (sel.value === 'today' ? today : sel.value === 'scheduled' ? (/^\d{4}-\d{2}-\d{2}$/.test(s.key) && s.key >= today ? s.key : today) : undefined),
       due_time: q.due_time, priority: q.priority, tags: q.tags.length ? q.tags : undefined, repeat: q.repeat,
       ...s.preset,
-      // What was typed wins over the group's preset.
+      // What was typed wins over the group's preset (tags add up).
       ...(q.due ? { due: q.due } : {}), ...(q.priority ? { priority: q.priority } : {}),
+      ...(q.tags.length && s.preset?.tags ? { tags: [...new Set([...q.tags, ...s.preset.tags])] } : q.tags.length ? { tags: q.tags } : {}),
     })
-    draft.value = ''
   } catch (e: any) {
+    if (!draft.value) draft.value = text
     toast.error(e.message)
   }
 }
@@ -291,6 +363,21 @@ function onListSaved(l: TaskList) {
 function pick(id: string) {
   router.push({ name: 'ws-tasks', params: { ws: ws.value, list: id } })
 }
+// Smart lists (saved filters).
+const smartSheet = ref<{ open: boolean; id: string; filter?: Filter }>({ open: false, id: '' })
+const canSmart = computed(() => !auth.privileges.read_only)
+function newSmart() {
+  smartSheet.value = { open: true, id: '', filter: JSON.parse(canon(filters.of(ws.value))) }
+}
+function onSmartSaved(l: SmartList) {
+  if (smartSheet.value.id) return
+  // Made from the filter on now: that filter is the smart list's from here.
+  filters.clear(ws.value)
+  pick(l.id)
+}
+function onSmartDeleted() {
+  router.replace({ name: 'ws-tasks', params: { ws: ws.value } })
+}
 const smartIcons = { today: CalendarDays, scheduled: CalendarClock, all: Inbox, completed: CheckCircle2 }
 const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', completed: '#8E8E93' }
 </script>
@@ -309,6 +396,17 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
           <span class="mt-2 text-[14px] font-semibold text-text-2">{{ t(`tasks.smart.${k}`) }}</span>
         </button>
       </div>
+      <template v-if="smartLists.length">
+        <h2 class="title-3 mb-2 mt-6 px-1">{{ t('smartList.section') }}</h2>
+        <div class="group" data-testid="smart-lists">
+          <button v-for="l in smartLists" :key="l.id" class="group-row w-full text-left" :class="{ 'list-on': sel === l.id }" @click="pick(l.id)">
+            <WsIcon :icon="l.icon || 'star'" :color="l.color || '#FF9500'" :size="28" />
+            <span class="min-w-0 flex-1 truncate text-[15px]">{{ l.name }}</span>
+            <span v-if="l.shared" class="text-[11.5px] text-text-3">{{ t('smartList.sharedBadge') }}</span>
+            <span class="text-[15px] text-text-3">{{ smartCount(l) }}</span>
+          </button>
+        </div>
+      </template>
       <h2 class="title-3 mb-2 mt-6 px-1">{{ t('tasks.myLists') }}</h2>
       <div class="group">
         <button v-for="l in lists" :key="l.id" class="group-row w-full text-left" :class="{ 'list-on': sel === l.id }" @click="pick(l.id)">
@@ -318,7 +416,10 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         </button>
         <div v-if="!lists.length" class="group-row text-[14px] text-text-3">{{ t('tasks.noLists') }}</div>
       </div>
-      <button v-if="editable" class="btn-plain mt-2" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</button>
+      <div class="mt-2 flex flex-wrap gap-x-3">
+        <button v-if="editable" class="btn-plain" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</button>
+        <button v-if="canSmart" class="btn-plain" data-testid="smart-add" @click="newSmart"><ListFilter class="h-4 w-4" />{{ t('smartList.add') }}</button>
+      </div>
     </aside>
 
     <!-- Tasks pane -->
@@ -330,12 +431,13 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
           <button v-if="canGroup" ref="groupAnchor" class="btn btn-sm shrink-0" :aria-expanded="groupOpen" @click="groupOpen = !groupOpen">
             <Rows3 class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('tasks.groupBy') }}:</span> {{ groupLabel(grouping) }}
           </button>
-          <TaskFilter :ws="ws" :show-lists="!list" />
+          <TaskFilter v-if="!saved || saved.can_edit" :ws="ws" :fkey="filterKey" :show-lists="!list" :can-save="!saved && canSmart" @save="newSmart" />
         </template>
         <button v-if="sel !== 'completed'" class="icon-btn" :title="showDone ? t('tasks.hideDone') : t('tasks.showDone')" @click="showDone = !showDone">
           <component :is="showDone ? EyeOff : Eye" class="h-[18px] w-[18px]" />
         </button>
         <button v-if="list && editable" class="icon-btn" :title="t('tasks.editList')" @click="listSheet = { open: true, id: list.id }"><Pencil class="h-[17px] w-[17px]" /></button>
+        <button v-if="saved" class="icon-btn" :title="t('smartList.edit')" data-testid="smart-edit" @click="smartSheet = { open: true, id: saved.id }"><Pencil class="h-[17px] w-[17px]" /></button>
       </header>
       <div class="mb-5 flex items-baseline gap-3">
         <h1 class="large-title min-w-0 flex-1 truncate" :style="{ color: heading.color }">{{ heading.title }}</h1>
@@ -423,6 +525,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
 
     <TaskDetailSheet :open="!!openTask" :ws="ws" :task-id="openTask" @close="closeTask" />
     <ListSheet :open="listSheet.open" :ws="ws" :list-id="listSheet.id" @close="listSheet.open = false" @saved="onListSaved" />
+    <SmartListSheet :open="smartSheet.open" :ws="ws" :id="smartSheet.id || undefined" :filter="smartSheet.filter" @close="smartSheet.open = false" @saved="onSmartSaved" @deleted="onSmartDeleted" />
   </div>
 </template>
 

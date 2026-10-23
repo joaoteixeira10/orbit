@@ -473,6 +473,21 @@ are "any of"; kinds combine. A workspace has one filter, kept in your browser
 and shared by the four views; the badge shows how many kinds are on and ✕
 clears it.
 
+**Smart lists** keep a filter with a name. Set a filter, then **Save as smart
+list…** at the bottom of its popover (or **Add Smart List** under My Lists);
+give it a name, colour and icon. It shows under **Smart Lists**, next to
+Today and Scheduled, with how many open tasks match. Open it and the tasks
+that match show grouped by list (or **Group by** as usual); the **Filter**
+button now changes the smart list itself, saved as you go, so it's the same
+on your other devices. A task added in a smart list gets its tag, its one
+priority and its one person, so it shows there. The pencil renames it,
+changes its look, or deletes it (the tasks stay).
+
+A smart list is yours alone unless you turn on **Share with the workspace**
+(editors and owners can): then every member sees it, and you and the
+workspace's owners can change it. If you leave a workspace, your own smart
+lists go; shared ones stay. They travel with a workspace's export.
+
 **Start date.** Besides its due date a task can have a **Start date** (in its
 details): when work on it begins. Lists then show it as a span (*Mon –
 Friday*), and the Timeline draws a bar from start to due. A start after the

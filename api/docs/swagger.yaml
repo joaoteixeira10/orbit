@@ -1,5 +1,38 @@
 basePath: /api/v1
 definitions:
+  api.SmartFilter:
+    properties:
+      assignee:
+        description: user ids, "me", "none"
+        items:
+          type: string
+        type: array
+      due:
+        description: overdue, today, week, next, later, none
+        items:
+          type: string
+        type: array
+      lists:
+        items:
+          type: string
+        type: array
+      priority:
+        description: 0 none … 3 high
+        items:
+          type: integer
+        type: array
+      progress:
+        description: notStarted, inProgress, done
+        items:
+          type: string
+        type: array
+      q:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
   api.activityLine:
     properties:
       actor_avatar:
@@ -1733,6 +1766,48 @@ definitions:
     required:
     - end
     - start
+    type: object
+  api.smartListRequest:
+    properties:
+      color:
+        type: string
+      filter:
+        $ref: '#/definitions/api.SmartFilter'
+      icon:
+        maxLength: 64
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      shared:
+        type: boolean
+    type: object
+  api.smartListResponse:
+    properties:
+      can_edit:
+        type: boolean
+      color:
+        type: string
+      created_at:
+        type: string
+      filter:
+        $ref: '#/definitions/api.SmartFilter'
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      owner_id:
+        type: string
+      rank:
+        type: number
+      shared:
+        type: boolean
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
     type: object
   api.snoozeRequest:
     properties:
@@ -6058,6 +6133,49 @@ paths:
       summary: Update settings/branding
       tags:
       - settings
+  /smart-lists/{id}:
+    delete:
+      parameters:
+      - description: Smart list id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a smart list
+      tags:
+      - smart lists
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Smart list id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.smartListRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.smartListResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a smart list
+      tags:
+      - smart lists
   /subscriptions/{id}:
     delete:
       parameters:
@@ -7758,6 +7876,55 @@ paths:
       summary: Create a page
       tags:
       - pages
+  /workspaces/{ws}/smart-lists:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.smartListResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's smart lists (yours and the shared ones)
+      tags:
+      - smart lists
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The smart list
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.smartListRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.smartListResponse'
+      security:
+      - BearerAuth: []
+      summary: New smart list
+      tags:
+      - smart lists
   /workspaces/{ws}/subscriptions:
     get:
       parameters:

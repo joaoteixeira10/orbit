@@ -1,7 +1,8 @@
 // Task filters, Microsoft Planner-style: by keyword, due date, priority,
 // progress, who it's for, tags and list. One filter per workspace, shared by
 // the Tasks, Board, Timeline and Charts views (and remembered per browser),
-// so narrowing it on one shows the same tasks on the others.
+// so narrowing it on one shows the same tasks on the others. A smart list (a
+// saved filter) has its own, under "<ws>#<id>", kept on the server instead.
 import { computed, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Task, TaskList } from '@/api/planner'
@@ -99,8 +100,9 @@ export const useTaskFilterStore = defineStore('taskFilter', {
     },
     save() {
       try {
-        // Only filters that do something are worth keeping.
-        localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(Object.entries(this.byWs).filter(([, f]) => activeCount(f)))))
+        // Only filters that do something are worth keeping (smart lists'
+        // live on the server).
+        localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(Object.entries(this.byWs).filter(([k, f]) => !k.includes('#') && activeCount(f)))))
       } catch {
         /* private mode: the filter just isn't remembered */
       }
@@ -112,12 +114,17 @@ export const useTaskFilterStore = defineStore('taskFilter', {
   },
 })
 
+// matchContext is what matching needs besides the filter.
+export function matchContext(me: string, lists: TaskList[]): MatchContext {
+  return { me, lists: new Map(lists.map((l) => [l.id, l])), edges: dueEdges() }
+}
+
 // useTaskFilter gives a view the workspace's filter and a matcher for it.
 export function useTaskFilter(ws: Ref<string>, lists: Ref<TaskList[]>, me: Ref<string>) {
   const store = useTaskFilterStore()
   const filter = computed(() => store.of(ws.value))
   const active = computed(() => activeCount(filter.value))
-  const ctx = computed<MatchContext>(() => ({ me: me.value, lists: new Map(lists.value.map((l) => [l.id, l])), edges: dueEdges() }))
+  const ctx = computed<MatchContext>(() => matchContext(me.value, lists.value))
   const matches = (t: Task) => !active.value || matchTask(t, filter.value, ctx.value)
   return { filter, active, matches, clear: () => store.clear(ws.value) }
 }

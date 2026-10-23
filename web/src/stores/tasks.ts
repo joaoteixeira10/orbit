@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { tasksApi, type Task, type TaskList, type TaskInput } from '@/api/planner'
+import { tasksApi, smartListsApi, type SmartList, type SmartListInput, type Task, type TaskList, type TaskInput } from '@/api/planner'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 import { i18n } from '@/i18n'
@@ -19,9 +19,11 @@ export const useTasksStore = defineStore('tasks', {
     lists: {} as Record<string, TaskList[]>,
     tasks: {} as Record<string, Task[]>,
     loading: {} as Record<string, boolean>,
+    smart: {} as Record<string, SmartList[]>, // saved filters, per workspace
   }),
   getters: {
     listsOf: (s) => (ws: string) => s.lists[ws] ?? [],
+    smartOf: (s) => (ws: string) => s.smart[ws] ?? [],
     tasksOf: (s) => (ws: string) => s.tasks[ws] ?? [],
     subtasksOf: (s) => (ws: string, parent: string) =>
       (s.tasks[ws] ?? []).filter((t) => t.parent_id === parent).sort((a, b) => a.rank - b.rank),
@@ -83,6 +85,22 @@ export const useTasksStore = defineStore('tasks', {
       void this.load(ws)
       return t
     },
+    async loadSmart(ws: string) {
+      this.smart[ws] = await smartListsApi.list(ws)
+    },
+    // saveSmart creates (no id) or changes a smart list.
+    async saveSmart(ws: string, id: string, body: SmartListInput) {
+      const l = id ? await smartListsApi.update(id, body) : await smartListsApi.create(ws, body)
+      const arr = (this.smart[ws] ??= [])
+      const i = arr.findIndex((x) => x.id === l.id)
+      if (i >= 0) arr[i] = l
+      else arr.push(l)
+      return l
+    },
+    async removeSmart(ws: string, id: string) {
+      await smartListsApi.remove(id)
+      this.smart[ws] = (this.smart[ws] ?? []).filter((x) => x.id !== id)
+    },
     async remove(ws: string, id: string) {
       await tasksApi.remove(id)
       this.tasks[ws] = (this.tasks[ws] ?? []).filter((t) => t.id !== id && t.parent_id !== id)
@@ -97,6 +115,7 @@ export function wireTasksLive() {
   wired = true
   const s = useTasksStore()
   onLiveEvent('ws', (e) => {
+    if (e.what === 'smart-lists' && e.origin !== CLIENT_ID && s.smart[String(e.ws)]) void s.loadSmart(String(e.ws)).catch(() => {})
     if ((e.what !== 'tasks' && e.what !== 'lists' && e.what !== 'comments') || e.origin === CLIENT_ID) return
     const ws = String(e.ws)
     if (s.tasks[ws]) void s.load(ws)

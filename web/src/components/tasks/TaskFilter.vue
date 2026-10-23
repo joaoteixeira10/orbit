@@ -9,8 +9,11 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 
 // The Filter button and its popover: keyword, due, priority, progress, who
 // it's for, tags and (where several lists show at once) lists. Every change
-// applies at once; the workspace's filter is shared by the task views.
-const props = withDefaults(defineProps<{ ws: string; showLists?: boolean }>(), { showLists: false })
+// applies at once; the workspace's filter is shared by the task views. fkey
+// is the filter it edits (a smart list's own; the workspace's by default);
+// canSave offers saving it as a smart list.
+const props = withDefaults(defineProps<{ ws: string; fkey?: string; showLists?: boolean; canSave?: boolean }>(), { fkey: '', showLists: false, canSave: false })
+const emit = defineEmits<{ save: [] }>()
 const store = useTaskFilterStore()
 const tasks = useTasksStore()
 const wss = useWorkspacesStore()
@@ -18,7 +21,8 @@ const { t } = useI18n()
 
 const anchor = ref<HTMLElement | null>(null)
 const open = ref(false)
-const f = computed(() => store.of(props.ws))
+const key = computed(() => props.fkey || props.ws)
+const f = computed(() => store.of(key.value))
 const count = computed(() => activeCount(f.value))
 
 const members = computed(() => wss.members[props.ws] ?? [])
@@ -47,7 +51,7 @@ const prios = [3, 2, 1, 0]
     <span>{{ t('filter.filter') }}</span>
     <span v-if="count" class="badge">{{ count }}</span>
   </button>
-  <button v-if="count" class="icon-btn h-7 w-7 shrink-0" :title="t('filter.clear')" :aria-label="t('filter.clear')" @click="store.clear(ws)"><X class="h-3.5 w-3.5" /></button>
+  <button v-if="count" class="icon-btn h-7 w-7 shrink-0" :title="t('filter.clear')" :aria-label="t('filter.clear')" @click="store.clear(key)"><X class="h-3.5 w-3.5" /></button>
 
   <Popover v-if="open" :anchor="anchor" placement="bottom-end" :width="320" @close="open = false">
     <div class="max-h-[70vh] overflow-y-auto p-3">
@@ -96,8 +100,9 @@ const prios = [3, 2, 1, 0]
         </div>
       </template>
 
-      <div class="flex justify-end border-t border-line-soft pt-2.5">
-        <button class="btn-plain !text-[13px]" :disabled="!count" @click="store.clear(ws)">{{ t('filter.clear') }}</button>
+      <div class="flex justify-end gap-3 border-t border-line-soft pt-2.5">
+        <button v-if="canSave" class="btn-plain mr-auto !text-[13px]" :disabled="!count" data-testid="filter-save" @click="(open = false), emit('save')">{{ t('smartList.save') }}</button>
+        <button class="btn-plain !text-[13px]" :disabled="!count" @click="store.clear(key)">{{ t('filter.clear') }}</button>
       </div>
     </div>
   </Popover>

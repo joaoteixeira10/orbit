@@ -359,6 +359,7 @@ func AllModels() []any {
 		&HabitCheck{},
 		&FocusSession{},
 		&Goal{},
+		&SmartList{},
 		&JournalEntry{},
 		&Bookmark{},
 		&BookmarkImage{},

@@ -945,6 +945,58 @@ test('Quick Draw: the sidebar + opens a sketch of your own', async ({ page, requ
   expect(mine.map((d: { title: string }) => d.title)).toContain('Napkin idea')
 })
 
+test('smart lists: a filter saved with a name, kept on the server; quick add reads a repeat', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Smart', kind: 'personal', modules: ['home', 'tasks'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/tasks`)
+  await page.getByRole('button', { name: 'New Task' }).first().click()
+  for (const line of ['Pay rent !!! #money', 'Buy milk #food', 'Bins every other Tuesday']) {
+    await page.getByPlaceholder(/New task/).fill(line)
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.task-row', { hasText: line.split(' ')[0] })).toBeVisible()
+  }
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.task-row', { hasText: 'Bins' })).toContainText('Every other Tuesday')
+
+  // All → filter by #money → saved as "Bills".
+  await page.goto(`/w/${ws.id}/tasks/all`)
+  await page.getByRole('button', { name: /^Filter/ }).click()
+  await page.locator('.popover .chip', { hasText: '#money' }).click()
+  await page.getByTestId('filter-save').click()
+  await page.getByTestId('smart-sheet').getByRole('textbox', { name: 'Name' }).fill('Bills')
+  await page.getByTestId('smart-save').click()
+  await expect(page.getByRole('heading', { name: 'Bills' })).toBeVisible()
+  await expect(page.getByTestId('smart-lists')).toContainText('Bills')
+  await expect(page.locator('.task-row', { hasText: 'Pay rent' })).toBeVisible()
+  await expect(page.locator('.task-row', { hasText: 'Buy milk' })).toBeHidden()
+  // All is whole again (the filter went into the smart list).
+  await page.locator('button.smart', { hasText: /All$/ }).click()
+  await expect(page.locator('.task-row', { hasText: 'Buy milk' })).toBeVisible()
+
+  // A task added in the smart list gets its tag, so it shows there.
+  await page.getByTestId('smart-lists').getByText('Bills').click()
+  await page.getByRole('button', { name: 'New Task' }).first().click()
+  await page.getByPlaceholder(/New task/).fill('Water bill')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.task-row', { hasText: 'Water bill' })).toContainText('#money')
+
+  // Its filter changes in place and is kept on the server.
+  await page.getByRole('button', { name: /^Filter/ }).click()
+  await page.locator('.popover .chip', { hasText: '#food' }).click()
+  await expect(page.locator('.task-row', { hasText: 'Buy milk' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect.poll(async () => (await (await request.get(`/api/v1/workspaces/${ws.id}/smart-lists`, { headers: H })).json())[0].filter.tags.length).toBe(2)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Bills' })).toBeVisible()
+  await expect(page.locator('.task-row', { hasText: 'Buy milk' })).toBeVisible()
+  await page.screenshot({ path: 'test-results/smart-lists.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

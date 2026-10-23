@@ -4992,6 +4992,76 @@
                 }
             }
         },
+        "/smart-lists/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "smart lists"
+                ],
+                "summary": "Change a smart list",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Smart list id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.smartListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.smartListResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "smart lists"
+                ],
+                "summary": "Delete a smart list",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Smart list id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/subscriptions/{id}": {
             "put": {
                 "security": [
@@ -7780,6 +7850,85 @@
                 }
             }
         },
+        "/workspaces/{ws}/smart-lists": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "smart lists"
+                ],
+                "summary": "A workspace's smart lists (yours and the shared ones)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.smartListResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "smart lists"
+                ],
+                "summary": "New smart list",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The smart list",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.smartListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.smartListResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/subscriptions": {
             "get": {
                 "security": [
@@ -8021,6 +8170,54 @@
         }
     },
     "definitions": {
+        "api.SmartFilter": {
+            "type": "object",
+            "properties": {
+                "assignee": {
+                    "description": "user ids, \"me\", \"none\"",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "due": {
+                    "description": "overdue, today, week, next, later, none",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "lists": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "priority": {
+                    "description": "0 none … 3 high",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "progress": {
+                    "description": "notStarted, inProgress, done",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "q": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "api.activityLine": {
             "type": "object",
             "properties": {
@@ -10517,6 +10714,69 @@
                     "type": "integer",
                     "maximum": 7,
                     "minimum": 1
+                }
+            }
+        },
+        "api.smartListRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "filter": {
+                    "$ref": "#/definitions/api.SmartFilter"
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "shared": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.smartListResponse": {
+            "type": "object",
+            "properties": {
+                "can_edit": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "filter": {
+                    "$ref": "#/definitions/api.SmartFilter"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "shared": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
                 }
             }
         },

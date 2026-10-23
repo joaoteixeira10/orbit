@@ -126,6 +126,11 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Smart lists**: a task filter saved with a name, colour and icon, shown
+  with Today and Scheduled (with its count). Yours, or shared with the
+  workspace; its filter changes in place and is kept on the server; a task
+  added there gets its tag, priority and person. Carried by workspace
+  export / import.
 - **Repeats in quick add**: "every other Tuesday", "every Monday and
   Friday", "every 3 days", "every weekday", and in Portuguese "terça sim,
   terça não", "todas as quintas", "de 15 em 15 dias"… The task starts on the
@@ -259,6 +264,11 @@ merge, not at release time.
 - **The integration webhook carries the audit events** (`X-Orbit-Event:
   audit.<action>`): accounts, roles, workspaces and their members, settings —
   never workspace content. See [docs/API.md](docs/API.md#live-updates-and-the-webhook).
+
+### Fixed
+
+- Quick add: pressing Enter then Escape at once no longer adds the task
+  twice.
 
 ### Security
 

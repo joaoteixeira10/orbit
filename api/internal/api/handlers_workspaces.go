@@ -506,6 +506,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return deleteHabits(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.FocusSession{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Goal{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.SmartList{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.JournalEntry{}).Error },
 		func() error { return deleteBookmarks(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Notification{}).Error },
@@ -728,6 +729,8 @@ func (h *Handlers) removeMember(c *gin.Context) {
 	}
 	h.db.Delete(&m)
 	h.db.Where("user_id = ? AND page_id IN (?)", target, h.db.Model(&models.Page{}).Select("id").Where("workspace_id = ?", ws.ID)).Delete(&models.PageFavorite{})
+	// Their own smart lists go with them; shared ones stay for the others.
+	h.db.Where("workspace_id = ? AND owner_id = ? AND shared = ?", ws.ID, target, false).Delete(&models.SmartList{})
 	h.recordCtx(c, "workspace.member_remove", "workspace", ws.ID, gin.H{"user_id": target})
 	h.publishWS(c, ws.ID, "members", target)
 	h.events.Publish(target, liveEvent("workspaces"))
@@ -770,6 +773,9 @@ func releaseWorkspaces(tx *gorm.DB, userID string) error {
 				}
 			}
 		}
+	}
+	if err := tx.Where("owner_id = ? AND shared = ?", userID, false).Delete(&models.SmartList{}).Error; err != nil {
+		return err
 	}
 	for _, q := range []any{&models.WorkspaceMember{}, &models.PageFavorite{}, &models.CalendarFeed{}} {
 		if err := tx.Where("user_id = ?", userID).Delete(q).Error; err != nil {

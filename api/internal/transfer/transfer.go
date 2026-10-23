@@ -99,6 +99,43 @@ type Archive struct {
 	HabitChecks []models.HabitCheck `json:"habit_checks,omitempty"`
 	// The exporter's own journal.
 	Journal []models.JournalEntry `json:"journal,omitempty"`
+	// The shared smart lists and the exporter's own.
+	SmartLists []xSmartList `json:"smart_lists,omitempty"`
+}
+
+type xSmartList struct {
+	models.SmartList
+	Filter json.RawMessage `json:"filter"`
+}
+
+// smartFilter rewrites a smart list's filter for its new home: lists by
+// their new ids, people by who they are here (those not here are dropped).
+func smartFilter(old string, list func(string) string, person map[string]string) string {
+	var f map[string]any
+	if json.Unmarshal([]byte(old), &f) != nil {
+		return ""
+	}
+	remap := func(key string, to func(string) string) {
+		arr, _ := f[key].([]any)
+		out := []string{}
+		for _, v := range arr {
+			if s, ok := v.(string); ok {
+				if n := to(s); n != "" {
+					out = append(out, n)
+				}
+			}
+		}
+		f[key] = out
+	}
+	remap("lists", list)
+	remap("assignee", func(s string) string {
+		if s == "me" || s == "none" {
+			return s
+		}
+		return person[s]
+	})
+	b, _ := json.Marshal(f)
+	return string(b)
 }
 
 func raw(s string) json.RawMessage {
@@ -170,6 +207,11 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	}
 	db.Where("habit_id IN ?", habitIDs).Order("date").Find(&a.HabitChecks)
 	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("date").Find(&a.Journal)
+	var smart []models.SmartList
+	db.Where("workspace_id = ? AND (shared = ? OR owner_id = ?)", wsID, true, uid).Order("rank").Find(&smart)
+	for _, l := range smart {
+		a.SmartLists = append(a.SmartLists, xSmartList{SmartList: l, Filter: raw(l.Filter)})
+	}
 	a.People = people(db, wsID, &a)
 
 	z := zip.NewWriter(w)
@@ -456,6 +498,23 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			g := x
 			g.ID, g.WorkspaceID, g.CreatedBy = ref(x.ID), ws.ID, who(x.CreatedBy)
 			if err := tx.Create(&g).Error; err != nil {
+				return err
+			}
+		}
+		for _, x := range a.SmartLists {
+			l := x.SmartList
+			l.ID, l.WorkspaceID, l.Name, l.OwnerID = "", ws.ID, trim(strings.TrimSpace(l.Name), 100), me.ID
+			if l.Shared {
+				l.OwnerID = who(x.OwnerID)
+			}
+			if l.Name == "" {
+				continue
+			}
+			if !validColor(l.Color) {
+				l.Color = ""
+			}
+			l.Filter = smartFilter(unraw(x.Filter), ref, user)
+			if err := tx.Create(&l).Error; err != nil {
 				return err
 			}
 		}

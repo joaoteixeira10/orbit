@@ -2,6 +2,7 @@
 // tasks, the calendar (events, subscriptions, feeds), Home and search.
 // Shapes mirror the Go handlers (api/internal/api/handlers_*.go).
 import { api } from '@/lib/api'
+import type { TaskFilter } from '@/lib/taskFilter'
 import type { Upload } from '@/lib/uploads'
 
 export type WSRole = 'owner' | 'editor' | 'viewer'
@@ -480,6 +481,27 @@ export const gitApi = {
   milestones: (id: string) => api<GitMilestone[]>(`/lists/${id}/git/milestones`),
   linkTask: (id: string, url: string) => api<Task>(`/tasks/${id}/git`, { method: 'POST', body: j({ url }) }),
   unlinkTask: (id: string) => api<Task>(`/tasks/${id}/git`, { method: 'DELETE' }),
+}
+
+// A smart list: a saved task filter (yours, or shared with the workspace).
+export interface SmartList {
+  id: string
+  workspace_id: string
+  owner_id: string
+  name: string
+  color: string
+  icon: string
+  shared: boolean
+  rank: number
+  can_edit: boolean
+  filter: TaskFilter
+}
+export type SmartListInput = Partial<Pick<SmartList, 'name' | 'color' | 'icon' | 'shared' | 'filter'>>
+export const smartListsApi = {
+  list: (ws: string) => api<SmartList[]>(`/workspaces/${ws}/smart-lists`),
+  create: (ws: string, b: SmartListInput) => api<SmartList>(`/workspaces/${ws}/smart-lists`, { method: 'POST', body: j(b) }),
+  update: (id: string, b: SmartListInput) => api<SmartList>(`/smart-lists/${id}`, { method: 'PUT', body: j(b) }),
+  remove: (id: string) => api<void>(`/smart-lists/${id}`, { method: 'DELETE' }),
 }
 
 export const tasksApi = {

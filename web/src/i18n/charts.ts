@@ -39,6 +39,14 @@ export const chEn = {
     clearFilter: 'Clear filter',
     nothing: 'Nothing to show',
     noActivity: 'No tasks created or completed lately',
+    export: 'Download',
+    png: 'As a picture (PNG)',
+    csv: 'As numbers (CSV)',
+    tasksCsv: 'Download these tasks (CSV)',
+    filtered: 'filtered',
+    workload: 'Workload',
+    workloadSub: 'Open tasks, by who they’re for and when they’re due',
+    cols: { title: 'Task', list: 'List', status: 'Status', priority: 'Priority', assignees: 'For', start: 'Start', due: 'Due', tags: 'Tags', completed: 'Completed on', created: 'Created on' },
   },
 }
 
@@ -82,5 +90,13 @@ export const chPt: typeof chEn = {
     clearFilter: 'Limpar filtro',
     nothing: 'Nada para mostrar',
     noActivity: 'Nenhuma tarefa criada ou concluída recentemente',
+    export: 'Descarregar',
+    png: 'Como imagem (PNG)',
+    csv: 'Como números (CSV)',
+    tasksCsv: 'Descarregar estas tarefas (CSV)',
+    filtered: 'filtrado',
+    workload: 'Carga de trabalho',
+    workloadSub: 'Tarefas por concluir, por pessoa e por prazo',
+    cols: { title: 'Tarefa', list: 'Lista', status: 'Estado', priority: 'Prioridade', assignees: 'Para', start: 'Início', due: 'Prazo', tags: 'Etiquetas', completed: 'Concluída em', created: 'Criada em' },
   },
 }

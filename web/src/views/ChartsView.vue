@@ -2,12 +2,16 @@
 import { ref, computed, watch, onBeforeUnmount, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { AlarmClock, CalendarClock, ChartPie, CircleCheck, ListTodo } from 'lucide-vue-next'
+import { AlarmClock, CalendarClock, ChartPie, CircleCheck, ListTodo, Sheet } from 'lucide-vue-next'
 import TaskFilter from '@/components/tasks/TaskFilter.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import Donut from '@/components/charts/Donut.vue'
 import StackedBars from '@/components/charts/StackedBars.vue'
 import WeekColumns, { type Period } from '@/components/charts/WeekColumns.vue'
+import Workload, { type WorkRow } from '@/components/charts/Workload.vue'
+import ChartExport from '@/components/charts/ChartExport.vue'
+import { csvOf, saveBlob, type ChartSpec } from '@/lib/chartExport'
+import { fileName } from '@/lib/markdown'
 import type { BarRow, Series } from '@/components/charts/types'
 import '@/components/charts/tokens.css'
 import { tasksApi, type Member, type Task } from '@/api/planner'
@@ -16,9 +20,9 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
 import { useToastStore } from '@/stores/toast'
-import { useTaskFilter, useTaskFilterStore, type DueBucket, type Progress } from '@/lib/taskFilter'
-import { STATUSES, countBy, countStatus, summary, totalOf, weekly, type Counts, type Status } from '@/lib/charts'
-import { todayStr, parseDate, addDays, fmtDate } from '@/lib/dates'
+import { useTaskFilter, useTaskFilterStore, dueBucket, dueEdges, DUE_BUCKETS, type DueBucket, type Progress } from '@/lib/taskFilter'
+import { STATUSES, countBy, countStatus, statusOf, summary, totalOf, weekly, type Counts, type Status } from '@/lib/charts'
+import { todayStr, parseDate, addDays, fmtDate, locale } from '@/lib/dates'
 
 // Charts: the workspace's tasks at a glance, like Planner's Charts. Summary
 // tiles, then status, lists, priority, people, tags and a weekly trend,
@@ -175,6 +179,55 @@ const periods = computed<Period[]>(() =>
 )
 const trendTotals = computed(() => weeks.value.reduce((a, w) => ({ created: a.created + w.created, done: a.done + w.completed }), { created: 0, done: 0 }))
 
+// ---- Workload: open tasks per person, by when they're due ----
+const workCols = computed(() => DUE_BUCKETS.map((b) => ({ key: b, label: t(`filter.dueB.${b}`), hot: b === 'overdue' })))
+const workload = computed<WorkRow[]>(() => {
+  const e = dueEdges(today)
+  const m = new Map<string, number[]>()
+  for (const x of shown.value) {
+    if (x.done) continue
+    const i = DUE_BUCKETS.indexOf(dueBucket(x, e))
+    for (const who of x.assignee_ids.length ? x.assignee_ids : ['none']) {
+      const row = m.get(who) ?? DUE_BUCKETS.map(() => 0)
+      row[i]++
+      m.set(who, row)
+    }
+  }
+  const sum = (k: string) => m.get(k)!.reduce((a, b) => a + b, 0)
+  // Everyone in the workspace, the busiest first; nobody's tasks last.
+  for (const id of members.value.keys()) if (!m.has(id)) m.set(id, DUE_BUCKETS.map(() => 0))
+  const keys = [...m.keys()].sort((a, b) => (a === 'none' ? 1 : b === 'none' ? -1 : sum(b) - sum(a) || memberName(a).localeCompare(memberName(b))))
+  return keys.map((k) => ({ key: k, label: memberName(k), values: m.get(k)! }))
+})
+
+// ---- Downloads: each chart as a picture or numbers; the tasks as CSV ----
+const subtitle = () =>
+  [workspace.value?.name, new Intl.DateTimeFormat(locale(), { dateStyle: 'long' }).format(new Date()), filterOn.value ? t('charts.filtered') : ''].filter(Boolean).join(' · ')
+const barSpec = (title: string, rows: () => BarRow[]) => (): ChartSpec => ({ kind: 'bars', title, subtitle: subtitle(), series: series.value, rows: rows() })
+const specs = {
+  status: (): ChartSpec => ({ kind: 'donut', title: t('charts.status.title'), subtitle: subtitle(), slices: slices.value, center: `${pctDone.value}%` }),
+  list: barSpec(t('charts.byList'), () => byList.value),
+  priority: barSpec(t('charts.byPriority'), () => byPriority.value),
+  person: barSpec(t('charts.byPerson'), () => byPerson.value),
+  tag: barSpec(t('charts.byTag'), () => byTag.value),
+  trend: (): ChartSpec => ({ kind: 'columns', title: t('charts.trend'), subtitle: subtitle(), series: trendSeries.value, periods: periods.value }),
+  workload: (): ChartSpec => ({
+    kind: 'table', title: t('charts.workload'), subtitle: subtitle(), cols: workCols.value.map((c) => c.label), rows: workload.value, hot: [0],
+  }),
+}
+function tasksCsv() {
+  const c = (k: string) => t(`charts.cols.${k}`)
+  const names = (ids: string[]) => ids.map((id) => memberName(id)).join(', ')
+  const rows = [
+    [c('title'), c('list'), c('status'), c('priority'), c('assignees'), c('start'), c('due'), c('tags'), c('created'), c('completed')],
+    ...shown.value.map((x) => [
+      x.title, listMap.value.get(x.list_id)?.name ?? '', t(`charts.status.${statusOf(x, listMap.value.get(x.list_id), today)}`), t(`filter.prio.${x.priority}`),
+      names(x.assignee_ids), x.start ?? '', x.due ? `${x.due}${x.due_time ? ' ' + x.due_time : ''}` : '', x.tags.join(', '),
+      x.created_at.slice(0, 10), x.completed_at?.slice(0, 10) ?? '',
+    ]),
+  ]
+  saveBlob(`${fileName(workspace.value?.name ?? 'tasks')}-${today}.csv`, new Blob([csvOf(rows)], { type: 'text/csv;charset=utf-8' }))
+}
 // ---- Drilling into the Tasks view ----
 // drill narrows the shared filter (one dimension per argument) and opens
 // the Tasks view, which shows the same tasks.
@@ -201,6 +254,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
         <p class="subhead mt-0.5 tabular-nums">{{ ready ? t('charts.count', shown.length) : ' ' }}</p>
       </div>
       <div class="mb-1 flex shrink-0 items-center gap-1">
+        <button v-if="ready && shown.length" type="button" class="icon-btn h-8 w-8" :title="t('charts.tasksCsv')" :aria-label="t('charts.tasksCsv')" data-testid="tasks-csv" @click="tasksCsv"><Sheet class="h-4 w-4" /></button>
         <TaskFilter :ws="ws" show-lists />
       </div>
     </header>
@@ -235,6 +289,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
           <header class="chart-head">
             <h2 class="title-3">{{ t('charts.status.title') }}</h2>
             <span class="footnote tabular-nums">{{ t('charts.count', total) }}</span>
+            <ChartExport :spec="specs.status" :name="t('charts.status.title')" />
           </header>
           <div class="chart-body justify-center">
             <Donut
@@ -250,7 +305,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
 
         <!-- By list -->
         <section class="chart-card card">
-          <header class="chart-head"><h2 class="title-3">{{ t('charts.byList') }}</h2></header>
+          <header class="chart-head"><h2 class="title-3">{{ t('charts.byList') }}</h2><ChartExport :spec="specs.list" :name="t('charts.byList')" /></header>
           <div class="chart-body">
             <StackedBars
               :rows="byList"
@@ -273,6 +328,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
           <header class="chart-head">
             <h2 class="title-3">{{ t('charts.trend') }}</h2>
             <span class="footnote tabular-nums">{{ t('charts.trendSub', { done: trendTotals.done, created: trendTotals.created, n: WEEKS }) }}</span>
+            <ChartExport :spec="specs.trend" :name="t('charts.trend')" />
           </header>
           <div class="chart-body">
             <WeekColumns v-if="trendTotals.done || trendTotals.created" :periods="periods" :series="trendSeries" :caption="t('charts.trend')" />
@@ -282,7 +338,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
 
         <!-- By priority -->
         <section class="chart-card card">
-          <header class="chart-head"><h2 class="title-3">{{ t('charts.byPriority') }}</h2></header>
+          <header class="chart-head"><h2 class="title-3">{{ t('charts.byPriority') }}</h2><ChartExport :spec="specs.priority" :name="t('charts.byPriority')" /></header>
           <div class="chart-body">
             <StackedBars
               :rows="byPriority"
@@ -302,7 +358,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
 
         <!-- By person -->
         <section v-if="shared" class="chart-card card">
-          <header class="chart-head"><h2 class="title-3">{{ t('charts.byPerson') }}</h2></header>
+          <header class="chart-head"><h2 class="title-3">{{ t('charts.byPerson') }}</h2><ChartExport :spec="specs.person" :name="t('charts.byPerson')" /></header>
           <div class="chart-body">
             <StackedBars
               :rows="byPerson"
@@ -321,11 +377,36 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
           </div>
         </section>
 
+        <!-- Workload -->
+        <section v-if="shared" class="chart-card card wide" data-testid="workload">
+          <header class="chart-head">
+            <h2 class="title-3">{{ t('charts.workload') }}</h2>
+            <span class="footnote">{{ t('charts.workloadSub') }}</span>
+            <ChartExport :spec="specs.workload" :name="t('charts.workload')" />
+          </header>
+          <div class="chart-body">
+            <Workload
+              :cols="workCols"
+              :rows="workload"
+              :caption="t('charts.workload')"
+              :hint="t('charts.showTasks')"
+              @select="(r, c) => drill({ assignee: [r], due: [c as DueBucket], progress: ['notStarted', 'inProgress'] })"
+            >
+              <template #label="{ row }">
+                <span v-if="row.key === 'none'" class="nobody" aria-hidden="true" />
+                <Avatar v-else :name="row.label" :src="members.get(row.key)?.avatar_url" :size="22" />
+                <span class="truncate" :class="{ 'text-text-2': row.key === 'none' }">{{ row.label }}</span>
+              </template>
+            </Workload>
+          </div>
+        </section>
+
         <!-- By tag -->
         <section v-if="byTag.length" class="chart-card card">
           <header class="chart-head">
             <h2 class="title-3">{{ t('charts.byTag') }}</h2>
             <span v-if="byTag.length === TAGS" class="footnote">{{ t('charts.byTagSub', { n: TAGS }) }}</span>
+            <ChartExport :spec="specs.tag" :name="t('charts.byTag')" />
           </header>
           <div class="chart-body">
             <StackedBars
@@ -447,10 +528,13 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
 }
 .chart-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 14px;
+}
+/* The title leads; the count and the download button sit at the right. */
+.chart-head > h2 {
+  margin-right: auto;
 }
 .chart-body {
   display: flex;

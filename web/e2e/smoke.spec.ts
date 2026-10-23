@@ -1073,6 +1073,56 @@ test('mentions: @ links a page and a date (in both editors); the page shows what
   await page.screenshot({ path: 'test-results/mentions.png' })
 })
 
+test('charts: a chart downloads as a picture and as numbers; the workload shows who has what', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/users', { headers: H, data: { username: 'rui', display_name: 'Rui', password: 'rui-e2e-password-42' } })
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Crew', kind: 'work', modules: ['home', 'tasks', 'charts'] } })).json()
+  await request.post(`/api/v1/workspaces/${ws.id}/members`, { headers: H, data: { user: 'rui', role: 'editor' } })
+  const members = await (await request.get(`/api/v1/workspaces/${ws.id}/members`, { headers: H })).json()
+  const rui = members.find((m: { username: string }) => m.username === 'rui').user_id
+  const lists = await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  for (const title of ['Fix the sink', 'Paint the door']) {
+    await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title, list_id: lists[0].id, assignee_ids: [rui], due: yesterday } })
+  }
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 900 })
+  await page.goto(`/w/${ws.id}/charts`)
+  // Rui has two late tasks.
+  const row = page.getByTestId('workload-row').filter({ hasText: 'Rui' })
+  await expect(row.locator('.work-cell').first()).toHaveText('2')
+
+  const card = page.getByTestId('workload')
+  await card.getByTestId('chart-export').click()
+  const [png] = await Promise.all([page.waitForEvent('download'), page.getByTestId('chart-png').click()])
+  expect(png.suggestedFilename()).toMatch(/^Workload-\d{4}-\d{2}-\d{2}\.png$/)
+  const bytes = await (await import('node:fs/promises')).readFile(await png.path())
+  expect(bytes.subarray(1, 4).toString()).toBe('PNG')
+  await card.getByTestId('chart-export').click()
+  const [csv] = await Promise.all([page.waitForEvent('download'), page.getByTestId('chart-csv').click()])
+  const text = (await (await import('node:fs/promises')).readFile(await csv.path())).toString()
+  expect(text).toContain('Rui,2,0,0,0,0,0,2')
+
+  // Every task shown, as CSV.
+  const [all] = await Promise.all([page.waitForEvent('download'), page.getByTestId('tasks-csv').click()])
+  const rows = (await (await import('node:fs/promises')).readFile(await all.path())).toString()
+  expect(rows).toContain('Fix the sink')
+  expect(rows).toContain('Rui')
+
+  // A cell opens those tasks.
+  await row.locator('.work-cell').first().click()
+  await page.waitForURL(/\/tasks\/all/)
+  await expect(page.locator('.task-row', { hasText: 'Paint the door' })).toBeVisible()
+  await page.getByRole('button', { name: 'Clear filter' }).first().click()
+  await page.goto(`/w/${ws.id}/charts`)
+  await expect(page.getByTestId('workload')).toBeVisible()
+  await page.getByTestId('workload').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: 'test-results/charts-workload.png' })
+  await (await import('node:fs/promises')).copyFile(await png.path(), 'test-results/workload-export.png')
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

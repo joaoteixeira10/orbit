@@ -126,6 +126,10 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Charts: downloads and workload**: each chart downloads as a PNG (drawn
+  on white with its title, workspace and date) or as CSV; the tasks shown
+  download as CSV; a **Workload** chart shows everyone's open tasks by when
+  they're due, each cell opening those tasks.
 - **@-mentions in pages**: type @ for a person (told once), a page (a link,
   opened in the app) or a date (a chip opening the calendar); in both
   editors, as plain Markdown. **Linked from** at the bottom of a page lists

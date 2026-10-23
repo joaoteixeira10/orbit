@@ -642,11 +642,23 @@ striped, and sub-task progress is a line along the bottom of the bar.
   open column), late (past its due date) and completed;
 - **By list**, **By priority**, **By tag** and, in shared workspaces, **By
   person** — bars split by status;
-- **Trend**: tasks created and completed per week over the last 12 weeks.
+- **Trend**: tasks created and completed per week over the last 12 weeks;
+- **Workload** (shared workspaces): everyone's open tasks by when they're
+  due — overdue, today, this week, next week, later, no date — darker the
+  more there are, red where they're late. A task for two people counts for
+  both.
 
 Hover (or focus) any part for the numbers. Click a part to open Tasks
 filtered to it — e.g. a list's *Late* segment shows that list's overdue
-tasks. **Filter** applies to every chart.
+tasks, a Workload cell that person's tasks then. **Filter** applies to every
+chart.
+
+**Download** (the arrow on each chart) saves it **as a picture (PNG)** — the
+chart on white with its title, the workspace, the date and whether a filter
+was on, the same from any screen — or **as numbers (CSV)** for a
+spreadsheet. The table button at the top saves **the tasks shown** as CSV:
+title, list, status, priority, who it's for, start, due, tags, created and
+completed dates.
 
 ## 11. Calendar
 

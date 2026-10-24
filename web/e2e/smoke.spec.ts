@@ -1168,6 +1168,53 @@ test('timeline dependencies: a bar linked to another by dragging; lengthening th
   await page.screenshot({ path: 'test-results/timeline-deps.png' })
 })
 
+test('import from Notion and Apple Notes; a page out as PDF', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Imports', kind: 'work', modules: ['home', 'pages'] } })).json()
+  const { zipSync } = await import('fflate')
+  const u8 = (s: string) => new Uint8Array(Buffer.from(s))
+  const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'))
+  const A = '0123456789abcdef0123456789abcdef'
+  const B = 'fedcba9876543210fedcba9876543210'
+  const notion = zipSync({
+    [`Garden ${A}.md`]: u8(`# Garden\n\nSee [Roses](Garden%20${A}/Roses%20${B}.md).\n\n![bed](Garden%20${A}/bed.png)`),
+    [`Garden ${A}/Roses ${B}.md`]: u8('# Roses\n\n- [ ] prune'),
+    [`Garden ${A}/bed.png`]: png,
+  })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/pages`)
+  await page.getByTestId('pages-import').click()
+  await page.getByTestId('import-input').setInputFiles([
+    { name: 'Export.zip', mimeType: 'application/zip', buffer: Buffer.from(notion) },
+    { name: 'Shopping.html', mimeType: 'text/html', buffer: Buffer.from('<html><head><title>Shopping</title></head><body><div><b>Saturday</b></div><ul class="checklist"><li class="checked">Milk</li><li>Bread</li></ul></body></html>') },
+  ])
+  await expect(page.getByTestId('import-result')).toContainText('3 pages and 1 file imported')
+  await page.keyboard.press('Escape')
+
+  const tree = (await (await request.get(`/api/v1/workspaces/${ws.id}/pages`, { headers: H })).json()) as { id: string; title: string; parent_id: string | null }[]
+  const by = Object.fromEntries(tree.map((p) => [p.title, p]))
+  expect(by.Roses.parent_id).toBe(by.Garden.id)
+  const garden = await (await request.get(`/api/v1/pages/${by.Garden.id}`, { headers: H })).json()
+  expect(garden.content).toContain(`[Roses](/w/${ws.id}/p/${by.Roses.id})`)
+  expect(garden.content).toMatch(/!\[bed\]\(\/api\/v1\/uploads\/[^)]+\)/)
+  const shopping = await (await request.get(`/api/v1/pages/${by.Shopping.id}`, { headers: H })).json()
+  expect(shopping.content).toBe('**Saturday**\n\n- [x] Milk\n- [ ] Bread')
+
+  // The page out as PDF: a clean copy, printed.
+  await page.goto(`/w/${ws.id}/p/${by.Garden.id}`)
+  await expect(page.locator('.md-view img')).toBeVisible()
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-pdf').click()
+  const frame = page.frameLocator('iframe[data-print]')
+  await expect(frame.locator('h1.title')).toHaveText('Garden')
+  await expect(frame.locator('a', { hasText: 'Roses' })).toBeVisible()
+  await expect.poll(() => frame.locator('img').evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1)
+  await page.screenshot({ path: 'test-results/imported.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

@@ -107,8 +107,8 @@ export const plEn = {
   },
   roles: { owner: 'Owner', editor: 'Editor', viewer: 'Viewer' },
   pages: {
-    importMd: 'Import Markdown',
-    importHint: '.md files: a first ‘# Heading’ becomes the title',
+    importMd: 'Import',
+    importHint: 'Markdown files, a Notion export, Apple Notes',
     imported: 'No pages imported | 1 page imported | {n} pages imported',
     exportAll: 'Export as Markdown (.zip)',
     expand: 'Expand',
@@ -387,8 +387,8 @@ export const plPt: typeof plEn = {
   },
   roles: { owner: 'Proprietário', editor: 'Editor', viewer: 'Leitor' },
   pages: {
-    importMd: 'Importar Markdown',
-    importHint: 'Ficheiros .md: um primeiro ‘# Título’ passa a ser o título',
+    importMd: 'Importar',
+    importHint: 'Ficheiros Markdown, uma exportação do Notion, as Notas da Apple',
     imported: 'Nenhuma página importada | 1 página importada | {n} páginas importadas',
     exportAll: 'Exportar em Markdown (.zip)',
     expand: 'Expandir',

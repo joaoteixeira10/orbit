@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer } from 'lucide-vue-next'
 import Popover from './ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import { usePagesStore } from '@/stores/pages'
@@ -79,6 +79,14 @@ const copyMd = () => run(async () => {
   await navigator.clipboard.writeText((await asMarkdown()).text)
   toast.success(t('editor.copied'))
 })
+// As PDF: printed from a clean copy (the print dialog saves a PDF).
+const asPdf = () =>
+  run(async () => {
+    const p = await pagesApi.get(props.pageId)
+    const meta = [wss.byId(props.ws)?.name, new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(new Date(p.updated_at))].filter(Boolean).join(' · ')
+    const { printPage } = await import('@/lib/printPage')
+    await printPage(p.title || t('pages.untitled'), p.content, meta)
+  })
 // A template is offered when a new page starts empty.
 const toggleTemplate = () =>
   run(async () => {
@@ -114,6 +122,7 @@ const trash = () =>
       <button class="menu-item" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('pages.copyLink') }}</button>
       <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
+      <button class="menu-item" data-testid="page-pdf" @click="asPdf"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
       <button class="menu-item" data-testid="page-template-toggle" @click="toggleTemplate">
         <LayoutTemplate class="h-4 w-4 text-text-2" />{{ page?.template ? t('pages.templateStop') : t('pages.templateUse') }}

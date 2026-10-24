@@ -9,7 +9,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { pagesApi, type PageSummary } from '@/api/planner'
 import { relDay } from '@/lib/dates'
-import { fromFile, fileName } from '@/lib/markdown'
+import { fileName } from '@/lib/markdown'
+import ImportSheet from '@/components/pages/ImportSheet.vue'
 import { downloadAuthed } from '@/lib/api'
 
 // A workspace's pages at a glance: a grid (or list) of every page, newest
@@ -44,24 +45,8 @@ const list = computed<PageSummary[]>(() => {
 })
 const parentTitle = (p: PageSummary) => (p.parent_id ? pages.find(p.parent_id)?.title : '')
 
-// Import: each .md file becomes a page (a first "# Heading" is its title).
-const fileInput = ref<HTMLInputElement | null>(null)
-async function importFiles(e: Event) {
-  const files = [...((e.target as HTMLInputElement).files ?? [])]
-  ;(e.target as HTMLInputElement).value = ''
-  let n = 0
-  for (const f of files) {
-    try {
-      const { title, content } = fromFile(await f.text(), f.name)
-      await pagesApi.create(ws.value, { title, content })
-      n++
-    } catch (err: any) {
-      toast.error(`${f.name}: ${err.message}`)
-    }
-  }
-  await pages.load(ws.value)
-  if (n) toast.success(t('pages.imported', { n }, n))
-}
+// Import: Markdown files, a Notion export, Apple Notes (ImportSheet).
+const importing = ref(false)
 async function exportAll() {
   try {
     await downloadAuthed(`/workspaces/${ws.value}/export`, `${fileName(workspace.value?.name ?? 'pages')}.zip`)
@@ -106,8 +91,7 @@ async function create() {
       </div>
       <span class="ml-auto" />
       <template v-if="editable">
-        <input ref="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple class="hidden" @change="importFiles" />
-        <button class="btn btn-ghost" :title="t('pages.importHint')" @click="fileInput?.click()"><Upload class="h-4 w-4" />{{ t('pages.importMd') }}</button>
+        <button class="btn btn-ghost" :title="t('pages.importHint')" data-testid="pages-import" @click="importing = true"><Upload class="h-4 w-4" />{{ t('pages.importMd') }}</button>
       </template>
       <button class="btn btn-ghost" @click="exportAll"><Download class="h-4 w-4" />{{ t('pages.exportAll') }}</button>
       <RouterLink :to="{ name: 'ws-trash', params: { ws } }" class="btn btn-ghost"><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink>
@@ -144,6 +128,7 @@ async function create() {
       <p v-if="!q" class="subhead mx-auto mt-1 max-w-sm">{{ t('pages.emptyHint') }}</p>
       <button v-if="editable && !q" class="btn-primary mt-4" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</button>
     </div>
+    <ImportSheet :open="importing" :ws="ws" @close="importing = false" />
   </div>
 </template>
 

@@ -126,6 +126,12 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Pages as PDF; import from Notion and Apple Notes**: a page's ⋯ → Export
+  as PDF prints a clean copy (pictures included) to save as PDF. **Import**
+  takes Markdown files, a Notion export (.zip, nested zips too: the page
+  tree, links between pages, pictures and files, databases as tables) and
+  Apple Notes as exported to HTML, text or Markdown (folders as pages,
+  checklists kept).
 - **Task dependencies**: a task waits on others (finish-to-start, no loops)
   — set in its details or by dragging from one timeline bar to another;
   arrows on the timeline (red when too early); moving a task's end moves

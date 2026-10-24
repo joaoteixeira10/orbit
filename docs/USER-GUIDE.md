@@ -326,10 +326,29 @@ style (`-` bullets, `**bold**`, one blank line between blocks).
 Add an **icon** (emoji) and a **cover** (gradient or colour) from the header.
 
 **As files.** A page's `⋯` → **Download as Markdown** (a `.md` with the title
-as its first heading) or **Copy as Markdown**. On the Pages screen, **Import
-Markdown** turns `.md` files into pages (a first `# Heading` becomes the
-title) and **Export as Markdown (.zip)** downloads every page as `.md` files
-in folders that follow the page tree — ready to keep in git.
+as its first heading), **Copy as Markdown**, or **Export as PDF…**: the page
+on white with its title, the workspace and the date, its pictures included,
+in the print dialog — choose *Save as PDF* there (the text stays text, the
+links work). On the Pages screen, **Export as Markdown (.zip)** downloads
+every page as `.md` files in folders that follow the page tree — ready to
+keep in git.
+
+**Import** (on the Pages screen) brings pages in from elsewhere — pick the
+files, or a `.zip` of them:
+- **Markdown**: `.md` or `.txt` files; a first `# Heading` becomes the title.
+- **Notion**: in Notion, `⋯` → **Export** → *Markdown & CSV*, with sub-pages,
+  and pick the `.zip` you get (a zip inside it is opened too). The page tree
+  comes along, Notion's ids leave the names, links between the pages point
+  at the new ones, and pictures and files are uploaded to their page. A
+  database comes in as a page with its table, its rows as pages inside it.
+- **Apple Notes**: the Notes app itself only exports PDFs — export your notes
+  as HTML or Markdown with an app such as *Exporter*, or ask Apple for a
+  copy of your iCloud data (privacy.apple.com; Notes come as text files).
+  Folders become pages with the notes inside; checklists keep their boxes;
+  pictures in the notes (and files next to them) are uploaded.
+
+It says how many pages and files came in, and names any file it couldn't
+read.
 
 **Saving** is automatic; the header says *Saving…* / *Saved* / *Edited … by
 …*. ⌘S saves at once. If someone else saved the page while you were editing,

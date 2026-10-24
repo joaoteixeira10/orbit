@@ -9,14 +9,17 @@ app.
   each shared workspace's activity ("Ana completed 3 tasks").
 - **Pages** — documents in Markdown, edited visually or as source: headings,
   checklists, tables, callouts, code, images; pages inside pages,
-  favourites, a trash, export and import as Markdown. Sums work in them
-  (`120 + 35 =`).
+  favourites, a trash, templates, @-mentions and backlinks; export as
+  Markdown or PDF, import Markdown, Notion and Apple Notes. Sums work in
+  them (`120 + 35 =`).
 - **Tasks** — Reminders-style lists with due dates and times, repeats,
   priorities, tags, sub-tasks, several people, notes in Markdown, files,
-  comments with @mentions and smart lists. Quick add understands
-  "Essay tomorrow 14:30 !! #maths".
+  comments with @mentions, smart lists (and your own, saved from a filter).
+  Quick add understands "Essay tomorrow 14:30 !! #maths" and "Bins every
+  other Tuesday".
 - **Boards, Timeline, Charts** — the same tasks as kanban columns, as bars on
-  a Gantt chart, and as charts.
+  a Gantt chart (with dependencies: move one and what waits on it moves
+  too), and as charts (a workload view; each downloads as PNG or CSV).
 - **Calendar** — month, week and day (drag to move and resize); events with
   repeats, reminders and their own time zone; public holidays; tasks on
   their dates; subscribed calendars; a private feed for Apple, Google or

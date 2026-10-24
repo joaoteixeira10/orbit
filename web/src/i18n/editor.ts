@@ -5,6 +5,23 @@
 // characters in messages as syntax.
 
 export const edEn = {
+  importer: {
+    title: 'Import pages',
+    intro: 'Pick files, or a .zip of them: they become pages of this workspace — folders as pages inside pages, links between them kept, their pictures and files uploaded.',
+    md: 'Markdown',
+    mdHow: '.md or .txt files. A first “# Heading” becomes the title.',
+    notion: 'Notion',
+    notionHow: 'In Notion: ⋯ at the top right of a page (or Settings → Workspace) → Export → Markdown & CSV, with sub-pages. Pick the .zip you get. A database comes in as a table, its rows as pages inside it.',
+    apple: 'Apple Notes',
+    appleHow: 'Apple Notes itself exports only PDFs. Export your notes as HTML or Markdown with an app such as Exporter, or ask Apple for a copy of your iCloud data (privacy.apple.com → Notes, as text files). Pick the files or their .zip; folders become pages.',
+    choose: 'Choose files…',
+    reading: 'Reading the files…',
+    progress: 'Importing… {done} of {total}',
+    result: '{pages} and {files} imported.',
+    pagesN: 'No pages | 1 page | {n} pages',
+    filesN: 'no files | 1 file | {n} files',
+    failed: 'Not imported: {list} | Not imported: {list}',
+  },
   mention: {
     label: 'Mention',
     none: 'No one, no page, no date by that name',
@@ -22,6 +39,7 @@ export const edEn = {
     linkedFrom: 'Linked from',
     download: 'Download as Markdown',
     copyMd: 'Copy as Markdown',
+    pdf: 'Export as PDF…',
     copied: 'Copied as Markdown',
     alert: { NOTE: 'Note', TIP: 'Tip', IMPORTANT: 'Important', WARNING: 'Warning', CAUTION: 'Caution' },
     alertPick: 'Kind of callout',
@@ -98,6 +116,23 @@ export const edEn = {
 }
 
 export const edPt: typeof edEn = {
+  importer: {
+    title: 'Importar páginas',
+    intro: 'Escolha ficheiros, ou um .zip com eles: passam a páginas deste espaço — as pastas como páginas dentro de páginas, as ligações entre elas mantidas, as imagens e os ficheiros carregados.',
+    md: 'Markdown',
+    mdHow: 'Ficheiros .md ou .txt. Um primeiro “# Título” passa a ser o título.',
+    notion: 'Notion',
+    notionHow: 'No Notion: ⋯ no canto superior direito de uma página (ou Definições → Espaço de trabalho) → Exportar → Markdown e CSV, com subpáginas. Escolha o .zip que receber. Uma base de dados chega como uma tabela, com as linhas como páginas dentro dela.',
+    apple: 'Notas da Apple',
+    appleHow: 'As Notas da Apple só exportam PDF. Exporte as notas como HTML ou Markdown com uma app como o Exporter, ou peça à Apple uma cópia dos seus dados do iCloud (privacy.apple.com → Notas, como ficheiros de texto). Escolha os ficheiros ou o .zip; as pastas passam a páginas.',
+    choose: 'Escolher ficheiros…',
+    reading: 'A ler os ficheiros…',
+    progress: 'A importar… {done} de {total}',
+    result: '{pages} e {files} importados.',
+    pagesN: 'Nenhuma página | 1 página | {n} páginas',
+    filesN: 'nenhum ficheiro | 1 ficheiro | {n} ficheiros',
+    failed: 'Não importado: {list} | Não importados: {list}',
+  },
   mention: {
     label: 'Mencionar',
     none: 'Ninguém, nenhuma página, nenhuma data com esse nome',
@@ -115,6 +150,7 @@ export const edPt: typeof edEn = {
     linkedFrom: 'Mencionada em',
     download: 'Transferir em Markdown',
     copyMd: 'Copiar como Markdown',
+    pdf: 'Exportar como PDF…',
     copied: 'Copiado como Markdown',
     alert: { NOTE: 'Nota', TIP: 'Dica', IMPORTANT: 'Importante', WARNING: 'Aviso', CAUTION: 'Cuidado' },
     alertPick: 'Tipo de destaque',

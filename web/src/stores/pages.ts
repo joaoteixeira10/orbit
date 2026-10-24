@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { pagesApi, type PageSummary } from '@/api/planner'
+import type { Database, PropValue } from '@/lib/database'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 
@@ -58,6 +59,32 @@ export const usePagesStore = defineStore('pages', {
       for (const list of Object.values(this.byWs)) {
         const i = list.findIndex((x) => x.id === p.id)
         if (i >= 0) list[i] = { ...list[i], ...p }
+      }
+    },
+    // saveDB keeps a database's properties and views (shown at once).
+    async saveDB(id: string, db: Database | null) {
+      const before = this.find(id)?.db
+      this.patch({ id, db: db ?? undefined })
+      try {
+        await pagesApi.update(id, { db })
+      } catch (e) {
+        this.patch({ id, db: before })
+        throw e
+      }
+    },
+    // setProp gives a row one value (null clears it); the server merges it.
+    async setProp(id: string, prop: string, value: PropValue | null) {
+      const row = this.find(id)
+      const before = row?.props
+      const next = { ...(before ?? {}) }
+      if (value === null) delete next[prop]
+      else next[prop] = value
+      this.patch({ id, props: next })
+      try {
+        await pagesApi.update(id, { props: { [prop]: value } })
+      } catch (e) {
+        this.patch({ id, props: before })
+        throw e
       }
     },
     toggle(id: string, on?: boolean) {

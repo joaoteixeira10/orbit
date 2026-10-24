@@ -9,7 +9,8 @@ app.
   each shared workspace's activity ("Ana completed 3 tasks").
 - **Pages** — documents in Markdown, edited visually or as source: headings,
   checklists, tables, callouts, code, images; pages inside pages,
-  favourites, a trash, templates, @-mentions and backlinks; export as
+  favourites, a trash, templates, @-mentions and backlinks, databases
+  (tables and boards of pages with properties); export as
   Markdown or PDF, import Markdown, Notion and Apple Notes. Sums work in
   them (`120 + 35 =`).
 - **Tasks** — Reminders-style lists with due dates and times, repeats,

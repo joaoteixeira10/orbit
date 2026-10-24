@@ -3,6 +3,7 @@
 // Shapes mirror the Go handlers (api/internal/api/handlers_*.go).
 import { api } from '@/lib/api'
 import type { TaskFilter } from '@/lib/taskFilter'
+import type { Database, PropValue, Props } from '@/lib/database'
 import type { Upload } from '@/lib/uploads'
 
 export type WSRole = 'owner' | 'editor' | 'viewer'
@@ -68,6 +69,8 @@ export interface PageSummary {
   trashed_at?: string | null
   favorite: boolean
   template?: boolean // offered when a new page starts empty
+  db?: Database // it's a database of the pages inside it
+  props?: Props // its values, as a row of its parent's database
 }
 export interface Page extends PageSummary {
   cover: string
@@ -412,13 +415,13 @@ export const withContent = (p: Page): Page => ({ ...p, content: p.content ?? '' 
 export const pagesApi = {
   list: (ws: string) => api<PageSummary[]>(`/workspaces/${ws}/pages`),
   trash: (ws: string) => api<PageSummary[]>(`/workspaces/${ws}/trash`),
-  create: (ws: string, b: { parent_id?: string | null; title?: string; icon?: string; content?: string; after_id?: string }) =>
+  create: (ws: string, b: { parent_id?: string | null; title?: string; icon?: string; content?: string; after_id?: string; db?: Database; props?: Props }) =>
     api<Page>(`/workspaces/${ws}/pages`, { method: 'POST', body: j(b) }),
   // An empty page comes without "content"; the app always has a string.
   get: (id: string) => api<Page>(`/pages/${id}`).then(withContent),
   // What links to a page: other pages, and tasks whose notes do.
   backlinks: (id: string) => api<{ pages: PageSummary[]; tasks: { id: string; title: string; list_id: string; done: boolean }[] }>(`/pages/${id}/backlinks`),
-  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean }) =>
+  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; db?: Database | null; props?: Record<string, PropValue | null> }) =>
     api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b) }).then(withContent),
   move: (id: string, parent_id: string | null, after_id: string) => api<PageSummary>(`/pages/${id}/move`, { method: 'POST', body: j({ parent_id, after_id }) }),
   trashPage: (id: string) => api<void>(`/pages/${id}`, { method: 'DELETE' }),

@@ -49,7 +49,6 @@ What Orbit could do next, roughly in the order it would pay off. The
 ## Pages
 
 - Drag handles on blocks, block menu ("turn into", duplicate, colour).
-- Databases: a table of pages with properties, filtered views.
 
 ## Tasks and boards
 

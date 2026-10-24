@@ -1,0 +1,451 @@
+<script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { Columns3, FileText, MoreHorizontal, Plus, Table2, Trash2 } from 'lucide-vue-next'
+import Popover from '@/components/ui/Popover.vue'
+import DbCell from './DbCell.vue'
+import PropMenu from './PropMenu.vue'
+import ViewTools from './ViewTools.vue'
+import { pagesApi } from '@/api/planner'
+import { usePagesStore } from '@/stores/pages'
+import { useWorkspacesStore } from '@/stores/workspaces'
+import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
+import { todayStr } from '@/lib/dates'
+import { boardOf, newId, rowsOf, type Database, type DBOption, type DBProp, type DBRow, type DBView, type PropValue } from '@/lib/database'
+
+// A database page's table: its rows (the pages inside it) with a column per
+// property, through the chosen view — a table or a board by a select
+// property, filtered and sorted. Values are edited in place; a row's name
+// opens its page. Everything is saved at once (and seen by the others).
+const props = defineProps<{ ws: string; pageId: string; editable: boolean }>()
+const { t } = useI18n()
+const router = useRouter()
+const pages = usePagesStore()
+const wss = useWorkspacesStore()
+const auth = useAuthStore()
+const toast = useToastStore()
+
+const page = computed(() => pages.find(props.pageId))
+const db = computed<Database>(() => page.value?.db ?? { props: [], views: [] })
+const members = computed(() => wss.members[props.ws] ?? [])
+const rows = computed<DBRow[]>(() =>
+  (pages.byWs[props.ws] ?? [])
+    .filter((p) => p.parent_id === props.pageId && !p.trashed_at)
+    .map((p) => ({ id: p.id, title: p.title, rank: p.rank, props: p.props ?? {} })),
+)
+const ctx = computed(() => ({ me: auth.user?.id ?? '', today: todayStr() }))
+
+async function saveDB(next: Database) {
+  try {
+    await pages.saveDB(props.pageId, next)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const clone = (): Database => JSON.parse(JSON.stringify(db.value))
+
+// ---- Views (the chosen one remembered per browser) ----
+const key = computed(() => `orbit_db_view_${props.pageId}`)
+const viewId = ref('')
+watch(
+  () => props.pageId,
+  () => {
+    try {
+      viewId.value = localStorage.getItem(key.value) ?? ''
+    } catch {
+      viewId.value = ''
+    }
+  },
+  { immediate: true },
+)
+const views = computed<DBView[]>(() => (db.value.views.length ? db.value.views : [{ id: '_', name: t('db.table'), type: 'table' }]))
+const view = computed(() => views.value.find((v) => v.id === viewId.value) ?? views.value[0])
+function pickView(id: string) {
+  viewId.value = id
+  try {
+    localStorage.setItem(key.value, id)
+  } catch {
+    /* private mode */
+  }
+}
+function saveView(v: DBView) {
+  const d = clone()
+  const i = d.views.findIndex((x) => x.id === v.id)
+  if (i >= 0) d.views[i] = v
+  else d.views.push(v.id === '_' ? { ...v, id: newId() } : v)
+  void saveDB(d)
+}
+function addView(type: 'table' | 'board') {
+  const d = clone()
+  const group = d.props.find((p) => p.type === 'select')?.id
+  const v: DBView = { id: newId(), name: type === 'board' ? t('db.board') : t('db.table'), type, ...(type === 'board' && group ? { group_by: group } : {}) }
+  if (!d.views.length) d.views.push({ id: newId(), name: t('db.table'), type: 'table' })
+  d.views.push(v)
+  void saveDB(d).then(() => pickView(v.id))
+  addOpen.value = false
+}
+const addAnchor = ref<HTMLElement | null>(null)
+const addOpen = ref(false)
+const viewMenu = ref<{ anchor: HTMLElement; id: string } | null>(null)
+const viewName = ref('')
+function openViewMenu(id: string, e: MouseEvent) {
+  viewMenu.value = { anchor: e.currentTarget as HTMLElement, id }
+  viewName.value = views.value.find((v) => v.id === id)?.name ?? ''
+}
+function closeViewMenu() {
+  const m = viewMenu.value
+  viewMenu.value = null
+  const v = m && views.value.find((x) => x.id === m.id)
+  if (v && viewName.value.trim() && viewName.value.trim() !== v.name) saveView({ ...v, name: viewName.value.trim().slice(0, 100) })
+}
+function deleteView(id: string) {
+  const d = clone()
+  d.views = d.views.filter((v) => v.id !== id)
+  viewMenu.value = null
+  void saveDB(d)
+}
+
+const shown = computed(() => rowsOf(db.value, view.value, rows.value, ctx.value))
+const columns = computed(() => db.value.props.filter((p) => !(view.value.hidden ?? []).includes(p.id)))
+const board = computed(() => (view.value.type === 'board' ? boardOf(db.value, view.value, shown.value, t('db.noValue')) : []))
+const selects = computed(() => db.value.props.filter((p) => p.type === 'select'))
+
+// ---- Properties ----
+const propMenu = ref<{ anchor: HTMLElement; prop: DBProp; isNew: boolean } | null>(null)
+function openProp(p: DBProp, e: MouseEvent) {
+  if (props.editable) propMenu.value = { anchor: e.currentTarget as HTMLElement, prop: p, isNew: false }
+}
+function newProp(e: MouseEvent) {
+  propMenu.value = { anchor: e.currentTarget as HTMLElement, prop: { id: newId(), name: '', type: 'text' }, isNew: true }
+}
+function saveProp(p: DBProp) {
+  const d = clone()
+  const i = d.props.findIndex((x) => x.id === p.id)
+  if (i >= 0) d.props[i] = p
+  else d.props.push(p)
+  void saveDB(d)
+}
+function hideProp(id: string) {
+  saveView({ ...view.value, hidden: [...new Set([...(view.value.hidden ?? []), id])] })
+}
+function removeProp(id: string) {
+  const d = clone()
+  d.props = d.props.filter((p) => p.id !== id)
+  for (const v of d.views) {
+    v.filters = v.filters?.filter((f) => f.prop !== id)
+    v.sorts = v.sorts?.filter((s) => s.prop !== id)
+    v.hidden = v.hidden?.filter((h) => h !== id)
+    if (v.group_by === id) delete v.group_by
+  }
+  void saveDB(d)
+}
+function addOption(propId: string, o: DBOption) {
+  const d = clone()
+  const p = d.props.find((x) => x.id === propId)
+  if (!p) return
+  p.options = [...(p.options ?? []), o]
+  void saveDB(d)
+}
+
+// ---- Rows ----
+async function setValue(row: DBRow, prop: string, v: PropValue | null) {
+  try {
+    await pages.setProp(row.id, prop, v)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const draft = ref('')
+const adding = ref<string | null>(null) // the board column (option id, "" none) or "table"
+const addInput = ref<HTMLInputElement | HTMLInputElement[] | null>(null)
+async function startAdd(where: string) {
+  adding.value = where
+  draft.value = ''
+  await nextTick()
+  ;(Array.isArray(addInput.value) ? addInput.value[0] : addInput.value)?.focus()
+}
+async function addRow(group?: string) {
+  const title = draft.value.trim()
+  draft.value = ''
+  if (!title) {
+    adding.value = null
+    return
+  }
+  // A row made in a board column, or under a filter "is", gets that value.
+  const values: Record<string, PropValue> = {}
+  if (group && view.value.group_by) values[view.value.group_by] = group
+  for (const f of view.value.filters ?? []) {
+    if (f.op === 'is' && f.prop !== 'title' && f.value !== undefined && f.value !== 'me') values[f.prop] = f.value as PropValue
+    if (f.op === 'checked') values[f.prop] = true
+  }
+  try {
+    await pagesApi.create(props.ws, { parent_id: props.pageId, title, props: Object.keys(values).length ? values : undefined })
+    await pages.load(props.ws)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const open = (id: string) => router.push({ name: 'ws-page', params: { ws: props.ws, page: id } })
+
+// Board: drag a card to another column.
+const dragging = ref('')
+function drop(col: string) {
+  const r = rows.value.find((x) => x.id === dragging.value)
+  dragging.value = ''
+  if (r && view.value.group_by && (r.props[view.value.group_by] ?? '') !== col) void setValue(r, view.value.group_by, col || null)
+}
+</script>
+
+<template>
+  <section class="db" data-testid="database">
+    <!-- Views and tools -->
+    <div class="db-bar">
+      <div class="db-views" role="tablist" :aria-label="t('db.views')">
+        <button
+          v-for="v in views"
+          :key="v.id"
+          type="button"
+          role="tab"
+          class="db-view"
+          :class="{ on: v.id === view.id }"
+          :aria-selected="v.id === view.id"
+          @click="pickView(v.id)"
+          @dblclick="editable && v.id !== '_' && openViewMenu(v.id, $event)"
+          @contextmenu.prevent="editable && v.id !== '_' && openViewMenu(v.id, $event)"
+        >
+          <component :is="v.type === 'board' ? Columns3 : Table2" class="h-3.5 w-3.5" />{{ v.name }}
+        </button>
+        <button v-if="editable" ref="addAnchor" type="button" class="icon-btn h-7 w-7" :title="t('db.addView')" :aria-label="t('db.addView')" data-testid="db-add-view" @click="addOpen = !addOpen"><Plus class="h-4 w-4" /></button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button v-if="editable && view.id !== '_'" type="button" class="icon-btn h-7 w-7" :aria-label="t('db.viewOptions')" @click="openViewMenu(view.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
+        <ViewTools :db="db" :view="view" :editable="editable" :members="members" @update="saveView" />
+        <button v-if="editable" type="button" class="btn-primary btn-sm" data-testid="db-new-row" @click="startAdd(view.type === 'board' ? board[0]?.key ?? '' : 'table')"><Plus class="h-3.5 w-3.5" />{{ t('db.new') }}</button>
+      </div>
+    </div>
+
+    <Popover v-if="addOpen" :anchor="addAnchor" :width="200" @close="addOpen = false">
+      <div class="p-1.5">
+        <button type="button" class="menu-item w-full" @click="addView('table')"><Table2 class="h-4 w-4 text-text-2" />{{ t('db.table') }}</button>
+        <button type="button" class="menu-item w-full" data-testid="db-add-board" @click="addView('board')"><Columns3 class="h-4 w-4 text-text-2" />{{ t('db.board') }}</button>
+      </div>
+    </Popover>
+    <Popover v-if="viewMenu" :anchor="viewMenu.anchor" :width="240" @close="closeViewMenu">
+      <div class="space-y-2 p-2.5">
+        <input v-model="viewName" class="field !py-1.5 text-[13.5px]" :aria-label="t('db.viewName')" maxlength="100" @keydown.enter.prevent="closeViewMenu" />
+        <label v-if="views.find((v) => v.id === viewMenu!.id)?.type === 'board'" class="flex items-center gap-2 text-[13px] text-text-2">
+          {{ t('db.groupBy') }}
+          <select class="input ml-auto !w-auto !py-1 text-[13px]" :value="views.find((v) => v.id === viewMenu!.id)?.group_by ?? ''" @change="saveView({ ...views.find((v) => v.id === viewMenu!.id)!, group_by: ($event.target as HTMLSelectElement).value || undefined })">
+            <option value="">—</option>
+            <option v-for="p in selects" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </label>
+        <button v-if="db.views.length > 1" type="button" class="menu-item danger w-full" @click="deleteView(viewMenu!.id)"><Trash2 class="h-4 w-4" />{{ t('db.deleteView') }}</button>
+      </div>
+    </Popover>
+
+    <!-- Table -->
+    <div v-if="view.type === 'table'" class="db-scroll">
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th class="name-col">{{ t('db.name') }}</th>
+            <th v-for="p in columns" :key="p.id">
+              <button type="button" class="th-btn" :disabled="!editable" data-testid="db-col" @click="openProp(p, $event)">{{ p.name }}</button>
+            </th>
+            <th v-if="editable" class="add-col">
+              <button type="button" class="icon-btn h-6 w-6" :title="t('db.addProp')" :aria-label="t('db.addProp')" data-testid="db-add-prop" @click="newProp"><Plus class="h-4 w-4" /></button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in shown" :key="r.id" data-testid="db-row">
+            <td class="name-col">
+              <button type="button" class="row-name" @click="open(r.id)">
+                <FileText class="h-3.5 w-3.5 shrink-0 text-text-3" />
+                <span class="truncate">{{ r.title || t('pages.untitled') }}</span>
+              </button>
+            </td>
+            <td v-for="p in columns" :key="p.id">
+              <DbCell :prop="p" :value="r.props[p.id]" :editable="editable" :members="members" @set="(v) => setValue(r, p.id, v)" @add-option="(o) => addOption(p.id, o)" />
+            </td>
+            <td v-if="editable" />
+          </tr>
+          <tr v-if="editable">
+            <td :colspan="columns.length + 2" class="add-row">
+              <input v-if="adding === 'table'" ref="addInput" v-model="draft" class="field !py-1 text-[13.5px]" :placeholder="t('db.rowName')" maxlength="300" data-testid="db-row-input" @keydown.enter="addRow()" @keydown.esc="adding = null" @blur="draft.trim() ? addRow() : (adding = null)" />
+              <button v-else type="button" class="btn-plain !text-[13px]" @click="startAdd('table')"><Plus class="h-4 w-4" />{{ t('db.new') }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="!shown.length && rows.length" class="px-2 py-3 text-[13px] text-text-3">{{ t('db.noneMatch') }}</p>
+    </div>
+
+    <!-- Board -->
+    <div v-else class="db-board">
+      <p v-if="!view.group_by" class="px-1 text-[13px] text-text-3">{{ t('db.pickGroup') }}</p>
+      <div v-for="c in board" :key="c.key" class="db-col" data-testid="db-board-col" @dragover.prevent @drop.prevent="drop(c.key)">
+        <h4 class="db-col-head">
+          <span class="h-2.5 w-2.5 rounded-full" :style="{ background: c.color || 'var(--text-faint)' }" />{{ c.name }}
+          <span class="ml-auto font-normal text-text-3">{{ c.rows.length }}</span>
+        </h4>
+        <div
+          v-for="r in c.rows"
+          :key="r.id"
+          class="db-card"
+          :draggable="editable"
+          data-testid="db-card"
+          @dragstart="dragging = r.id"
+          @dragend="dragging = ''"
+          @click="open(r.id)"
+        >
+          <div class="text-[13.5px] font-medium">{{ r.title || t('pages.untitled') }}</div>
+          <div class="mt-1 flex flex-wrap gap-1">
+            <template v-for="p in columns" :key="p.id">
+              <DbCell v-if="p.id !== view.group_by && r.props[p.id] !== undefined" :prop="p" :value="r.props[p.id]" :editable="false" :members="members" />
+            </template>
+          </div>
+        </div>
+        <input v-if="adding === c.key" ref="addInput" v-model="draft" class="field mt-1 !py-1 text-[13.5px]" :placeholder="t('db.rowName')" maxlength="300" @keydown.enter="addRow(c.key)" @keydown.esc="adding = null" @blur="draft.trim() ? addRow(c.key) : (adding = null)" />
+        <button v-else-if="editable" type="button" class="btn-plain mt-1 !text-[13px]" @click="startAdd(c.key)"><Plus class="h-4 w-4" />{{ t('db.new') }}</button>
+      </div>
+    </div>
+
+    <PropMenu
+      v-if="propMenu"
+      :anchor="propMenu.anchor"
+      :prop="propMenu.prop"
+      :is-new="propMenu.isNew"
+      @save="saveProp"
+      @hide="hideProp(propMenu.prop.id)"
+      @remove="removeProp(propMenu.prop.id)"
+      @close="propMenu = null"
+    />
+  </section>
+</template>
+
+<style scoped>
+.db {
+  margin: 4px 0 24px;
+}
+.db-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+.db-views {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+.db-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.db-view:hover {
+  background: var(--fill-2);
+}
+.db-view.on {
+  background: var(--fill-2);
+  color: var(--text);
+  font-weight: 600;
+}
+.db-scroll {
+  overflow-x: auto;
+}
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.db-table th {
+  padding: 6px 4px;
+  border-bottom: 0.5px solid var(--border);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.db-table td {
+  min-width: 120px;
+  max-width: 280px;
+  padding: 1px 2px;
+  border-bottom: 0.5px solid var(--line-soft);
+  vertical-align: middle;
+}
+.db-table .name-col {
+  min-width: 200px;
+}
+.db-table .add-col {
+  width: 32px;
+  min-width: 0;
+}
+.th-btn {
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.th-btn:not(:disabled):hover {
+  background: var(--fill-2);
+  color: var(--text);
+}
+.row-name {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-weight: 500;
+  text-align: left;
+}
+.row-name:hover {
+  background: var(--fill-2);
+}
+.add-row {
+  padding: 6px 4px !important;
+}
+.db-board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-top: 12px;
+}
+.db-col {
+  flex: 0 0 240px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--grouped);
+}
+.db-col-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.db-card {
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border), var(--shadow-sm);
+  cursor: pointer;
+}
+</style>

@@ -126,6 +126,12 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Databases**: a page becomes a database of the pages inside it — typed
+  properties (text, number, select, multi-select, date, checkbox, person,
+  link) edited in place, table and board views with filters, sorts and
+  hidden properties, a row's values on its page. Values save as patches
+  (two people editing a row don't overwrite each other). Exports write a
+  table; Notion databases import as databases.
 - **Pages as PDF; import from Notion and Apple Notes**: a page's ⋯ → Export
   as PDF prints a clean copy (pictures included) to save as PDF. **Import**
   takes Markdown files, a Notion export (.zip, nested zips too: the page

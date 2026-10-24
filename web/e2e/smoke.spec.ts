@@ -1181,6 +1181,8 @@ test('import from Notion and Apple Notes; a page out as PDF', async ({ page, req
     [`Garden ${A}.md`]: u8(`# Garden\n\nSee [Roses](Garden%20${A}/Roses%20${B}.md).\n\n![bed](Garden%20${A}/bed.png)`),
     [`Garden ${A}/Roses ${B}.md`]: u8('# Roses\n\n- [ ] prune'),
     [`Garden ${A}/bed.png`]: png,
+    [`Books ${B}.csv`]: u8('Name,Status,Pages\nDune,Read,412\nEmma,To read,474\n'),
+    [`Books ${B}/Dune ${A}.md`]: u8('# Dune\n\nStatus: Read\nPages: 412\n\nGreat.'),
   })
 
   await signIn(page, NEW_PASSWORD)
@@ -1191,7 +1193,7 @@ test('import from Notion and Apple Notes; a page out as PDF', async ({ page, req
     { name: 'Export.zip', mimeType: 'application/zip', buffer: Buffer.from(notion) },
     { name: 'Shopping.html', mimeType: 'text/html', buffer: Buffer.from('<html><head><title>Shopping</title></head><body><div><b>Saturday</b></div><ul class="checklist"><li class="checked">Milk</li><li>Bread</li></ul></body></html>') },
   ])
-  await expect(page.getByTestId('import-result')).toContainText('3 pages and 1 file imported')
+  await expect(page.getByTestId('import-result')).toContainText('6 pages and 1 file imported')
   await page.keyboard.press('Escape')
 
   const tree = (await (await request.get(`/api/v1/workspaces/${ws.id}/pages`, { headers: H })).json()) as { id: string; title: string; parent_id: string | null }[]
@@ -1202,6 +1204,14 @@ test('import from Notion and Apple Notes; a page out as PDF', async ({ page, req
   expect(garden.content).toMatch(/!\[bed\]\(\/api\/v1\/uploads\/[^)]+\)/)
   const shopping = await (await request.get(`/api/v1/pages/${by.Shopping.id}`, { headers: H })).json()
   expect(shopping.content).toBe('**Saturday**\n\n- [x] Milk\n- [ ] Bread')
+  // Notion's database: a database, its rows with their values (Emma had no page).
+  const books = await (await request.get(`/api/v1/pages/${by.Books.id}`, { headers: H })).json()
+  expect(books.db.props.map((p: { name: string; type: string }) => `${p.name}:${p.type}`)).toEqual(['Status:select', 'Pages:number'])
+  const dune = await (await request.get(`/api/v1/pages/${by.Dune.id}`, { headers: H })).json()
+  expect(dune.parent_id).toBe(by.Books.id)
+  expect(dune.content).toBe('Great.')
+  expect(Object.values(dune.props)).toContain(412)
+  expect(by.Emma.parent_id).toBe(by.Books.id)
 
   // The page out as PDF: a clean copy, printed.
   await page.goto(`/w/${ws.id}/p/${by.Garden.id}`)
@@ -1213,6 +1223,63 @@ test('import from Notion and Apple Notes; a page out as PDF', async ({ page, req
   await expect(frame.locator('a', { hasText: 'Roses' })).toBeVisible()
   await expect.poll(() => frame.locator('img').evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1)
   await page.screenshot({ path: 'test-results/imported.png' })
+})
+
+test('databases: a page of rows with properties, edited in place, filtered, on a board', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Shelf', kind: 'personal', modules: ['home', 'pages'] } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Reading list' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${list.id}`)
+  await page.getByTestId('make-database').click()
+  const dbv = page.getByTestId('database')
+  await expect(dbv.getByTestId('db-col')).toHaveText(['Status'])
+
+  // A number property.
+  await dbv.getByTestId('db-add-prop').click()
+  const menu = page.getByTestId('prop-menu')
+  await menu.getByRole('textbox', { name: 'Property name' }).fill('Pages')
+  await menu.getByTestId('prop-type').selectOption('number')
+  await menu.getByTestId('prop-done').click()
+  await expect(dbv.getByTestId('db-col')).toHaveText(['Status', 'Pages'])
+
+  // Two rows; values typed and picked in place.
+  await dbv.getByTestId('db-new-row').click()
+  for (const name of ['Dune', 'Emma']) {
+    await dbv.getByTestId('db-row-input').fill(name)
+    await dbv.getByTestId('db-row-input').press('Enter')
+    await expect(dbv.getByTestId('db-row').filter({ hasText: name })).toBeVisible()
+  }
+  await page.keyboard.press('Escape')
+  const dune = dbv.getByTestId('db-row').filter({ hasText: 'Dune' })
+  await dune.getByRole('textbox', { name: 'Pages' }).fill('412')
+  await dune.getByRole('textbox', { name: 'Pages' }).press('Enter')
+  await dune.getByRole('button', { name: 'Status' }).click()
+  await page.getByTestId('option-picker').getByRole('button', { name: 'Done' }).click()
+  await expect(dune).toContainText('Done')
+
+  // Filter: Status is Done.
+  await dbv.getByTestId('db-filter').click()
+  await page.getByTestId('db-add-filter').click()
+  await page.getByTestId('db-filters').getByRole('combobox', { name: 'Value' }).selectOption({ label: 'Done' })
+  await expect(dbv.getByTestId('db-row')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+
+  // A board by Status.
+  await dbv.getByTestId('db-add-view').click()
+  await page.getByTestId('db-add-board').click()
+  const done = dbv.getByTestId('db-board-col').filter({ hasText: 'Done' })
+  await expect(done.getByTestId('db-card')).toHaveText([/Dune/])
+
+  // A row's page shows its values.
+  await done.getByTestId('db-card').first().click()
+  await expect(page.getByTestId('row-props')).toContainText('Pages')
+  await expect(page.getByTestId('row-props').getByRole('textbox', { name: 'Pages' })).toHaveValue('412')
+  await page.goBack()
+  await page.screenshot({ path: 'test-results/database.png' })
 })
 
 test('an admin creates a role with instance privileges', async ({ page }) => {

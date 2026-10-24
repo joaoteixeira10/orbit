@@ -275,6 +275,34 @@ rendered like a README on GitHub — and you can tick its checkboxes right
 there. **Edit** (or the **E** key, or a double click) opens it for writing;
 **Done** goes back to reading. A new page opens ready to write.
 
+**Databases.** A page can be a **database** of the pages inside it — a
+reading list, a set of projects, recipes. On an empty page pick **Database**
+(next to the templates), or `⋯` → **Turn into a database** on any page (its
+pages inside become the rows). Each row is a page of its own — open it to
+write in it; its values show under its title.
+- **Properties** are the columns: **+** at the end of the header adds one;
+  click a column's name to rename it, change its type, edit a select's
+  options (click a colour to change it), hide it in this view or delete it.
+  Types: text, number, select, multi-select, date, checkbox, person (a
+  member) and link.
+- **Values** are edited right in the table: type text and numbers, pick a
+  date, tick a box, choose a person; a select or multi-select opens its
+  options (type a new one to add it).
+- **New** (or the last row) adds a row: type its name, Enter.
+- **Views** are tabs above the table: **+** adds a **Table** or a **Board**
+  (cards in a column per option of a select property — drag a card to
+  another column to change it; `⋯` → **Group by** picks the property).
+  Double-click a view's tab (or `⋯`) to rename or delete it. Each view keeps
+  its own **Filter** (rules that must all hold: *contains*, *is*, *>*,
+  *is before*, *in the next week*, *is checked*…), **Sort** (one property
+  after another, ascending or descending) and **Properties** shown. A row
+  added under a filter like *Status is Done* gets that value, so it shows.
+
+Views and properties belong to the database, so everyone sees the same
+ones. **Turn back into a page** keeps the rows as pages. Exported as
+Markdown, a database page gets a table of its rows, and each row its values
+under its title; Notion databases come in as databases (see Import).
+
 **@-mentions.** Type **@** in either editor for people, pages and dates:
 - a **person** of the workspace goes in as `@username` — they're told
   (in the bell, and where they get comments), once per page;
@@ -340,7 +368,9 @@ files, or a `.zip` of them:
   and pick the `.zip` you get (a zip inside it is opened too). The page tree
   comes along, Notion's ids leave the names, links between the pages point
   at the new ones, and pictures and files are uploaded to their page. A
-  database comes in as a page with its table, its rows as pages inside it.
+  database comes in as a database: its columns as properties (numbers,
+  dates, checkboxes and selects recognised), its rows as pages inside it
+  with their values.
 - **Apple Notes**: the Notes app itself only exports PDFs — export your notes
   as HTML or Markdown with an app such as *Exporter*, or ask Apple for a
   copy of your iCloud data (privacy.apple.com; Notes come as text files).

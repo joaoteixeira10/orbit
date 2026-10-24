@@ -66,6 +66,24 @@ func (h *Handlers) wsAccess(c *gin.Context, wsID, need string) (ws models.Worksp
 	return ws, member, true
 }
 
+// memberNames maps a workspace's members to their names (display name, else
+// username).
+func (h *Handlers) memberNames(wsID string) map[string]string {
+	var rows []struct {
+		ID, Username, DisplayName string
+	}
+	h.db.Table("workspace_members").Joins("JOIN users ON users.id = workspace_members.user_id").
+		Where("workspace_members.workspace_id = ?", wsID).Select("users.id, users.username, users.display_name").Scan(&rows)
+	out := make(map[string]string, len(rows))
+	for _, r := range rows {
+		out[r.ID] = r.DisplayName
+		if out[r.ID] == "" {
+			out[r.ID] = r.Username
+		}
+	}
+	return out
+}
+
 // memberIDs lists the users of a workspace.
 func (h *Handlers) memberIDs(wsID string) []string {
 	var ids []string

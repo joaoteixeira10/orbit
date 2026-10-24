@@ -2,13 +2,16 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2 } from 'lucide-vue-next'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2 } from 'lucide-vue-next'
 import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
 import { locale } from '@/lib/dates'
 import { builtInTemplates, fill, type PageTemplate } from '@/lib/pageTemplates'
 import { currentLocale } from '@/i18n'
+import DatabaseView from '@/components/database/DatabaseView.vue'
+import RowProps from '@/components/database/RowProps.vue'
+import { newDatabase } from '@/lib/database'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
@@ -351,6 +354,21 @@ async function refresh() {
   autosize()
 }
 
+// ---- Databases: this page one, or a row of its parent ----
+const isDb = computed(() => !!(pages.find(pageId.value)?.db ?? page.value?.db))
+const parentDb = computed(() => {
+  const parent = page.value?.parent_id
+  return parent && pages.find(parent)?.db ? parent : ''
+})
+async function makeDatabase() {
+  try {
+    await pages.saveDB(pageId.value, newDatabase({ status: t('db.status'), todo: t('db.todo'), doing: t('db.doing'), done: t('db.doneOpt'), table: t('db.table') }))
+    hasText.value = true
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 // ---- Templates ----
 // An empty page offers to start from a template: the built-in ones and the
 // workspace's pages marked as templates. It fills the title (if none), the
@@ -361,7 +379,7 @@ const BUILT_IN_ICONS: Record<string, unknown> = { meeting: CalendarDays, class: 
 const ownTemplates = computed(() => (pages.byWs[wsId.value] ?? []).filter((p) => p.template && !p.trashed_at && p.id !== pageId.value))
 // Whether this page is a template (its menu changes the tree's copy).
 const isTemplate = computed(() => pages.find(pageId.value)?.template ?? page.value?.template ?? false)
-const offerTemplates = computed(() => editable.value && !hasText.value && !isTemplate.value)
+const offerTemplates = computed(() => editable.value && !hasText.value && !isTemplate.value && !isDb.value)
 async function useTemplate(tpl: PageTemplate | { id: string }) {
   const p = page.value
   if (!p) return
@@ -760,10 +778,13 @@ onUnmounted(() => {
             <button v-for="b in builtInTemplates(currentLocale())" :key="b.key" type="button" class="btn btn-sm" @click="useTemplate(b)">
               <component :is="BUILT_IN_ICONS[b.key]" class="h-3.5 w-3.5" />{{ t(`pages.tpl.${b.key}`) }}
             </button>
+            <button type="button" class="btn btn-sm" data-testid="make-database" @click="makeDatabase"><Table2 class="h-3.5 w-3.5" />{{ t('db.database') }}</button>
             <button v-for="o in ownTemplates" :key="o.id" type="button" class="btn btn-sm" @click="useTemplate({ id: o.id })">
               <span v-if="o.icon">{{ o.icon }}</span><LayoutTemplate v-else class="h-3.5 w-3.5" />{{ o.title || t('pages.untitled') }}
             </button>
           </div>
+          <RowProps v-if="parentDb" :ws="wsId" :page-id="page.id" :db-id="parentDb" :editable="editable" />
+          <DatabaseView v-if="isDb" :ws="wsId" :page-id="page.id" :editable="editable" />
           <p v-if="isTemplate && editable" class="tpl-note"><LayoutTemplate class="h-3.5 w-3.5 shrink-0" />{{ t('pages.isTemplate', { fields: PLACEHOLDERS }) }}</p>
 
           <component
@@ -779,7 +800,7 @@ onUnmounted(() => {
             @invalid="onInvalid"
           />
           <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" math @toggle="onToggle" @edit="startEdit()" />
-          <p v-else class="empty-read">
+          <p v-else-if="!isDb" class="empty-read">
             {{ t('editor.emptyRead') }}
             <button v-if="editable" class="btn-plain" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</button>
           </p>
@@ -799,7 +820,7 @@ onUnmounted(() => {
           </section>
 
           <!-- Pages inside -->
-          <section v-if="children.length || editable" class="subpages">
+          <section v-if="!isDb && (children.length || editable)" class="subpages">
             <h2 v-if="children.length" class="cap mb-1.5 px-2">{{ t('editor.subpages') }}</h2>
             <RouterLink v-for="c in children" :key="c.id" :to="{ name: 'ws-page', params: { ws: wsId, page: c.id } }" class="sub-row">
               <span v-if="c.icon" class="sub-icon">{{ c.icon }}</span>

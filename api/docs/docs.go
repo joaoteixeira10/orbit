@@ -8910,12 +8910,19 @@ const docTemplate = `{
                 "content": {
                     "type": "string"
                 },
+                "db": {
+                    "description": "DB makes it a database; Props are its values as a row of one.",
+                    "type": "object"
+                },
                 "icon": {
                     "type": "string",
                     "maxLength": 64
                 },
                 "parent_id": {
                     "type": "string"
+                },
+                "props": {
+                    "type": "object"
                 },
                 "title": {
                     "type": "string",
@@ -10375,6 +10382,9 @@ const docTemplate = `{
                 "created_by": {
                     "type": "string"
                 },
+                "db": {
+                    "type": "object"
+                },
                 "favorite": {
                     "type": "boolean"
                 },
@@ -10386,6 +10396,9 @@ const docTemplate = `{
                 },
                 "parent_id": {
                     "type": "string"
+                },
+                "props": {
+                    "type": "object"
                 },
                 "rank": {
                     "type": "number"
@@ -10417,6 +10430,10 @@ const docTemplate = `{
         "api.pageSummary": {
             "type": "object",
             "properties": {
+                "db": {
+                    "description": "A database's properties and views; a row's values (JSON objects).",
+                    "type": "object"
+                },
                 "favorite": {
                     "type": "boolean"
                 },
@@ -10428,6 +10445,9 @@ const docTemplate = `{
                 },
                 "parent_id": {
                     "type": "string"
+                },
+                "props": {
+                    "type": "object"
                 },
                 "rank": {
                     "type": "number"
@@ -11175,9 +11195,16 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 64
                 },
+                "db": {
+                    "description": "DB: the whole database (null: no longer one). Props: a patch of the\nrow's values (a null value removes one).",
+                    "type": "object"
+                },
                 "icon": {
                     "type": "string",
                     "maxLength": 64
+                },
+                "props": {
+                    "type": "object"
                 },
                 "template": {
                     "description": "Template offers the page as a template for new pages.",

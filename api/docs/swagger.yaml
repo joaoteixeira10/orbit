@@ -488,11 +488,16 @@ definitions:
         type: string
       content:
         type: string
+      db:
+        description: DB makes it a database; Props are its values as a row of one.
+        type: object
       icon:
         maxLength: 64
         type: string
       parent_id:
         type: string
+      props:
+        type: object
       title:
         maxLength: 300
         type: string
@@ -1500,6 +1505,8 @@ definitions:
         type: string
       created_by:
         type: string
+      db:
+        type: object
       favorite:
         type: boolean
       icon:
@@ -1508,6 +1515,8 @@ definitions:
         type: string
       parent_id:
         type: string
+      props:
+        type: object
       rank:
         type: number
       template:
@@ -1530,6 +1539,9 @@ definitions:
     type: object
   api.pageSummary:
     properties:
+      db:
+        description: A database's properties and views; a row's values (JSON objects).
+        type: object
       favorite:
         type: boolean
       icon:
@@ -1538,6 +1550,8 @@ definitions:
         type: string
       parent_id:
         type: string
+      props:
+        type: object
       rank:
         type: number
       template:
@@ -2071,9 +2085,16 @@ definitions:
       cover:
         maxLength: 64
         type: string
+      db:
+        description: |-
+          DB: the whole database (null: no longer one). Props: a patch of the
+          row's values (a null value removes one).
+        type: object
       icon:
         maxLength: 64
         type: string
+      props:
+        type: object
       template:
         description: Template offers the page as a template for new pages.
         type: boolean

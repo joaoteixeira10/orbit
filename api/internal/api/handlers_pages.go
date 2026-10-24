@@ -3,6 +3,7 @@ package api
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,13 +33,30 @@ type pageSummary struct {
 	TrashedAt   *time.Time `json:"trashed_at,omitempty"`
 	Favorite    bool       `json:"favorite"`
 	Template    bool       `json:"template"`
+	// A database's properties and views; a row's values (JSON objects).
+	DB    json.RawMessage `json:"db,omitempty" swaggertype:"object"`
+	Props json.RawMessage `json:"props,omitempty" swaggertype:"object"`
 }
 
 // pageResponse is a full page plus what the caller may do with it.
 type pageResponse struct {
 	models.Page
-	Favorite bool `json:"favorite"`
-	CanEdit  bool `json:"can_edit"`
+	Favorite bool            `json:"favorite"`
+	CanEdit  bool            `json:"can_edit"`
+	DB       json.RawMessage `json:"db,omitempty" swaggertype:"object"`
+	Props    json.RawMessage `json:"props,omitempty" swaggertype:"object"`
+}
+
+// rawJSON is s as JSON (nothing when empty).
+func rawJSON(s string) json.RawMessage {
+	if s == "" {
+		return nil
+	}
+	return json.RawMessage(s)
+}
+
+func pageOut(p models.Page, fav, canEdit bool) pageResponse {
+	return pageResponse{Page: p, Favorite: fav, CanEdit: canEdit, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
 }
 
 func (h *Handlers) favoriteSet(uid string) map[string]bool {
@@ -52,7 +70,7 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
 }
 
 // pageAccess loads a page and checks the caller's role in its workspace.
@@ -120,6 +138,9 @@ type createPageRequest struct {
 	Content  string  `json:"content"`
 	// AfterID puts the page right after this sibling ("" = at the end).
 	AfterID string `json:"after_id"`
+	// DB makes it a database; Props are its values as a row of one.
+	DB    json.RawMessage `json:"db" swaggertype:"object"`
+	Props json.RawMessage `json:"props" swaggertype:"object"`
 }
 
 // siblingRank returns a rank among the children of parent in ws: right after
@@ -213,8 +234,21 @@ func (h *Handlers) createPage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	dbJSON, err := planner.CleanDatabase(string(req.DB))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	props := ""
+	if len(req.Props) > 0 && string(req.Props) != "null" {
+		if props, err = planner.MergeProps("", string(req.Props)); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
 	uid := auth.UserID(c)
 	p := models.Page{
+		DB: dbJSON, Props: props,
 		WorkspaceID: ws.ID, ParentID: req.ParentID, Title: strings.TrimSpace(req.Title), Icon: req.Icon,
 		Content: req.Content, ContentText: planner.DocText(req.Content),
 		Rank: h.siblingRank(h.db, ws.ID, req.ParentID, req.AfterID, ""), CreatedBy: uid, UpdatedBy: uid,
@@ -230,7 +264,7 @@ func (h *Handlers) createPage(c *gin.Context) {
 	if p.Title != "" {
 		h.notifyActivity(c, ws, "page_added", p.Title, pageLink(p))
 	}
-	c.JSON(http.StatusCreated, pageResponse{Page: p, CanEdit: true})
+	c.JSON(http.StatusCreated, pageOut(p, false, true))
 }
 
 // pageLink opens a page in the app.
@@ -255,7 +289,7 @@ func (h *Handlers) getPage(c *gin.Context) {
 	var ws models.Workspace
 	h.db.Select("id", "archived_at").First(&ws, "id = ?", p.WorkspaceID)
 	canEdit := roleRank(m.Role) >= roleRank(models.WSEditor) && !auth.Effective(c).ReadOnly && p.TrashedAt == nil && ws.ArchivedAt == nil
-	c.JSON(http.StatusOK, pageResponse{Page: p, Favorite: n > 0, CanEdit: canEdit})
+	c.JSON(http.StatusOK, pageOut(p, n > 0, canEdit))
 }
 
 type updatePageRequest struct {
@@ -265,6 +299,10 @@ type updatePageRequest struct {
 	// Template offers the page as a template for new pages.
 	Template *bool   `json:"template"`
 	Content  *string `json:"content"`
+	// DB: the whole database (null: no longer one). Props: a patch of the
+	// row's values (a null value removes one).
+	DB    json.RawMessage `json:"db" swaggertype:"object"`
+	Props json.RawMessage `json:"props" swaggertype:"object"`
 	// Version is the version the editor started from; required with content.
 	// A newer save by someone else makes this a 409 with the current page.
 	Version int `json:"version"`
@@ -311,6 +349,22 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	if req.Template != nil {
 		up["template"] = *req.Template
 	}
+	if len(req.DB) > 0 {
+		d, err := planner.CleanDatabase(string(req.DB))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		up["db"] = d
+	}
+	if len(req.Props) > 0 && string(req.Props) != "null" {
+		merged, err := planner.MergeProps(p.Props, string(req.Props))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		up["props"] = merged
+	}
 	if req.Content != nil {
 		md := planner.PageMarkdown(*req.Content)
 		req.Content = &md
@@ -333,7 +387,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	}
 	p = reloadPage(h, p.ID)
 	if res.RowsAffected == 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "someone else saved this page since you opened it", "page": pageResponse{Page: p, CanEdit: true}})
+		c.JSON(http.StatusConflict, gin.H{"error": "someone else saved this page since you opened it", "page": pageOut(p, false, true)})
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
@@ -344,7 +398,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	if wasUntitled && p.Title != "" && p.CreatedBy == auth.UserID(c) && time.Since(p.CreatedAt) < 24*time.Hour {
 		h.notifyActivity(c, h.workspaceOf(p.WorkspaceID), "page_added", p.Title, pageLink(p))
 	}
-	c.JSON(http.StatusOK, pageResponse{Page: p, CanEdit: true})
+	c.JSON(http.StatusOK, pageOut(p, false, true))
 }
 
 type movePageRequest struct {
@@ -493,7 +547,7 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 	uid := auth.UserID(c)
 	cp := models.Page{
 		WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title + " (copy)", Icon: p.Icon, Cover: p.Cover,
-		Content: p.Content, ContentText: p.ContentText, CreatedBy: uid, UpdatedBy: uid,
+		Content: p.Content, ContentText: p.ContentText, CreatedBy: uid, UpdatedBy: uid, DB: p.DB, Props: p.Props,
 		Rank: h.siblingRank(h.db, p.WorkspaceID, p.ParentID, p.ID, ""),
 	}
 	if err := h.db.Create(&cp).Error; err != nil {
@@ -501,7 +555,7 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
-	c.JSON(http.StatusCreated, pageResponse{Page: cp, CanEdit: true})
+	c.JSON(http.StatusCreated, pageOut(cp, false, true))
 }
 
 // favoritePage adds (POST) or removes (DELETE) a page from my Favorites.
@@ -629,6 +683,12 @@ func (h *Handlers) exportPages(c *gin.Context) {
 			return up + strings.ReplaceAll(attachment(u), " ", "%20")
 		})
 	}
+	// Databases: a table of their rows; rows: their values under the title.
+	byPage := map[string]models.Page{}
+	for _, p := range pages {
+		byPage[p.ID] = p
+	}
+	names := h.memberNames(ws.ID)
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	var walk func(parent, dir string) error
@@ -645,8 +705,22 @@ func (h *Handlers) exportPages(c *gin.Context) {
 				title = "Untitled"
 			}
 			body := "# " + planner.Escape(title) + "\n"
+			if p.ParentID != nil {
+				if db := planner.ParseDatabase(byPage[*p.ParentID].DB); db != nil {
+					if lines := planner.PropLines(*db, p.Props, names); lines != "" {
+						body += "\n" + lines + "\n"
+					}
+				}
+			}
 			if md := strings.TrimSpace(planner.PageMarkdown(p.Content)); md != "" {
 				body += "\n" + localLinks(md, dir) + "\n"
+			}
+			if db := planner.ParseDatabase(p.DB); db != nil {
+				var rows []planner.Row
+				for _, r := range children[p.ID] {
+					rows = append(rows, planner.Row{Title: r.Title, Props: r.Props, Rank: r.Rank})
+				}
+				body += "\n" + planner.DatabaseTable(*db, rows, names) + "\n"
 			}
 			f, err := zw.CreateHeader(&zip.FileHeader{Name: dir + name + ".md", Method: zip.Deflate, Modified: p.UpdatedAt})
 			if err != nil {

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2 } from 'lucide-vue-next'
 import Popover from './ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import { usePagesStore } from '@/stores/pages'
@@ -87,6 +87,12 @@ const asPdf = () =>
     const { printPage } = await import('@/lib/printPage')
     await printPage(p.title || t('pages.untitled'), p.content, meta)
   })
+// A database of the pages inside it (or no longer: they stay as pages).
+const toggleDatabase = () =>
+  run(async () => {
+    const { newDatabase } = await import('@/lib/database')
+    await pages.saveDB(props.pageId, page.value?.db ? null : newDatabase({ status: t('db.status'), todo: t('db.todo'), doing: t('db.doing'), done: t('db.doneOpt'), table: t('db.table') }))
+  })
 // A template is offered when a new page starts empty.
 const toggleTemplate = () =>
   run(async () => {
@@ -124,6 +130,9 @@ const trash = () =>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
       <button class="menu-item" data-testid="page-pdf" @click="asPdf"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
+      <button class="menu-item" data-testid="page-db-toggle" @click="toggleDatabase">
+        <Table2 class="h-4 w-4 text-text-2" />{{ page?.db ? t('db.stop') : t('db.turnInto') }}
+      </button>
       <button class="menu-item" data-testid="page-template-toggle" @click="toggleTemplate">
         <LayoutTemplate class="h-4 w-4 text-text-2" />{{ page?.template ? t('pages.templateStop') : t('pages.templateUse') }}
       </button>

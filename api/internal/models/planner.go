@@ -75,6 +75,11 @@ type Page struct {
 	// Template: offered when a new page starts empty (its title and
 	// document, its placeholders — the date and the like — filled in).
 	Template bool `gorm:"not null;default:false" json:"template"`
+	// DB makes the page a database of the pages inside it: its properties
+	// and views (planner.Database, JSON). Props are a row's values, by
+	// property id (JSON). The API answers both as JSON objects.
+	DB    string `gorm:"type:text" json:"db,omitempty"`
+	Props string `gorm:"type:text" json:"props,omitempty"`
 }
 
 // PageFavorite pins a page to one user's Favorites.

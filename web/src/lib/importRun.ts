@@ -7,7 +7,9 @@ import { pageExtensions } from '@/components/editor/extensions'
 import { pagesApi } from '@/api/planner'
 import { uploadFile } from './uploads'
 import { normalizeMarkdown, textToMarkdown } from './markdown'
-import { baseOf, csvTable, dirOf, isImage, mimeOf, plan, resolve, rewriteLinks, splitTitle, type InFile, type Planned } from './importPages'
+import { baseOf, cleanName, csvRows, dirOf, isImage, mimeOf, plan, resolve, rewriteLinks, splitTitle, type InFile, type Planned } from './importPages'
+import { guessType, importValue, newId, type Database, type Props } from './database'
+import { i18n } from '@/i18n'
 
 export interface ImportResult {
   pages: number
@@ -55,6 +57,39 @@ function dataUrlFile(src: string, n: number): File | null {
   return new File([bytes], `image-${n}.${m[1].split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'}`, { type: m[1] })
 }
 
+// A Notion database (its CSV): the database it becomes, and its rows'
+// values by name (rows with no page of their own become pages).
+interface Table {
+  db: Database
+  rows: Map<string, Props>
+  headers: string[]
+}
+function tableOf(text: string): Table {
+  const rows = csvRows(text)
+  const headers = rows[0] ?? []
+  const data = rows.slice(1)
+  const props = headers.slice(1).map((h, i) => ({ id: newId(), name: h.trim() || `#${i + 2}`, type: guessType(data.map((r) => r[i + 1] ?? '')) }))
+  const values = new Map<string, Props>()
+  for (const r of data) {
+    const v: Props = {}
+    props.forEach((p, i) => {
+      const x = importValue(p, r[i + 1] ?? '')
+      if (x !== undefined) v[p.id] = x
+    })
+    values.set(cleanName(r[0] ?? ''), v)
+  }
+  return { db: { props, views: [{ id: newId(), name: i18n.global.t('db.table'), type: 'table' }] }, rows: values, headers }
+}
+// Notion writes a row's values at the top of its page ("Status: Done"):
+// they're properties now.
+function dropPropLines(md: string, headers: string[]): string {
+  const names = new Set(headers.map((h) => h.trim().toLowerCase()))
+  const lines = md.split('\n')
+  let i = 0
+  while (i < lines.length && (lines[i].trim() === '' || names.has(lines[i].split(':')[0].trim().toLowerCase()))) i++
+  return i ? lines.slice(i).join('\n') : md
+}
+
 // importPages makes the pages under `parent` (null: at the top), telling
 // progress(done, total) as it goes.
 export async function importPages(ws: string, files: InFile[], parent: string | null, progress: (done: number, total: number) => void): Promise<ImportResult> {
@@ -69,6 +104,8 @@ export async function importPages(ws: string, files: InFile[], parent: string | 
     if (p.file) pageOf.set(p.file.path, p.key)
     if (p.kind === 'csv') pageOf.set(`${p.key}_all.csv`, p.key)
   }
+  const tables = new Map<string, Table>()
+  for (const p of planned) if (p.kind === 'csv' && p.file) tables.set(p.key, tableOf(decoder.decode(p.file.data)))
   const total = planned.length * 2
   let done = 0
   const tick = () => progress(++done, total)
@@ -83,13 +120,32 @@ export async function importPages(ws: string, files: InFile[], parent: string | 
         if (t) title = t
       }
       const pid = p.parent ? ids.get(p.parent) : parent
-      const page = await pagesApi.create(ws, { title: title.slice(0, 300), parent_id: pid ?? null })
+      // A database (Notion's CSV); a row of one gets its values.
+      const table = tables.get(p.key)
+      const of = p.parent ? tables.get(p.parent) : undefined
+      const values = of?.rows.get(title)
+      if (values) of!.rows.delete(title)
+      const page = await pagesApi.create(ws, { title: title.slice(0, 300), parent_id: pid ?? null, db: table?.db, props: values && Object.keys(values).length ? values : undefined })
       ids.set(p.key, page.id)
       res.pages++
     } catch {
       res.failed.push(p.file?.path ?? p.key)
     }
     tick()
+  }
+
+  // Rows of a database with no page of their own.
+  for (const [key, table] of tables) {
+    const id = ids.get(key)
+    if (!id) continue
+    for (const [title, values] of table.rows) {
+      try {
+        await pagesApi.create(ws, { title: title.slice(0, 300) || i18n.global.t('pages.untitled'), parent_id: id, props: Object.keys(values).length ? values : undefined })
+        res.pages++
+      } catch {
+        res.failed.push(title)
+      }
+    }
   }
 
   // 2. Their documents: links to the new pages, files uploaded.
@@ -120,9 +176,10 @@ export async function importPages(ws: string, files: InFile[], parent: string | 
       let md = ''
       const text = p.file ? decoder.decode(p.file.data) : ''
       const dir = p.file ? dirOf(p.file.path) : p.key
-      if (p.kind === 'md') md = await rewriteLinks(splitTitle(text).body, dir, to)
+      const of = p.parent ? tables.get(p.parent) : undefined
+      if (p.kind === 'md') md = await rewriteLinks(of ? dropPropLines(splitTitle(text).body, of.headers) : splitTitle(text).body, dir, to)
       else if (p.kind === 'txt') md = textToMarkdown(text.replace(/^﻿/, '').replace(/\r\n?/g, '\n'))
-      else if (p.kind === 'csv') md = csvTable(text)
+      else if (p.kind === 'csv') md = '' // a database: its rows show
       else if (p.kind === 'html') {
         const doc = new DOMParser().parseFromString(text, 'text/html')
         doc.querySelectorAll('script, style, head, title').forEach((x) => x.remove())

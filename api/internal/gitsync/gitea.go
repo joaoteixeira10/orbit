@@ -130,11 +130,15 @@ type Client struct {
 	token string
 	http  *http.Client
 
-	labelNames map[string]map[int64]string // GitHub: owner/repo → label id → name
+	labelNames map[string]map[int64]string // GitHub, GitLab: owner/repo → label id → name
+	userIDs    map[string]int64            // GitLab: login → user id
 }
 
 // apiRoot is where a server's REST API is.
 func apiRoot(base, kind string) string {
+	if kind == KindGitLab {
+		return base + "/api/v4"
+	}
 	if kind != KindGitHub {
 		return base + "/api/v1"
 	}
@@ -152,7 +156,8 @@ func isGitHubCom(base string) bool {
 // GitHub reports whether the client speaks to GitHub.
 func (c *Client) GitHub() bool { return c.kind == KindGitHub }
 
-// HasDue reports whether the server's issues have due dates (GitHub's don't).
+// HasDue reports whether the server's issues have due dates (GitHub's
+// don't; Gitea's and GitLab's do).
 func (c *Client) HasDue() bool { return c.kind != KindGitHub }
 
 func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, out any) error {
@@ -172,7 +177,10 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, 
 	if err != nil {
 		return err
 	}
-	if c.GitHub() {
+	if c.GitLab() {
+		req.Header.Set("Authorization", "Bearer "+c.token) // a personal access token or an OAuth one
+		req.Header.Set("Accept", "application/json")
+	} else if c.GitHub() {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 		req.Header.Set("Accept", "application/vnd.github+json")
 		req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
@@ -194,10 +202,19 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, 
 	}
 	if resp.StatusCode >= 300 {
 		var m struct {
-			Message string `json:"message"`
+			Message any    `json:"message"` // GitLab: sometimes an object of field errors
+			Error   string `json:"error"`
 		}
 		_ = json.Unmarshal(data, &m)
-		return &APIError{Status: resp.StatusCode, Message: strings.TrimSpace(m.Message)}
+		msg := m.Error
+		switch v := m.Message.(type) {
+		case string:
+			msg = v
+		case map[string]any:
+			b, _ := json.Marshal(v)
+			msg = string(b)
+		}
+		return &APIError{Status: resp.StatusCode, Message: strings.TrimSpace(msg)}
 	}
 	if out == nil || len(data) == 0 {
 		return nil
@@ -218,6 +235,9 @@ func isStatus(err error, code int) bool {
 
 // Me is the token's account.
 func (c *Client) Me(ctx context.Context) (User, error) {
+	if c.GitLab() {
+		return c.glMe(ctx)
+	}
 	var u User
 	err := c.do(ctx, "GET", "/user", nil, nil, &u)
 	return u, err
@@ -226,6 +246,9 @@ func (c *Client) Me(ctx context.Context) (User, error) {
 // SearchRepos finds repositories the user can see (most recently updated
 // first).
 func (c *Client) SearchRepos(ctx context.Context, q string) ([]Repo, error) {
+	if c.GitLab() {
+		return c.glSearchRepos(ctx, q)
+	}
 	if c.GitHub() {
 		// The user's repositories (own, collaborator, organisations'), most
 		// recently updated first, filtered here.
@@ -266,6 +289,9 @@ func repoPath(owner, repo string) string {
 // Issues lists a repository's issues (not pull requests), open and closed,
 // updated since (zero: all), every page.
 func (c *Client) Issues(ctx context.Context, owner, repo string, since time.Time) ([]Issue, error) {
+	if c.GitLab() {
+		return c.glIssues(ctx, owner, repo, since)
+	}
 	var all []Issue
 	size := 50
 	if c.GitHub() {
@@ -298,8 +324,20 @@ func (c *Client) Issues(ctx context.Context, owner, repo string, since time.Time
 	return all, nil
 }
 
+// Item is an issue or (pull) a pull / merge request by its number: on
+// GitLab they're numbered apart.
+func (c *Client) Item(ctx context.Context, owner, repo string, number int64, pull bool) (Issue, error) {
+	if c.GitLab() {
+		return c.glItem(ctx, owner, repo, number, pull)
+	}
+	return c.Issue(ctx, owner, repo, number)
+}
+
 // Issue is one issue (or pull request) by its number.
 func (c *Client) Issue(ctx context.Context, owner, repo string, number int64) (Issue, error) {
+	if c.GitLab() {
+		return c.glItem(ctx, owner, repo, number, false)
+	}
 	var i Issue
 	err := c.do(ctx, "GET", fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), nil, nil, &i)
 	if err == nil && i.PullRequest != nil {
@@ -331,6 +369,9 @@ func DueTime(date string) string { return date + "T23:59:59Z" }
 
 // CreateIssue opens an issue.
 func (c *Client) CreateIssue(ctx context.Context, owner, repo string, in IssueInput) (Issue, error) {
+	if c.GitLab() {
+		return c.glCreateIssue(ctx, owner, repo, in)
+	}
 	var i Issue
 	var body any = in
 	if c.GitHub() {
@@ -359,6 +400,9 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo string, in IssueIn
 
 // EditIssue changes an issue.
 func (c *Client) EditIssue(ctx context.Context, owner, repo string, number int64, in IssueInput) (Issue, error) {
+	if c.GitLab() {
+		return c.glEditIssue(ctx, owner, repo, number, in)
+	}
 	var i Issue
 	var body any = in
 	if c.GitHub() {
@@ -379,6 +423,9 @@ func (c *Client) EditIssue(ctx context.Context, owner, repo string, number int64
 
 // SetLabels replaces an issue's labels.
 func (c *Client) SetLabels(ctx context.Context, owner, repo string, number int64, ids []int64) error {
+	if c.GitLab() {
+		return c.glSetLabels(ctx, owner, repo, number, ids)
+	}
 	var labels any = ids
 	if ids == nil {
 		labels = []int64{}
@@ -421,7 +468,13 @@ func (c *Client) Labels(ctx context.Context, owner, repo string) ([]Label, error
 	if c.GitHub() {
 		size, sizeKey = 100, "per_page"
 	}
-	for page := 1; page <= 20; page++ {
+	if c.GitLab() {
+		var err error
+		if all, err = c.glLabels(ctx, owner, repo); err != nil {
+			return nil, err
+		}
+	}
+	for page := 1; page <= 20 && !c.GitLab(); page++ {
 		var batch []Label
 		if err := c.do(ctx, "GET", repoPath(owner, repo)+"/labels", url.Values{sizeKey: {strconv.Itoa(size)}, "page": {strconv.Itoa(page)}}, nil, &batch); err != nil {
 			return nil, err
@@ -445,7 +498,7 @@ func (c *Client) Labels(ctx context.Context, owner, repo string) ([]Label, error
 // Projects lists a repository's open project boards (ErrNoProjects when
 // the server has no projects API).
 func (c *Client) Projects(ctx context.Context, owner, repo string) ([]Project, error) {
-	if c.GitHub() {
+	if c.GitHub() || c.GitLab() {
 		return nil, ErrNoProjects
 	}
 	var ps []Project

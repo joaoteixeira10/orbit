@@ -353,7 +353,7 @@ user. Release mode refuses either secret under 32 characters.
   `git.bot_set`); without one, the API refuses changes that would reach git
   (`403`, `git_read_only`). Reading (the sync) uses whoever linked the list,
   or the bot once they've left; failed changes are retried as their author.
-- **"Sign in with GitHub, Gitea or Forgejo"** (OAuth2 authorization code with PKCE):
+- **"Sign in with GitHub, GitLab, Gitea or Forgejo"** (OAuth2 authorization code with PKCE):
   the owner's client secrets are sealed; the flow's state is single-use, kept
   server-side (10 minutes) and tied to the browser that started it by an
   HttpOnly `SameSite=Lax` cookie, so a sign-in link someone else started
@@ -386,7 +386,8 @@ user. Release mode refuses either secret under 32 characters.
   diagram someone pastes into their own drawing.)
 - **Git webhooks** (instant updates) post to a public endpoint per linked
   list; a post counts only if signed (HMAC-SHA256 of the body) with the
-  list's secret — random, sealed, shown once when added by hand — and it
+  list's secret — or, from GitLab, if it carries that secret as its
+  `X-Gitlab-Token` (compared in constant time) — — random, sealed, shown once when added by hand — and it
   only triggers a sync (its content isn't trusted or read). Per-IP rate
   limited.
 - **Synced CalDAV calendars** (owners set them up; the `caldav_sync` flag) are

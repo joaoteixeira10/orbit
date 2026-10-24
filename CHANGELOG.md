@@ -126,6 +126,11 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **GitLab in the git integration**: gitlab.com or a self-managed GitLab,
+  by token or by signing in (OAuth); lists from projects (subgroups too),
+  issues both ways by iid (state, labels by name, assignees by id, due
+  dates, milestones), comments as notes (system notes left out), webhooks
+  with a token, merge requests linked by hand (read).
 - **Databases**: a page becomes a database of the pages inside it — typed
   properties (text, number, select, multi-select, date, checkbox, person,
   link) edited in place, table and board views with filters, sorts and

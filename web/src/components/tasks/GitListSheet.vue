@@ -131,11 +131,13 @@ async function create() {
 }
 
 // GitHub's project boards have no REST API (only GraphQL): labels there.
-const github = computed(() => accounts.value?.find((a) => a.id === accountId.value)?.kind === 'github')
+const kind = computed(() => accounts.value?.find((a) => a.id === accountId.value)?.kind)
+const github = computed(() => kind.value === 'github')
+const gitlab = computed(() => kind.value === 'gitlab')
 const modes = computed(() => [
   { key: 'issues' as const, label: t('git.list.modeIssues'), hint: t('git.list.modeIssuesHint') },
   { key: 'labels' as const, label: t('git.list.modeLabels'), hint: t('git.list.modeLabelsHint') },
-  ...(github.value ? [] : [{ key: 'project' as const, label: t('git.list.modeProject'), hint: t('git.list.modeProjectHint') }]),
+  ...(github.value || gitlab.value ? [] : [{ key: 'project' as const, label: t('git.list.modeProject'), hint: t('git.list.modeProjectHint') }]),
 ])
 </script>
 
@@ -209,6 +211,7 @@ const modes = computed(() => [
           </button>
         </div>
         <p v-if="github" class="mt-2 px-1 text-[12px] leading-snug text-text-3">{{ t('git.list.githubNote') }}</p>
+        <p v-else-if="gitlab" class="mt-2 px-1 text-[12px] leading-snug text-text-3">{{ t('git.list.gitlabNote') }}</p>
 
         <div v-if="mode === 'labels' && boards" class="mt-3">
           <p class="mb-1.5 px-1 text-[12.5px] text-text-3">{{ t('git.list.pickLabels') }}</p>

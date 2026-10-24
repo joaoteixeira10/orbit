@@ -9476,6 +9476,10 @@ const docTemplate = `{
                 },
                 "has_secret": {
                     "type": "boolean"
+                },
+                "kind": {
+                    "description": "gitea | github | gitlab",
+                    "type": "string"
                 }
             }
         },
@@ -11782,6 +11786,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "client_secret": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "Kind: gitea (Gitea, Forgejo), github or gitlab — their sign-in pages\ndiffer. Empty: from the address (github.com, gitlab.com), else gitea.",
                     "type": "string"
                 }
             }

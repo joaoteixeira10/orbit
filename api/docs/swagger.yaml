@@ -887,6 +887,9 @@ definitions:
         type: string
       has_secret:
         type: boolean
+      kind:
+        description: gitea | github | gitlab
+        type: string
     type: object
   api.gitOAuthAppsRequest:
     properties:
@@ -2498,6 +2501,11 @@ definitions:
       client_id:
         type: string
       client_secret:
+        type: string
+      kind:
+        description: |-
+          Kind: gitea (Gitea, Forgejo), github or gitlab — their sign-in pages
+          differ. Empty: from the address (github.com, gitlab.com), else gitea.
         type: string
     type: object
   gitsync.Project:

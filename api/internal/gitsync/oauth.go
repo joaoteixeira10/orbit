@@ -28,6 +28,22 @@ type OAuthApp struct {
 	BaseURL      string `json:"base_url"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret,omitempty"`
+	// Kind: gitea (Gitea, Forgejo), github or gitlab — their sign-in pages
+	// differ. Empty: from the address (github.com, gitlab.com), else gitea.
+	Kind string `json:"kind,omitempty"`
+}
+
+// appKind is the kind of server an app is registered on.
+func appKind(a OAuthApp) string {
+	switch {
+	case a.Kind == KindGitHub || a.Kind == KindGitLab || a.Kind == KindGitea:
+		return a.Kind
+	case isGitHubCom(a.BaseURL):
+		return KindGitHub
+	case isGitLabCom(a.BaseURL):
+		return KindGitLab
+	}
+	return KindGitea
 }
 
 const oauthKey = "git_oauth_apps"
@@ -37,6 +53,7 @@ type stored struct {
 	Base string `json:"b"`
 	ID   string `json:"i"`
 	Key  string `json:"k"`
+	Kind string `json:"t,omitempty"`
 }
 
 // OAuthApps are the servers where people can sign in, with their secrets.
@@ -57,7 +74,7 @@ func (e *Engine) OAuthApps() []OAuthApp {
 	var rows []stored
 	_ = json.Unmarshal(raw, &rows)
 	for _, r := range rows {
-		out = append(out, OAuthApp{BaseURL: r.Base, ClientID: r.ID, ClientSecret: r.Key})
+		out = append(out, OAuthApp{BaseURL: r.Base, ClientID: r.ID, ClientSecret: r.Key, Kind: appKind(OAuthApp{BaseURL: r.Base, Kind: r.Kind})})
 	}
 	return out
 }
@@ -80,6 +97,7 @@ func (e *Engine) SetOAuthApps(apps []OAuthApp) ([]OAuthApp, error) {
 			return nil, err
 		}
 		a.BaseURL, a.ClientID, a.ClientSecret = base, strings.TrimSpace(a.ClientID), strings.TrimSpace(a.ClientSecret)
+		a.Kind = appKind(a)
 		if a.ClientSecret == "" {
 			a.ClientSecret = old[base]
 		}
@@ -93,7 +111,7 @@ func (e *Engine) SetOAuthApps(apps []OAuthApp) ([]OAuthApp, error) {
 	}
 	rows := make([]stored, 0, len(clean))
 	for _, a := range clean {
-		rows = append(rows, stored{Base: a.BaseURL, ID: a.ClientID, Key: a.ClientSecret})
+		rows = append(rows, stored{Base: a.BaseURL, ID: a.ClientID, Key: a.ClientSecret, Kind: a.Kind})
 	}
 	b, _ := json.Marshal(rows)
 	blob, err := e.sealer.Seal(b)
@@ -129,10 +147,15 @@ func AuthorizeURL(app OAuthApp, redirect, state, verifier string) string {
 		"code_challenge":        {Challenge(verifier)},
 		"code_challenge_method": {"S256"},
 	}
-	if isGitHubCom(app.BaseURL) {
+	switch appKind(app) {
+	case KindGitHub:
 		// GitHub grants what's asked: the repositories (issues, labels,
 		// comments) and who the person is.
 		q.Set("scope", "repo read:user")
+	case KindGitLab:
+		// GitLab: the API (issues, labels, notes, hooks) and who they are.
+		q.Set("scope", "api read_user")
+		return app.BaseURL + "/oauth/authorize?" + q.Encode()
 	}
 	return app.BaseURL + "/login/oauth/authorize?" + q.Encode()
 }
@@ -151,8 +174,12 @@ func (e *Engine) tokenCall(ctx context.Context, app OAuthApp, body map[string]st
 	body["client_id"], body["client_secret"] = app.ClientID, app.ClientSecret
 	var payload []byte
 	ctype := "application/json"
-	if isGitHubCom(app.BaseURL) {
-		// GitHub's token endpoint takes a form.
+	endpoint := app.BaseURL + "/login/oauth/access_token"
+	if appKind(app) == KindGitLab {
+		endpoint = app.BaseURL + "/oauth/token"
+	}
+	if appKind(app) != KindGitea {
+		// GitHub's and GitLab's token endpoints take a form.
 		form := url.Values{}
 		for k, v := range body {
 			form.Set(k, v)
@@ -161,7 +188,7 @@ func (e *Engine) tokenCall(ctx context.Context, app OAuthApp, body map[string]st
 	} else {
 		payload, _ = json.Marshal(body)
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", app.BaseURL+"/login/oauth/access_token", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return tok, err
 	}
@@ -196,7 +223,7 @@ func (e *Engine) ConnectOAuth(ctx context.Context, userID string, app OAuthApp, 
 	if err != nil {
 		return models.GitAccount{}, err
 	}
-	c := e.newClient(app.BaseURL, tok.AccessToken)
+	c := &Client{base: app.BaseURL, kind: appKind(app), token: tok.AccessToken, http: e.clientFor(app.BaseURL)}
 	me, err := c.Me(ctx)
 	if err != nil {
 		return models.GitAccount{}, fmt.Errorf("couldn't read your account: %w", err)

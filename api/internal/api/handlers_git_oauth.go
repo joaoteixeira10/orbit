@@ -32,6 +32,7 @@ type gitOAuthAppResponse struct {
 	BaseURL   string `json:"base_url"`
 	ClientID  string `json:"client_id"`
 	HasSecret bool   `json:"has_secret"`
+	Kind      string `json:"kind"` // gitea | github | gitlab
 }
 
 type gitOAuthAppsResponse struct {
@@ -42,7 +43,7 @@ type gitOAuthAppsResponse struct {
 func (h *Handlers) gitOAuthApps(c *gin.Context) gitOAuthAppsResponse {
 	out := gitOAuthAppsResponse{Apps: []gitOAuthAppResponse{}, RedirectURI: h.gitOAuthRedirect(c)}
 	for _, a := range h.git.OAuthApps() {
-		out.Apps = append(out.Apps, gitOAuthAppResponse{BaseURL: a.BaseURL, ClientID: a.ClientID, HasSecret: a.ClientSecret != ""})
+		out.Apps = append(out.Apps, gitOAuthAppResponse{BaseURL: a.BaseURL, ClientID: a.ClientID, HasSecret: a.ClientSecret != "", Kind: a.Kind})
 	}
 	return out
 }

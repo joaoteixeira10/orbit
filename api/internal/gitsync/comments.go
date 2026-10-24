@@ -31,6 +31,9 @@ type Comment struct {
 }
 
 func (c *Client) Comments(ctx context.Context, owner, repo string, number int64) ([]Comment, error) {
+	if c.GitLab() {
+		return c.glComments(ctx, owner, repo, number)
+	}
 	var out []Comment
 	path := fmt.Sprintf("%s/issues/%d/comments", repoPath(owner, repo), number)
 	if !c.GitHub() {
@@ -53,19 +56,30 @@ func (c *Client) Comments(ctx context.Context, owner, repo string, number int64)
 }
 
 func (c *Client) CreateComment(ctx context.Context, owner, repo string, number int64, body string) (Comment, error) {
+	if c.GitLab() {
+		return c.glNoteCall(ctx, "POST", fmt.Sprintf("%s/issues/%d/notes", glProject(owner, repo), number), body)
+	}
 	var out Comment
 	err := c.do(ctx, "POST", fmt.Sprintf("%s/issues/%d/comments", repoPath(owner, repo), number), nil, map[string]string{"body": body}, &out)
 	return out, err
 }
 
-func (c *Client) EditComment(ctx context.Context, owner, repo string, id int64, body string) (Comment, error) {
+// EditComment changes a comment (number: its issue's, which GitLab needs).
+func (c *Client) EditComment(ctx context.Context, owner, repo string, number, id int64, body string) (Comment, error) {
+	if c.GitLab() {
+		return c.glNoteCall(ctx, "PUT", fmt.Sprintf("%s/issues/%d/notes/%d", glProject(owner, repo), number, id), body)
+	}
 	var out Comment
 	err := c.do(ctx, "PATCH", fmt.Sprintf("%s/issues/comments/%d", repoPath(owner, repo), id), nil, map[string]string{"body": body}, &out)
 	return out, err
 }
 
-func (c *Client) DeleteComment(ctx context.Context, owner, repo string, id int64) error {
-	err := c.do(ctx, "DELETE", fmt.Sprintf("%s/issues/comments/%d", repoPath(owner, repo), id), nil, nil, nil)
+func (c *Client) DeleteComment(ctx context.Context, owner, repo string, number, id int64) error {
+	path := fmt.Sprintf("%s/issues/comments/%d", repoPath(owner, repo), id)
+	if c.GitLab() {
+		path = fmt.Sprintf("%s/issues/%d/notes/%d", glProject(owner, repo), number, id)
+	}
+	err := c.do(ctx, "DELETE", path, nil, nil, nil)
 	if isStatus(err, 404) {
 		return nil
 	}
@@ -94,6 +108,9 @@ func unsigned(body string) string {
 // pullComments brings an issue's comments into its task: new ones added,
 // edited ones changed, deleted ones removed.
 func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, byLogin map[string]string) {
+	if c.GitLab() && t.GitPull {
+		return // a merge request's discussion stays there
+	}
 	owner, repo, ok := strings.Cut(t.GitRepo, "/")
 	if !ok || t.GitNumber == 0 {
 		return
@@ -158,7 +175,7 @@ func (e *Engine) PushComment(ctx context.Context, actor, actorName string, t *mo
 		if cm.GitCommentID == 0 {
 			return nil
 		}
-		return c.DeleteComment(ctx, owner, repo, cm.GitCommentID)
+		return c.DeleteComment(ctx, owner, repo, t.GitNumber, cm.GitCommentID)
 	case cm.GitCommentID == 0:
 		rc, err := c.CreateComment(ctx, owner, repo, t.GitNumber, body)
 		if err != nil {
@@ -166,7 +183,7 @@ func (e *Engine) PushComment(ctx context.Context, actor, actorName string, t *mo
 		}
 		cm.GitCommentID, cm.GitHash = rc.ID, hashBody(rc.Body)
 	default:
-		rc, err := c.EditComment(ctx, owner, repo, cm.GitCommentID, body)
+		rc, err := c.EditComment(ctx, owner, repo, t.GitNumber, cm.GitCommentID, body)
 		if err != nil {
 			return err
 		}

@@ -149,7 +149,8 @@ reminder with `remind_at` (RFC 3339; `""` removes it) on `PUT /notes/{id}`.
 on a webhook for a linked list — `{auto: true}` when Orbit made it, else
 `{url, secret}` to add by hand; `DELETE` turns it off. The server posts to
 `/api/v1/git/hook/{link}` (public, HMAC-SHA256 signed: `X-Hub-Signature-256`,
-`X-Gitea-Signature` or `X-Forgejo-Signature`), which syncs the list at once.
+`X-Gitea-Signature` or `X-Forgejo-Signature`; GitLab sends the secret as
+`X-Gitlab-Token`), which syncs the list at once.
 `GET /lists/{id}/git/milestones` lists the repository's open ones
 (`{ref, title, due_on}`); a task takes one with `git_milestone_id` (a `ref`,
 `0` for none) and `git_milestone` (its title).
@@ -206,7 +207,7 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/search?q=essay" | jq -r '.[] | "\(.kind)\t\(
 | Uploads | `POST /uploads?target=page|task|note&target_id=` (multipart field `file`), `GET /uploads?target=&target_id=`, `GET /uploads/{id}/{name}` (raster images inline, anything else as a download), `DELETE /uploads/{id}` |
 | Own channels | `GET/POST /me/channels` (`{kind: discord\|slack\|teams\|telegram\|ntfy\|gotify, name?, webhook_url \| bot_token + chat_id \| server_url + topic (+ token) \| server_url + token}`; https only; a test is sent first; secrets never come back, only `hint`), `POST /me/channels/{id}/test`, `DELETE /me/channels/{id}`; flag `personal_channels`; the kinds allowed are `personal` in `GET /notifications/channels`, set by the owner with `PUT /notifications/personal-kinds` (`{kinds}`; a channel of another kind is kept, `allowed: false`, and gets nothing) |
 | Feeds | `GET/POST /me/feeds`, `DELETE /me/feeds/{id}`; the feed itself is `GET /ical/<token>.ics` (no header: the token is in the address) |
-| Git sign-in | `GET/PUT /git/oauth-apps` (owner: `{apps: [{base_url, client_id, client_secret}]}` — a blank secret keeps the stored one; answers the `redirect_uri` to register), `POST /me/git/oauth/start` (`{base_url}` → `{url}` to send the browser to); the server returns to `GET /git/oauth/callback`, which ends on `/settings#git`. `GET /me/git` lists `sign_in` servers and each account's `via` (`token` or `oauth`). A list's bot: `PUT /lists/{id}/git/bot` (`{token}`, empty removes; whoever linked it or an owner) |
+| Git sign-in | `GET/PUT /git/oauth-apps` (owner: `{apps: [{base_url, client_id, client_secret, kind}]}`, `kind` gitea / github / gitlab, told from the address when left out — a blank secret keeps the stored one; answers the `redirect_uri` to register), `POST /me/git/oauth/start` (`{base_url}` → `{url}` to send the browser to); the server returns to `GET /git/oauth/callback`, which ends on `/settings#git`. `GET /me/git` lists `sign_in` servers and each account's `via` (`token` or `oauth`). A list's bot: `PUT /lists/{id}/git/bot` (`{token}`, empty removes; whoever linked it or an owner) |
 | Git | `GET/POST /me/git` (connect: `base_url`, `token`), `DELETE /me/git/{id}`, `GET /me/git/{id}/repos?q=`, `GET /me/git/{id}/boards?owner=&repo=` (labels, project boards); `POST /workspaces/{ws}/lists/git` (`account_id`, `owner`, `repo`, `mode`: `issues`, `labels` with `labels`, or `project` with `project_id`), `DELETE /lists/{id}/git`, `POST /lists/{id}/git/sync`; `POST/DELETE /tasks/{id}/git` (`url` of an issue or pull request). A task change that git refuses still saves and answers `git_error`. |
 
 All under `/api/v1` except the feed. Accounts and administration (users,

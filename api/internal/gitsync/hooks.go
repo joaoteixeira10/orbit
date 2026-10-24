@@ -30,7 +30,7 @@ type Milestone struct {
 }
 
 // msRef is how an issue names a milestone on this server: GitHub by its
-// number, Gitea by its id.
+// number, Gitea and GitLab by its id.
 func (c *Client) msRef(m Milestone) int64 {
 	if c.GitHub() {
 		return m.Number
@@ -40,6 +40,9 @@ func (c *Client) msRef(m Milestone) int64 {
 
 // Milestones lists a repository's open milestones.
 func (c *Client) Milestones(ctx context.Context, owner, repo string) ([]Milestone, error) {
+	if c.GitLab() {
+		return c.glMilestones(ctx, owner, repo)
+	}
 	q := url.Values{"state": {"open"}, "limit": {"50"}}
 	if c.GitHub() {
 		q = url.Values{"state": {"open"}, "per_page": {"100"}}
@@ -90,6 +93,9 @@ func (e *Engine) Milestones(ctx context.Context, link models.GitLink) ([]Milesto
 
 // CreateHook adds a webhook for issue events; it answers the hook's id.
 func (c *Client) CreateHook(ctx context.Context, owner, repo, target, secret string) (int64, error) {
+	if c.GitLab() {
+		return c.glCreateHook(ctx, owner, repo, target, secret)
+	}
 	var body any
 	if c.GitHub() {
 		body = map[string]any{
@@ -112,7 +118,11 @@ func (c *Client) CreateHook(ctx context.Context, owner, repo, target, secret str
 
 // DeleteHook removes a webhook (gone already is fine).
 func (c *Client) DeleteHook(ctx context.Context, owner, repo string, id int64) error {
-	err := c.do(ctx, "DELETE", repoPath(owner, repo)+"/hooks/"+strconv.FormatInt(id, 10), nil, nil, nil)
+	path := repoPath(owner, repo) + "/hooks/" + strconv.FormatInt(id, 10)
+	if c.GitLab() {
+		path = glProject(owner, repo) + "/hooks/" + strconv.FormatInt(id, 10)
+	}
+	err := c.do(ctx, "DELETE", path, nil, nil, nil)
 	if isStatus(err, http.StatusNotFound) {
 		return nil
 	}
@@ -179,7 +189,8 @@ var ErrHookSignature = errors.New("the webhook's signature doesn't match")
 
 // VerifyHook checks a webhook post's signature: GitHub's X-Hub-Signature-256
 // ("sha256=<hex>"), Gitea's X-Gitea-Signature, Forgejo's
-// X-Forgejo-Signature (hex), all HMAC-SHA256 of the body.
+// X-Forgejo-Signature (hex), all HMAC-SHA256 of the body — or GitLab's
+// X-Gitlab-Token, the secret itself (compared in constant time).
 func (e *Engine) VerifyHook(link models.GitLink, body []byte, h http.Header) error {
 	if len(link.HookSecretSealed) == 0 {
 		return errors.New("instant updates are off for this list")
@@ -187,6 +198,12 @@ func (e *Engine) VerifyHook(link models.GitLink, body []byte, h http.Header) err
 	secret, err := e.sealer.Unseal(link.HookSecretSealed)
 	if err != nil {
 		return err
+	}
+	if tok := h.Get("X-Gitlab-Token"); tok != "" {
+		if hmac.Equal([]byte(tok), secret) {
+			return nil
+		}
+		return ErrHookSignature
 	}
 	mac := hmac.New(sha256.New, secret)
 	mac.Write(body)

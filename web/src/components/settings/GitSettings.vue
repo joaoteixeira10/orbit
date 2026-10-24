@@ -40,11 +40,14 @@ onMounted(async () => {
   }
 })
 
-// GitHub (github.com; an Enterprise server is told when connecting).
+// GitHub (github.com; an Enterprise server is told when connecting) and
+// GitLab (gitlab.com; a self-managed one too, once connected).
 const isGitHub = computed(() => /^https?:\/\/(www\.)?github\.com\/?$/i.test(base.value.trim()))
+const isGitLab = computed(() => /^https?:\/\/(www\.)?gitlab\.com\/?$/i.test(base.value.trim()))
 // Where to make a token: the server's own page, once its address is typed.
 const tokenPage = computed(() => {
   if (isGitHub.value) return 'https://github.com/settings/personal-access-tokens/new'
+  if (isGitLab.value) return 'https://gitlab.com/-/user_settings/personal_access_tokens'
   try {
     const u = new URL(base.value.trim())
     return /^https?:$/.test(u.protocol) ? `${u.origin}${u.pathname.replace(/\/+$/, '')}/user/settings/applications` : ''
@@ -130,6 +133,7 @@ function host(u: string) {
         </datalist>
         <span class="mt-1.5 flex flex-wrap gap-1.5">
           <button type="button" class="pill hover:bg-fill" @click="base = 'https://github.com'">GitHub</button>
+          <button type="button" class="pill hover:bg-fill" @click="base = 'https://gitlab.com'">GitLab</button>
         </span>
       </label>
       <label class="block">
@@ -138,6 +142,11 @@ function host(u: string) {
         <I18nT v-if="isGitHub" keypath="git.settings.tokenHintGitHub" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">
           <template #link>
             <a :href="tokenPage" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-accent-text hover:underline">{{ t('git.settings.tokenPageGitHub') }}<ExternalLink class="h-3 w-3" /></a>
+          </template>
+        </I18nT>
+        <I18nT v-else-if="isGitLab" keypath="git.settings.tokenHintGitLab" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">
+          <template #link>
+            <a :href="tokenPage" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-accent-text hover:underline">{{ t('git.settings.tokenPageGitLab') }}<ExternalLink class="h-3 w-3" /></a>
           </template>
         </I18nT>
         <I18nT v-else keypath="git.settings.tokenHint" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">

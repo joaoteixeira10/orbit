@@ -35,7 +35,7 @@ app.
   grid; Pomodoro sessions logged on tasks; goals with progress from their
   tasks; a private page a day with a mood and "on this day"; links with a
   preview, tags and read later.
-- **Git** — lists that are a GitHub, Gitea or Forgejo repository's issues,
+- **Git** — lists that are a GitHub, GitLab, Gitea or Forgejo repository's issues,
   kept in step both ways (comments, labels, milestones, webhooks for
   instant updates); each person acts with their own account.
 - **Search** — full text across everything you can see (⌘K).
@@ -47,7 +47,7 @@ app.
   private to its members: instance admins manage accounts, not your
   planner. Move a whole workspace to another Orbit (export / import).
 - **Accounts** — passwords with two-factor (authenticator app or passkey),
-  passkeys, SSO (OpenID Connect), sign in with Gitea or GitHub for the git
+  passkeys, SSO (OpenID Connect), sign in with Gitea, GitHub or GitLab for the git
   integration, API tokens (optionally read-only), a tamper-evident audit
   log, encrypted backups.
 - **Anywhere** — light and dark, developer themes, English and Portuguese,

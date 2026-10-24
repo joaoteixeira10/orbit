@@ -113,9 +113,9 @@ func normalize(raw string) (string, error) {
 	return u.Scheme + "://" + host + strings.TrimRight(u.Path, "/"), nil
 }
 
-// newClient is a client for a server, of the kind it is: github.com, a
-// GitHub Enterprise someone connected (its accounts say so), else Gitea /
-// Forgejo.
+// newClient is a client for a server, of the kind it is: github.com or
+// gitlab.com, a GitHub Enterprise or GitLab someone connected (its accounts
+// say so), else Gitea / Forgejo.
 func (e *Engine) newClient(base, token string) *Client {
 	return &Client{base: base, kind: e.kindOf(base), token: token, http: e.clientFor(base)}
 }
@@ -124,10 +124,12 @@ func (e *Engine) kindOf(base string) string {
 	if isGitHubCom(base) {
 		return KindGitHub
 	}
-	var n int64
-	e.db.Model(&models.GitAccount{}).Where("base_url = ? AND kind = ?", base, KindGitHub).Count(&n)
-	if n > 0 {
-		return KindGitHub
+	if isGitLabCom(base) {
+		return KindGitLab
+	}
+	var acc models.GitAccount
+	if e.db.Where("base_url = ? AND kind IN ?", base, []string{KindGitHub, KindGitLab}).First(&acc).Error == nil {
+		return acc.Kind
 	}
 	return KindGitea
 }
@@ -157,7 +159,7 @@ func (e *Engine) client(acc models.GitAccount) (*Client, error) {
 		return nil, errors.New("this git token can't be read; connect the account again")
 	}
 	kind := acc.Kind
-	if kind != KindGitHub {
+	if kind != KindGitHub && kind != KindGitLab {
 		kind = KindGitea
 	}
 	return &Client{base: acc.BaseURL, kind: kind, token: string(tok), http: e.clientFor(acc.BaseURL)}, nil
@@ -176,11 +178,15 @@ func (e *Engine) Connect(ctx context.Context, userID, base, token string) (model
 	}
 	c := e.newClient(base, token)
 	me, err := c.Me(ctx)
-	if err != nil && !c.GitHub() && (isStatus(err, http.StatusNotFound) || isNotJSON(err)) {
-		// No Gitea API there: GitHub Enterprise keeps its API at /api/v3.
-		gh := &Client{base: base, kind: KindGitHub, token: token, http: c.http}
-		if m, err2 := gh.Me(ctx); err2 == nil || isStatus(err2, http.StatusUnauthorized) {
-			c, me, err = gh, m, err2
+	if err != nil && c.kind == KindGitea && (isStatus(err, http.StatusNotFound) || isNotJSON(err)) {
+		// No Gitea API there: a GitLab keeps its API at /api/v4, GitHub
+		// Enterprise at /api/v3.
+		for _, kind := range []string{KindGitLab, KindGitHub} {
+			other := &Client{base: base, kind: kind, token: token, http: c.http}
+			if m, err2 := other.Me(ctx); err2 == nil || isStatus(err2, http.StatusUnauthorized) {
+				c, me, err = other, m, err2
+				break
+			}
 		}
 	}
 	if err != nil {
@@ -746,6 +752,9 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 	if err != nil {
 		return err
 	}
+	if c.GitLab() && t.GitPull {
+		return nil // a merge request is only read
+	}
 	in := IssueInput{}
 	edit := false
 	if ch.Title {
@@ -815,7 +824,7 @@ func (e *Engine) push(ctx context.Context, actor string, link *models.GitLink, t
 	// Remember the issue as it is now, so the next pull doesn't bring our own
 	// change back as news.
 	if is.ID == 0 {
-		if is, err = c.Issue(ctx, owner, repo, t.GitNumber); err != nil {
+		if is, err = c.Item(ctx, owner, repo, t.GitNumber, t.GitPull); err != nil {
 			return err
 		}
 	}
@@ -943,10 +952,16 @@ func (e *Engine) createIssue(ctx context.Context, actor string, link models.GitL
 
 var issueURL = regexp.MustCompile(`^(https?://[^/]+(?:/[^/]+)*?)/([^/]+)/([^/]+)/(issues|pulls|pull)/(\d+)(?:/[^?#]*)?(?:[?#].*)?$`)
 
+// GitLab's: https://host/group[/sub…]/project/-/issues/12 (or merge_requests).
+var gitlabURL = regexp.MustCompile(`^(https?://[^/]+)/(.+)/([^/]+)/-/(issues|merge_requests)/(\d+)(?:/[^?#]*)?(?:[?#].*)?$`)
+
 // ParseIssueURL splits an issue or pull request address: the server's base
 // URL, owner, repository, number, and whether it's a pull request.
 func ParseIssueURL(raw string) (base, owner, repo string, number int64, pull bool, err error) {
-	m := issueURL.FindStringSubmatch(strings.TrimSpace(raw))
+	m := gitlabURL.FindStringSubmatch(strings.TrimSpace(raw))
+	if m == nil {
+		m = issueURL.FindStringSubmatch(strings.TrimSpace(raw))
+	}
 	if m == nil {
 		return "", "", "", 0, false, errors.New("paste the address of an issue or pull request, like https://github.com/owner/repo/issues/12")
 	}
@@ -958,7 +973,7 @@ func ParseIssueURL(raw string) (base, owner, repo string, number int64, pull boo
 // LinkTask points a task at an issue or pull request (by its address), as
 // the user, and takes its state.
 func (e *Engine) LinkTask(ctx context.Context, userID string, t *models.Task, raw string) error {
-	base, owner, repo, number, _, err := ParseIssueURL(raw)
+	base, owner, repo, number, pull, err := ParseIssueURL(raw)
 	if err != nil {
 		return err
 	}
@@ -966,7 +981,7 @@ func (e *Engine) LinkTask(ctx context.Context, userID string, t *models.Task, ra
 	if err != nil {
 		return err
 	}
-	is, err := c.Issue(ctx, owner, repo, number)
+	is, err := c.Item(ctx, owner, repo, number, pull)
 	if err != nil {
 		if isStatus(err, http.StatusNotFound) {
 			return errors.New("there's no such issue, or your account can't see it")
@@ -1016,7 +1031,7 @@ func (e *Engine) refreshLinked(ctx context.Context) {
 			}
 			continue
 		}
-		is, err := c.Issue(ctx, owner, repo, t.GitNumber)
+		is, err := c.Item(ctx, owner, repo, t.GitNumber, t.GitPull)
 		if err != nil || (t.GitSyncedAt != nil && !is.UpdatedAt.After(*t.GitSyncedAt) && is.GitState() == t.GitState) {
 			continue
 		}

@@ -434,7 +434,7 @@ export const pagesApi = {
 
 export interface GitAccount {
   id: string
-  kind: 'gitea' | 'github' // Gitea / Forgejo, or GitHub
+  kind: 'gitea' | 'github' | 'gitlab' // Gitea / Forgejo, GitHub or GitLab
   base_url: string
   login: string
   last_error?: string

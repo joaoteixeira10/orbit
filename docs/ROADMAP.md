@@ -52,10 +52,8 @@ What Orbit could do next, roughly in the order it would pay off. The
 
 ## Tasks and boards
 
-- **GitLab** for the git integration (a third client: its API differs more —
-  issues by `iid`, `state_event` to close, notes for comments, labels by
-  name, merge requests apart). GitHub's project boards (Projects v2, GraphQL
-  only) as a list layout.
+- GitHub's project boards (Projects v2, GraphQL only) as a list layout;
+  GitLab merge requests as tasks of a list (they're linked by hand today).
 - Git: milestones as a list layout or a filter (they're a field now);
   webhooks for tasks linked by hand.
 - Git: an "only as me" choice — today every editor of a linked list writes

@@ -570,8 +570,8 @@ task's start moves with it.
 
 ### Git: issues as tasks
 
-Connect your account on **GitHub** or a **Gitea** / **Forgejo** server
-first, in **Settings → Git**. Where the owner set it up, click **Sign in
+Connect your account on **GitHub**, **GitLab** or a **Gitea** / **Forgejo**
+server first, in **Settings → Git**. Where the owner set it up, click **Sign in
 with \<server\>**: you sign in on the server, approve Orbit, and come back
 connected — nothing to copy. Otherwise give the server's address and a
 personal access token:
@@ -581,6 +581,9 @@ personal access token:
   Settings → Developer settings → Personal access tokens) with the
   repositories you want and *Issues: read and write*, *Metadata: read* — or a
   classic token with the *repo* scope.
+- **GitLab** (the **GitLab** button fills in `https://gitlab.com`; a
+  self-managed GitLab's address works too): a *personal access token*
+  (your avatar → Preferences → Access tokens) with the *api* scope.
 - **Gitea / Forgejo**: make one in the server's *Settings → Applications*
   with *issue: read and write*, *repository: read*, *user: read*.
 
@@ -595,7 +598,8 @@ the repository and how its issues are laid out:
   with none of them), and moving the task changes its label.
 - **Project board** — one of the repository's boards, with its columns
   (Gitea servers whose API has project boards; the sheet tells you
-  otherwise). Not on GitHub, whose boards have no such API: use labels.
+  otherwise). Not on GitHub, whose boards have no such API, nor on GitLab,
+  whose issue boards are lists of labels anyway: use labels.
 
 Then it goes both ways. Title, description, due date, labels (shown as
 tags; tags that aren't labels stay Orbit's own), who it's for (a member who
@@ -603,7 +607,9 @@ connected the same server) and the column reach the issue as soon as you
 change them; completing a task closes its issue. Changes made on git come
 back every few minutes, or at once with **Sync now** in **Edit list**,
 which also shows when it last synced and why it failed, if it did. (GitHub's
-issues have no due date: there a task's date stays in Orbit.) A **new
+issues have no due date: there a task's date stays in Orbit. On GitLab,
+projects in subgroups work as well, and a merge request linked to a task by
+hand is read — its state, merged or not — but not changed.) A **new
 task** in the list opens an issue. **Deleting** a task leaves its issue
 alone (and it doesn't come back). Each task shows its issue's number in
 green (open) or purple (closed): click it to open the issue. If git refuses
@@ -1052,7 +1058,7 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
   **Time format** 13:00 or 1:00 PM.
 - **Reminders** — notifications on this device; **Also send reminders**
   through the channels you tick.
-- **Git** — your accounts on GitHub, Gitea or Forgejo: the server's address
+- **Git** — your accounts on GitHub, GitLab, Gitea or Forgejo: the server's address
   and a personal access token (see [Git: issues as tasks](#git-issues-as-tasks)).
   Connecting the same server again replaces the token; the bin icon
   disconnects.
@@ -1183,7 +1189,7 @@ until they transfer it. Your name → **Owner** has these tabs: **Owner**,
 | **User impersonation** | off | **Impersonate** for holders of **Impersonate users** — which shows that user's workspaces. |
 | **Calendar subscriptions** | on | Subscribing workspaces to outside calendars. |
 | **Calendar feeds** | on | Private ICS feeds in Settings. |
-| **Git integration** | on | GitHub, Gitea and Forgejo accounts in Settings, lists made from repositories, tasks linked to issues. Under it, **Sign in with GitHub, Gitea or Forgejo**: for each server, Orbit's OAuth2 application — on Gitea / Forgejo create one in Site administration → Applications (or Settings → Applications), *confidential*; on GitHub (server `https://github.com`) an *OAuth App* in Settings → Developer settings — with the **redirect URI** shown here as its callback, and paste its client ID and secret. People then connect with one click. |
+| **Git integration** | on | GitHub, GitLab, Gitea and Forgejo accounts in Settings, lists made from repositories, tasks linked to issues. Under it, **Sign in with GitHub, GitLab, Gitea or Forgejo**: for each server, Orbit's OAuth2 application (its kind is told from the address — github.com, gitlab.com — or chosen) — on Gitea / Forgejo create one in Site administration → Applications (or Settings → Applications), *confidential*; on GitHub (server `https://github.com`) an *OAuth App* in Settings → Developer settings; on GitLab an application in Preferences → Applications (or Admin → Applications) with the *api* and *read_user* scopes — with the **redirect URI** shown here as its callback, and paste its client ID and secret. People then connect with one click. |
 | **Personal notification channels** | on | Each person adds their own Discord / Slack / Teams / Telegram / ntfy / Gotify channel. Under it, tick **which kinds** people may add — whether or not you set up a shared one; a channel of a kind you untick is kept but gets nothing. |
 | **Invite links** | on | Owners make links to their workspaces; people join through them, making an account if they need one. Off: existing links stop working. |
 | **Step-up re-authentication** | off | **Confirm it's you** before security and SSO changes, feature flags, backups, owner transfer and impersonation. |

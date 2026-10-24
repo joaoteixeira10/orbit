@@ -139,6 +139,14 @@ any of `title`, `scene` (Excalidraw JSON, images included, up to 16 MB),
 `GET/POST /me/drawings` are Quick Draw: the caller's own sketches (no
 workspace; only they can read or change them).
 
+**Sheets**: `GET/POST /workspaces/{ws}/sheets` lists / makes spreadsheets;
+`GET/PUT/DELETE /sheets/{id}` — a `PUT` carries the `version` it changes (a
+stale one answers `409` with the newer sheet) and any of `title`, `data` (an
+object: `{tabs: [{id, name, rows, cols, widths, freeze, cells: {"B3": {v, b,
+i, al, nf}}}]}`, `v` being what was typed — a value or an `=` formula; up to
+8 MB) and `text` (its words, for search). Values are worked out by the app,
+not stored.
+
 **Notifications.** `POST /me/notifications/{id}/snooze` with `{until}` (RFC
 3339, within a month) or `{minutes}` puts one off; it comes back unread and
 is sent again. Quiet hours are prefs (`PUT /me/prefs`: `quiet_from`,

@@ -21,6 +21,7 @@ const (
 	ModGoals     = "goals"       // goals with progress from their tasks
 	ModJournal   = "journal"     // a page a day, with a mood
 	ModBookmarks = "bookmarks"   // links with a preview, tags, read later
+	ModSheets    = "sheets"      // spreadsheets (cells, Excel's formulas)
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -44,6 +45,7 @@ var Catalog = []Module{
 	{Key: ModCourses, Icon: "graduation-cap"},
 	{Key: ModGrades, Icon: "award"},
 	{Key: ModBoards, Icon: "brush"},
+	{Key: ModSheets, Icon: "sheet"},
 	{Key: ModHabits, Icon: "repeat"},
 	{Key: ModJournal, Icon: "notebook-pen"},
 	{Key: ModGoals, Icon: "target"},

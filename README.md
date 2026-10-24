@@ -30,6 +30,10 @@ app.
   reminders, files and a drawing; your own **Quick Notes** and **Quick Draw**
   sketches from anywhere, and things shared from your phone land there.
 - **Whiteboards** — hand-drawn sketches and diagrams (Excalidraw).
+- **Sheets** — spreadsheets with Excel's formulas (English or Portuguese
+  names), ranges, other tabs, lookups, fill handle, copy-paste with Excel,
+  rows and columns that move the references; `.xlsx` and `.csv` in and out;
+  shown in a page by its link.
 - **School** — courses with their weekly timetable on the calendar, exams
   with a countdown, grades with weighted averages and what you need to pass.
 - **Habits, Focus timer, Goals, Journal, Bookmarks** — streaks and a year

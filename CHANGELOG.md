@@ -126,6 +126,15 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Sheets** (a new module): spreadsheets as in Excel — cells, ranges,
+  `$` references, other tabs (`'My tab'!A1`), Excel's formulas in English
+  or Portuguese (lookups, SUMIFS…), Excel's errors; click cells into a
+  formula; fill handle (series, references moved), ⌘D / ⌘R, copy-paste with
+  Excel and Google Sheets; inserting / deleting rows and columns moves every
+  reference; bold, italic, alignment, number formats, frozen rows, column
+  widths, tabs; undo. Saved as it goes (version-guarded), found by search,
+  carried by workspace export. `.xlsx` and `.csv` in and out (written and
+  read in the app). A sheet's link alone on a page's line shows it there.
 - **Text that edits like VS Code**: the Markdown editor, task notes, the
   journal and notes take Visual Studio Code's keys — several cursors
   (⌥-click, ⌘D, ⌘⇧L, ⌘⌥↑↓, ⇧⌥I), box selections (⇧⌥-drag), moving and

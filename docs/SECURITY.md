@@ -384,6 +384,14 @@ user. Release mode refuses either secret under 32 characters.
   pictures drawn into a drawing. (A known advisory in KaTeX, which Excalidraw
   pulls in through its Mermaid import, only concerns math in a Mermaid
   diagram someone pastes into their own drawing.)
+- **Formulas** (database formula properties, sheets) are parsed into a tree
+  and walked by Orbit's own small evaluator (`web/src/lib/formula.ts`): no
+  `eval`, no `Function`, no access to anything but the cells and properties
+  named. A sheet is JSON stored as sent (an object, capped at 8 MB); its
+  values are worked out in each viewer's browser. Excel files are read and
+  written in the browser (XML parsed with `DOMParser`, never run; at most
+  500 000 cells read), so nothing of an imported file reaches the server but
+  the cells kept from it.
 - **Git webhooks** (instant updates) post to a public endpoint per linked
   list; a post counts only if signed (HMAC-SHA256 of the body) with the
   list's secret — or, from GitLab, if it carries that secret as its

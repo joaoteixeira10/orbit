@@ -113,7 +113,8 @@ func New(d Deps) *gin.Engine {
 	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool {
 		// These keep their own, larger caps (files; drawings with their images).
 		return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" ||
-			strings.HasPrefix(p, "/api/v1/drawings/") || strings.HasSuffix(p, "/drawings")
+			strings.HasPrefix(p, "/api/v1/drawings/") || strings.HasSuffix(p, "/drawings") ||
+			strings.HasPrefix(p, "/api/v1/sheets/") || strings.HasSuffix(p, "/sheets")
 	}))
 	r.Use(metricsMiddleware())
 
@@ -296,6 +297,11 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/goals", h.createGoal)
 			authed.PUT("/goals/:id", h.updateGoal)
 			authed.DELETE("/goals/:id", h.deleteGoal)
+			authed.GET("/workspaces/:ws/sheets", h.listSheets)
+			authed.POST("/workspaces/:ws/sheets", h.createSheet)
+			authed.GET("/sheets/:id", h.getSheet)
+			authed.PUT("/sheets/:id", h.updateSheet)
+			authed.DELETE("/sheets/:id", h.deleteSheet)
 			authed.GET("/workspaces/:ws/smart-lists", h.listSmartLists)
 			authed.POST("/workspaces/:ws/smart-lists", h.createSmartList)
 			authed.PUT("/smart-lists/:id", h.updateSmartList)

@@ -112,8 +112,10 @@ function reader(): Marked {
           const name = attr(this.parser.parseInline(tokens, this.parser.textRenderer))
           return `<a href="${attr(href)}"${t} data-upload="${attr(href)}" data-name="${name}" class="md-file">${text}</a>`
         }
-        // A link within Orbit (a page, the calendar) opens here.
-        if (/^\/(?!\/)/.test(href)) return `<a href="${href}"${t} class="md-internal${/^\/w\/[^/]+\/p\//.test(href) ? ' md-page' : ''}">${text}</a>`
+        // A link to this Orbit, written in full (pasted), reads as one within it.
+      if (typeof location !== 'undefined' && href.startsWith(location.origin + '/')) href = href.slice(location.origin.length)
+      // A link within Orbit (a page, the calendar) opens here.
+        if (/^\/(?!\/)/.test(href)) return `<a href="${href}"${t} class="md-internal${/^\/w\/[^/]+\/p\//.test(href) ? ' md-page' : /^\/w\/[^/]+\/s\//.test(href) ? ' md-sheet' : ''}">${text}</a>`
         return `<a href="${href}"${t} target="_blank" rel="noopener noreferrer nofollow">${text}</a>`
       },
     },

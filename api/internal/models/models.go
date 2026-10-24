@@ -360,6 +360,7 @@ func AllModels() []any {
 		&FocusSession{},
 		&Goal{},
 		&SmartList{},
+		&Sheet{},
 		&JournalEntry{},
 		&Bookmark{},
 		&BookmarkImage{},

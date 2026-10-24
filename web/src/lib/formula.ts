@@ -9,6 +9,9 @@
 //   arguments separated by , or ; (as Portuguese Excel writes them).
 // - Excel's errors: #DIV/0!, #VALUE!, #NAME?, #REF!, #N/A.
 //
+// In a sheet (parse with { cells: true }) it also reads Excel's cell
+// references: A1, $A$1, B2:B20, A:A, Tab2!A1, 'My tab'!A1:B5.
+//
 // It's parsed into a tree and walked — nothing is ever run as code.
 
 export type FDate = { date: number } // a day number (days since 1970-01-01, UTC)
@@ -30,26 +33,93 @@ type Node =
   | { k: 'pct'; a: Node }
   | { k: 'bin'; op: string; a: Node; b: Node }
   | { k: 'call'; fn: string; args: Node[] }
+  | { k: 'cells'; ref: CellRef }
 
 export class FormulaError extends Error {}
 
-interface Tok {
-  t: 'num' | 'str' | 'ref' | 'name' | 'op' | '(' | ')' | 'sep'
-  v: string
+// A cell (0-based; row -1: the whole column) and whether each part is
+// absolute ($).
+export interface CellPos {
+  col: number
+  row: number
+  absCol: boolean
+  absRow: boolean
+}
+// A reference: one cell, or a range from a to b; on another tab when sheet.
+export interface CellRef {
+  sheet?: string
+  a: CellPos
+  b?: CellPos
 }
 
-function lex(src: string): Tok[] {
+interface Tok {
+  t: 'num' | 'str' | 'ref' | 'name' | 'op' | '(' | ')' | 'sep' | 'cells'
+  v: string
+  s: number // where it starts in the source
+  e: number // and ends
+  cell?: CellRef
+}
+
+export const colIndex = (letters: string) => [...letters.toUpperCase()].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1
+export const colName = (i: number): string => (i < 26 ? String.fromCharCode(65 + i) : colName(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26)))
+
+const SHEET = /^(?:'((?:[^']|'')+)'|([\p{L}_][\p{L}\p{N}_.]*))!/u
+const PART = /^(\$?)([A-Za-z]{1,3})(?:(\$?)(\d{1,7}))?/
+const goesOn = (ch: string | undefined) => !!ch && /[\p{L}\p{N}_(.$]/u.test(ch)
+
+// cellAt reads a reference at src[i] ('' when there's none there).
+function cellAt(src: string, i: number): { ref: CellRef; end: number } | null {
+  let j = i
+  let sheet: string | undefined
+  const sm = SHEET.exec(src.slice(j))
+  if (sm) {
+    sheet = sm[1] !== undefined ? sm[1].replace(/''/g, "'") : sm[2]
+    j += sm[0].length
+  }
+  const p1 = PART.exec(src.slice(j))
+  if (!p1) {
+    if (sheet) throw new FormulaError(`${sheet}! needs a cell after it`)
+    return null
+  }
+  const pos = (m: RegExpExecArray): CellPos => ({ col: colIndex(m[2]), row: m[4] !== undefined ? Number(m[4]) - 1 : -1, absCol: m[1] === '$', absRow: m[3] === '$' })
+  const end = j + p1[0].length
+  const a = pos(p1)
+  if (src[end] === ':') {
+    const p2 = PART.exec(src.slice(end + 1))
+    if (p2 && !goesOn(src[end + 1 + p2[0].length])) {
+      const b = pos(p2)
+      if ((a.row < 0) === (b.row < 0)) return { ref: { sheet, a, b }, end: end + 1 + p2[0].length }
+    }
+  }
+  if (a.row < 0 || goesOn(src[end])) {
+    if (sheet) throw new FormulaError(`${sheet}! needs a cell after it`)
+    return null
+  }
+  return { ref: { sheet, a }, end }
+}
+
+function lex(src: string, cells = false): Tok[] {
   const out: Tok[] = []
   let i = 0
+  const push = (t: Tok['t'], v: string, start: number) => out.push({ t, v, s: start, e: i })
   while (i < src.length) {
     const c = src[i]
+    const start = i
+    if (cells && !/\s/.test(c) && (out.length === 0 || !['num', 'str', 'ref', 'cells', ')'].includes(out[out.length - 1].t) || out[out.length - 1].t === 'op')) {
+      const hit = /[\p{L}_$']/u.test(c) ? cellAt(src, i) : null
+      if (hit) {
+        i = hit.end
+        out.push({ t: 'cells', v: src.slice(start, i), s: start, e: i, cell: hit.ref })
+        continue
+      }
+    }
     if (/\s/.test(c)) {
       i++
     } else if (/[0-9.]/.test(c)) {
       const m = /^(\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/.exec(src.slice(i))
       if (!m) throw new FormulaError(`unexpected “${c}”`)
-      out.push({ t: 'num', v: m[0] })
       i += m[0].length
+      push('num', m[0], start)
     } else if (c === '"') {
       let s = ''
       i++
@@ -66,38 +136,38 @@ function lex(src: string): Tok[] {
         }
         s += src[i++]
       }
-      out.push({ t: 'str', v: s })
+      push('str', s, start)
     } else if (c === '[') {
       const end = src.indexOf(']', i)
       if (end < 0) throw new FormulaError('a [name] has no closing ]')
-      out.push({ t: 'ref', v: src.slice(i + 1, end) })
       i = end + 1
+      push('ref', src.slice(start + 1, end), start)
     } else if (/[\p{L}_]/u.test(c)) {
       const m = /^[\p{L}_][\p{L}\p{N}_.]*/u.exec(src.slice(i))!
-      out.push({ t: 'name', v: m[0] })
       i += m[0].length
+      push('name', m[0], start)
     } else if (c === '(' || c === ')') {
-      out.push({ t: c, v: c })
       i++
+      push(c, c, start)
     } else if (c === ',' || c === ';') {
-      out.push({ t: 'sep', v: c })
       i++
+      push('sep', c, start)
     } else {
       const two = src.slice(i, i + 2)
       if (two === '<>' || two === '<=' || two === '>=') {
-        out.push({ t: 'op', v: two })
         i += 2
+        push('op', two, start)
       } else if ('+-*/^&=<>%'.includes(c)) {
-        out.push({ t: 'op', v: c })
         i++
+        push('op', c, start)
       } else throw new FormulaError(`unexpected “${c}”`)
     }
   }
   return out
 }
 
-export function parse(src: string): Node {
-  const toks = lex(src.trim().replace(/^=/, ''))
+export function parse(src: string, opts: { cells?: boolean } = {}): Node {
+  const toks = lex(src.trim().replace(/^=/, ''), !!opts.cells)
   if (!toks.length) throw new FormulaError('the formula is empty')
   let p = 0
   const peek = () => toks[p]
@@ -146,6 +216,7 @@ export function parse(src: string): Node {
     const t = next()
     if (!t) throw new FormulaError('the formula ends too soon')
     if (t.t === 'num') return { k: 'num', v: Number(t.v) }
+    if (t.t === 'cells') return { k: 'cells', ref: t.cell! }
     if (t.t === 'str') return { k: 'str', v: t.v }
     if (t.t === 'ref') return t.v.startsWith('@') ? { k: 'ref', name: t.v.slice(1).trim(), col: false } : { k: 'ref', name: t.v.trim(), col: true }
     if (t.t === '(') {
@@ -464,6 +535,175 @@ const FNS: Record<string, Fn> = {
     return n * sign
   },
 }
+// Lookups and more, mostly for sheets (ranges are rows of values).
+const grid = (v: FValue): FValue[][] => (Array.isArray(v) ? (v.every(Array.isArray) ? (v as FValue[][]) : v.map((x) => [x])) : [[v]])
+const same = (a: FValue, b: FValue) => {
+  const c = compare(a, b)
+  return !isErr(c) && c === 0
+}
+Object.assign(FNS, {
+  vlookup: ((a) => {
+    const rows = grid(a[1] ?? null)
+    const col = num(a[2] ?? 1)
+    if (isErr(col)) return col
+    const approx = a.length > 3 ? truthy(a[3]) : true
+    if (isErr(approx)) return approx
+    let hit = -1
+    for (let i = 0; i < rows.length; i++) {
+      if (same(rows[i][0], a[0] ?? null)) {
+        hit = i
+        break
+      }
+      // Approximate (Excel's default, a sorted first column): the last one not above it.
+      if (approx) {
+        const c = compare(rows[i][0], a[0] ?? null)
+        if (!isErr(c) && c <= 0 && !blank(rows[i][0])) hit = i
+      }
+    }
+    if (hit < 0) return err('#N/A')
+    const v = rows[hit][col - 1]
+    return v === undefined ? err('#REF!') : v
+  }) as Fn,
+  hlookup: ((a) => {
+    const rows = grid(a[1] ?? null)
+    const row = num(a[2] ?? 1)
+    if (isErr(row)) return row
+    const i = (rows[0] ?? []).findIndex((v) => same(v, a[0] ?? null))
+    if (i < 0) return err('#N/A')
+    const v = rows[row - 1]?.[i]
+    return v === undefined ? err('#REF!') : v
+  }) as Fn,
+  index: ((a) => {
+    const rows = grid(a[0] ?? null)
+    const r = num(a[1] ?? 1)
+    const c = num(a[2] ?? 1)
+    if (isErr(r)) return r
+    if (isErr(c)) return c
+    const one = rows.length === 1 && a.length < 3 // a single row: INDEX(row, n)
+    const v = one ? rows[0][r - 1] : rows[r - 1]?.[(c || 1) - 1]
+    return v === undefined ? err('#REF!') : v
+  }) as Fn,
+  match: ((a) => {
+    const list = flat([a[1] ?? null])
+    const type = a.length > 2 ? num(a[2]) : 1
+    if (isErr(type)) return type
+    if (type === 0) {
+      const i = list.findIndex((v) => same(v, a[0] ?? null))
+      return i < 0 ? err('#N/A') : i + 1
+    }
+    let hit = -1
+    list.forEach((v, i) => {
+      const c = compare(v, a[0] ?? null)
+      if (!isErr(c) && !blank(v) && (type > 0 ? c <= 0 : c >= 0)) hit = i
+    })
+    return hit < 0 ? err('#N/A') : hit + 1
+  }) as Fn,
+  xlookup: ((a) => {
+    const keys = flat([a[1] ?? null])
+    const vals = flat([a[2] ?? null])
+    const i = keys.findIndex((v) => same(v, a[0] ?? null))
+    if (i < 0) return a.length > 3 ? a[3] : err('#N/A')
+    return vals[i] ?? err('#REF!')
+  }) as Fn,
+  choose: ((a) => {
+    const i = num(a[0] ?? null)
+    if (isErr(i)) return i
+    return a[i] ?? err('#VALUE!')
+  }) as Fn,
+  product: ((a) => {
+    const n = nums(a)
+    return isErr(n) ? n : n.reduce((p, x) => p * x, 1)
+  }) as Fn,
+  median: ((a) => {
+    const n = nums(a)
+    if (isErr(n)) return n
+    if (!n.length) return err('#NUM!')
+    const s = [...n].sort((x, y) => x - y)
+    const m = s.length >> 1
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+  }) as Fn,
+  sumifs: ((a) => ifs(a, 1, 'sum')) as Fn,
+  countifs: ((a) => ifs(a, 0, 'count')) as Fn,
+  averageifs: ((a) => ifs(a, 1, 'avg')) as Fn,
+  pi: (() => Math.PI) as Fn,
+  ln: n1((x) => (x <= 0 ? err('#NUM!') : Math.log(x))),
+  log: n1((x, b) => (x <= 0 || b <= 0 || b === 1 ? err('#NUM!') : Math.log(x) / Math.log(b)), 10),
+  log10: n1((x) => (x <= 0 ? err('#NUM!') : Math.log10(x))),
+  exp: n1((x) => Math.exp(x)),
+  ceiling: n1((x, f) => (f === 0 ? 0 : Math.ceil(x / f - 1e-9) * f), 1),
+  floor: n1((x, f) => (f === 0 ? 0 : Math.floor(x / f + 1e-9) * f), 1),
+  trunc: n1((x, d) => round(x, d, 'down')),
+  sign: n1((x) => Math.sign(x)),
+  value: ((a) => num(typeof a[0] === 'string' ? a[0].replace(/\s/g, '') : (a[0] ?? null))) as Fn,
+  istext: ((a) => typeof a[0] === 'string') as Fn,
+  iserror: ((a) => isErr(a[0] ?? null)) as Fn,
+  textjoin: ((a) => {
+    const sep = text(a[0] ?? '')
+    const skip = truthy(a[1] ?? true)
+    if (isErr(sep)) return sep
+    if (isErr(skip)) return skip
+    const parts: string[] = []
+    for (const v of flat(a.slice(2))) {
+      if (skip && blank(v)) continue
+      const t = text(v)
+      if (isErr(t)) return t
+      parts.push(t)
+    }
+    return parts.join(sep)
+  }) as Fn,
+  rept: t1((s, n) => (n < 0 ? err('#VALUE!') : s.repeat(Math.floor(n)))),
+  proper: t1((s) => s.toLocaleLowerCase().replace(/(^|[^\p{L}])(\p{L})/gu, (_m, p, ch: string) => p + ch.toLocaleUpperCase())),
+  find: ((a) => {
+    const what = text(a[0] ?? '')
+    const within = text(a[1] ?? '')
+    const from = num(a[2] ?? 1)
+    if (isErr(what)) return what
+    if (isErr(within)) return within
+    if (isErr(from)) return from
+    const i = within.indexOf(what, from - 1)
+    return i < 0 ? err('#VALUE!') : i + 1
+  }) as Fn,
+  search: ((a) => {
+    const what = text(a[0] ?? '')
+    const within = text(a[1] ?? '')
+    if (isErr(what)) return what
+    if (isErr(within)) return within
+    const i = fold(within).indexOf(fold(what))
+    return i < 0 ? err('#VALUE!') : i + 1
+  }) as Fn,
+  eomonth: ((a) => {
+    const s = date(a[0] ?? null)
+    const m = num(a[1] ?? 0)
+    if (isErr(s)) return s
+    if (isErr(m)) return m
+    const p = parts(s)
+    return { date: Math.round(Date.UTC(p.y, p.m + m, 0) / DAY) }
+  }) as Fn,
+})
+
+// ifs: SUMIFS / COUNTIFS / AVERAGEIFS — the ranges and criteria in pairs
+// (after the values to add up, when there are).
+function ifs(a: FValue[], from: number, how: 'sum' | 'count' | 'avg'): FValue {
+  const vals = from ? flat([a[0] ?? null]) : []
+  const pairs: [FValue[], FValue][] = []
+  for (let i = from; i + 1 < a.length; i += 2) pairs.push([flat([a[i]]), a[i + 1]])
+  if (!pairs.length) return err('#VALUE!')
+  const n = pairs[0][0].length
+  let sum = 0
+  let count = 0
+  for (let i = 0; i < n; i++) {
+    if (!pairs.every(([range, crit]) => meets(range[i] ?? null, crit))) continue
+    count++
+    if (from) {
+      const x = num(vals[i] ?? null)
+      if (!isErr(x)) sum += x
+    }
+  }
+  if (how === 'count') return count
+  if (how === 'sum') return sum
+  return count ? sum / count : err('#DIV/0!')
+}
+
 // Portuguese Excel's names (and a few common spellings).
 const PT: Record<string, string> = {
   soma: 'sum', media: 'average', minimo: 'min', maximo: 'max', contar: 'count', 'contar.val': 'counta', 'contar.vazio': 'countblank',
@@ -472,6 +712,11 @@ const PT: Record<string, string> = {
   'e.cel.vazia': 'isblank', 'e.num': 'isnumber', concatenar: 'concat', 'num.carat': 'len', esquerda: 'left', direita: 'right', 'seg.texto': 'mid',
   maiusculas: 'upper', minusculas: 'lower', compactar: 'trim', subst: 'substitute', hoje: 'today', data: 'date', ano: 'year', mes: 'month', dia: 'day',
   'dia.semana': 'weekday', dias: 'days', datadif: 'datedif', datam: 'edate', diatrabalhototal: 'networkdays', concatenate: 'concat',
+  procv: 'vlookup', proch: 'hlookup', indice: 'index', corresp: 'match', procx: 'xlookup', seleccionar: 'choose', escolher: 'choose',
+  produto: 'product', med: 'median', 'soma.se.s': 'sumifs', 'contar.se.s': 'countifs', 'media.se.s': 'averageifs', ln: 'ln', log: 'log',
+  log10: 'log10', exp: 'exp', 'arred.excesso': 'ceiling', 'arred.defeito': 'floor', truncar: 'trunc', sinal: 'sign', valor: 'value',
+  'e.texto': 'istext', 'e.erro': 'iserror', 'unir.texto': 'textjoin', repetir: 'rept', 'inicial.maiuscula': 'proper', localizar: 'search',
+  procurar: 'find', 'fim.mes': 'eomonth',
 }
 export const FUNCTION_NAMES = Object.keys(FNS).map((k) => k.toUpperCase())
 
@@ -479,6 +724,8 @@ export const FUNCTION_NAMES = Object.keys(FNS).map((k) => k.toUpperCase())
 
 export interface Ctx {
   today: number // a day number
+  // cells: a sheet's cell (one value) or range (rows of values); none: #REF!
+  cells?: (ref: CellRef) => FValue | FValue[][]
   // row: this row's value of a property by name ('' unknown → #NAME?)
   row: (name: string) => FValue | undefined
   // column: every row's values of a property by name
@@ -495,6 +742,8 @@ function evalNode(n: Node, c: Ctx): FValue {
       const v = n.col ? c.column(n.name) : c.row(n.name)
       return v === undefined ? err('#NAME?') : v
     }
+    case 'cells':
+      return c.cells ? (c.cells(n.ref) as FValue) : err('#REF!')
     case 'un': {
       const x = num(evalNode(n.a, c))
       return isErr(x) ? x : n.op === '-' ? -x : x
@@ -572,6 +821,7 @@ export function refsOf(tree: Node): string[] {
   const out: string[] = []
   const walk = (n: Node) => {
     if (n.k === 'ref') out.push(n.name)
+    else if (n.k === 'cells') out.push(formatRef(n.ref))
     else if (n.k === 'un' || n.k === 'pct') walk(n.a)
     else if (n.k === 'bin') {
       walk(n.a)
@@ -582,3 +832,82 @@ export function refsOf(tree: Node): string[] {
   return out
 }
 export { fold as foldName }
+
+// ---- References in a sheet's formulas ----
+
+const plainSheet = /^[\p{L}_][\p{L}\p{N}_.]*$/u
+export function formatPos(p: CellPos): string {
+  return `${p.absCol ? '$' : ''}${colName(p.col)}${p.row >= 0 ? `${p.absRow ? '$' : ''}${p.row + 1}` : ''}`
+}
+export function formatRef(r: CellRef): string {
+  const sheet = r.sheet === undefined ? '' : plainSheet.test(r.sheet) ? `${r.sheet}!` : `'${r.sheet.replace(/'/g, "''")}'!`
+  return sheet + formatPos(r.a) + (r.b ? `:${formatPos(r.b)}` : '')
+}
+
+// rewriteRefs gives a formula back with each of its references changed by
+// fn (null: the reference is gone — #REF!, as in Excel). Text in quotes and
+// everything else stays as written. A formula that can't be read stays too.
+export function rewriteRefs(src: string, fn: (r: CellRef) => CellRef | null): string {
+  const lead = /^\s*=/.exec(src)
+  if (!lead) return src
+  const body = src.slice(lead[0].length)
+  let toks: Tok[]
+  try {
+    toks = lex(body, true)
+  } catch {
+    return src
+  }
+  let out = ''
+  let last = 0
+  for (const t of toks) {
+    if (t.t !== 'cells') continue
+    const next = fn(t.cell!)
+    out += body.slice(last, t.s) + (next ? formatRef(next) : '#REF!')
+    last = t.e
+  }
+  return lead[0] + out + body.slice(last)
+}
+
+// shiftFormula moves a formula's relative references by rows and columns
+// (copying it elsewhere, the fill handle). One that falls off the sheet
+// becomes #REF!.
+export function shiftFormula(src: string, dRow: number, dCol: number): string {
+  if (!dRow && !dCol) return src
+  const move = (p: CellPos): CellPos | null => {
+    const q = { ...p, col: p.absCol ? p.col : p.col + dCol, row: p.absRow || p.row < 0 ? p.row : p.row + dRow }
+    return q.col < 0 || (q.row < 0 && p.row >= 0) ? null : q
+  }
+  return rewriteRefs(src, (r) => {
+    const a = move(r.a)
+    const b = r.b ? move(r.b) : undefined
+    return a && b !== null ? { ...r, a, b } : null
+  })
+}
+
+// toExcel writes a formula the way Excel files keep it: English function
+// names, "," between arguments, TRUE / FALSE (no leading "=").
+export function toExcel(src: string): string {
+  const body = src.replace(/^\s*=/, '')
+  let toks: Tok[]
+  try {
+    toks = lex(body, true)
+  } catch {
+    return body
+  }
+  let out = ''
+  let last = 0
+  toks.forEach((t, i) => {
+    let rep: string | null = null
+    if (t.t === 'sep') rep = ','
+    else if (t.t === 'name') {
+      const f = fold(t.v)
+      if (toks[i + 1]?.t === '(') rep = (FNS[f] ? f : (PT[f] ?? f)).toUpperCase()
+      else if (f === 'verdadeiro' || f === 'true') rep = 'TRUE'
+      else if (f === 'falso' || f === 'false') rep = 'FALSE'
+    }
+    if (rep === null) return
+    out += body.slice(last, t.s) + rep
+    last = t.e
+  })
+  return out + body.slice(last)
+}

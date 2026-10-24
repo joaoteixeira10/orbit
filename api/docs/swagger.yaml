@@ -1790,6 +1790,55 @@ definitions:
       passwordless_enabled:
         type: boolean
     type: object
+  api.sheetOut:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      data:
+        type: object
+      id:
+        type: string
+      rank:
+        type: number
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
+      workspace_id:
+        type: string
+    type: object
+  api.sheetRequest:
+    properties:
+      data:
+        type: object
+      text:
+        type: string
+      title:
+        maxLength: 300
+        type: string
+      version:
+        description: 'the version saved over (0: don''t check)'
+        type: integer
+    type: object
+  api.sheetSummary:
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
+    type: object
   api.slotRequest:
     properties:
       end:
@@ -6226,6 +6275,72 @@ paths:
       summary: Update settings/branding
       tags:
       - settings
+  /sheets/{id}:
+    delete:
+      parameters:
+      - description: Sheet id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a sheet
+      tags:
+      - sheets
+    get:
+      parameters:
+      - description: Sheet id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.sheetOut'
+      security:
+      - BearerAuth: []
+      summary: A sheet
+      tags:
+      - sheets
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Sheet id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changed
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.sheetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.sheetOut'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.sheetOut'
+      security:
+      - BearerAuth: []
+      summary: Save a sheet
+      tags:
+      - sheets
   /smart-lists/{id}:
     delete:
       parameters:
@@ -7969,6 +8084,55 @@ paths:
       summary: Create a page
       tags:
       - pages
+  /workspaces/{ws}/sheets:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.sheetSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's sheets
+      tags:
+      - sheets
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Title (and data)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.sheetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.sheetOut'
+      security:
+      - BearerAuth: []
+      summary: New sheet
+      tags:
+      - sheets
   /workspaces/{ws}/smart-lists:
     get:
       parameters:

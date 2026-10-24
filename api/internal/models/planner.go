@@ -336,6 +336,24 @@ type Drawing struct {
 	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
 }
 
+// ---- Sheets -----------------------------------------------------------------
+
+// Sheet is a spreadsheet: tabs of cells, as the app writes them (Data, JSON:
+// each cell's input — a value or an "=" formula — and its look; the values
+// are worked out in the app). Text is its words and numbers, for search.
+// Version guards saves as for drawings.
+type Sheet struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	Title       string  `gorm:"size:300" json:"title"`
+	Data        string  `gorm:"type:text" json:"data,omitempty"`
+	Text        string  `gorm:"type:text" json:"-"`
+	Version     int     `gorm:"not null;default:1" json:"version"`
+	Rank        float64 `gorm:"not null;default:0" json:"rank"`
+	CreatedBy   string  `gorm:"size:36" json:"created_by"`
+	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+}
+
 // ---- Calendar ---------------------------------------------------------------
 
 // Event is a calendar entry. StartsAt / EndsAt are instants (UTC); an

@@ -23,16 +23,17 @@ the [API](API.md).
 12. [Courses](#12-courses)
 13. [Grades](#13-grades)
 14. [Whiteboards](#14-whiteboards)
-15. [Habits](#15-habits)
-16. [Focus timer](#16-focus-timer)
-17. [Goals](#17-goals)
-18. [Journal](#18-journal)
-19. [Bookmarks](#19-bookmarks)
-20. [Notifications](#20-notifications)
-21. [Your settings](#21-your-settings)
-22. [Administration](#22-administration)
-23. [Owner controls](#23-owner-controls)
-24. [On a phone](#24-on-a-phone)
+15. [Sheets](#15-sheets)
+16. [Habits](#16-habits)
+17. [Focus timer](#17-focus-timer)
+18. [Goals](#18-goals)
+19. [Journal](#19-journal)
+20. [Bookmarks](#20-bookmarks)
+21. [Notifications](#21-notifications)
+22. [Your settings](#22-your-settings)
+23. [Administration](#23-administration)
+24. [Owner controls](#24-owner-controls)
+25. [On a phone](#25-on-a-phone)
 
 ---
 
@@ -942,7 +943,66 @@ floor plans, diagrams, mind maps. They use **Excalidraw**.
 
 A **drawing on a note** works the same way: see [Notes](#6-notes).
 
-## 15. Habits
+## 15. Sheets
+
+**Sheets** (a module: turn it on in the workspace's settings) are
+spreadsheets, like Excel or Google Sheets. **New sheet** opens an empty one;
+**Import** brings in an Excel file (`.xlsx`) or a CSV as a new sheet.
+
+**Cells.** Click a cell and type — a number (`1,234.5`, or `1234,5` in
+Portuguese), a percentage (`15%`), euros (`€12`), a date (`2026-11-05` or
+`05/11/2026`), `TRUE`/`FALSE`, or text (start with `'` to keep a number as
+text). **Enter** goes down, **Tab** right, the arrows move; **Enter**, **F2**
+or a double click edits what's there; **Esc** cancels; **Alt-Enter** is a new
+line inside a cell. **Delete** clears the selection. Drag, ⇧-click or
+⇧-arrows select a range; ⌘-arrows jump to the edge of the data; ⌘A selects
+it all. The bar above shows the cell's address and what's in it (and edits
+it too).
+
+**Formulas** start with `=` and are Excel's: `=SUM(B2:B20)`,
+`=B2*$C$1`, `=IF(B2>100, "big", "small")`, `=VLOOKUP("Food", A2:B10, 2,
+FALSE)`, `=Rates!B2` (another tab), `='My tab'!A1:A5`, `=SUM(B:B)` (the
+whole column). While writing one, **click a cell** (or drag over several)
+to put its reference in. Function names work in English or Portuguese
+(`SOMA`, `SE`, `PROCV`…), with `,` or `;`. Besides the database ones (see
+Databases) there are VLOOKUP, HLOOKUP, XLOOKUP, INDEX, MATCH, CHOOSE,
+PRODUCT, MEDIAN, SUMIFS, COUNTIFS, AVERAGEIFS, PI, LN, LOG, LOG10, EXP,
+CEILING, FLOOR, TRUNC, SIGN, VALUE, ISTEXT, ISERROR, TEXTJOIN, REPT, PROPER,
+FIND, SEARCH and EOMONTH. A mistake shows Excel's way (`#DIV/0!`, `#N/A`,
+`#REF!` — also a cell that needs itself).
+
+**Filling and copying.** The small square at the corner of the selection
+drags a **fill**: formulas move their references (`$` keeps one fixed),
+numbers going up by a step continue (1, 2 → 3, 4, 5), anything else repeats.
+⌘D fills down from the top cell, ⌘R right. ⌘C / ⌘X / ⌘V copy and paste —
+between sheets with their formulas and looks; with Excel, Numbers or Google
+Sheets as values.
+
+**Rows and columns.** Right-click a row number or a column letter to insert
+one before or after, or delete the selected ones — formulas everywhere
+follow, as in Excel (a reference to a deleted cell becomes `#REF!`). Drag a
+column letter's edge to resize it. More rows and columns appear as you
+scroll.
+
+**Looks.** The toolbar: undo / redo (⌘Z, ⌘⇧Z), bold (⌘B), italic (⌘I),
+left / centre / right, the **number format** (general, number with two
+decimals, whole number, euros, percent, date) and **keep the top rows in
+view** (freezes the rows above the selected one).
+
+**Tabs** are at the bottom: **+** adds one, a double click renames it, a
+right click deletes it.
+
+It saves itself a moment after each change. If someone else saved the sheet
+meanwhile, theirs is kept and shown (with a note). `⋯` (top right):
+**Copy link**, **Download as Excel (.xlsx)** — every tab, with formulas
+(in Excel's English), formats, widths and the frozen rows — or **Download
+this tab as CSV**, and **Delete sheet**.
+
+**In a page**: paste the sheet's link (`⋯` → Copy link) on a line of its
+own and the page shows the sheet there (a tab at a time, up to 50 rows and
+15 columns), with **Open**.
+
+## 16. Habits
 
 **Habits** (a module: turn it on in Workspace settings → Modules) are things
 you want to do again and again — read, run, practise the piano. They're
@@ -964,7 +1024,7 @@ sees anyone else's.
   **Edit** changes it; **Archive** puts it away (with its history; **Bring
   back** later), **Delete** removes it and its history.
 
-## 16. Focus timer
+## 17. Focus timer
 
 **Focus timer** (a module) is for working in focused stretches — the
 Pomodoro way: 25 minutes on one thing, then a break.
@@ -980,7 +1040,7 @@ Pomodoro way: 25 minutes on one thing, then a break.
   **Today** lists today's sessions; the top says how long you focused today.
 - One session runs at a time: starting another ends the one running.
 
-## 17. Goals
+## 18. Goals
 
 **Goals** (a module) are what a workspace works towards by a date — a
 launch, an exam, a trip.
@@ -996,7 +1056,7 @@ launch, an exam, a trip.
 - **Mark achieved** puts it with the **Achieved** goals (folded at the
   bottom); **Delete** removes it — its tasks stay.
 
-## 18. Journal
+## 19. Journal
 
 The **Journal** (a module) is a page a day — what happened, how it went.
 It's **yours alone**: in a shared workspace each member writes their own,
@@ -1012,7 +1072,7 @@ and nobody reads anyone else's (search finds yours for you only).
 - **On this day** shows the same date in earlier years — what you wrote a
   year ago, two years ago…
 
-## 19. Bookmarks
+## 20. Bookmarks
 
 **Bookmarks** (a module) keep links worth coming back to.
 
@@ -1029,7 +1089,7 @@ and nobody reads anyone else's (search finds yours for you only).
 - Search (⌘K) finds bookmarks by their title, description, site, address
   and notes; choosing one opens the link.
 
-## 20. Notifications
+## 21. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -1092,7 +1152,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 21. Your settings
+## 22. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -1130,7 +1190,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 22. Administration
+## 23. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -1225,7 +1285,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 23. Owner controls
+## 24. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1363,7 +1423,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 24. On a phone
+## 25. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

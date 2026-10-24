@@ -1349,6 +1349,94 @@ test('databases: a page of rows with properties, edited in place, filtered, on a
   await page.screenshot({ path: 'test-results/database.png' })
 })
 
+test('sheets: values and formulas typed and clicked, a fill, a row inserted, saved, out as .xlsx and back', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Money', kind: 'personal', modules: ['home', 'sheets'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await page.goto(`/w/${ws.id}/sheets`)
+  await page.getByTestId('new-sheet').first().click()
+  await page.getByTestId('sheet-title').fill('Budget')
+  await page.getByTestId('sheet-title').press('Enter')
+  const cell = (a: string) => page.locator(`[data-addr="${a}"]`)
+
+  // Values typed in: Enter goes down.
+  await cell('A1').click()
+  for (const v of ['Rent', 'Food', 'Total']) {
+    await page.keyboard.type(v)
+    await page.keyboard.press('Enter')
+  }
+  await cell('B1').click()
+  await page.keyboard.type('650')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('300')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('=SUM(B1:B2)')
+  await page.keyboard.press('Enter')
+  await expect(cell('B3')).toHaveText('950')
+
+  // A formula made by clicking a cell.
+  await cell('C1').click()
+  await page.keyboard.type('=')
+  await cell('B1').click()
+  await page.keyboard.type('*2')
+  await page.keyboard.press('Enter')
+  await expect(cell('C1')).toHaveText('1300')
+  await cell('C1').click()
+  await expect(page.getByTestId('sheet-bar')).toHaveValue('=B1*2')
+
+  // The fill handle drags it down: references move.
+  const handle = page.getByTestId('sheet-fill')
+  const hb = (await handle.boundingBox())!
+  const c2 = (await cell('C2').boundingBox())!
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(c2.x + c2.width / 2, c2.y + c2.height / 2, { steps: 5 })
+  await page.mouse.up()
+  await expect(cell('C2')).toHaveText('600')
+
+  // A row inserted above row 1: the total's formula follows.
+  await page.locator('.sh-rowhead', { hasText: /^1$/ }).first().click({ button: 'right' })
+  await page.getByTestId('sheet-head-menu').getByRole('button', { name: 'Insert a row above' }).click()
+  await expect(cell('B4')).toHaveText('950')
+  await cell('B4').click()
+  await expect(page.getByTestId('sheet-bar')).toHaveValue('=SUM(B2:B3)')
+  // Undo takes it back.
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect(cell('B3')).toHaveText('950')
+
+  // Saved: still there after a reload.
+  await expect(page.getByTestId('sheet-state')).toHaveText(/Saved/)
+  await page.reload()
+  await expect(cell('B3')).toHaveText('950')
+  await expect(cell('C2')).toHaveText('600')
+
+  // Out as Excel, and back in as a new sheet.
+  await page.getByTestId('sheet-menu').click()
+  const [xlsx] = await Promise.all([page.waitForEvent('download'), page.getByTestId('sheet-xlsx').click()])
+  expect(xlsx.suggestedFilename()).toBe('Budget.xlsx')
+  const bytes = await (await import('node:fs/promises')).readFile(await xlsx.path())
+  expect(bytes.subarray(0, 2).toString()).toBe('PK')
+  await page.screenshot({ path: 'test-results/sheet.png' })
+  await page.goto(`/w/${ws.id}/sheets`)
+  await page.getByTestId('sheet-import-input').setInputFiles({ name: 'Copy.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: bytes })
+  await page.waitForURL(/\/s\//)
+  await expect(page.getByTestId('sheet-title')).toHaveValue('Copy')
+  await expect(cell('B3')).toHaveText('950')
+  await expect(cell('C2')).toHaveText('600')
+
+  // Its link alone on a line of a page shows the sheet there.
+  const sheetId = new URL(page.url()).pathname.split('/').pop()
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Plans', content: `Our money:\n\n[Copy](/w/${ws.id}/s/${sheetId})\n\nThat's all.` } })).json()
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  const embed = page.getByTestId('sheet-embed')
+  await expect(embed).toContainText('Copy')
+  await expect(embed.locator('td', { hasText: '950' })).toBeVisible()
+  await page.screenshot({ path: 'test-results/sheet-embed.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

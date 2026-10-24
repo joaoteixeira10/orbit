@@ -94,6 +94,7 @@ type Archive struct {
 	Files          []models.Upload      `json:"files"`
 	Drawings       []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
 	WorkspaceGoals []models.Goal        `json:"workspace_goals,omitempty"`
+	Sheets         []xSheet             `json:"sheets,omitempty"`
 	Bookmarks      []models.Bookmark    `json:"bookmarks,omitempty"` // their pictures are read again
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
@@ -102,6 +103,11 @@ type Archive struct {
 	Journal []models.JournalEntry `json:"journal,omitempty"`
 	// The shared smart lists and the exporter's own.
 	SmartLists []xSmartList `json:"smart_lists,omitempty"`
+}
+
+type xSheet struct {
+	models.Sheet
+	Text string `json:"text,omitempty"`
 }
 
 type xSmartList struct {
@@ -200,6 +206,11 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Drawings)
 	db.Where("workspace_id = ?", wsID).Order("rank").Find(&a.WorkspaceGoals)
+	var sheets []models.Sheet
+	db.Where("workspace_id = ?", wsID).Order("rank").Find(&sheets)
+	for _, sh := range sheets {
+		a.Sheets = append(a.Sheets, xSheet{Sheet: sh, Text: sh.Text})
+	}
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Bookmarks)
 	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("rank").Find(&a.Habits)
 	habitIDs := []string{""}
@@ -394,6 +405,9 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 	for _, x := range a.WorkspaceGoals {
 		fresh(x.ID)
 	}
+	for _, x := range a.Sheets {
+		fresh(x.ID)
+	}
 	pairs := make([]string, 0, 2*len(newID))
 	for o, n := range newID {
 		if len(o) >= 8 { // ids, not stray short strings
@@ -499,6 +513,14 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			g := x
 			g.ID, g.WorkspaceID, g.CreatedBy = ref(x.ID), ws.ID, who(x.CreatedBy)
 			if err := tx.Create(&g).Error; err != nil {
+				return err
+			}
+		}
+		for _, x := range a.Sheets {
+			sh := x.Sheet
+			sh.ID, sh.WorkspaceID, sh.Text, sh.Version = ref(x.ID), ws.ID, x.Text, 1
+			sh.CreatedBy, sh.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
+			if err := tx.Create(&sh).Error; err != nil {
 				return err
 			}
 		}

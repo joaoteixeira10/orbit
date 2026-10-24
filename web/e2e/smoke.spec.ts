@@ -1318,6 +1318,23 @@ test('databases: a page of rows with properties, edited in place, filtered, on a
   await dbv.getByTestId('db-total-Pages').selectOption('sum')
   await expect(dbv.getByTestId('db-totals')).toContainText('412')
 
+  // A formula made by clicking: this row's Pages, divided by the column's sum.
+  await dbv.getByTestId('db-add-prop').click()
+  await menu.getByRole('textbox', { name: 'Property name' }).fill('Share')
+  await menu.getByTestId('prop-type').selectOption('formula')
+  await menu.getByTestId('formula-prop-Pages').click()
+  await page.getByTestId('formula-pick').getByRole('button', { name: /This row/ }).click()
+  await menu.getByTestId('prop-formula').press('End')
+  await page.keyboard.type('/')
+  await menu.getByTestId('formula-prop-Pages').click()
+  await page.getByTestId('formula-pick').getByRole('button', { name: /Sum of the column/ }).click()
+  await expect(menu.getByTestId('prop-formula')).toHaveValue('[@Pages]/SUM([Pages])')
+  await menu.getByTestId('prop-done').click()
+  const share = dune.getByTestId('db-formula').last()
+  await expect(share).toHaveText('1')
+  await expect(share).toHaveCSS('text-align', 'right')
+  await page.screenshot({ path: 'test-results/formula-share.png' })
+
   // A board by Status.
   await dbv.getByTestId('db-add-view').click()
   await page.getByTestId('db-add-board').click()

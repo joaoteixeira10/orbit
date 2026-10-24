@@ -297,8 +297,12 @@ write in it; its values show under its title.
   NOT, ISBLANK, ISNUMBER, CONCAT, LEN, LEFT, RIGHT, MID, UPPER, LOWER, TRIM,
   SUBSTITUTE, TODAY, DATE, YEAR, MONTH, DAY, WEEKDAY, DAYS, DATEDIF, EDATE
   and NETWORKDAYS. A mistake shows Excel's way: `#DIV/0!`, `#NAME?` (an
-  unknown name), `#VALUE!`, `#REF!` (a formula that needs itself). The menu
-  lists the properties: click one to put it in. Filters, sorts and boards
+  unknown name), `#VALUE!`, `#REF!` (a formula that needs itself). Under the
+  formula, click a property for its value on this row or a total of its
+  column — sum, average, min, max, count (the same sums the totals row
+  shows, but over every row, whatever the filter) — and the **Functions**
+  row puts in the common ones with the cursor inside. Results that are
+  numbers line up on the right, like number columns. Filters, sorts and boards
   use a formula's result like any value.
 - **Totals**: the row under a table — click under a column for its **sum**,
   **average**, **min**, **max**, **count** or **empty** (numbers and

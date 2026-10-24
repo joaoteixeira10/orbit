@@ -133,6 +133,10 @@ const href = computed(() => (props.prop.type === 'url' && typeof props.value ===
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+/* A number shown (a formula's, or read only) sits at the right, as typed ones do. */
+.cell-text.num {
+  flex: 1;
+}
 .cell-text {
   min-width: 0;
   padding: 4px 6px;

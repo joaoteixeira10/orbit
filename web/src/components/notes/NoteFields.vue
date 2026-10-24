@@ -3,8 +3,8 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Plus, X, ChevronRight } from 'lucide-vue-next'
 import { newItem, MAX_BODY, MAX_ITEMS, MAX_ITEM_TEXT, MAX_TITLE, type Draft, type DraftItem } from './noteModel'
-import { acceptAnswer, evaluate } from '@/lib/mathnotes'
-import MathGhost from '@/components/ui/MathGhost.vue'
+import { evaluate } from '@/lib/mathnotes'
+import CodeArea from '@/components/editor/CodeArea.vue'
 
 // The editable inside of a note, shared by the capture box and the editor:
 // a title, then either the text (growing with it) or checklist rows. In a
@@ -16,7 +16,7 @@ const emit = defineEmits<{ submit: [] }>()
 const { t } = useI18n()
 
 const titleEl = ref<HTMLTextAreaElement | null>(null)
-const bodyEl = ref<HTMLTextAreaElement | null>(null)
+const bodyEl = ref<InstanceType<typeof CodeArea> | null>(null)
 const addEl = ref<HTMLInputElement | null>(null)
 const rows = new Map<number, HTMLInputElement>()
 const setRow = (k: number, el: unknown) => {
@@ -36,9 +36,9 @@ function grow(el: HTMLTextAreaElement | null) {
 }
 watch(
   () => [draft.value.title, draft.value.body, draft.value.checklist],
-  () => nextTick(() => (grow(titleEl.value), grow(bodyEl.value))),
+  () => nextTick(() => grow(titleEl.value)),
 )
-onMounted(() => (grow(titleEl.value), grow(bodyEl.value)))
+onMounted(() => grow(titleEl.value))
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -52,16 +52,8 @@ function onKey(e: KeyboardEvent) {
 // ---- Math, like iPhone's Math Notes: a line ending in "=" shows its answer
 // in grey; Tab writes it in. The grey layer lies under the (transparent)
 // text, wrapped the same way. ----
+// (The body edits like VS Code — CodeArea — and answers its sums itself.)
 const answers = computed(() => (draft.value.checklist ? [] : evaluate(draft.value.body)))
-function onBodyKey(e: KeyboardEvent) {
-  if (onKey(e) || e.key !== 'Tab' || e.shiftKey || props.readonly || !bodyEl.value) return
-  const el = bodyEl.value
-  const r = acceptAnswer(draft.value.body, el.selectionStart ?? 0, answers.value)
-  if (!r) return
-  e.preventDefault()
-  draft.value.body = r.value
-  void nextTick(() => el.setSelectionRange(r.caret, r.caret))
-}
 function onTitleKey(e: KeyboardEvent) {
   if (onKey(e)) return
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
@@ -141,13 +133,7 @@ function remove(it: DraftItem) {
 async function focus(where: 'title' | 'body' | 'end' = 'end') {
   await nextTick()
   if (where === 'title') return titleEl.value?.focus()
-  if (!draft.value.checklist) {
-    const el = bodyEl.value
-    if (!el) return
-    el.focus()
-    el.setSelectionRange(el.value.length, el.value.length)
-    return
-  }
+  if (!draft.value.checklist) return bodyEl.value?.focus('end')
   addEl.value?.focus()
 }
 defineExpose({ focus })
@@ -169,19 +155,20 @@ defineExpose({ focus })
     />
 
     <div v-if="!draft.checklist" class="math-wrap">
-      <textarea
+      <CodeArea
         ref="bodyEl"
         v-model="draft.body"
-        rows="1"
         class="f-body"
+        :markdown="false"
+        sums
+        submit
         :placeholder="t('notes.takeNote')"
         :readonly="props.readonly"
         :maxlength="MAX_BODY"
-        data-testid="note-body"
-        @keydown="onBodyKey"
-        @input="grow(bodyEl)"
+        :label="t('notes.takeNote')"
+        testid="note-body"
+        @submit="emit('submit')"
       />
-      <MathGhost class="f-body" :text="draft.body" :answers="answers" />
       <p v-if="answers.length && !readonly" class="calc-hint">{{ t('notes.mathHint') }}</p>
     </div>
 

@@ -1,222 +1,44 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, markRaw, reactive } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import CodeArea from './CodeArea.vue'
 import { normalizeMarkdown } from '@/lib/markdown'
 import { markdownFor, uploadFile } from '@/lib/uploads'
+import { mentionItems } from '@/lib/mentions'
 import { useToastStore } from '@/stores/toast'
-import { acceptAnswer, evaluate } from '@/lib/mathnotes'
-import MathGhost from '@/components/ui/MathGhost.vue'
-import SlashMenu from './SlashMenu.vue'
-import type { SlashItem, SlashState } from './slash'
-import { mentionItems, markdownOf, type MentionItem } from '@/lib/mentions'
-import { caretRect } from '@/lib/caret'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { usePagesStore } from '@/stores/pages'
-import { AtSign, CalendarDays, FileText } from 'lucide-vue-next'
 
-// The page body, edited as Markdown source: a plain text area that grows with
-// the page, with the small helps of a Markdown editor — Enter continues a
-// list, task or quote (and ends it on an empty item), Tab / ⇧Tab indent,
-// ⌘B ⌘I ⌘E ⌘K wrap the selection in bold, italic, code, a link. Same
-// contract as PageEditor: the parent saves; this hands out the Markdown.
+// The page body, edited as Markdown source, the way Visual Studio Code edits
+// text (CodeArea: several cursors, moving lines, find and replace…), with
+// the helps of a Markdown editor — Enter continues a list, task or quote
+// (an empty item ends it), Tab / ⇧Tab indent, ⌘B ⌘I ⌘E ⌘K wrap the
+// selection in bold, italic, code, a link — sums answered after "=", files
+// pasted or dropped, @-mentions. Same contract as PageEditor: the parent
+// saves; this hands out the Markdown.
 const props = defineProps<{ content: string; editable: boolean; pageId?: string; ws?: string }>()
 const emit = defineEmits<{ change: [] }>()
 const { t } = useI18n()
 const toast = useToastStore()
-
-// Files pasted or dropped in: uploaded to the page, their Markdown (an image
-// or a link) put where the caret is.
-async function addFiles(files: File[]) {
-  if (!props.pageId || !props.editable) return
-  for (const f of files) {
-    toast.info(t('editor.uploading', { name: f.name }))
-    try {
-      const u = await uploadFile('page', props.pageId, f)
-      const el = area.value!
-      const at = el.selectionEnd
-      const before = text.value.slice(0, at)
-      const sep = before && !before.endsWith('\n') ? '\n' : ''
-      const s = `${sep}${markdownFor(u)}\n`
-      replace(at, at, s, at + s.length)
-    } catch (e: any) {
-      toast.error(e?.message ?? String(e))
-    }
-  }
-}
-function onPaste(e: ClipboardEvent) {
-  const files = [...(e.clipboardData?.files ?? [])]
-  if (!files.length || !props.pageId) return
-  e.preventDefault()
-  void addFiles(files)
-}
-function onDrop(e: DragEvent) {
-  const files = [...(e.dataTransfer?.files ?? [])]
-  if (!files.length || !props.pageId) return
-  e.preventDefault()
-  void addFiles(files)
-}
-
-const text = ref(props.content)
-const area = ref<HTMLTextAreaElement | null>(null)
-
-function grow() {
-  const el = area.value
-  if (!el) return
-  el.style.height = 'auto'
-  el.style.height = `${el.scrollHeight}px`
-}
-onMounted(grow)
-watch(text, () => nextTick(grow))
-
-function onInput() {
-  emit('change')
-  findMention()
-}
-
-// ---- @-mentions: the word at the caret, when it starts with "@" ----
 const wss = useWorkspacesStore()
 const pagesStore = usePagesStore()
-const mention = reactive<SlashState>({ open: false, items: [], index: 0, rect: null, pick: () => {} })
-const ICONS = { person: markRaw(AtSign), page: markRaw(FileText), date: markRaw(CalendarDays) }
-let mentionAt = -1
-function closeMention() {
-  mention.open = false
-  mention.items = []
-  mentionAt = -1
-}
-function findMention() {
-  const el = area.value
-  if (!el || !props.ws || el.selectionStart !== el.selectionEnd) return closeMention()
-  const upto = text.value.slice(0, el.selectionStart)
-  const m = /(?:^|[\s([“"])@([^\s@[\]()]{0,40})$/.exec(upto)
-  if (!m) return closeMention()
-  mentionAt = upto.length - m[1].length - 1
-  const items = mentionItems(m[1], { ws: props.ws, members: wss.members[props.ws] ?? [], pages: pagesStore.byWs[props.ws] ?? [], self: props.pageId }, t)
-  mention.items = items.map((it): SlashItem => ({ key: it.key, title: it.title, desc: it.desc, icon: ICONS[it.kind], aliases: [], run: () => pickMention(it) }))
-  mention.index = 0
-  const at = mentionAt
-  mention.rect = () => caretRect(el, at)
-  mention.pick = (it) => it.run(null as any, null as any)
-  mention.open = true
-}
-function pickMention(it: MentionItem) {
-  const el = area.value
-  if (!el || mentionAt < 0) return
-  const s = markdownOf(it) + ' '
-  const from = mentionAt
-  closeMention()
-  replace(from, el.selectionStart, s, from + s.length)
-}
 
-// replace swaps [from, to) for s and puts the caret (or selection) at
-// [selFrom, selTo), as an edit the browser can undo.
-function replace(from: number, to: number, s: string, selFrom: number, selTo = selFrom) {
-  const el = area.value!
-  el.focus()
-  el.setSelectionRange(from, to)
-  if (!document.execCommand?.('insertText', false, s)) {
-    text.value = text.value.slice(0, from) + s + text.value.slice(to)
-  }
-  text.value = el.value
-  void nextTick(() => el.setSelectionRange(selFrom, selTo))
-  emit('change')
-}
+const text = ref(props.content)
+const area = ref<InstanceType<typeof CodeArea> | null>(null)
 
-const LIST = /^(\s*)(?:([-*+])\s+(\[[ xX]\]\s+)?|(\d+)([.)])\s+|(>\s?))/
-
-function onEnter(e: KeyboardEvent) {
-  const el = area.value!
-  const pos = el.selectionStart
-  if (pos !== el.selectionEnd) return
-  const start = text.value.lastIndexOf('\n', pos - 1) + 1
-  const line = text.value.slice(start, pos)
-  const m = LIST.exec(line)
-  if (!m) return
-  e.preventDefault()
-  if (line.slice(m[0].length).trim() === '' && text.value.slice(pos, text.value.indexOf('\n', pos) >>> 0).trim() === '') {
-    // An empty item ends the list.
-    return replace(start, pos, '', start)
-  }
-  const [, ind, bullet, box, num, delim, quote] = m
-  const next = quote ? `${ind}> ` : num ? `${ind}${Number(num) + 1}${delim} ` : `${ind}${bullet} ${box ? '[ ] ' : ''}`
-  replace(pos, pos, `\n${next}`, pos + 1 + next.length)
-}
-
-function onTab(e: KeyboardEvent) {
-  e.preventDefault()
-  const el = area.value!
-  const { selectionStart: a, selectionEnd: b } = el
-  const start = text.value.lastIndexOf('\n', a - 1) + 1
-  const end = b
-  const block = text.value.slice(start, end)
-  const lines = block.split('\n')
-  const out = e.shiftKey ? lines.map((l) => l.replace(/^ {1,2}/, '')) : lines.map((l) => '  ' + l)
-  const joined = out.join('\n')
-  const shift = joined.length - block.length
-  const first = e.shiftKey ? out[0].length - lines[0].length : 2
-  replace(start, end, joined, Math.max(start, a + first), b + shift)
-}
-
-function wrap(before: string, after = before) {
-  const el = area.value!
-  const { selectionStart: a, selectionEnd: b } = el
-  const sel = text.value.slice(a, b)
-  replace(a, b, before + sel + after, a + before.length, b + before.length)
-}
-
-// Sums, as in Quick Notes: a line ending in "=" shows its answer; Tab
-// writes it in.
-const answers = computed(() => evaluate(text.value, { markdown: true }))
-function takeAnswer(): boolean {
-  const el = area.value
-  if (!el) return false
-  const v = text.value
-  const caret = el.selectionStart ?? 0
-  if (!acceptAnswer(v, caret, answers.value)) return false
-  const line = v.slice(0, caret).split('\n').length - 1
-  const answer = answers.value.find((a) => a.line === line)!.result
-  const start = v.lastIndexOf('\n', caret - 1) + 1
-  const nl = v.indexOf('\n', caret)
-  const end = nl === -1 ? v.length : nl
-  const at = start + v.slice(start, end).replace(/\s+$/, '').length
-  replace(at, end, ' ' + answer, at + 1 + answer.length) // undoable
-  return true
-}
-function onKey(e: KeyboardEvent) {
-  if (!props.editable) return
-  if (mention.open) {
-    const n = mention.items.length
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (n) mention.index = (mention.index + (e.key === 'ArrowDown' ? 1 : n - 1)) % n
-      return
-    }
-    if ((e.key === 'Enter' || e.key === 'Tab') && n) {
-      e.preventDefault()
-      mention.pick(mention.items[mention.index])
-      return
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      e.stopPropagation()
-      closeMention()
-      return
-    }
-  }
-  const mod = e.metaKey || e.ctrlKey
-  if (e.key === 'Enter' && !mod && !e.shiftKey && !e.isComposing) onEnter(e)
-  else if (e.key === 'Tab' && !mod && !e.shiftKey && takeAnswer()) e.preventDefault()
-  else if (e.key === 'Tab' && !mod) onTab(e)
-  else if (mod && !e.altKey) {
-    const k = e.key.toLowerCase()
-    const forms: Record<string, [string, string?]> = { b: ['**'], i: ['*'], e: ['`'], k: ['[', '](https://)'] }
-    if (forms[k] && !(k === 'k' && area.value!.selectionStart === area.value!.selectionEnd)) {
-      e.preventDefault()
-      e.stopPropagation()
-      wrap(...forms[k])
-    }
+// Files pasted or dropped in: uploaded to the page, their Markdown (an image
+// or a link) put where they landed.
+async function upload(f: File): Promise<string> {
+  toast.info(t('editor.uploading', { name: f.name }))
+  try {
+    return markdownFor(await uploadFile('page', props.pageId!, f))
+  } catch (e: any) {
+    toast.error(e?.message ?? String(e))
+    throw e
   }
 }
+const mentions = (q: string) =>
+  props.ws ? mentionItems(q, { ws: props.ws, members: wss.members[props.ws] ?? [], pages: pagesStore.byWs[props.ws] ?? [], self: props.pageId }, t) : []
 
 // getContent is the page's Markdown, tidied the way every save is.
 function getContent(): string {
@@ -224,60 +46,38 @@ function getContent(): string {
 }
 // setContent replaces the text (someone else's save), keeping the caret.
 function setContent(md: string) {
-  const el = area.value
-  const [a, b] = el ? [el.selectionStart, el.selectionEnd] : [0, 0]
   text.value = md
-  void nextTick(() => el?.setSelectionRange(Math.min(a, md.length), Math.min(b, md.length)))
 }
 function focusStart() {
-  area.value?.focus()
-  area.value?.setSelectionRange(0, 0)
+  area.value?.focus('start')
 }
 defineExpose({ getContent, setContent, focusStart })
 </script>
 
 <template>
-  <div class="math-wrap">
-  <textarea
+  <CodeArea
     ref="area"
     v-model="text"
     class="md-source"
+    mono
+    sums
     :readonly="!editable"
     :placeholder="t('editor.mdPlaceholder')"
-    spellcheck="true"
-    :aria-label="t('editor.mdLabel')"
-    @input="onInput"
-    @keydown="onKey"
-    @paste="onPaste"
-    @drop="onDrop"
-    @click="findMention"
-    @blur="closeMention"
+    :label="t('editor.mdLabel')"
+    :upload="pageId && editable ? upload : null"
+    :mentions="ws ? mentions : null"
+    testid="md-source"
+    @change="emit('change')"
   />
-  <SlashMenu :state="mention" :context="area" :label="t('mention.label')" :empty="t('mention.none')" @hover="(i) => (mention.index = i)" />
-  <MathGhost class="md-source" :text="text" :answers="answers" />
-  </div>
 </template>
 
 <style scoped>
 .md-source {
   display: block;
-  width: 100%;
   min-height: 40vh;
   padding: 2px 0 24px;
-  resize: none;
-  overflow: hidden;
-  border: 0;
-  outline: none;
-  background: transparent;
   color: var(--text);
-  font: 14px/1.7 var(--font-mono);
-  tab-size: 2;
-  field-sizing: content;
-}
-.md-source::placeholder {
-  color: var(--text-faint);
-}
-.md-source:focus-visible {
-  box-shadow: none;
+  font-size: 14px;
+  line-height: 1.7;
 }
 </style>

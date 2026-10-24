@@ -17,8 +17,7 @@ import Avatar from '@/components/ui/Avatar.vue'
 import TaskComments from './TaskComments.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
-import { acceptAnswer, evaluate } from '@/lib/mathnotes'
-import MathGhost from '@/components/ui/MathGhost.vue'
+import CodeArea from '@/components/editor/CodeArea.vue'
 import { todayStr, dateStr, addDays, REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
 // Everything about one task, Reminders' "Details": notes, start, date and
@@ -82,7 +81,7 @@ const notes = ref('')
 // Notes are Markdown (as a linked git issue's body is): read rendered, with
 // boxes that tick; a click (not on a link or box) or the pencil edits them.
 const editingNotes = ref(false)
-const notesEl = ref<HTMLTextAreaElement | null>(null)
+const notesEl = ref<InstanceType<typeof CodeArea> | null>(null)
 const tagDraft = ref('')
 const subDraft = ref('')
 watch(
@@ -160,17 +159,14 @@ async function editNotes() {
   if (!editable.value) return
   editingNotes.value = true
   await nextTick()
-  notesEl.value?.focus()
+  notesEl.value?.focus('end')
 }
-// Sums in the notes, as in Quick Notes: answers after "=", Tab writes one in.
-const noteAnswers = computed(() => (editingNotes.value || !notes.value.trim() ? evaluate(notes.value, { markdown: true }) : []))
-function notesKey(e: KeyboardEvent) {
-  if (e.key !== 'Tab' || e.shiftKey || !notesEl.value) return
-  const r = acceptAnswer(notes.value, notesEl.value.selectionStart ?? 0, noteAnswers.value)
-  if (!r) return
-  e.preventDefault()
-  notes.value = r.value
-  void nextTick(() => notesEl.value?.setSelectionRange(r.caret, r.caret))
+// Escape the editor didn't use (it first goes back to one cursor) ends the
+// editing, not the sheet.
+function notesEsc(e: KeyboardEvent) {
+  if (e.defaultPrevented) return
+  e.stopPropagation()
+  ;(document.activeElement as HTMLElement | null)?.blur()
 }
 function tickInNotes(i: number) {
   notes.value = toggleTask(notes.value, i)
@@ -326,19 +322,20 @@ async function remove() {
         <MarkdownView class="notes-md" :content="notes" :editable="editable" math @toggle="tickInNotes" @edit="editNotes" />
       </div>
       <div v-else-if="editable || notes.trim()" class="math-wrap mt-2">
-      <textarea
-        id="task-notes"
-        ref="notesEl"
-        v-model="notes"
-        rows="3"
-        class="notes-area w-full resize-none rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
-        :placeholder="t('tasks.notesMd')"
-        :readonly="!editable"
-        @blur="saveNotes"
-        @keydown="notesKey"
-        @keydown.esc.stop="($event.target as HTMLTextAreaElement).blur()"
-      />
-      <MathGhost class="notes-area px-3 py-2.5 text-[14px]" :text="notes" :answers="noteAnswers" />
+      <div @keydown.esc="notesEsc">
+        <CodeArea
+          id="task-notes"
+          ref="notesEl"
+          v-model="notes"
+          class="notes-area w-full rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] focus-within:shadow-[0_0_0_3px_var(--ring)]"
+          sums
+          :placeholder="t('tasks.notesMd')"
+          :readonly="!editable"
+          :label="t('tasks.notesMd')"
+          testid="task-notes"
+          @blur="saveNotes"
+        />
+      </div>
       </div>
 
       <!-- When -->

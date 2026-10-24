@@ -360,9 +360,37 @@ same page: it's the same Markdown.
   underline, strikethrough, code, highlight, link (⌘K), and turn into text or
   a heading. A **callout** is one of GitHub's five alerts — note, tip,
   important, warning, caution (click its icon to choose).
-- **Markdown** — the page's source. Enter continues a list, task or quote (an
-  empty item ends it), Tab / ⇧Tab indent, ⌘B ⌘I ⌘E ⌘K make bold, italic,
-  code and a link of the selection.
+- **Markdown** — the page's source, coloured as you type. Enter continues a
+  list, task or quote (an empty item ends it), Tab / ⇧Tab indent, ⌘B ⌘I ⌘E
+  ⌘K make bold, italic, code and a link of every selection. It edits like
+  Visual Studio Code — see below.
+
+**Editing like VS Code.** The Markdown editor, task notes, the journal and
+the text of notes and Quick Notes take Visual Studio Code's keys (⌘ on a
+Mac, Ctrl elsewhere; ⌥ is Alt):
+
+| Keys | Does |
+|---|---|
+| ⌥-click | another cursor (as many as you like); Esc goes back to one |
+| ⇧⌥-drag | a box (column) selection |
+| ⌘D | add the next occurrence of the selection (again: the one after) |
+| ⌘⇧L | select every occurrence |
+| ⌘⌥↑ / ⌘⌥↓ | a cursor on the line above / below |
+| ⇧⌥I | a cursor at the end of each selected line |
+| ⌥↑ / ⌥↓ | move the line (or lines) up / down |
+| ⇧⌥↑ / ⇧⌥↓ | copy the line up / down |
+| ⌘⇧K | delete the line |
+| ⌘L | select the line (again: the next) |
+| ⌘↵ / ⌘⇧↵ | a new line below / above (in a note ⌘↵ saves it) |
+| ⌘] / ⌘[ | indent / outdent |
+| ⌘/ | comment out (`<!-- -->` in Markdown) |
+| ⌘C / ⌘X with nothing selected | copy / cut the whole line |
+| ⌘U | undo the last cursor move |
+| ⌘F, ⌘⌥F | find, and replace (match case, whole word, regular expression); F3 / ⌘G the next |
+| Ctrl-G | go to a line |
+
+Typing, pasting, ⌘B and Tab work at every cursor at once. Esc then Tab
+moves on to the next field (Tab alone indents).
 
 What Markdown has no syntax for is written the way GitHub shows it:
 highlight as `<mark>…</mark>`, underline as `<u>…</u>`, callouts as

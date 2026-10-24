@@ -786,7 +786,7 @@ textarea.outline-none:focus-visible,
   }
 }
 
-/* A textarea with its sums' answers laid over it (components/ui/MathGhost). */
+/* A field with its sums (answers shown by the editor, CodeArea). */
 .math-wrap {
   position: relative;
 }

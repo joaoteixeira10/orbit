@@ -126,6 +126,13 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Text that edits like VS Code**: the Markdown editor, task notes, the
+  journal and notes take Visual Studio Code's keys — several cursors
+  (⌥-click, ⌘D, ⌘⇧L, ⌘⌥↑↓, ⇧⌥I), box selections (⇧⌥-drag), moving and
+  copying lines (⌥↑↓, ⇧⌥↑↓), ⌘⇧K, ⌘L, ⌘↵ / ⌘⇧↵, find and replace, go to
+  line; Markdown is coloured as you type. CodeMirror 6 underneath; sums,
+  lists, files and @-mentions as before. Escape that an editor used (back to
+  one cursor) no longer closes the sheet or note around it.
 - **Formulas and totals in databases**: a formula property works itself out
   for every row, written as in Excel (`=[@Price]*[@Qty]`, `SUM([Hours])`,
   IF, ROUND, COUNTIF, DATEDIF… in English or Portuguese, `,` or `;`), with
@@ -306,6 +313,8 @@ merge, not at release time.
 
 - Quick add: pressing Enter then Escape at once no longer adds the task
   twice.
+- Notion / Apple Notes import: fflate 0.8.3 (a malformed ZIP64 file could
+  hang the unzipping).
 - An empty page opened right after signing in now opens ready to write
   (it waited for the workspaces and opened read-only).
 

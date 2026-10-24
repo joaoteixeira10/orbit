@@ -7,7 +7,8 @@ app.
 
 - **Today** — what's late, due and coming up across every workspace, with
   each shared workspace's activity ("Ana completed 3 tasks").
-- **Pages** — documents in Markdown, edited visually or as source: headings,
+- **Pages** — documents in Markdown, edited visually or as source (with VS
+  Code's keys: several cursors, moving lines, find and replace): headings,
   checklists, tables, callouts, code, images; pages inside pages,
   favourites, a trash, templates, @-mentions and backlinks, databases
   (tables and boards of pages with properties); export as

@@ -14,7 +14,8 @@ const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
+  // An Escape something inside used (an editor's extra cursors, a menu) isn't to close.
+  if (e.key === 'Escape' && !e.defaultPrevented) {
     e.stopPropagation()
     emit('close')
   }

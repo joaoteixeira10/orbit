@@ -70,7 +70,8 @@ onBeforeUnmount(() => {
 })
 
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && open.value) {
+  // (An Escape the editor used — back to one cursor, the find bar — isn't for us.)
+  if (e.key === 'Escape' && open.value && !e.defaultPrevented) {
     e.preventDefault()
     close()
   }

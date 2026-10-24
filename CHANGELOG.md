@@ -126,6 +126,10 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Task dependencies**: a task waits on others (finish-to-start, no loops)
+  — set in its details or by dragging from one timeline bar to another;
+  arrows on the timeline (red when too early); moving a task's end moves
+  what waits on it, down the chain. Carried by export / import.
 - **Charts: downloads and workload**: each chart downloads as a PNG (drawn
   on white with its title, workspace and date) or as CSV; the tasks shown
   download as CSV; a **Workload** chart shows everyone's open tasks by when
@@ -280,6 +284,8 @@ merge, not at release time.
 
 - Quick add: pressing Enter then Escape at once no longer adds the task
   twice.
+- An empty page opened right after signing in now opens ready to write
+  (it waited for the workspaces and opened read-only).
 
 ### Security
 

@@ -10981,6 +10981,14 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "maxLength": 500
+                },
+                "waits_on": {
+                    "description": "WaitsOn: the tasks of its workspace it starts after (the whole list).",
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -11107,6 +11115,13 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "waits_on": {
+                    "description": "tasks it starts after",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "workspace_id": {
                     "type": "string"

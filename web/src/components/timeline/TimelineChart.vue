@@ -32,6 +32,7 @@ const emit = defineEmits<{
   create: [listId: string, title: string]
   collapse: [listId: string]
   extend: [side: 'before' | 'after']
+  link: [from: string, to: string] // to now waits on from
 }>()
 const { t } = useI18n()
 
@@ -139,6 +140,92 @@ onMounted(() => {
   })
 })
 
+// ---- Dependencies: arrows from the end of what's waited on to the start of what waits ----
+const body = ref<HTMLElement | null>(null)
+const rowY = ref(new Map<string, number>()) // a task row's middle, from the top of the body
+const bodyH = ref(0)
+function measure() {
+  const el = body.value
+  if (!el) return
+  const m = new Map<string, number>()
+  for (const r of el.querySelectorAll<HTMLElement>('[data-row]')) m.set(r.dataset.row!, r.offsetTop + r.offsetHeight / 2)
+  rowY.value = m
+  bodyH.value = el.scrollHeight
+}
+watch(() => [props.groups, props.collapsed, props.px] as const, () => void nextTick(measure), { immediate: true, deep: false })
+let ro: ResizeObserver | null = null
+onMounted(() => {
+  ro = new ResizeObserver(() => measure())
+  if (body.value) ro.observe(body.value)
+})
+onBeforeUnmount(() => ro?.disconnect())
+
+const rowsById = computed(() => {
+  const m = new Map<string, TlRow>()
+  for (const g of props.groups) if (!props.collapsed.has(g.list.id)) for (const r of g.rows) m.set(r.task.id, r)
+  return m
+})
+interface Arrow {
+  key: string
+  d: string
+  late: boolean // it starts before what it waits on is due
+}
+const arrows = computed<Arrow[]>(() => {
+  const out: Arrow[] = []
+  const ys = rowY.value
+  for (const r of rowsById.value.values()) {
+    const s = spanFor(r)
+    const y2 = ys.get(r.task.id)
+    if (!s || y2 === undefined) continue
+    for (const pid of r.task.waits_on ?? []) {
+      const p = rowsById.value.get(pid)
+      const ps = p && spanFor(p)
+      const y1 = ys.get(pid)
+      if (!p || !ps || y1 === undefined) continue
+      const a = geom(ps)
+      const b = geom(s)
+      const x1 = a.left + a.width
+      const x2 = b.left
+      let d: string
+      if (x2 - x1 >= 16) {
+        const mid = x1 + 8
+        d = `M${x1},${y1} H${mid} V${y2} H${x2 - 1}`
+      } else {
+        // Backwards (or touching): out, down between the rows, back, in.
+        const yb = y2 + (y1 < y2 ? -1 : 1) * 18
+        d = `M${x1},${y1} h8 V${yb} H${x2 - 10} V${y2} H${x2 - 1}`
+      }
+      out.push({ key: `${pid}>${r.task.id}`, d, late: !p.task.done && s.from <= ps.to })
+    }
+  }
+  return out
+})
+
+// Linking: drag from a bar's dot onto another bar.
+const linking = ref<{ from: TlRow; pointerId: number; cx: number; cy: number } | null>(null)
+function startLink(r: TlRow, e: PointerEvent) {
+  if (!props.editable) return
+  linking.value = { from: r, pointerId: e.pointerId, cx: e.clientX, cy: e.clientY }
+}
+const linkLine = computed(() => {
+  const l = linking.value
+  const el = body.value
+  if (!l || !el) return null
+  const s = spanFor(l.from)
+  const y = rowY.value.get(l.from.task.id)
+  if (!s || y === undefined) return null
+  const box = el.getBoundingClientRect()
+  const g = geom(s)
+  return { x1: g.left + g.width, y1: y, x2: l.cx - box.left - nameW.value, y2: l.cy - box.top }
+})
+function endLink(e: PointerEvent) {
+  const l = linking.value
+  linking.value = null
+  if (!l) return
+  const target = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-row]')?.dataset.row
+  if (target && target !== l.from.task.id) emit('link', l.from.task.id, target)
+}
+
 // ---- Dragging bars ----
 interface Drag {
   row: TlRow
@@ -203,6 +290,10 @@ function grab(r: TlRow, mode: DragMode, e: PointerEvent) {
 let pending: TlRow | null = null
 
 function onMove(e: PointerEvent) {
+  if (linking.value && e.pointerId === linking.value.pointerId) {
+    linking.value = { ...linking.value, cx: e.clientX, cy: e.clientY }
+    return
+  }
   const d = drag.value
   if (!d || e.pointerId !== d.pointerId) return
   d.cx = e.clientX
@@ -223,6 +314,7 @@ function update() {
   if (d.moved) d.delta = Math.round(dx / props.px)
 }
 function onUp(e: PointerEvent) {
+  if (linking.value && e.pointerId === linking.value.pointerId) return endLink(e)
   if (pending) {
     const r = pending
     pending = null
@@ -237,6 +329,7 @@ function onUp(e: PointerEvent) {
   else if (next && d.span && (next.from !== d.span.from || next.to !== d.span.to)) emit('schedule', d.row.task, next)
 }
 function cancel() {
+  linking.value = null
   if (drag.value) clearTimeout(drag.value.timer)
   drag.value = null
   pending = null
@@ -367,7 +460,7 @@ function commitAdd(listId: string) {
         <TimelineScale :range="range" :px="px" :zoom="zoom" :today="today" :week-start="weekStart" :sel="tip ? preview : null" />
       </div>
 
-      <div class="tl-body">
+      <div ref="body" class="tl-body">
         <!-- The grid -->
         <div class="tl-bg" :style="bgStyle" aria-hidden="true">
           <i v-for="l in monthLines" :key="l" class="month-line" :style="{ left: `${l}px` }" />
@@ -375,6 +468,20 @@ function commitAdd(listId: string) {
           <i v-if="drag?.armed && preview" class="drag-col" :style="{ left: `${x(preview.from)}px`, width: `${(preview.to - preview.from + 1) * px}px` }" />
           <i v-if="todayIn" class="today-line" :style="{ left: `${x(today) + px / 2}px` }" />
         </div>
+
+        <!-- What waits on what -->
+        <svg v-if="arrows.length || linkLine" class="tl-links" :style="{ left: `${nameW}px` }" :width="W" :height="bodyH" aria-hidden="true">
+          <defs>
+            <marker id="tl-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="head" />
+            </marker>
+            <marker id="tl-arrow-late" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="head late" />
+            </marker>
+          </defs>
+          <path v-for="a in arrows" :key="a.key" :d="a.d" class="dep" :class="{ late: a.late }" :marker-end="a.late ? 'url(#tl-arrow-late)' : 'url(#tl-arrow)'" data-testid="tl-arrow" />
+          <line v-if="linkLine" :x1="linkLine.x1" :y1="linkLine.y1" :x2="linkLine.x2" :y2="linkLine.y2" class="dep linking" marker-end="url(#tl-arrow)" />
+        </svg>
 
         <template v-for="g in groups" :key="g.list.id">
           <!-- The list -->
@@ -399,7 +506,7 @@ function commitAdd(listId: string) {
 
           <template v-if="!collapsed.has(g.list.id)">
             <!-- Its tasks -->
-            <div v-for="r in g.rows" :key="r.task.id" class="tl-row task" :class="{ 'row-flash': flash === r.task.id, lifted: drag?.row.task.id === r.task.id }">
+            <div v-for="r in g.rows" :key="r.task.id" class="tl-row task" :data-row="r.task.id" :class="{ 'row-flash': flash === r.task.id, lifted: drag?.row.task.id === r.task.id, 'link-target': linking && linking.from.task.id !== r.task.id }">
               <div class="nm">
                 <button
                   class="check"
@@ -438,6 +545,8 @@ function commitAdd(listId: string) {
                   @grab="(m, e) => grab(r, m, e)"
                   @open="emit('open', r.task.id)"
                   @nudge="(m, d) => nudge(r, m, d)"
+                  :link-title="t('timeline.link')"
+                  @link="(e) => startLink(r, e)"
                 />
                 <span
                   v-else-if="ghost?.id === r.task.id"
@@ -537,6 +646,36 @@ html.dark .tl {
   padding: 0 14px 9px;
   background: var(--bg);
   box-shadow: inset -0.5px -0.5px 0 var(--border);
+}
+
+/* ---- Dependencies ---- */
+.tl-links {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+.dep {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 38%, transparent);
+  stroke-width: 1.4;
+}
+.dep.late {
+  stroke: var(--crit);
+}
+.dep.linking {
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+}
+.head {
+  fill: color-mix(in srgb, var(--text) 38%, transparent);
+}
+.head.late {
+  fill: var(--crit);
+}
+.link-target:hover .tr {
+  background: var(--accent-bg);
 }
 
 /* ---- Body ---- */

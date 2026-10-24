@@ -1123,6 +1123,51 @@ test('charts: a chart downloads as a picture and as numbers; the workload shows 
   await (await import('node:fs/promises')).copyFile(await png.path(), 'test-results/workload-export.png')
 })
 
+test('timeline dependencies: a bar linked to another by dragging; lengthening the first moves the second', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'House', kind: 'work', modules: ['home', 'tasks', 'timeline'] } })).json()
+  const lists = await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()
+  const day = (n: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + n)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  const mk = async (title: string, start: string, due: string) =>
+    (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title, list_id: lists[0].id, start, due } })).json()
+  const base = await mk('Pour the base', day(1), day(2))
+  const walls = await mk('Build the walls', day(3), day(5))
+  const get = async (id: string) => {
+    const all = await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()
+    return all.find((x: { id: string }) => x.id === id)
+  }
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 820 })
+  await page.goto(`/w/${ws.id}/timeline`)
+  await page.getByRole('tab', { name: 'Weeks' }).click()
+  const barA = page.getByRole('button', { name: /^Pour the base: / })
+  const barB = page.getByRole('button', { name: /^Build the walls: / })
+  await barA.hover()
+  const dot = barA.getByTestId('tl-link')
+  const a = (await dot.boundingBox())!
+  const b = (await barB.boundingBox())!
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 10 })
+  await page.mouse.up()
+  await expect(page.getByTestId('tl-arrow')).toHaveCount(1)
+  await expect.poll(async () => (await get(walls.id)).waits_on).toEqual([base.id])
+
+  // One more day for the base: the walls move a day too.
+  await barA.focus()
+  await page.keyboard.press('Shift+ArrowRight')
+  await expect.poll(async () => (await get(walls.id)).start).toBe(day(4))
+  expect((await get(walls.id)).due).toBe(day(6))
+  await expect(page.getByTestId('tl-arrow')).toHaveCount(1)
+  await page.screenshot({ path: 'test-results/timeline-deps.png' })
+})
+
 test('an admin creates a role with instance privileges', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   await page.goto('/admin')

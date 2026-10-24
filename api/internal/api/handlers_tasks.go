@@ -287,6 +287,7 @@ type taskResponse struct {
 	Tags        []string `json:"tags"`
 	AssigneeIDs []string `json:"assignee_ids"`
 	AssigneeID  *string  `json:"assignee_id"` // the first one (older clients)
+	WaitsOn     []string `json:"waits_on"`    // tasks it starts after
 	Done        bool     `json:"done"`
 	Comments    int64    `json:"comment_count"`
 	// GitError: the change is saved but didn't reach the linked issue (the
@@ -295,7 +296,7 @@ type taskResponse struct {
 }
 
 func toTaskResponse(t models.Task) taskResponse {
-	r := taskResponse{Task: t, Tags: decodeList(t.Tags), AssigneeIDs: t.AssigneeList(), Done: t.CompletedAt != nil}
+	r := taskResponse{Task: t, Tags: decodeList(t.Tags), AssigneeIDs: t.AssigneeList(), WaitsOn: t.WaitsOnList(), Done: t.CompletedAt != nil}
 	if len(r.AssigneeIDs) > 0 {
 		first := r.AssigneeIDs[0]
 		r.AssigneeID = &first
@@ -406,6 +407,8 @@ type taskRequest struct {
 	GitMilestone   *string `json:"git_milestone" binding:"omitempty,max=255"`
 	// GoalID: a goal of the task's workspace it counts towards ("" none).
 	GoalID *string `json:"goal_id"`
+	// WaitsOn: the tasks of its workspace it starts after (the whole list).
+	WaitsOn *[]string `json:"waits_on" binding:"omitempty,max=20"`
 }
 
 // cleanTags trims, de-duplicates and bounds tags.
@@ -528,6 +531,12 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 			one = append(one, *req.AssigneeID)
 		}
 		ids = &one
+	}
+	if req.WaitsOn != nil {
+		if msg := h.checkWaitsOn(t, *req.WaitsOn); msg != "" {
+			return msg
+		}
+		t.SetWaitsOn(*req.WaitsOn)
 	}
 	if ids != nil {
 		var want models.Task
@@ -769,6 +778,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 		h.internalError(c, err, "could not update the task")
 		return
 	}
+	shifted := h.cascade(c, before, t)
 	h.publishWS(c, t.WorkspaceID, "tasks")
 	h.recordTask(c, &before, t)
 	h.notifyAssigned(c, t, prevAssignees)
@@ -778,7 +788,7 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	gitErr := h.gitAfter(c, &before, &t)
 	resp := toTaskResponse(t)
 	resp.GitError = gitErr
-	c.JSON(http.StatusOK, gin.H{"task": h.countedOne(resp), "repeated": repeated})
+	c.JSON(http.StatusOK, gin.H{"task": h.countedOne(resp), "repeated": repeated, "shifted": shifted})
 }
 
 type moveTaskRequest struct {
@@ -882,6 +892,7 @@ func (h *Handlers) deleteTask(c *gin.Context) {
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskComment{})
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskEvent{})
 	h.db.Where("id = ? OR parent_id = ?", t.ID, t.ID).Delete(&models.Task{})
+	h.forgetWaits(t.WorkspaceID, ids)
 	if h.git != nil {
 		// Its issue stays on git, and mustn't come back as a new task.
 		h.git.Ignore(t.ListID, t.GitIssueID)

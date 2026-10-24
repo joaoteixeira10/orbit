@@ -19,7 +19,9 @@ import type { Member, Task } from '@/api/planner'
 // Timeline: the workspace's tasks as bars on a Gantt chart, grouped by list,
 // from their start to their due date. Zoom by weeks, months or quarters;
 // editors drag bars to reschedule, click an undated row to schedule it and
-// add tasks at the end of each list. The shared task filter applies.
+// add tasks at the end of each list. Arrows show what waits on what (a dot
+// at a bar's end drags onto the task that waits on it). The shared task
+// filter applies.
 const route = useRoute()
 const tasks = useTasksStore()
 const wss = useWorkspacesStore()
@@ -194,9 +196,23 @@ async function schedule(x: Task, span: Span) {
   clearTimeout(flashTimer)
   flashTimer = window.setTimeout(() => (flash.value = ''), 900)
   try {
-    await tasks.update(ws.value, x.id, patch)
+    const r = await tasks.update(ws.value, x.id, patch)
+    if (r.shifted) toast.info(t('tasks.shifted', { n: r.shifted }, r.shifted))
   } catch (e: any) {
     tasks.put(ws.value, before)
+    toast.error(e.message)
+  }
+}
+
+// link makes `to` wait on `from` (dragged from one bar onto another).
+async function link(from: string, to: string) {
+  const x = all.value.find((y) => y.id === to)
+  const f = all.value.find((y) => y.id === from)
+  if (!editable.value || !x || !f || (x.waits_on ?? []).includes(from)) return
+  try {
+    await tasks.update(ws.value, to, { waits_on: [...(x.waits_on ?? []), from] })
+    toast.success(t('timeline.linked', { from: f.title, to: x.title }))
+  } catch (e: any) {
     toast.error(e.message)
   }
 }
@@ -288,6 +304,7 @@ useFillHeight(frame, 320)
         @toggle="toggle"
         @open="openTask = $event"
         @schedule="schedule"
+        @link="link"
         @create="create"
         @collapse="collapse"
         @extend="extend"

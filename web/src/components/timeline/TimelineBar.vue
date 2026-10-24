@@ -19,8 +19,9 @@ const props = defineProps<{
   subs?: { done: number; total: number }
   editable: boolean
   dragging: boolean
+  linkTitle?: string // the handle that links another task to wait on it
 }>()
-const emit = defineEmits<{ grab: [mode: DragMode, e: PointerEvent]; open: []; nudge: [mode: DragMode, delta: number] }>()
+const emit = defineEmits<{ grab: [mode: DragMode, e: PointerEvent]; open: []; nudge: [mode: DragMode, delta: number]; link: [e: PointerEvent] }>()
 
 // Text widths, measured once per title.
 let ctx: CanvasRenderingContext2D | null = null
@@ -71,6 +72,7 @@ function onKey(e: KeyboardEvent) {
     <template v-if="editable">
       <span class="edge l" @pointerdown.stop="emit('grab', 'start', $event)"><i /></span>
       <span class="edge r" @pointerdown.stop="emit('grab', 'end', $event)"><i /></span>
+      <span v-if="linkTitle" class="link" :title="linkTitle" :aria-label="linkTitle" data-testid="tl-link" @pointerdown.stop.prevent="emit('link', $event)" />
     </template>
   </div>
   <span v-if="!inside" class="out" :class="{ done, overdue }" :style="{ left: `${left + width + 7}px` }">{{ title }}</span>
@@ -226,6 +228,35 @@ html.dark .bar:hover .body {
   }
   .narrow .edge.r {
     right: -14px;
+  }
+}
+
+/* Drag from here onto another bar: that one waits on this one. */
+.link {
+  position: absolute;
+  top: 50%;
+  right: -17px;
+  width: 11px;
+  height: 11px;
+  margin-top: -5.5px;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: 0 0 0 1.5px var(--c);
+  cursor: crosshair;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.12s var(--ease);
+}
+.narrow .link {
+  right: -25px;
+}
+.bar:hover .link,
+.link:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .link {
+    opacity: 0.8;
   }
 }
 

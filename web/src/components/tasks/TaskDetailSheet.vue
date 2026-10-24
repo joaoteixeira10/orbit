@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer, Target } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer, Target, Link2 } from 'lucide-vue-next'
 import { durationOf } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
 import Overlay from '@/components/ui/Overlay.vue'
@@ -110,10 +110,43 @@ async function save(patch: TaskInput) {
   try {
     const r = await tasks.update(props.ws, task.value.id, patch)
     if (r.repeated) toast.success(t('tasks.repeated', { date: r.task.due }))
+    if (r.shifted) toast.info(t('tasks.shifted', { n: r.shifted }, r.shifted))
   } catch (e: any) {
     toast.error(e.message)
   }
 }
+// ---- What it waits on (starts after) ----
+const byId = computed(() => new Map(tasks.tasksOf(props.ws).map((x) => [x.id, x])))
+const waits = computed(() => (task.value?.waits_on ?? []).map((id) => byId.value.get(id)).filter((x): x is NonNullable<typeof x> => !!x))
+// Candidates: the workspace's other top-level tasks, not those that (in the
+// end) wait on this one — that would be a loop.
+const waitChoices = computed(() => {
+  const me = task.value
+  if (!me) return []
+  const after = new Set<string>([me.id])
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const x of tasks.tasksOf(props.ws)) {
+      if (!after.has(x.id) && (x.waits_on ?? []).some((id) => after.has(id))) {
+        after.add(x.id)
+        grew = true
+      }
+    }
+  }
+  const have = new Set(me.waits_on ?? [])
+  return tasks
+    .tasksOf(props.ws)
+    .filter((x) => !x.parent_id && !after.has(x.id) && !have.has(x.id))
+    .sort((a, b) => Number(a.done) - Number(b.done) || (a.due ?? '9').localeCompare(b.due ?? '9') || a.title.localeCompare(b.title))
+})
+function addWait(id: string) {
+  if (id && task.value) void save({ waits_on: [...(task.value.waits_on ?? []), id] })
+}
+function removeWait(id: string) {
+  if (task.value) void save({ waits_on: (task.value.waits_on ?? []).filter((x) => x !== id) })
+}
+
 function saveTitle() {
   const v = title.value.trim()
   if (v && v !== task.value?.title) void save({ title: v })
@@ -433,6 +466,25 @@ async function remove() {
           <option v-for="g in goalList" :key="g.id" :value="g.id">{{ g.icon ? `${g.icon} ` : '' }}{{ g.title }}</option>
         </select>
       </label>
+
+      <!-- What it waits on -->
+      <div v-if="!task.parent_id && (waits.length || (editable && waitChoices.length))" class="mt-4 px-1" data-testid="task-waits">
+        <div class="flex items-center gap-2">
+          <Link2 class="h-4 w-4 text-text-3" />
+          <span class="text-[13.5px] text-text-2">{{ t('tasks.waitsOn') }}</span>
+          <select v-if="editable && waitChoices.length" class="input ml-auto !w-auto max-w-[60%] !py-1 text-[13.5px]" value="" :aria-label="t('tasks.waitsAdd')" data-testid="waits-add" @change="addWait(($event.target as HTMLSelectElement).value)">
+            <option value="" disabled>{{ t('tasks.waitsAdd') }}</option>
+            <option v-for="x in waitChoices" :key="x.id" :value="x.id">{{ x.done ? '✓ ' : '' }}{{ x.title }}</option>
+          </select>
+        </div>
+        <div v-if="waits.length" class="mt-1.5 flex flex-wrap gap-1.5 pl-6">
+          <span v-for="w in waits" :key="w.id" class="pill" :class="{ 'line-through opacity-60': w.done }">
+            {{ w.title }}
+            <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" :aria-label="t('tasks.waitsRemove', { title: w.title })" @click="removeWait(w.id)"><X class="h-3 w-3" /></button>
+          </span>
+        </div>
+        <p v-if="waits.length" class="mt-1 pl-6 text-[12px] text-text-3">{{ t('tasks.waitsHint') }}</p>
+      </div>
 
       <!-- Focus: the time spent on it, and a timer for it -->
       <div v-if="focusWs && !task.parent_id && !task.done" class="mt-4 flex items-center gap-2 px-1" data-testid="task-focus">

@@ -57,7 +57,7 @@ export const useTasksStore = defineStore('tasks', {
     },
     // update applies the patch locally, then the server's answer. It returns
     // whether a repeating task moved to its next date.
-    async update(ws: string, id: string, body: TaskInput): Promise<{ task: Task; repeated: boolean }> {
+    async update(ws: string, id: string, body: TaskInput): Promise<{ task: Task; repeated: boolean; shifted?: number }> {
       const cur = this.tasks[ws]?.find((t) => t.id === id)
       if (cur) {
         const optimistic = { ...cur } as Task
@@ -71,6 +71,8 @@ export const useTasksStore = defineStore('tasks', {
         gitWarn(r.task)
         this.put(ws, r.task)
         if (body.completed !== undefined || body.list_id !== undefined || body.column_id !== undefined) void this.loadLists(ws)
+        // Tasks that wait on it moved along: fetch them.
+        if (r.shifted) void this.load(ws)
         return r
       } catch (e) {
         if (cur) this.put(ws, cur)

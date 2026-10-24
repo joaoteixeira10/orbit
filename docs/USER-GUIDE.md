@@ -633,6 +633,17 @@ striped, and sub-task progress is a line along the bottom of the bar.
   schedule it there.
 - The eye button shows or hides completed tasks; **Filter** applies.
 
+**Dependencies.** A task can **wait on** others: it starts after they're
+due (finish-to-start). An arrow runs from the end of each bar to the start
+of what waits on it — red when the waiting task starts too early. To link
+two, hover a bar and drag the small circle at its end onto the task that
+waits on it; or, in a task's details, **Waits on** → pick a task (✕ on a
+chip lets go of it). When a task's end moves — a bar dragged, a date
+changed anywhere — what waits on it moves as many days (keeping its length,
+and never starting before everything it waits on is due), and so on down
+the chain; a note says how many moved. Completed tasks and tasks without
+dates stay put. A task can't wait on one that (in the end) waits on it.
+
 ## 10. Charts
 
 **Charts** shows how the work is going, like Microsoft Planner:

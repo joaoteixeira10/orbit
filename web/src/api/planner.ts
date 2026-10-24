@@ -152,6 +152,7 @@ export interface Task {
   git_milestone_id?: number
   focus_minutes?: number // time focused on it
   goal_id?: string // the goal it counts towards
+  waits_on?: string[] // tasks it starts after (finish-to-start)
 }
 export interface TaskInput {
   list_id?: string
@@ -172,6 +173,7 @@ export interface TaskInput {
   assignee_ids?: string[]
   completed?: boolean
   after_id?: string
+  waits_on?: string[] // the whole list
 }
 
 // A quick note: a short text, or a checklist (items) when checklist is set.
@@ -517,7 +519,7 @@ export const tasksApi = {
   orderLists: (ws: string, ids: string[]) => api<void>(`/workspaces/${ws}/lists/order`, { method: 'PUT', body: j({ ids }) }),
   list: (ws: string, p: { list?: string; state?: 'active' | 'done' | 'all' } = {}) => api<Task[]>(`/workspaces/${ws}/tasks?${qs(p)}`),
   create: (ws: string, b: TaskInput) => api<Task>(`/workspaces/${ws}/tasks`, { method: 'POST', body: j(b) }),
-  update: (id: string, b: TaskInput) => api<{ task: Task; repeated: boolean }>(`/tasks/${id}`, { method: 'PUT', body: j(b) }),
+  update: (id: string, b: TaskInput) => api<{ task: Task; repeated: boolean; shifted?: number }>(`/tasks/${id}`, { method: 'PUT', body: j(b) }),
   move: (id: string, b: { column_id: string; list_id?: string; after_id?: string }) => api<Task>(`/tasks/${id}/move`, { method: 'POST', body: j(b) }),
   remove: (id: string) => api<void>(`/tasks/${id}`, { method: 'DELETE' }),
 }

@@ -1,6 +1,8 @@
 // The Timeline module (tasks on a Gantt chart).
 export const tlEn = {
   timeline: {
+    link: 'Drag onto the task that waits on this one',
+    linked: '{to} now waits on {from}',
     title: 'Timeline',
     zoom: 'Zoom',
     zooms: { weeks: 'Weeks', months: 'Months', quarters: 'Quarters' },
@@ -23,6 +25,8 @@ export const tlEn = {
 
 export const tlPt: typeof tlEn = {
   timeline: {
+    link: 'Arraste para a tarefa que depende desta',
+    linked: '{to} depende agora de {from}',
     title: 'Cronograma',
     zoom: 'Zoom',
     zooms: { weeks: 'Semanas', months: 'Meses', quarters: 'Trimestres' },

@@ -61,6 +61,7 @@ type (
 		models.Task
 		Tags      json.RawMessage `json:"tags"`
 		Assignees []string        `json:"assignees"`
+		WaitsOn   []string        `json:"waits_on,omitempty"`
 	}
 	xNote struct {
 		models.Note
@@ -174,7 +175,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	for _, t := range tasks {
 		var who []string
 		_ = json.Unmarshal([]byte(t.Assignees), &who)
-		a.Tasks = append(a.Tasks, xTask{Task: t, Tags: raw(t.Tags), Assignees: who})
+		a.Tasks = append(a.Tasks, xTask{Task: t, Tags: raw(t.Tags), Assignees: who, WaitsOn: t.WaitsOnList()})
 	}
 	db.Where("workspace_id = ? AND trashed_at IS NULL", wsID).Order("rank").Find(&a.Pages)
 	var notes []models.Note
@@ -556,6 +557,13 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			t.Assignees = encode(as)
 			t.GitDirty, t.GitDirtyBy = false, ""
 			t.GoalID = ref(x.GoalID)
+			var waits []string
+			for _, old := range x.WaitsOn {
+				if id := ref(old); id != "" {
+					waits = append(waits, id)
+				}
+			}
+			t.SetWaitsOn(waits)
 			if err := tx.Create(&t).Error; err != nil {
 				return err
 			}

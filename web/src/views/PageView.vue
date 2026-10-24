@@ -165,6 +165,15 @@ async function load(id: string) {
   }
 }
 watch(pageId, (id) => id && void load(id), { immediate: true })
+// The workspaces may load after the page (a fresh sign-in): an empty page
+// still opens ready to write once it turns out to be editable.
+watch(editable, async (on) => {
+  const p = page.value
+  if (!on || !p || editing.value || p.content.trim() || draft.value.trim()) return
+  editing.value = true
+  await nextTick()
+  if (!p.title) titleEl.value?.focus()
+})
 
 function onEditorChange() {
   if (!hasText.value) hasText.value = !!currentContent().trim()

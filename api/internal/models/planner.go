@@ -150,6 +150,9 @@ type Task struct {
 	FocusMinutes int `gorm:"not null;default:0" json:"focus_minutes,omitempty"`
 	// GoalID: the goal it counts towards ("" none).
 	GoalID string `gorm:"size:36;index" json:"goal_id,omitempty"`
+	// WaitsOn: tasks of the workspace it starts after (finish-to-start), a
+	// JSON list of ids. See WaitsOnList / SetWaitsOn.
+	WaitsOn string `gorm:"type:text" json:"-"`
 }
 
 // ---- Quick notes ------------------------------------------------------------
@@ -707,6 +710,33 @@ func (t *Task) SetAssignees(ids []string) {
 	}
 	b, _ := json.Marshal(out)
 	t.Assignees = string(b)
+}
+
+// WaitsOnList is the tasks it waits on (ids), never nil.
+func (t Task) WaitsOnList() []string {
+	out := []string{}
+	if t.WaitsOn != "" {
+		_ = json.Unmarshal([]byte(t.WaitsOn), &out)
+	}
+	return out
+}
+
+// SetWaitsOn stores ids (in order, without duplicates, blanks or itself).
+func (t *Task) SetWaitsOn(ids []string) {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, id := range ids {
+		if id != "" && id != t.ID && !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	if len(out) == 0 {
+		t.WaitsOn = ""
+		return
+	}
+	b, _ := json.Marshal(out)
+	t.WaitsOn = string(b)
 }
 
 // AssignedTo reports whether uid is one of the task's assignees.

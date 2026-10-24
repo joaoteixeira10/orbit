@@ -1929,6 +1929,13 @@ definitions:
       title:
         maxLength: 500
         type: string
+      waits_on:
+        description: 'WaitsOn: the tasks of its workspace it starts after (the whole
+          list).'
+        items:
+          type: string
+        maxItems: 20
+        type: array
     type: object
   api.taskResponse:
     properties:
@@ -2024,6 +2031,11 @@ definitions:
         type: string
       updated_at:
         type: string
+      waits_on:
+        description: tasks it starts after
+        items:
+          type: string
+        type: array
       workspace_id:
         type: string
     type: object

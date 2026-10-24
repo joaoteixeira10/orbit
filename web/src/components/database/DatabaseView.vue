@@ -13,7 +13,8 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { todayStr } from '@/lib/dates'
-import { boardOf, newId, rowsOf, type Database, type DBOption, type DBProp, type DBRow, type DBView, type PropValue } from '@/lib/database'
+import { aggsFor, boardOf, newId, rowsOf, total, typeOf, withFormulas, type Agg, type Database, type DBOption, type DBProp, type DBRow, type DBView, type PropValue } from '@/lib/database'
+import { locale } from '@/lib/dates'
 
 // A database page's table: its rows (the pages inside it) with a column per
 // property, through the chosen view — a table or a board by a select
@@ -30,10 +31,17 @@ const toast = useToastStore()
 const page = computed(() => pages.find(props.pageId))
 const db = computed<Database>(() => page.value?.db ?? { props: [], views: [] })
 const members = computed(() => wss.members[props.ws] ?? [])
+const names = computed(() => new Map(members.value.map((m) => [m.user_id, m.display_name || m.username])))
+// The rows, their formulas worked out (so filters and sorts see them).
 const rows = computed<DBRow[]>(() =>
-  (pages.byWs[props.ws] ?? [])
-    .filter((p) => p.parent_id === props.pageId && !p.trashed_at)
-    .map((p) => ({ id: p.id, title: p.title, rank: p.rank, props: p.props ?? {} })),
+  withFormulas(
+    db.value,
+    (pages.byWs[props.ws] ?? [])
+      .filter((p) => p.parent_id === props.pageId && !p.trashed_at)
+      .map((p) => ({ id: p.id, title: p.title, rank: p.rank, props: p.props ?? {} })),
+    names.value,
+    todayStr(),
+  ),
 )
 const ctx = computed(() => ({ me: auth.user?.id ?? '', today: todayStr() }))
 
@@ -111,6 +119,22 @@ const shown = computed(() => rowsOf(db.value, view.value, rows.value, ctx.value)
 const columns = computed(() => db.value.props.filter((p) => !(view.value.hidden ?? []).includes(p.id)))
 const board = computed(() => (view.value.type === 'board' ? boardOf(db.value, view.value, shown.value, t('db.noValue')) : []))
 const selects = computed(() => db.value.props.filter((p) => p.type === 'select'))
+
+// ---- Totals (the table's last row; each view keeps its own) ----
+const totals = computed(() => view.value.totals ?? {})
+const hasTotals = computed(() => Object.keys(totals.value).length > 0)
+function setTotal(prop: string, agg: string) {
+  const next = { ...totals.value }
+  if (agg) next[prop] = agg as Agg
+  else delete next[prop]
+  saveView({ ...view.value, totals: next })
+}
+function totalText(prop: string): string {
+  const agg = totals.value[prop]
+  if (!agg) return ''
+  const v = total(shown.value, prop, agg)
+  return v === null ? '—' : new Intl.NumberFormat(locale(), { maximumFractionDigits: 2 }).format(v)
+}
 
 // ---- Properties ----
 const propMenu = ref<{ anchor: HTMLElement; prop: DBProp; isNew: boolean } | null>(null)
@@ -280,6 +304,28 @@ function drop(col: string) {
             </td>
           </tr>
         </tbody>
+        <tfoot v-if="shown.length && (editable || hasTotals)">
+          <tr data-testid="db-totals">
+            <td v-for="col in [{ id: 'title', name: t('db.name') }, ...columns]" :key="col.id" class="total-cell">
+              <label class="total">
+                <span v-if="totals[col.id]" class="total-agg">{{ t(`db.aggs.${totals[col.id]}`) }}</span>
+                <span class="total-val">{{ totalText(col.id) }}</span>
+                <select
+                  v-if="editable"
+                  class="total-pick"
+                  :value="totals[col.id] ?? ''"
+                  :aria-label="t('db.calculate', { name: col.name })"
+                  :data-testid="`db-total-${col.id === 'title' ? 'title' : col.name}`"
+                  @change="setTotal(col.id, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="">{{ totals[col.id] ? t('db.noTotal') : t('db.calculate', { name: col.name }) }}</option>
+                  <option v-for="a in aggsFor(typeOf(db, col.id))" :key="a" :value="a">{{ t(`db.aggs.${a}`) }}</option>
+                </select>
+              </label>
+            </td>
+            <td v-if="editable" />
+          </tr>
+        </tfoot>
       </table>
       <p v-if="!shown.length && rows.length" class="px-2 py-3 text-[13px] text-text-3">{{ t('db.noneMatch') }}</p>
     </div>
@@ -319,6 +365,7 @@ function drop(col: string) {
       :anchor="propMenu.anchor"
       :prop="propMenu.prop"
       :is-new="propMenu.isNew"
+      :others="[{ id: 'title', name: t('db.name'), type: 'text' }, ...db.props.filter((p) => p.id !== propMenu!.prop.id)]"
       @save="saveProp"
       @hide="hideProp(propMenu.prop.id)"
       @remove="removeProp(propMenu.prop.id)"
@@ -419,6 +466,40 @@ function drop(col: string) {
 }
 .add-row {
   padding: 6px 4px !important;
+}
+.total-cell {
+  border-bottom: 0 !important;
+  border-top: 0.5px solid var(--border);
+}
+.total {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+.total:hover {
+  background: var(--fill-2);
+}
+.total-agg {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.total-val {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.total-pick {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 .db-board {
   display: flex;

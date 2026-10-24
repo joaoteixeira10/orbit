@@ -7,8 +7,9 @@ import (
 
 const testDB = `{"props":[{"id":"st","name":"Status","type":"select","options":[{"id":"o1","name":"Done","color":"#34c759"},{"id":"o2","name":"Doing"}]},
 {"id":"n","name":" Pages ","type":"number"},{"id":"tg","name":"Tags","type":"multi_select","options":[{"id":"a","name":"fun"},{"id":"b","name":"work"}]},
-{"id":"ok","name":"Read","type":"checkbox","options":[{"id":"x","name":"dropped"}]},{"id":"who","name":"Owner","type":"person"}],
-"views":[{"id":"v1","name":"All","type":"table","filters":[{"prop":"st","op":"is","value":"o1"}],"sorts":[{"prop":"title"}]}]}`
+{"id":"ok","name":"Read","type":"checkbox","options":[{"id":"x","name":"dropped"}]},{"id":"who","name":"Owner","type":"person"},
+{"id":"f","name":"Per day","type":"formula","formula":" =[@Pages]/30 "}],
+"views":[{"id":"v1","name":"All","type":"table","filters":[{"prop":"st","op":"is","value":"o1"}],"sorts":[{"prop":"title"}],"totals":{"n":"sum","title":"count"}}]}`
 
 func TestCleanDatabase(t *testing.T) {
 	out, err := CleanDatabase(testDB)
@@ -16,7 +17,7 @@ func TestCleanDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	db := ParseDatabase(out)
-	if db == nil || len(db.Props) != 5 || db.Props[1].Name != "Pages" || db.Props[3].Options != nil {
+	if db == nil || len(db.Props) != 6 || db.Props[1].Name != "Pages" || db.Props[3].Options != nil || db.Props[5].Formula != "=[@Pages]/30" || db.Views[0].Totals["n"] != "sum" {
 		t.Fatalf("cleaned: %s", out)
 	}
 	for _, bad := range []string{
@@ -25,6 +26,7 @@ func TestCleanDatabase(t *testing.T) {
 		`{"props":[{"id":"title","name":"A","type":"text"}]}`,
 		`{"props":[],"views":[{"id":"v","name":"V","type":"calendar"}]}`,
 		`{"props":[],"views":[{"id":"v","name":"V","type":"table","filters":[{"prop":"nope","op":"is"}]}]}`,
+		`{"props":[],"views":[{"id":"v","name":"V","type":"table","totals":{"title":"median"}}]}`,
 	} {
 		if _, err := CleanDatabase(bad); err == nil {
 			t.Errorf("accepted %s", bad)

@@ -1268,6 +1268,16 @@ test('databases: a page of rows with properties, edited in place, filtered, on a
   await expect(dbv.getByTestId('db-row')).toHaveCount(1)
   await page.keyboard.press('Escape')
 
+  // A formula, as in Excel, and a total under a column.
+  await dbv.getByTestId('db-add-prop').click()
+  await menu.getByRole('textbox', { name: 'Property name' }).fill('Days')
+  await menu.getByTestId('prop-type').selectOption('formula')
+  await menu.getByTestId('prop-formula').fill('=ROUND([@Pages]/50, 1)')
+  await menu.getByTestId('prop-done').click()
+  await expect(dune.getByTestId('db-formula')).toHaveText('8.2')
+  await dbv.getByTestId('db-total-Pages').selectOption('sum')
+  await expect(dbv.getByTestId('db-totals')).toContainText('412')
+
   // A board by Status.
   await dbv.getByTestId('db-add-view').click()
   await page.getByTestId('db-add-board').click()

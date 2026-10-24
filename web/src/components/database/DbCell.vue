@@ -42,8 +42,13 @@ const href = computed(() => (props.prop.type === 'url' && typeof props.value ===
 </script>
 
 <template>
+  <!-- A formula: worked out, read only (an Excel error in red) -->
+  <span v-if="prop.type === 'formula'" class="cell-line">
+    <span class="cell-text" :class="{ num: typeof value === 'number', 'text-crit-text': typeof value === 'string' && value.startsWith('#') }" data-testid="db-formula">{{ shownValue(prop, value, names) }}</span>
+  </span>
+
   <!-- Text, numbers, links: typed in place -->
-  <span v-if="prop.type === 'text' || prop.type === 'number' || prop.type === 'url'" class="cell-line">
+  <span v-else-if="prop.type === 'text' || prop.type === 'number' || prop.type === 'url'" class="cell-line">
     <input
       v-if="editable"
       v-model="draft"

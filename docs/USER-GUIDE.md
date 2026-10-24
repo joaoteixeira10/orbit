@@ -284,7 +284,27 @@ write in it; its values show under its title.
   click a column's name to rename it, change its type, edit a select's
   options (click a colour to change it), hide it in this view or delete it.
   Types: text, number, select, multi-select, date, checkbox, person (a
-  member) and link.
+  member), link and **formula**.
+- A **formula** works itself out for every row, as in Excel: `=[@Price]*[@Qty]`
+  (`[@Name]` is this row's value; a name without spaces works bare:
+  `Price * Qty`), `=IF([@Done], 0, [@Hours])`, `=[@Due] - TODAY()` (days
+  left), `=[@Name] & " (" & [@Status] & ")"`. `[Name]` without the @ is the
+  whole column: `=ROUND([@Hours] / SUM([Hours]), 2)`. Excel's function
+  names work in English or Portuguese (`SUM`/`SOMA`, `IF`/`SE`,
+  `ROUND`/`ARRED`…) with `,` or `;` between arguments: SUM, AVERAGE, MIN,
+  MAX, COUNT, COUNTA, COUNTBLANK, COUNTIF, SUMIF, AVERAGEIF, ROUND,
+  ROUNDUP, ROUNDDOWN, INT, ABS, MOD, POWER, SQRT, IF, IFS, IFERROR, AND, OR,
+  NOT, ISBLANK, ISNUMBER, CONCAT, LEN, LEFT, RIGHT, MID, UPPER, LOWER, TRIM,
+  SUBSTITUTE, TODAY, DATE, YEAR, MONTH, DAY, WEEKDAY, DAYS, DATEDIF, EDATE
+  and NETWORKDAYS. A mistake shows Excel's way: `#DIV/0!`, `#NAME?` (an
+  unknown name), `#VALUE!`, `#REF!` (a formula that needs itself). The menu
+  lists the properties: click one to put it in. Filters, sorts and boards
+  use a formula's result like any value.
+- **Totals**: the row under a table — click under a column for its **sum**,
+  **average**, **min**, **max**, **count** or **empty** (numbers and
+  formulas), how many are **checked** (checkboxes), or how many rows (the
+  name column). Each view keeps its own; they count the rows shown, so a
+  filter narrows them.
 - **Values** are edited right in the table: type text and numbers, pick a
   date, tick a box, choose a person; a select or multi-select opens its
   options (type a new one to add it).

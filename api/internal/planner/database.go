@@ -24,9 +24,12 @@ const (
 	PropCheckbox = "checkbox"
 	PropPerson   = "person"
 	PropURL      = "url"
+	PropFormula  = "formula" // worked out in the app from the row's other values
 )
 
-var propTypes = map[string]bool{PropText: true, PropNumber: true, PropSelect: true, PropMulti: true, PropDate: true, PropCheckbox: true, PropPerson: true, PropURL: true}
+var propTypes = map[string]bool{PropText: true, PropNumber: true, PropSelect: true, PropMulti: true, PropDate: true, PropCheckbox: true, PropPerson: true, PropURL: true, PropFormula: true}
+
+var aggs = map[string]bool{"sum": true, "avg": true, "min": true, "max": true, "count": true, "empty": true, "checked": true}
 
 // DBOption is a choice of a select or multi-select property.
 type DBOption struct {
@@ -41,6 +44,7 @@ type DBProp struct {
 	Name    string     `json:"name"`
 	Type    string     `json:"type"`
 	Options []DBOption `json:"options,omitempty"`
+	Formula string     `json:"formula,omitempty"` // a formula property's (Excel-style)
 }
 
 // DBFilter keeps the rows whose property Prop ("title" for the name)
@@ -67,6 +71,9 @@ type DBView struct {
 	Filters []DBFilter `json:"filters,omitempty"`
 	Sorts   []DBSort   `json:"sorts,omitempty"`
 	Hidden  []string   `json:"hidden,omitempty"`
+	// Totals: a total under a column (sum, avg, min, max, count, empty,
+	// checked), by property id or "title".
+	Totals map[string]string `json:"totals,omitempty"`
 }
 
 // Database is what a database page holds.
@@ -113,6 +120,11 @@ func CleanDatabase(raw string) (string, error) {
 		if p.Type != PropSelect && p.Type != PropMulti {
 			p.Options = nil
 		}
+		if p.Type != PropFormula {
+			p.Formula = ""
+		} else if p.Formula = strings.TrimSpace(p.Formula); !short(p.Formula, 2000) {
+			return "", errors.New("a formula is at most 2000 characters")
+		}
 		if len(p.Options) > 100 {
 			return "", errors.New("a property has at most 100 options")
 		}
@@ -149,6 +161,14 @@ func CleanDatabase(raw string) (string, error) {
 		for _, s := range v.Sorts {
 			if !ids[s.Prop] {
 				return "", errors.New("a sort needs one of the properties")
+			}
+		}
+		if len(v.Totals) > 51 {
+			return "", errors.New("too many totals")
+		}
+		for prop, agg := range v.Totals {
+			if !ids[prop] || !aggs[agg] {
+				return "", errors.New("a total needs one of the properties and sum, avg, min, max, count, empty or checked")
 			}
 		}
 	}
@@ -304,6 +324,7 @@ func DatabaseTable(db Database, rows []Row, names map[string]string) string {
 		}
 		return s
 	}
+	db.Props = stored(db.Props)
 	head := []string{"Name"}
 	for _, p := range db.Props {
 		head = append(head, cell(p.Name))
@@ -334,10 +355,22 @@ type Row struct {
 func PropLines(db Database, props string, names map[string]string) string {
 	vals := PropsOf(props)
 	var out []string
-	for _, p := range db.Props {
+	for _, p := range stored(db.Props) {
 		if s := ValueText(p, vals[p.ID], names); s != "" {
 			out = append(out, Escape(p.Name)+": "+s)
 		}
 	}
 	return strings.Join(out, "  \n")
+}
+
+// stored are the properties with stored values (formulas are worked out in
+// the app, so exports leave them out).
+func stored(ps []DBProp) []DBProp {
+	out := make([]DBProp, 0, len(ps))
+	for _, p := range ps {
+		if p.Type != PropFormula {
+			out = append(out, p)
+		}
+	}
+	return out
 }

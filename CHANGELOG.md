@@ -126,6 +126,11 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Formulas and totals in databases**: a formula property works itself out
+  for every row, written as in Excel (`=[@Price]*[@Qty]`, `SUM([Hours])`,
+  IF, ROUND, COUNTIF, DATEDIF… in English or Portuguese, `,` or `;`), with
+  Excel's errors; a totals row under a table (sum, average, min, max, count,
+  empty, checked), each view its own. Never run as code: parsed and walked.
 - **GitLab in the git integration**: gitlab.com or a self-managed GitLab,
   by token or by signing in (OAuth); lists from projects (subgroups too),
   issues both ways by iid (state, labels by name, assignees by id, due

@@ -4,9 +4,10 @@
 // is the logic: matching filters, sorting, grouping for a board, and how a
 // value reads.
 import { addDays, dateStr, locale, parseDate } from './dates'
+import { FormulaError, dayOf, evaluate, foldName, isDate as isFDate, isErr, isoOf, parse, type Ctx, type FValue } from './formula'
 
-export type PropType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'person' | 'url'
-export const PROP_TYPES: PropType[] = ['text', 'number', 'select', 'multi_select', 'date', 'checkbox', 'person', 'url']
+export type PropType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'person' | 'url' | 'formula'
+export const PROP_TYPES: PropType[] = ['text', 'number', 'select', 'multi_select', 'date', 'checkbox', 'person', 'url', 'formula']
 
 export interface DBOption {
   id: string
@@ -18,6 +19,7 @@ export interface DBProp {
   name: string
   type: PropType
   options?: DBOption[]
+  formula?: string // a formula property's formula (lib/formula.ts)
 }
 export interface DBFilter {
   prop: string // a property id, or "title"
@@ -36,7 +38,9 @@ export interface DBView {
   filters?: DBFilter[]
   sorts?: DBSort[]
   hidden?: string[]
+  totals?: Record<string, Agg> // a total under a column (by property id, or "title")
 }
+export type Agg = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'empty' | 'checked'
 export interface Database {
   props: DBProp[]
   views: DBView[]
@@ -85,6 +89,7 @@ export const OPS: Record<PropType | 'title', string[]> = {
   person: ['is', 'is_not', 'empty', 'set'], // value: a user id, or "me"
   date: ['on', 'before', 'after', 'past_week', 'next_week', 'empty', 'set'],
   checkbox: ['checked', 'unchecked'],
+  formula: ['eq', 'ne', 'gt', 'lt', 'gte', 'lte', 'contains', 'empty', 'set'],
 }
 // Ops that need no value.
 export const NO_VALUE = new Set(['empty', 'set', 'checked', 'unchecked', 'past_week', 'next_week'])
@@ -137,6 +142,17 @@ export function passes(row: DBRow, f: DBFilter, type: PropType | 'title', c: Mat
     }
     case 'checkbox':
       return f.op === 'checked' ? !!v : !v
+    case 'formula': {
+      // A formula's result: compared as a number when both are numbers.
+      if (f.op === 'contains') return fold(String(v ?? '')).includes(fold(String(want ?? '')))
+      const n = Number(want)
+      if (typeof v === 'number' && want !== '' && !Number.isNaN(n)) {
+        return { eq: v === n, ne: v !== n, gt: v > n, lt: v < n, gte: v >= n, lte: v <= n }[f.op as 'eq'] ?? true
+      }
+      const a = fold(String(v ?? ''))
+      const b = fold(String(want ?? ''))
+      return { eq: a === b, ne: a !== b, gt: a > b, lt: a < b, gte: a >= b, lte: a <= b }[f.op as 'eq'] ?? true
+    }
   }
   return true
 }
@@ -210,9 +226,132 @@ export function shownValue(p: DBProp, v: PropValue | undefined, names: Map<strin
       return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(parseDate(String(v)))
     case 'number':
       return typeof v === 'number' ? new Intl.NumberFormat(locale()).format(v) : ''
+    case 'formula':
+      if (typeof v === 'number') return new Intl.NumberFormat(locale(), { maximumFractionDigits: 4 }).format(v)
+      if (typeof v === 'boolean') return v ? '✓' : '✗'
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(parseDate(v))
+      return String(v)
     default:
       return String(v)
   }
+}
+
+// ---- Formulas ----
+// withFormulas works out each row's formula properties (each formula once
+// per row, a formula that comes back to itself is #REF!) and puts the
+// results among its values, so filters, sorts and boards see them. names:
+// people's names by id; today: YYYY-MM-DD.
+export function withFormulas(db: Database, rows: DBRow[], names: Map<string, string>, today: string): DBRow[] {
+  const formulas = db.props.filter((p) => p.type === 'formula')
+  if (!formulas.length) return rows
+  const byName = new Map<string, DBProp | 'title'>()
+  for (const n of ['name', 'nome', 'title', 'titulo']) byName.set(n, 'title')
+  for (const p of db.props) byName.set(foldName(p.name), p)
+  const trees = new Map<string, ReturnType<typeof parse> | FormulaError>()
+  for (const p of formulas) {
+    try {
+      trees.set(p.id, parse(p.formula ?? ''))
+    } catch (e) {
+      trees.set(p.id, e instanceof FormulaError ? e : new FormulaError(String(e)))
+    }
+  }
+  const opt = (p: DBProp, id: string) => p.options?.find((o) => o.id === id)?.name ?? null
+  const raw = (r: DBRow, p: DBProp): FValue => {
+    const v = r.props[p.id]
+    if (v === undefined || v === '') return p.type === 'checkbox' ? false : null
+    switch (p.type) {
+      case 'number':
+        return typeof v === 'number' ? v : null
+      case 'checkbox':
+        return !!v
+      case 'date':
+        return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? { date: dayOf(v) } : null
+      case 'select':
+        return opt(p, String(v))
+      case 'multi_select':
+        return (v as string[]).map((id) => opt(p, id)).filter(Boolean).join(', ')
+      case 'person':
+        return names.get(String(v)) ?? null
+      default:
+        return String(v)
+    }
+  }
+  const cache = new Map<string, FValue>()
+  const busy = new Set<string>()
+  const value = (r: DBRow, p: DBProp): FValue => (p.type === 'formula' ? formula(r, p) : raw(r, p))
+  const ctxFor = (r: DBRow): Ctx => ({
+    today: dayOf(today),
+    row: (name) => {
+      const p = byName.get(foldName(name))
+      return p === undefined ? undefined : p === 'title' ? r.title : value(r, p)
+    },
+    column: (name) => {
+      const p = byName.get(foldName(name))
+      return p === undefined ? undefined : rows.map((x) => (p === 'title' ? x.title : value(x, p)))
+    },
+  })
+  function formula(r: DBRow, p: DBProp): FValue {
+    const key = `${r.id}|${p.id}`
+    if (cache.has(key)) return cache.get(key)!
+    if (busy.has(key)) return { error: '#REF!' }
+    busy.add(key)
+    const tree = trees.get(p.id)!
+    const v = tree instanceof FormulaError ? { error: '#ERROR!' } : evaluate(tree, ctxFor(r))
+    busy.delete(key)
+    cache.set(key, v)
+    return v
+  }
+  return rows.map((r) => {
+    const props = { ...r.props }
+    for (const p of formulas) {
+      const v = formula(r, p)
+      if (v === null || v === '') delete props[p.id]
+      else props[p.id] = isErr(v) ? v.error : isFDate(v) ? isoOf(v.date) : (v as PropValue)
+    }
+    return { ...r, props }
+  })
+}
+
+// formulaProblem is what's wrong with a formula as written ('' when nothing).
+export function formulaProblem(src: string): string {
+  try {
+    parse(src)
+    return ''
+  } catch (e) {
+    return e instanceof FormulaError ? e.message : String(e)
+  }
+}
+
+// ---- Totals ----
+// The totals a column can have, by its type.
+export function aggsFor(type: PropType | 'title'): Agg[] {
+  if (type === 'title') return ['count']
+  if (type === 'number' || type === 'formula') return ['sum', 'avg', 'min', 'max', 'count', 'empty']
+  if (type === 'checkbox') return ['checked', 'count']
+  return ['count', 'empty']
+}
+// total works out a column's total over the rows shown (null: none to show).
+export function total(rows: DBRow[], prop: string, agg: Agg): number | null {
+  const vals = rows.map((r) => valueOf(r, prop))
+  const filled = vals.filter((v) => !isEmpty(v))
+  const nums = filled.filter((v): v is number => typeof v === 'number')
+  switch (agg) {
+    case 'sum':
+      return nums.reduce((a, b) => a + b, 0)
+    case 'avg':
+      return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null
+    case 'min':
+      return nums.length ? Math.min(...nums) : null
+    case 'max':
+      return nums.length ? Math.max(...nums) : null
+    case 'count':
+      return prop === 'title' ? rows.length : filled.length
+    case 'empty':
+      return vals.length - filled.length
+    case 'checked':
+      return vals.filter((v) => v === true).length
+  }
+  return null
 }
 
 // guessType reads a column of imported values: numbers, yes / no, dates,

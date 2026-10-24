@@ -6,7 +6,8 @@ import DbCell from './DbCell.vue'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
-import type { DBOption, PropValue } from '@/lib/database'
+import { withFormulas, type DBOption, type PropValue } from '@/lib/database'
+import { todayStr } from '@/lib/dates'
 
 // A row's values, on its own page: each property of its database, edited
 // in place as in the table.
@@ -17,8 +18,15 @@ const wss = useWorkspacesStore()
 const toast = useToastStore()
 
 const db = computed(() => pages.find(props.dbId))
-const row = computed(() => pages.find(props.pageId))
 const members = computed(() => wss.members[props.ws] ?? [])
+// This row with its formulas worked out (over its siblings, for columns).
+const row = computed(() => {
+  const d = db.value?.db
+  const siblings = (pages.byWs[props.ws] ?? []).filter((p) => p.parent_id === props.dbId && !p.trashed_at).map((p) => ({ id: p.id, title: p.title, rank: p.rank, props: p.props ?? {} }))
+  if (!d) return siblings.find((r) => r.id === props.pageId)
+  const names = new Map(members.value.map((m) => [m.user_id, m.display_name || m.username]))
+  return withFormulas(d, siblings, names, todayStr()).find((r) => r.id === props.pageId)
+})
 
 async function set(prop: string, v: PropValue | null) {
   try {

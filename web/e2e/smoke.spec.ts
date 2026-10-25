@@ -959,30 +959,126 @@ test('bookmarks: a link kept, tagged, read later and read', async ({ page, reque
   await page.screenshot({ path: 'test-results/bookmarks.png' })
 })
 
-test('Quick Draw: the sidebar + opens a sketch of your own', async ({ page, request }) => {
+// A two-page PDF (a red and a blue box), small enough to write by hand.
+function tinyPdf(): Buffer {
+  const streams = ['1 0 0 rg 20 20 160 60 re f', '0 0 1 rg 20 20 160 60 re f']
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>']
+  streams.forEach((st, i) => {
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents ${4 + i * 2} 0 R >>`)
+    objs.push(`<< /Length ${st.length} >>\nstream\n${st}\nendstream`)
+  })
+  let out = '%PDF-1.4\n'
+  const offs: number[] = []
+  objs.forEach((o, i) => {
+    offs.push(out.length)
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`
+  })
+  const x = out.length
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((n) => `${String(n).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`
+  return Buffer.from(out)
+}
+
+test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours kept, the lasso, paper, layers with a picture and a PDF page', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
   await signIn(page, NEW_PASSWORD)
   await page.setViewportSize({ width: 1400, height: 900 })
   await page.getByTestId('quick-draw-new').click()
   await page.waitForURL(/\/draw\/[^/]+$/)
-  const canvas = page.locator('.excalidraw canvas.interactive')
-  await expect(canvas).toBeVisible({ timeout: 20000 })
+  const id = page.url().split('/').pop()!
+  const scene = async () => JSON.parse((await (await request.get(`/api/v1/drawings/${id}`, { headers: H })).json()).scene || '{}')
+  const items = async () => ((await scene()).layers ?? []).flatMap((l: { items: unknown[] }) => l.items)
+  await expect(page.getByTestId('sketch')).toBeVisible()
   await page.getByTestId('whiteboard-title').fill('Napkin idea')
   await page.getByTestId('whiteboard-title').press('Enter')
-  const box = (await canvas.boundingBox())!
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 40)
-  await page.keyboard.press('d')
-  await page.mouse.move(box.x + 300, box.y + 200)
+  const box = (await page.getByTestId('sketch-board').boundingBox())!
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2 - 60
+
+  // A line with the pen.
+  await page.mouse.move(cx - 200, cy)
   await page.mouse.down()
-  await page.mouse.move(box.x + 450, box.y + 320, { steps: 8 })
+  await page.mouse.move(cx + 200, cy + 40, { steps: 20 })
   await page.mouse.up()
-  await expect(page.getByTestId('draw-state')).toContainText('Saved', { timeout: 10000 })
+  // A wobbly circle, held at the end: it snaps into a clean one.
+  await page.mouse.move(cx + 60, cy + 150)
+  await page.mouse.down()
+  for (let k = 1; k <= 28; k++) {
+    const a = (k / 28) * 2 * Math.PI
+    await page.mouse.move(cx + Math.cos(a) * (60 + (k % 3)), cy + 150 + Math.sin(a) * (58 + (k % 2) * 3))
+  }
+  await page.waitForTimeout(800)
+  await expect(page.getByText('A circle')).toBeVisible()
+  await page.mouse.up()
+  await expect.poll(async () => (await items()).length).toBe(2)
+  const [line, circle] = await items()
+  expect(line.tool).toBe('pen')
+  expect(circle.snapped).toBe(true)
+
+  // The eraser takes out only the part rubbed: the line in two.
+  await page.getByTestId('sketch-eraser').click()
+  await page.mouse.move(cx, cy - 30)
+  await page.mouse.down()
+  await page.mouse.move(cx, cy + 70, { steps: 10 })
+  await page.mouse.up()
+  await expect.poll(async () => (await items()).length).toBe(3)
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await items()).length).toBe(2)
+
+  // A colour typed in, kept in my colours (with my settings).
+  await page.getByTestId('sketch-color').click()
+  await page.getByTestId('color-code').fill('#ff3b30')
+  await page.getByTestId('color-code').press('Enter')
+  await page.getByTestId('color-keep').click()
+  await expect(page.getByTestId('my-colors').getByRole('button', { name: '#ff3b30' })).toBeVisible()
+  await expect.poll(async () => (await (await request.get('/api/v1/me/prefs', { headers: H })).json()).sketch_colors).toContain('#ff3b30')
+  await page.keyboard.press('Escape')
+
+  // The lasso round the circle: recoloured.
+  await page.getByTestId('sketch-lasso').click()
+  await page.mouse.move(cx + 110, cy + 150)
+  await page.mouse.down()
+  for (let k = 1; k <= 24; k++) {
+    const a = (k / 24) * 2 * Math.PI
+    await page.mouse.move(cx + Math.cos(a) * 110, cy + 150 + Math.sin(a) * 100)
+  }
+  await page.mouse.up()
+  await expect(page.getByTestId('sketch-picked')).toContainText('One chosen')
+  await page.getByTestId('sketch-recolor').click()
+  await expect.poll(async () => (await items())[1].color).toBe('#ff3b30')
+  expect((await items())[0].color).toBe('#1c1c1e')
+
+  // Lined paper.
+  await page.getByTestId('sketch-paper').click()
+  await page.getByTestId('paper-lined').click()
+  await expect.poll(async () => (await scene()).paper).toBe('lined')
+  await page.keyboard.press('Escape')
+
+  // A picture, then a PDF's second page, each on a layer under the ink.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  await page.getByTestId('sketch-file').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: png })
+  await expect.poll(async () => (await scene()).layers.length).toBe(2)
+  await page.getByTestId('sketch-file').setInputFiles({ name: 'plan.pdf', mimeType: 'application/pdf', buffer: tinyPdf() })
+  await page.getByTestId('sketch-pdf-page').fill('2')
+  await page.getByRole('button', { name: 'Put it in' }).click()
+  await expect.poll(async () => (await scene()).layers.length).toBe(3)
+  const layers = (await scene()).layers as { name: string; items: { kind: string; src?: string }[] }[]
+  // Bottom to top: each went in just under the layer drawn on.
+  expect(layers.map((l) => l.name)).toEqual(['photo.png', 'plan · page 2', 'Layer 1'])
+  expect(layers[1].items[0].src).toMatch(/^data:image\/jpeg/)
+  await page.getByTestId('sketch-layers').click()
+  await expect(page.getByTestId('sketch-layer')).toHaveCount(3)
+  await page.keyboard.press('Escape')
+  await page.screenshot({ path: 'test-results/sketch.png' })
+
   await page.getByTestId('whiteboard-back').click()
   await expect(page).toHaveURL(/\/draw$/)
   await expect(page.getByTestId('whiteboard-card').filter({ hasText: 'Napkin idea' }).locator('img')).toBeVisible()
-  const mine = await (await request.get('/api/v1/me/drawings', { headers: H })).json()
-  expect(mine.map((d: { title: string }) => d.title)).toContain('Napkin idea')
+
+  // A sketch made before keeps opening in Excalidraw.
+  const old = await (await request.post('/api/v1/me/drawings', { headers: H, data: { title: 'Old sketch' } })).json()
+  await page.goto(`/draw/${old.id}`)
+  await expect(page.locator('.excalidraw canvas.interactive')).toBeVisible({ timeout: 20000 })
 })
 
 test('smart lists: a filter saved with a name, kept on the server; quick add reads a repeat', async ({ page, request }) => {

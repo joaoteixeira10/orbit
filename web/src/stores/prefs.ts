@@ -19,6 +19,7 @@ interface ServerPrefs {
   page_editor?: PageEditorMode
   dev_theme?: string // "" = as the instance | none | a developer theme id
   remote_images?: 'ask' | 'always'
+  sketch_colors?: string[] // their own palette in Quick Draw
 }
 
 function browserTZ(): string {
@@ -68,6 +69,7 @@ export const usePrefsStore = defineStore('prefs', {
     timezone: localStorage.getItem('orbit_timezone') || 'local',
     // Personal accent override ("" = follow the org accent).
     accentColor: localStorage.getItem('orbit_accent') || '',
+    sketchColors: [] as string[],
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
@@ -111,6 +113,7 @@ export const usePrefsStore = defineStore('prefs', {
       this.devTheme = p.dev_theme || ''
       pushDevTheme(this.devTheme)
       this.remoteImages = p.remote_images === 'always' ? 'always' : 'ask'
+      this.sketchColors = p.sketch_colors ?? []
       mediaPrefs.remoteImages = this.remoteImages
       localStorage.setItem('orbit_remote_images', this.remoteImages)
       this.applyTheme()
@@ -159,6 +162,11 @@ export const usePrefsStore = defineStore('prefs', {
       this.devTheme = choice
       pushDevTheme(choice)
       await this.persist({ dev_theme: choice })
+    },
+    // Their own palette in Quick Draw.
+    async setSketchColors(colors: string[]) {
+      this.sketchColors = colors
+      await this.persist({ sketch_colors: colors })
     },
     // Set ("" clears) the personal accent; repaints immediately + persists.
     async setAccentColor(color: string) {

@@ -11071,6 +11071,13 @@ const docTemplate = `{
                     "description": "ask | always",
                     "type": "string"
                 },
+                "sketch_colors": {
+                    "description": "their own palette in Quick Draw",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "theme": {
                     "$ref": "#/definitions/models.Theme"
                 },
@@ -11855,6 +11862,13 @@ const docTemplate = `{
                         "ask",
                         "always"
                     ]
+                },
+                "sketch_colors": {
+                    "type": "array",
+                    "maxItems": 40,
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "theme": {
                     "enum": [

@@ -6,6 +6,7 @@ import { Plus, MoreHorizontal, Pencil, Trash2, Brush } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
+import { emptySketch } from '@/lib/sketch'
 import { ago } from '@/components/notes/noteModel'
 import { locale } from '@/lib/dates'
 import { onLiveEvent } from '@/lib/live'
@@ -54,7 +55,8 @@ const open = (d: Drawing) =>
   personal.value ? router.push({ name: 'my-drawing', params: { id: d.id } }) : router.push({ name: 'ws-whiteboard', params: { ws: ws.value, id: d.id } })
 async function create() {
   try {
-    const d = await drawingsApi.create(ws.value, '')
+    // Quick Draw's sketches have its own canvas; whiteboards are Excalidraw's.
+    const d = await drawingsApi.create(ws.value, '', personal.value ? JSON.stringify(emptySketch(t('sketch.layerN', { n: 1 }))) : undefined)
     await open(d)
   } catch (e: any) {
     toast.error(e.message)

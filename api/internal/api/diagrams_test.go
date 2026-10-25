@@ -111,3 +111,23 @@ func TestDrawioAddress(t *testing.T) {
 		t.Errorf("reset: %q", b.DrawioURL)
 	}
 }
+
+// TestSketchColors: a person's own Quick Draw palette is kept with their
+// preferences, colours checked.
+func TestSketchColors(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p struct {
+		SketchColors []string `json:"sketch_colors"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if p.SketchColors == nil || len(p.SketchColors) != 0 {
+		t.Fatalf("default: %#v", p.SketchColors)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"sketch_colors":["#ff0000","red"]}`, owner), http.StatusBadRequest, "not hex")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"sketch_colors":["#ff0000","#00AA88"]}`, owner), http.StatusOK, "save")
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if len(p.SketchColors) != 2 || p.SketchColors[1] != "#00AA88" {
+		t.Errorf("saved: %#v", p.SketchColors)
+	}
+}

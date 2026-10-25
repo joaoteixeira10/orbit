@@ -3,7 +3,9 @@ import { computed, onBeforeUnmount, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, LoaderCircle, TriangleAlert } from 'lucide-vue-next'
 import ExcalidrawCanvas from './ExcalidrawCanvas.vue'
-import { drawingsApi, type Drawing } from './drawing'
+import SketchCanvas from './SketchCanvas.vue'
+import { isSketch } from '@/lib/sketch'
+import { drawingsApi, type Drawing, type Snapshot } from './drawing'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
 import { useToastStore } from '@/stores/toast'
@@ -19,7 +21,8 @@ const { t } = useI18n()
 const toast = useToastStore()
 
 const drawing = ref<Drawing | null>(null)
-const canvas = ref<InstanceType<typeof ExcalidrawCanvas> | null>(null)
+// Excalidraw's canvas, or Quick Draw's own for a sketch: both hand over a snapshot.
+const canvas = ref<{ snapshot: () => Promise<Snapshot | null>; replace: (scene: string) => void } | null>(null)
 const state = ref<'idle' | 'waiting' | 'saving' | 'saved' | 'error'>('idle')
 let timer: ReturnType<typeof setTimeout> | undefined
 let running: Promise<void> = Promise.resolve()
@@ -104,7 +107,8 @@ const status = computed(() =>
 
 <template>
   <div class="relative h-full w-full">
-    <ExcalidrawCanvas v-if="drawing" ref="canvas" :scene="drawing.scene ?? ''" :readonly="readonly" :name="drawing.title" @change="changed" />
+    <SketchCanvas v-if="drawing && isSketch(drawing.scene)" ref="canvas" :scene="drawing.scene ?? ''" :readonly="readonly" :name="drawing.title" @change="changed" />
+    <ExcalidrawCanvas v-else-if="drawing" ref="canvas" :scene="drawing.scene ?? ''" :readonly="readonly" :name="drawing.title" @change="changed" />
     <span v-if="status" class="save-state" :class="state" data-testid="draw-state">
       <LoaderCircle v-if="state === 'waiting' || state === 'saving'" class="h-3.5 w-3.5 animate-spin" />
       <Check v-else-if="state === 'saved'" class="h-3.5 w-3.5" />

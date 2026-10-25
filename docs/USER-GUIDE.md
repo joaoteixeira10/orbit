@@ -537,10 +537,42 @@ belongs, `⋯` → **Move to…** a workspace you edit (or back to Quick Notes),
 
 **Quick Draw** (under Quick Notes in the sidebar) is the same for drawing:
 your own sketches, in no workspace, that only you see. Its **+** opens a new
-one straight away (or ⌘K → **New sketch**); it's Excalidraw, as on
-[whiteboards](#14-whiteboards) — shapes, arrows, a pen, text, images — and
-saves as you draw. Quick Draw lists them with their pictures (name, rename,
-delete), and search finds them by their name and the words on them.
+one straight away (or ⌘K → **New sketch**). Sketches have a canvas of their
+own, made for drawing by hand (whiteboards stay on Excalidraw, for diagrams;
+sketches made before this canvas keep opening in Excalidraw). It saves as you
+draw; Quick Draw lists them with their pictures (name, rename, delete).
+
+- **Pens**: pen, pencil (a rougher edge), marker, highlighter (see-through,
+  it doesn't hide what's under it) and brush (thin at both ends). With a
+  stylus (Apple Pencil, a Wacom pen…) they get thicker the harder you press.
+  The slider sets the size (also `[` and `]`).
+- **Colour**: the round button — a square of shades with a hue strip, the
+  colour's code (`#ff3b30`), how see-through, the eyedropper (anywhere on
+  the screen where the browser allows it, else a click on the sketch), the
+  standard colours, the last ones you used, and **My colours**: **+** keeps
+  the current one; they follow you to other devices (right-click or **×**
+  forgets one).
+- **Hold to snap**: finish a line and hold still a moment — a wobbly line
+  becomes straight, a round loop a circle or ellipse, three corners a
+  triangle, four a rectangle.
+- **Eraser**: rubs out just what it touches (a line rubbed in the middle
+  becomes two); its button below switches to wiping whole strokes.
+- **Lasso**: draw round strokes or pictures to choose them; drag them to
+  move them, or **This colour** (recolours them to the current colour),
+  **Duplicate**, **Delete** (or the Delete key).
+- **Paper**: plain, lined, squared or dotted, in white, cream or night.
+- **Layers**: you draw on the highlighted one; show, hide, rename (double
+  click), reorder, make see-through, delete. **Put a picture or a PDF page
+  under the ink** puts a photo, or the page you choose of a PDF, on a layer
+  of its own just under the one you draw on, so the ink never touches it.
+- **Moving around**: scroll or drag with the hand (or hold Space), pinch or
+  ⌘-scroll to zoom; the percentage shows it all.
+- **On a tablet**: once you've drawn with a stylus, fingers only move and
+  zoom the paper, so your palm can rest on it. Tap with two fingers to undo,
+  three to redo.
+
+Keys: P pen, N pencil, M marker, H highlighter, B brush, E eraser, L lasso,
+I eyedropper, ⌘Z / ⌘⇧Z undo and redo.
 
 ## 7. Tasks
 

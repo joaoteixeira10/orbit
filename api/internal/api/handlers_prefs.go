@@ -30,6 +30,7 @@ type prefsResponse struct {
 	PageEditor    string                    `json:"page_editor"`   // visual | markdown
 	DevTheme      string                    `json:"dev_theme"`     // "" (as the instance) | none | a theme id
 	RemoteImages  string                    `json:"remote_images"` // ask | always
+	SketchColors  []string                  `json:"sketch_colors"` // their own palette in Quick Draw
 	// Quiet hours ("" = none): nothing to devices or channels between them.
 	QuietFrom      string `json:"quiet_from"`
 	QuietTo        string `json:"quiet_to"`
@@ -41,6 +42,10 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 	chans := []string{}
 	if p.NotifyChannels != "" {
 		_ = json.Unmarshal([]byte(p.NotifyChannels), &chans)
+	}
+	colors := []string{}
+	if p.SketchColors != "" {
+		_ = json.Unmarshal([]byte(p.SketchColors), &colors)
 	}
 	return prefsResponse{
 		Timezone:       p.Timezone,
@@ -58,6 +63,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		PageEditor:     orDefault(p.PageEditor, "visual"),
 		DevTheme:       p.DevTheme,
 		RemoteImages:   orDefault(p.RemoteImages, "ask"),
+		SketchColors:   colors,
 		QuietFrom:      p.QuietFrom,
 		QuietTo:        p.QuietTo,
 		QuietReminders: p.QuietReminders,
@@ -161,6 +167,16 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.PageEditor != nil {
 		updates["page_editor"] = *req.PageEditor
+	}
+	if req.SketchColors != nil {
+		for _, col := range *req.SketchColors {
+			if col == "" || !validHexColor(col) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "sketch_colors must be #rrggbb hex colours"})
+				return
+			}
+		}
+		b, _ := json.Marshal(*req.SketchColors)
+		updates["sketch_colors"] = string(b)
 	}
 	if req.RemoteImages != nil {
 		updates["remote_images"] = *req.RemoteImages

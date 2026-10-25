@@ -8,6 +8,15 @@ merge, not at release time.
 
 ### Added
 
+- **Quick Draw's own canvas** — new sketches get a drawing canvas made for
+  the hand (old ones stay on Excalidraw): pen, pencil, marker, highlighter
+  and brush with stylus pressure (perfect-freehand); a full colour picker
+  (shades, hue, code, opacity, eyedropper, recent, "My colours" kept in
+  your preferences); hold to snap a line, circle, ellipse, triangle or
+  rectangle; an eraser that rubs out parts of strokes; a lasso to move,
+  recolour, copy or delete; plain / lined / squared / dotted paper; layers,
+  with a photo or a PDF page (pdf.js, loaded when needed) under the ink;
+  palm rejection, two-finger undo and three-finger redo.
 - **Diagrams** — a module of draw.io diagrams: the draw.io editor in a
   frame (from `DRAWIO_URL` or the owner's address; `embed.diagrams.net` by
   default, or your own `jgraph/drawio`), saved as you draw with a picture

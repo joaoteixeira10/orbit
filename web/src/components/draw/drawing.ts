@@ -28,7 +28,8 @@ const j = (b: unknown) => JSON.stringify(b)
 export const drawingsApi = {
   // ws "me": Quick Draw, the person's own sketches.
   list: (ws: string) => api<Drawing[]>(ws === 'me' ? '/me/drawings' : `/workspaces/${ws}/drawings`),
-  create: (ws: string, title: string) => api<Drawing>(ws === 'me' ? '/me/drawings' : `/workspaces/${ws}/drawings`, { method: 'POST', body: j({ title }) }),
+  // scene: how it starts (a Quick Draw sketch starts as one; else Excalidraw's).
+  create: (ws: string, title: string, scene?: string) => api<Drawing>(ws === 'me' ? '/me/drawings' : `/workspaces/${ws}/drawings`, { method: 'POST', body: j({ title, scene }) }),
   get: (id: string) => api<Drawing>(`/drawings/${id}`),
   save: (id: string, b: Partial<Snapshot> & { title?: string; version: number }) => api<Drawing>(`/drawings/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/drawings/${id}`, { method: 'DELETE' }),

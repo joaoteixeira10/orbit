@@ -17,6 +17,7 @@ import { wireNotesLive } from '@/stores/notes'
 import { wireInboxLive } from '@/stores/inbox'
 import { useFocusStore, wireFocusLive, clockOf } from '@/stores/focus'
 import { drawingsApi } from '@/components/draw/drawing'
+import { emptySketch } from '@/lib/sketch'
 import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
@@ -261,10 +262,10 @@ function onKey(e: KeyboardEvent) {
 // asking for it (orbit:quick-note).
 const quickNoteOpen = ref(false)
 const onQuickNote = () => (quickNoteOpen.value = true)
-// Quick Draw's +: a new sketch, open.
+// Quick Draw's +: a new sketch (Quick Draw's own canvas), open.
 async function newSketch() {
   try {
-    const d = await drawingsApi.create('me', '')
+    const d = await drawingsApi.create('me', '', JSON.stringify(emptySketch(t('sketch.layerN', { n: 1 }))))
     void router.push({ name: 'my-drawing', params: { id: d.id } })
   } catch (e: any) {
     toast.error(e.message)

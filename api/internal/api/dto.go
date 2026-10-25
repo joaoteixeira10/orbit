@@ -92,6 +92,7 @@ type updatePrefsRequest struct {
 	PageEditor    *string                    `json:"page_editor" binding:"omitempty,oneof=visual markdown"`
 	DevTheme      *string                    `json:"dev_theme" binding:"omitempty,max=10"`
 	RemoteImages  *string                    `json:"remote_images" binding:"omitempty,oneof=ask always"`
+	SketchColors  *[]string                  `json:"sketch_colors" binding:"omitempty,max=40"`
 	// Quiet hours: "HH:MM" each ("" both = none); reminders through or not.
 	QuietFrom      *string `json:"quiet_from"`
 	QuietTo        *string `json:"quiet_to"`

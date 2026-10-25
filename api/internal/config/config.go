@@ -94,6 +94,10 @@ type Config struct {
 	// connect even when they resolve to a private address — your own server
 	// on the LAN. Any other server must be public (https, not private IPs).
 	GitServers []string // GIT_SERVERS (comma list of base URLs)
+	// DrawioURL is where the draw.io editor for Diagrams is loaded from:
+	// draw.io's own (the default), or your own (the jgraph/drawio container).
+	// An admin can change it in Settings.
+	DrawioURL string // DRAWIO_URL
 
 	// Optional app-terminated HTTPS for the MAIN listener. When both are set the
 	// app serves HTTPS on HTTPAddr itself (run with nothing in front, or encrypt
@@ -159,6 +163,7 @@ func Load() (*Config, error) {
 		CORSOrigins:      splitNonEmpty(env("CORS_ORIGINS", "")),
 		TrustedProxies:   splitNonEmpty(env("TRUSTED_PROXIES", "")),
 		GitServers:       splitNonEmpty(env("GIT_SERVERS", "")),
+		DrawioURL:        env("DRAWIO_URL", "https://embed.diagrams.net"),
 		MaxBodyBytes:     int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
 		UploadMaxBytes:   int64(envInt("UPLOAD_MAX_MB", 25)) << 20,
 		UploadQuotaBytes: int64(envInt("UPLOAD_QUOTA_MB", 2048)) << 20,

@@ -1647,3 +1647,77 @@ test('databases: rows out as Excel and CSV, rows in from a CSV', async ({ page, 
   const bytes = await (await import('node:fs/promises')).readFile(await xlsx.path())
   expect(bytes.subarray(0, 2).toString()).toBe('PK')
 })
+
+test('diagrams: draw.io in a frame saves the file, a picture and its words; a file comes in; a page shows one', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Ops', kind: 'personal', modules: ['home', 'diagrams', 'pages'] } })).json()
+  // A stand-in for draw.io (no internet here): it speaks the same messages.
+  await page.route('https://embed.diagrams.net/**', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: `<button id="draw">Draw</button><script>
+        let xml = ''
+        const say = (m) => parent.postMessage(JSON.stringify(m), '*')
+        addEventListener('message', (e) => {
+          const m = JSON.parse(e.data)
+          if (m.action === 'load') { xml = m.xml; say({ event: 'load', xml }) }
+          if (m.action === 'export') say({ event: 'export', format: m.format, xml, data: m.format.includes('png')
+            ? 'data:image/png;base64,iVBORw0KGgo='
+            : 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme: light dark;" width="80" height="20"><text y="15">Order placed</text></svg>') })
+        })
+        document.getElementById('draw').onclick = () => {
+          xml = '<mxfile><diagram name="Checkout"><mxGraphModel><root><mxCell id="2" value="Order &lt;b&gt;placed&lt;/b&gt;" vertex="1"/></root></mxGraphModel></diagram></mxfile>'
+          say({ event: 'autosave', xml })
+        }
+        say({ event: 'init' })
+      </script>`,
+    }),
+  )
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/diagrams`)
+  await page.getByTestId('new-diagram').click()
+  await expect(page.locator('.drawio-wait')).toBeHidden()
+  await page.getByTestId('diagram-title').fill('Checkout')
+  await page.getByTestId('diagram-title').press('Enter')
+  await page.frameLocator('[data-testid="drawio-frame"]').getByRole('button', { name: 'Draw' }).click()
+  const id = page.url().split('/').pop()!
+  const get = async () => (await request.get(`/api/v1/diagrams/${id}`, { headers: H })).json()
+  await expect.poll(async () => (await get()).data ?? '').toContain('Order &lt;b&gt;placed')
+  await expect(page.getByTestId('diagram-state')).toHaveText(/Saved/)
+  const saved = await get()
+  expect(saved.title).toBe('Checkout')
+  // The picture keeps its light colours.
+  expect(saved.preview).toContain('color-scheme: light;')
+  const hits = await (await request.get('/api/v1/search?q=placed', { headers: H })).json()
+  expect(hits.map((h: { kind: string }) => h.kind)).toContain('diagram')
+
+  // Out as a draw.io file and a PNG.
+  await page.getByTestId('diagram-menu').click()
+  const [file] = await Promise.all([page.waitForEvent('download'), page.getByTestId('diagram-drawio').click()])
+  expect(file.suggestedFilename()).toBe('Checkout.drawio')
+  expect((await (await import('node:fs/promises')).readFile(await file.path())).toString()).toContain('<mxfile>')
+  await page.getByTestId('diagram-menu').click()
+  const [png] = await Promise.all([page.waitForEvent('download'), page.getByTestId('diagram-png').click()])
+  expect((await (await import('node:fs/promises')).readFile(await png.path())).subarray(1, 4).toString()).toBe('PNG')
+
+  // A draw.io file comes in as a new diagram.
+  await page.goto(`/w/${ws.id}/diagrams`)
+  await expect(page.getByTestId('diagram-card').locator('img')).toBeVisible()
+  await page.getByTestId('diagram-import-input').setInputFiles({
+    name: 'Network.drawio',
+    mimeType: 'application/xml',
+    buffer: Buffer.from('<mxfile><diagram name="LAN"><mxGraphModel><root><mxCell id="2" value="Router" vertex="1"/></root></mxGraphModel></diagram></mxfile>'),
+  })
+  await expect(page.getByTestId('diagram-title')).toHaveValue('Network')
+  await page.goto(`/w/${ws.id}/diagrams`)
+  await expect(page.getByTestId('diagram-card')).toHaveCount(2)
+
+  // A page shows the diagram from its link.
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Flows', content: `How orders go:\n\n[Checkout](/w/${ws.id}/d/${id})\n` } })).json()
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await expect(page.getByTestId('diagram-embed')).toContainText('Checkout')
+  await expect(page.getByTestId('diagram-embed').locator('img')).toBeVisible()
+})

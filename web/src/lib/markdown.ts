@@ -115,7 +115,7 @@ function reader(): Marked {
         // A link to this Orbit, written in full (pasted), reads as one within it.
       if (typeof location !== 'undefined' && href.startsWith(location.origin + '/')) href = href.slice(location.origin.length)
       // A link within Orbit (a page, the calendar) opens here.
-        if (/^\/(?!\/)/.test(href)) return `<a href="${href}"${t} class="md-internal${/^\/w\/[^/]+\/p\//.test(href) ? ' md-page' : /^\/w\/[^/]+\/s\//.test(href) ? ' md-sheet' : ''}">${text}</a>`
+        if (/^\/(?!\/)/.test(href)) return `<a href="${href}"${t} class="md-internal${/^\/w\/[^/]+\/p\//.test(href) ? ' md-page' : /^\/w\/[^/]+\/s\//.test(href) ? ' md-sheet' : /^\/w\/[^/]+\/d\//.test(href) ? ' md-diagram' : ''}">${text}</a>`
         return `<a href="${href}"${t} target="_blank" rel="noopener noreferrer nofollow">${text}</a>`
       },
     },

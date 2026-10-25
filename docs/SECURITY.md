@@ -30,7 +30,8 @@ Orbit. Every setting named here is in [CONFIGURATION.md](CONFIGURATION.md).
 | Browser → Orbit | Sign-in, the app, the API | TLS (at your proxy or in the app), short access tokens in memory, `HttpOnly` refresh cookie, CSRF check, CSP, rate limits |
 | Script → Orbit | API calls | Personal API tokens (`orb_…`), hashed, optionally limited or read-only |
 | Calendar app → Orbit | `GET /ical/<token>.ics` | A long random token per feed, stored hashed, revocable; its own rate limit |
-| Orbit → the internet | Subscribed calendars, SSO discovery, notifications, update check, git servers | An SSRF-guarded HTTP client, size and time limits (git servers named in `GIT_SERVERS` may be on your network) |
+| Orbit → the internet | Subscribed calendars, SSO discovery, notifications, update check, git servers, a shared Google Sheets spreadsheet | An SSRF-guarded HTTP client, size and time limits (git servers named in `GIT_SERVERS` may be on your network). Google Sheets: only the export address made from the link's id, through the public-only client, redirects followed on Google's hosts alone, 20 MB |
+| Browser → the draw.io editor | A diagram being edited (Diagrams) | The editor runs in a sandboxed frame from the one address the owner sets (CSP `frame-src`); Orbit talks to it by `postMessage`, checking the sender is that frame at that origin. Its pictures (SVG) are shown as `<img>`, where scripts don't run |
 | Anyone with the host | Database file, environment | `ORBIT_MASTER_KEY` seals secrets at rest; the rest is your host's security |
 
 **Who is trusted.** The **owner** and holders of `users.manage` and

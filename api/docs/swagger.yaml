@@ -227,6 +227,9 @@ definitions:
         type: boolean
       developer_themes_personal:
         type: boolean
+      drawio_url:
+        description: where Diagrams load the draw.io editor from
+        type: string
       favicon_data_url:
         type: string
       hide_local_login:
@@ -562,6 +565,38 @@ definitions:
         type: boolean
     required:
     - name
+    type: object
+  api.diagramRequest:
+    properties:
+      data:
+        description: draw.io's XML
+        type: string
+      preview:
+        description: an SVG picture of it
+        type: string
+      text:
+        type: string
+      title:
+        maxLength: 300
+        type: string
+      version:
+        description: 'the version saved over (0: don''t check)'
+        type: integer
+    type: object
+  api.diagramSummary:
+    properties:
+      id:
+        type: string
+      preview:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: integer
     type: object
   api.drawingRequest:
     properties:
@@ -2266,6 +2301,9 @@ definitions:
         type: boolean
       developer_themes_personal:
         type: boolean
+      drawio_url:
+        description: '"" goes back to DRAWIO_URL (or draw.io''s own)'
+        type: string
       favicon_data_url:
         type: string
       login_message:
@@ -2741,6 +2779,31 @@ definitions:
       updated_at:
         type: string
       weekday:
+        type: integer
+      workspace_id:
+        type: string
+    type: object
+  models.Diagram:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      data:
+        type: string
+      id:
+        type: string
+      preview:
+        type: string
+      rank:
+        type: number
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
         type: integer
       workspace_id:
         type: string
@@ -3967,6 +4030,72 @@ paths:
       summary: A course's notes page
       tags:
       - school
+  /diagrams/{id}:
+    delete:
+      parameters:
+      - description: Diagram id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a diagram
+      tags:
+      - diagrams
+    get:
+      parameters:
+      - description: Diagram id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Diagram'
+      security:
+      - BearerAuth: []
+      summary: A diagram
+      tags:
+      - diagrams
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Diagram id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changed
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.diagramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Diagram'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.Diagram'
+      security:
+      - BearerAuth: []
+      summary: Save a diagram
+      tags:
+      - diagrams
   /drawings/{id}:
     delete:
       parameters:
@@ -7388,6 +7517,55 @@ paths:
       summary: Create a course
       tags:
       - school
+  /workspaces/{ws}/diagrams:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.diagramSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's diagrams
+      tags:
+      - diagrams
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Title (and file)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.diagramRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Diagram'
+      security:
+      - BearerAuth: []
+      summary: New diagram
+      tags:
+      - diagrams
   /workspaces/{ws}/drawings:
     get:
       parameters:

@@ -95,6 +95,7 @@ type Archive struct {
 	Drawings       []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
 	WorkspaceGoals []models.Goal        `json:"workspace_goals,omitempty"`
 	Sheets         []xSheet             `json:"sheets,omitempty"`
+	Diagrams       []xDiagram           `json:"diagrams,omitempty"`
 	Bookmarks      []models.Bookmark    `json:"bookmarks,omitempty"` // their pictures are read again
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
@@ -107,6 +108,11 @@ type Archive struct {
 
 type xSheet struct {
 	models.Sheet
+	Text string `json:"text,omitempty"`
+}
+
+type xDiagram struct {
+	models.Diagram
 	Text string `json:"text,omitempty"`
 }
 
@@ -210,6 +216,11 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	db.Where("workspace_id = ?", wsID).Order("rank").Find(&sheets)
 	for _, sh := range sheets {
 		a.Sheets = append(a.Sheets, xSheet{Sheet: sh, Text: sh.Text})
+	}
+	var diagrams []models.Diagram
+	db.Where("workspace_id = ?", wsID).Order("rank").Find(&diagrams)
+	for _, d := range diagrams {
+		a.Diagrams = append(a.Diagrams, xDiagram{Diagram: d, Text: d.Text})
 	}
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Bookmarks)
 	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("rank").Find(&a.Habits)
@@ -521,6 +532,14 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			sh.ID, sh.WorkspaceID, sh.Text, sh.Version = ref(x.ID), ws.ID, x.Text, 1
 			sh.CreatedBy, sh.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
 			if err := tx.Create(&sh).Error; err != nil {
+				return err
+			}
+		}
+		for _, x := range a.Diagrams {
+			d := x.Diagram
+			d.ID, d.WorkspaceID, d.Text, d.Version = ref(x.ID), ws.ID, x.Text, 1
+			d.CreatedBy, d.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
+			if err := tx.Create(&d).Error; err != nil {
 				return err
 			}
 		}

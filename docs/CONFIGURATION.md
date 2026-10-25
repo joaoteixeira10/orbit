@@ -128,6 +128,19 @@ the audit log and the runtime settings below. Back up the file and
 Uploads are kept **in the database** (a table of their own), so backups and
 restores carry them with everything else. Plan the disk accordingly.
 
+## Diagrams (draw.io)
+
+| Variable | Req | Default | Notes |
+|---|---|---|---|
+| `DRAWIO_URL` | – | `https://embed.diagrams.net` | Where the Diagrams module loads the draw.io editor from (in a frame). The owner can override it in **Owner → Owner → Diagrams (draw.io)**; empty there goes back to this. It is also the one outside address the Content-Security-Policy lets be framed. |
+
+draw.io's own editor needs the browser to reach the internet; the diagram is
+handed to it inside the browser (`postMessage`) and saved only in Orbit. To
+load nothing from outside, run draw.io's container next to Orbit and point
+`DRAWIO_URL` at it — the commented `drawio` service in `docker-compose.yml`
+(`jgraph/drawio`, Apache 2.0). Serve it on HTTPS when Orbit is (a browser
+won't frame `http://` in an `https://` page).
+
 ## Git
 
 | Variable | Req | Default | Notes |

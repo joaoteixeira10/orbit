@@ -300,7 +300,15 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			sheets[r.ID] = r
 		}
 	}
-	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8, "journal": 8, "bookmark": 8, "sheet": 8}
+	diagrams := map[string]models.Diagram{}
+	if l := ids["diagram"]; len(l) > 0 {
+		var rows []models.Diagram
+		h.db.Select("id", "workspace_id", "title", "text").Where("id IN ?", l).Find(&rows)
+		for _, r := range rows {
+			diagrams[r.ID] = r
+		}
+	}
+	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8, "journal": 8, "bookmark": 8, "sheet": 8, "diagram": 8}
 	seen := map[string]bool{}
 	for _, x := range hits {
 		kind := x.Kind
@@ -361,6 +369,12 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 				continue
 			}
 			out = append(out, searchHit{Kind: "sheet", ID: s.ID, WorkspaceID: s.WorkspaceID, Title: s.Title, Snippet: planner.Snippet(s.Text, q, 100)})
+		case "diagram":
+			d, ok := diagrams[x.Ref]
+			if !ok {
+				continue
+			}
+			out = append(out, searchHit{Kind: "diagram", ID: d.ID, WorkspaceID: d.WorkspaceID, Title: d.Title, Snippet: planner.Snippet(d.Text, q, 100)})
 		case "drawing":
 			d, ok := drawings[x.Ref]
 			if !ok {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
@@ -65,6 +66,8 @@ type brandingResponse struct {
 	AssetSourceLogo         string `json:"asset_source_logo"`     // theme | keep
 	AssetSourceWordmark     string `json:"asset_source_wordmark"` // theme | keep
 	AssetSourceFavicon      string `json:"asset_source_favicon"`  // theme | keep
+
+	DrawioURL string `json:"drawio_url"` // where Diagrams load the draw.io editor from
 }
 
 type updateSettingsRequest struct {
@@ -82,6 +85,8 @@ type updateSettingsRequest struct {
 	AssetSourceLogo         *string `json:"asset_source_logo"`
 	AssetSourceWordmark     *string `json:"asset_source_wordmark"`
 	AssetSourceFavicon      *string `json:"asset_source_favicon"`
+
+	DrawioURL *string `json:"drawio_url"` // "" goes back to DRAWIO_URL (or draw.io's own)
 }
 
 // getBranding returns public branding (no auth) so the SPA can theme at boot.
@@ -119,6 +124,8 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		AssetSourceLogo:         validAssetSource(m[keyAssetSrcLogo]),
 		AssetSourceWordmark:     validAssetSource(m[keyAssetSrcWordmark]),
 		AssetSourceFavicon:      validAssetSource(m[keyAssetSrcFavicon]),
+
+		DrawioURL: h.refreshDrawio(),
 	})
 }
 
@@ -149,6 +156,13 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 	if req.FaviconDataURL != nil && !validImageDataURL(*req.FaviconDataURL) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "favicon must be an image data URL"})
 		return
+	}
+	if req.DrawioURL != nil && strings.TrimSpace(*req.DrawioURL) != "" && cleanDrawioURL(*req.DrawioURL) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "the draw.io address must be an http(s) address, with no query"})
+		return
+	}
+	if req.DrawioURL != nil {
+		h.setSetting(keyDrawioURL, cleanDrawioURL(*req.DrawioURL))
 	}
 	if req.AppName != nil {
 		h.setSetting(keyAppName, *req.AppName)

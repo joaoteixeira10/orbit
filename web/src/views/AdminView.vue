@@ -22,7 +22,7 @@ import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
-  Info,
+  Info, Workflow,
 } from 'lucide-vue-next'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
@@ -707,6 +707,18 @@ const offUsersLive = onLiveEvent('users', async () => {
 onUnmounted(() => offUsersLive())
 
 // ---------- Owner (god mode) ----------
+// Where Diagrams load the draw.io editor from.
+const drawioUrl = ref(branding.drawioUrl)
+async function saveDrawio(v: string) {
+  try {
+    const b = await settingsApi.update({ drawio_url: v.trim() })
+    branding.apply(b)
+    drawioUrl.value = branding.drawioUrl
+    toast.success(t('adm.owner.drawioSaved'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() => [
   { key: 'sessions', label: t('adm.owner.feature.sessions'), hint: t('adm.owner.feature.sessionsHint') },
   { key: 'impersonation', label: t('adm.owner.feature.impersonation'), hint: t('adm.owner.feature.impersonationHint') },
@@ -1401,6 +1413,21 @@ function switchTab(t: Tab) {
           </div>
           </template>
         </div>
+      </div>
+
+      <!-- Diagrams: the draw.io editor's address -->
+      <div class="card overflow-hidden" data-testid="drawio-admin">
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
+          <Workflow class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">{{ t('adm.owner.drawio') }}</h3>
+        </div>
+        <form class="flex flex-col gap-3 p-5" @submit.prevent="saveDrawio(drawioUrl)">
+          <p class="text-[12px] text-text-3">{{ t('adm.owner.drawioHint') }}</p>
+          <input v-model="drawioUrl" class="input" type="url" placeholder="https://embed.diagrams.net" :aria-label="t('adm.owner.drawio')" data-testid="drawio-url" />
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="btn-primary btn-sm">{{ t('adm.owner.drawioSave') }}</button>
+            <button type="button" class="btn btn-sm" @click="saveDrawio('')">{{ t('adm.owner.drawioReset') }}</button>
+          </div>
+        </form>
       </div>
 
       </div><!-- /left column -->

@@ -159,6 +159,11 @@ export const adminUiEn = {
       discoveryOk: 'Discovery succeeded — issuer looks good',
     },
     owner: {
+      drawio: 'Diagrams (draw.io)',
+      drawioHint: 'Diagrams open the draw.io editor from this address. draw.io’s own (embed.diagrams.net) needs the internet, and the diagram stays in the browser; for no outside calls, run draw.io’s container (jgraph/drawio) and put its address here. Empty: the DRAWIO_URL setting, or draw.io’s own.',
+      drawioSave: 'Save address',
+      drawioReset: 'Use the default',
+      drawioSaved: 'draw.io address saved',
       flags: 'Feature flags',
       flagsHint: 'Opt-in capabilities. Only you (the instance owner) can change these.',
       featureOn: 'Feature enabled',
@@ -360,6 +365,11 @@ export const adminUiPt: typeof adminUiEn = {
       discoveryOk: 'Descoberta concluída — o emissor parece correto',
     },
     owner: {
+      drawio: 'Diagramas (draw.io)',
+      drawioHint: 'Os diagramas abrem o editor do draw.io a partir deste endereço. O do próprio draw.io (embed.diagrams.net) precisa da internet, e o diagrama fica no navegador; para nenhuma ligação ao exterior, corra o contentor do draw.io (jgraph/drawio) e ponha aqui o seu endereço. Vazio: a definição DRAWIO_URL, ou o do próprio draw.io.',
+      drawioSave: 'Guardar endereço',
+      drawioReset: 'Usar o predefinido',
+      drawioSaved: 'Endereço do draw.io guardado',
       flags: 'Funcionalidades',
       flagsHint: 'Capacidades opcionais. Só você (o proprietário da instância) as pode alterar.',
       featureOn: 'Funcionalidade ativada',

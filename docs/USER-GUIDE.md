@@ -24,16 +24,17 @@ the [API](API.md).
 13. [Grades](#13-grades)
 14. [Whiteboards](#14-whiteboards)
 15. [Sheets](#15-sheets)
-16. [Habits](#16-habits)
-17. [Focus timer](#17-focus-timer)
-18. [Goals](#18-goals)
-19. [Journal](#19-journal)
-20. [Bookmarks](#20-bookmarks)
-21. [Notifications](#21-notifications)
-22. [Your settings](#22-your-settings)
-23. [Administration](#23-administration)
-24. [Owner controls](#24-owner-controls)
-25. [On a phone](#25-on-a-phone)
+16. [Diagrams](#16-diagrams)
+17. [Habits](#17-habits)
+18. [Focus timer](#18-focus-timer)
+19. [Goals](#19-goals)
+20. [Journal](#20-journal)
+21. [Bookmarks](#21-bookmarks)
+22. [Notifications](#22-notifications)
+23. [Your settings](#23-your-settings)
+24. [Administration](#24-administration)
+25. [Owner controls](#25-owner-controls)
+26. [On a phone](#26-on-a-phone)
 
 ---
 
@@ -1025,7 +1026,34 @@ this tab as CSV**, and **Delete sheet**.
 own and the page shows the sheet there (a tab at a time, up to 50 rows and
 15 columns), with **Open**.
 
-## 16. Habits
+## 16. Diagrams
+
+**Diagrams** (a module: turn it on in the workspace's settings) are drawn
+with [draw.io](https://www.drawio.com) — flowcharts, org charts, networks,
+UML, mind maps, floor plans. **New diagram** opens the draw.io editor inside
+Orbit with all its shapes; **Import** brings in a draw.io file (`.drawio`,
+or an `.svg` draw.io saved with the diagram inside).
+
+It saves itself as you draw: the diagram, a picture of it (shown in the
+list and in pages) and its labels (so search finds it by the words in its
+shapes). If someone else saved it meanwhile, theirs is kept and shown (with
+a note). Viewers see the picture. `⋯` (top right): **Copy link**,
+**Download as draw.io (.drawio)**, **Download as SVG** (opens again in
+draw.io, the diagram is inside), **Download as PNG** and **Delete diagram**.
+Downloaded files open in the draw.io desktop app and on drawio.com, and
+diagrams drawn there come back in with Import.
+
+**In a page**: paste the diagram's link (`⋯` → Copy link) on a line of its
+own and the page shows its picture there, with **Open**.
+
+**Where the editor comes from.** The draw.io editor loads from draw.io's own
+address (`embed.diagrams.net`) unless the instance owner sets another in
+**Owner → Owner → Diagrams (draw.io)** — for example their own draw.io
+container, so nothing is loaded from outside (see
+[Configuration](CONFIGURATION.md)). With draw.io's own, the diagram is still
+handed to the editor inside your browser and saved only in Orbit.
+
+## 17. Habits
 
 **Habits** (a module: turn it on in Workspace settings → Modules) are things
 you want to do again and again — read, run, practise the piano. They're
@@ -1047,7 +1075,7 @@ sees anyone else's.
   **Edit** changes it; **Archive** puts it away (with its history; **Bring
   back** later), **Delete** removes it and its history.
 
-## 17. Focus timer
+## 18. Focus timer
 
 **Focus timer** (a module) is for working in focused stretches — the
 Pomodoro way: 25 minutes on one thing, then a break.
@@ -1063,7 +1091,7 @@ Pomodoro way: 25 minutes on one thing, then a break.
   **Today** lists today's sessions; the top says how long you focused today.
 - One session runs at a time: starting another ends the one running.
 
-## 18. Goals
+## 19. Goals
 
 **Goals** (a module) are what a workspace works towards by a date — a
 launch, an exam, a trip.
@@ -1079,7 +1107,7 @@ launch, an exam, a trip.
 - **Mark achieved** puts it with the **Achieved** goals (folded at the
   bottom); **Delete** removes it — its tasks stay.
 
-## 19. Journal
+## 20. Journal
 
 The **Journal** (a module) is a page a day — what happened, how it went.
 It's **yours alone**: in a shared workspace each member writes their own,
@@ -1095,7 +1123,7 @@ and nobody reads anyone else's (search finds yours for you only).
 - **On this day** shows the same date in earlier years — what you wrote a
   year ago, two years ago…
 
-## 20. Bookmarks
+## 21. Bookmarks
 
 **Bookmarks** (a module) keep links worth coming back to.
 
@@ -1112,7 +1140,7 @@ and nobody reads anyone else's (search finds yours for you only).
 - Search (⌘K) finds bookmarks by their title, description, site, address
   and notes; choosing one opens the link.
 
-## 21. Notifications
+## 22. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -1175,7 +1203,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 22. Your settings
+## 23. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -1213,7 +1241,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 23. Administration
+## 24. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -1308,13 +1336,18 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 24. Owner controls
+## 25. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
 **Branding**, **Notifications**, **Security**, **SSO**.
 
 ### Owner tab
+
+**Diagrams (draw.io)**: the address the Diagrams module loads the draw.io
+editor from — draw.io's own (`embed.diagrams.net`, the default), or your
+own draw.io container. **Use the default** goes back to `DRAWIO_URL` (or
+draw.io's own).
 
 **Feature flags** (only the owner changes them):
 
@@ -1446,7 +1479,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 25. On a phone
+## 26. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

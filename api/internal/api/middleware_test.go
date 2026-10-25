@@ -43,7 +43,7 @@ func TestIPRateLimiterRefill(t *testing.T) {
 func TestSecurityHeadersSet(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.Use(securityHeaders(func() string { return "https://pki-cert.example.org" }))
+	r.Use(securityHeaders(func() string { return "https://pki-cert.example.org" }, nil))
 	r.GET("/x", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 
 	w := httptest.NewRecorder()

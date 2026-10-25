@@ -73,13 +73,20 @@ func requestLogger(log *zap.Logger) gin.HandlerFunc {
 // embedded Vite SPA (external module scripts, data: images for QR codes and
 // branding logos, same-origin /api XHR).
 // extraConnectSrc, when non-nil, returns an extra origin to allow in the CSP
-// connect-src. Orbit passes nil (same-origin only).
-func securityHeaders(extraConnectSrc func() string) gin.HandlerFunc {
+// connect-src (Orbit passes nil: same-origin only); extraFrameSrc one to allow
+// in frame-src (Orbit's draw.io editor).
+func securityHeaders(extraConnectSrc, extraFrameSrc func() string) gin.HandlerFunc {
 	build := func() string {
 		connect := "'self'"
 		if extraConnectSrc != nil {
 			if o := extraConnectSrc(); o != "" {
 				connect += " " + o
+			}
+		}
+		frame := "'self'"
+		if extraFrameSrc != nil {
+			if o := extraFrameSrc(); o != "" {
+				frame += " " + o
 			}
 		}
 		// img-src allows https images: pages are Markdown and may show them.
@@ -88,7 +95,7 @@ func securityHeaders(extraConnectSrc func() string) gin.HandlerFunc {
 			"img-src 'self' data: blob: https:; font-src 'self' data:; connect-src " + connect + "; " +
 			// The SPA builds its branded web manifest as a blob: URL.
 			"manifest-src 'self' blob:; " +
-			"object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+			"frame-src " + frame + "; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 	}
 	return func(c *gin.Context) {
 		h := c.Writer.Header()

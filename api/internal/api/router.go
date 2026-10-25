@@ -107,14 +107,16 @@ func New(d Deps) *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(requestID())
 	r.Use(requestLogger(d.Log))
-	r.Use(securityHeaders(nil))
+	h.refreshDrawio()
+	r.Use(securityHeaders(nil, drawioOrigin))
 	// Cap request bodies.
 	// Uploads have their own, larger limit (UPLOAD_MAX_MB, in the handler).
 	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool {
 		// These keep their own, larger caps (files; drawings with their images).
 		return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" ||
 			strings.HasPrefix(p, "/api/v1/drawings/") || strings.HasSuffix(p, "/drawings") ||
-			strings.HasPrefix(p, "/api/v1/sheets/") || strings.HasSuffix(p, "/sheets")
+			strings.HasPrefix(p, "/api/v1/sheets/") || strings.HasSuffix(p, "/sheets") ||
+			strings.HasPrefix(p, "/api/v1/diagrams/") || strings.HasSuffix(p, "/diagrams")
 	}))
 	r.Use(metricsMiddleware())
 
@@ -303,6 +305,11 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/sheets/:id", h.getSheet)
 			authed.PUT("/sheets/:id", h.updateSheet)
 			authed.DELETE("/sheets/:id", h.deleteSheet)
+			authed.GET("/workspaces/:ws/diagrams", h.listDiagrams)
+			authed.POST("/workspaces/:ws/diagrams", h.createDiagram)
+			authed.GET("/diagrams/:id", h.getDiagram)
+			authed.PUT("/diagrams/:id", h.updateDiagram)
+			authed.DELETE("/diagrams/:id", h.deleteDiagram)
 			authed.GET("/workspaces/:ws/smart-lists", h.listSmartLists)
 			authed.POST("/workspaces/:ws/smart-lists", h.createSmartList)
 			authed.PUT("/smart-lists/:id", h.updateSmartList)

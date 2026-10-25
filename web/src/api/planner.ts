@@ -316,7 +316,7 @@ export interface Home {
   exams: Task[] // the next ones (60 days), soonest first
 }
 export interface SearchHit {
-  kind: 'page' | 'task' | 'event' | 'note' | 'drawing' | 'journal' | 'bookmark' | 'sheet'
+  kind: 'page' | 'task' | 'event' | 'note' | 'drawing' | 'journal' | 'bookmark' | 'sheet' | 'diagram'
   id: string
   workspace_id: string
   title: string

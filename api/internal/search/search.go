@@ -18,7 +18,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "5"
+const version = "6"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -38,6 +38,7 @@ var sources = []struct {
 	// only they find it, as with their own notes.
 	{"journal_entries", "journal", "@.id", "''", "@.owner_id", "@.date", "@.content_text"},
 	{"sheets", "sheet", "@.id", "@.workspace_id", "''", "@.title", "@.text"},
+	{"diagrams", "diagram", "@.id", "@.workspace_id", "''", "@.title", "@.text"},
 	{"bookmarks", "bookmark", "@.id", "@.workspace_id", "''", "@.title", "coalesce(@.description,'') || ' ' || coalesce(@.site_name,'') || ' ' || coalesce(@.url,'') || ' ' || coalesce(@.notes,'')"},
 }
 

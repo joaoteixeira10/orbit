@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush, Bookmark, Sheet } from 'lucide-vue-next'
+import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush, Bookmark, Sheet, Workflow } from 'lucide-vue-next'
 import WsIcon from './ui/WsIcon.vue'
 import { plannerApi, pagesApi, type SearchHit } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -111,6 +111,8 @@ const results = computed<Item[]>(() =>
       return { key: 'j-' + h.id, label: fmtDate(parseDate(h.id), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: NotebookPen, run: () => router.push({ name: 'ws-journal', params: { ws: h.workspace_id }, query: { date: h.id } }) }
     if (h.kind === 'sheet')
       return { key: 's-' + h.id, label: h.title || t('sheets.untitled'), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: Sheet, run: () => router.push({ name: 'ws-sheet', params: { ws: h.workspace_id, id: h.id } }) }
+    if (h.kind === 'diagram')
+      return { key: 'd-' + h.id, label: h.title || t('diagrams.untitled'), sub: h.snippet ? `${where} · ${h.snippet}` : where, icon: Workflow, run: () => router.push({ name: 'ws-diagram', params: { ws: h.workspace_id, id: h.id } }) }
     if (h.kind === 'drawing') {
       // No workspace: a Quick Draw sketch.
       const at = h.workspace_id ? where : t('draw.quick')

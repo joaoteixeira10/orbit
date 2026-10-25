@@ -48,6 +48,8 @@ export const useBrandingStore = defineStore('branding', {
     showAppName: true,
     showLogo: true,
     loginMessage: '',
+    // Where Diagrams load the draw.io editor from.
+    drawioUrl: 'https://embed.diagrams.net',
     oidcEnabled: false,
     hideLocalLogin: false,
     passwordlessEnabled: true,
@@ -133,6 +135,7 @@ export const useBrandingStore = defineStore('branding', {
       this.assetSourceWordmark = b.asset_source_wordmark || 'theme'
       this.assetSourceFavicon = b.asset_source_favicon || 'theme'
       this.devThemesPersonal = !!b.developer_themes_personal
+      if (b.drawio_url) this.drawioUrl = b.drawio_url
 
       document.title = this.appName
       this.applyAccent()

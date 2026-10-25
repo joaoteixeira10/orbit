@@ -27,5 +27,15 @@ services:
       # - ./backups:/backups
     restart: unless-stopped
 
+  # Optional: your own draw.io editor for Diagrams, so nothing loads from
+  # draw.io's site. Put it behind your proxy on HTTPS, then set
+  # DRAWIO_URL=https://drawio.example.org in .env (or Owner → Owner →
+  # Diagrams). Pin a version you've checked.
+  # drawio:
+  #   image: jgraph/drawio:latest
+  #   ports:
+  #     - "${DRAWIO_PORT:-8081}:8080"
+  #   restart: unless-stopped
+
 volumes:
   orbit-data:

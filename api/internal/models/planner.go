@@ -354,6 +354,25 @@ type Sheet struct {
 	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
 }
 
+// ---- Diagrams ---------------------------------------------------------------
+
+// Diagram is a draw.io diagram: Data is its file (draw.io's XML, as the
+// desktop app saves a .drawio), Preview a picture of it (SVG, made by the
+// editor) for lists and pages. Text is its labels, for search. Version
+// guards saves as for drawings.
+type Diagram struct {
+	Base
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	Title       string  `gorm:"size:300" json:"title"`
+	Data        string  `gorm:"type:text" json:"data,omitempty"`
+	Preview     string  `gorm:"type:text" json:"preview,omitempty"`
+	Text        string  `gorm:"type:text" json:"-"`
+	Version     int     `gorm:"not null;default:1" json:"version"`
+	Rank        float64 `gorm:"not null;default:0" json:"rank"`
+	CreatedBy   string  `gorm:"size:36" json:"created_by"`
+	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+}
+
 // ---- Calendar ---------------------------------------------------------------
 
 // Event is a calendar entry. StartsAt / EndsAt are instants (UTC); an

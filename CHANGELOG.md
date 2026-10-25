@@ -8,6 +8,12 @@ merge, not at release time.
 
 ### Added
 
+- **Diagrams** — a module of draw.io diagrams: the draw.io editor in a
+  frame (from `DRAWIO_URL` or the owner's address; `embed.diagrams.net` by
+  default, or your own `jgraph/drawio`), saved as you draw with a picture
+  and the labels for search; `.drawio` / draw.io `.svg` in, `.drawio`,
+  editable `.svg` and `.png` out; shown in a page from its link; carried by
+  workspace export. CSP `frame-src` allows that one address.
 - **Spreadsheets in and out** — a database's view downloads as Excel or
   CSV, and rows come in from an Excel file, a CSV or a Google Sheets link
   (columns matched to properties by name, new ones made); a sheet comes in

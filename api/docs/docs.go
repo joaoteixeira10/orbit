@@ -1235,6 +1235,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/diagrams/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "diagrams"
+                ],
+                "summary": "A diagram",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Diagram id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Diagram"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "diagrams"
+                ],
+                "summary": "Save a diagram",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Diagram id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changed",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.diagramRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Diagram"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/models.Diagram"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "diagrams"
+                ],
+                "summary": "Delete a diagram",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Diagram id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/drawings/{id}": {
             "get": {
                 "security": [
@@ -6865,6 +6972,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/diagrams": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "diagrams"
+                ],
+                "summary": "A workspace's diagrams",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.diagramSummary"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "diagrams"
+                ],
+                "summary": "New diagram",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Title (and file)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.diagramRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Diagram"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/drawings": {
             "get": {
                 "security": [
@@ -8778,6 +8964,10 @@ const docTemplate = `{
                 "developer_themes_personal": {
                     "type": "boolean"
                 },
+                "drawio_url": {
+                    "description": "where Diagrams load the draw.io editor from",
+                    "type": "string"
+                },
                 "favicon_data_url": {
                     "type": "string"
                 },
@@ -9252,6 +9442,53 @@ const docTemplate = `{
                 "starter": {
                     "description": "Starter creates the template's lists and first pages (default true).",
                     "type": "boolean"
+                }
+            }
+        },
+        "api.diagramRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "draw.io's XML",
+                    "type": "string"
+                },
+                "preview": {
+                    "description": "an SVG picture of it",
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "version": {
+                    "description": "the version saved over (0: don't check)",
+                    "type": "integer"
+                }
+            }
+        },
+        "api.diagramSummary": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "preview": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -11691,6 +11928,10 @@ const docTemplate = `{
                 "developer_themes_personal": {
                     "type": "boolean"
                 },
+                "drawio_url": {
+                    "description": "\"\" goes back to DRAWIO_URL (or draw.io's own)",
+                    "type": "string"
+                },
                 "favicon_data_url": {
                     "type": "string"
                 },
@@ -12383,6 +12624,44 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "weekday": {
+                    "type": "integer"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Diagram": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "preview": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "version": {
                     "type": "integer"
                 },
                 "workspace_id": {

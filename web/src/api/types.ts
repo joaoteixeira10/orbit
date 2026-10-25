@@ -98,6 +98,7 @@ export interface Branding {
   asset_source_logo?: 'theme' | 'keep'
   asset_source_wordmark?: 'theme' | 'keep'
   asset_source_favicon?: 'theme' | 'keep'
+  drawio_url?: string // where Diagrams load the draw.io editor from
 }
 
 export interface OIDCConfig {

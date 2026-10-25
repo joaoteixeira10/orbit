@@ -126,6 +126,10 @@ merge, not at release time.
 - **Habits** (a new module): each person's own — every day, some weekdays
   or N times a week; tap a day to mark it done; streaks, the best one, the
   last 30 days, a year grid; a reminder at a time on the days it counts.
+- **Function suggestions** in every formula (sheets, the formula bar,
+  database formulas): the functions that fit what's typed, with what each
+  does, in English or Portuguese (Tab puts one in), and the arguments of
+  the function being written, the current one in bold.
 - **Sheets** (a new module): spreadsheets as in Excel — cells, ranges,
   `$` references, other tabs (`'My tab'!A1`), Excel's formulas in English
   or Portuguese (lookups, SUMIFS…), Excel's errors; click cells into a

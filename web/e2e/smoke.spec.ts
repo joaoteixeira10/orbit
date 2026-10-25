@@ -1373,7 +1373,13 @@ test('sheets: values and formulas typed and clicked, a fill, a row inserted, sav
   await page.keyboard.press('Enter')
   await page.keyboard.type('300')
   await page.keyboard.press('Enter')
-  await page.keyboard.type('=SUM(B1:B2)')
+  // Function suggestions: "=SU" offers SUM; Tab puts it in; then its arguments show.
+  await page.keyboard.type('=SU')
+  await expect(page.getByTestId('formula-suggestion').first()).toContainText('SUM')
+  await page.keyboard.press('Tab')
+  await expect(page.getByTestId('sheet-cell-editor')).toHaveValue('=SUM(')
+  await expect(page.getByTestId('formula-hint')).toContainText('number1')
+  await page.keyboard.type('B1:B2)')
   await page.keyboard.press('Enter')
   await expect(cell('B3')).toHaveText('950')
 

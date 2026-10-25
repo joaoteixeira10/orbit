@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useI18n } from 'vue-i18n'
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Plus, Redo2, Rows3, Undo2 } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
+import FormulaAssist from '@/components/ui/FormulaAssist.vue'
 import { Book, MAX_COLS, MAX_ROWS, addr, newTab, reshape, series, show, toTSV, fromTSV, type Cell, type NumFmt, type SheetData, type Tab } from '@/lib/sheet'
 import { colName, dayOf, formatRef, shiftFormula } from '@/lib/formula'
 import { locale, todayStr } from '@/lib/dates'
@@ -215,6 +216,7 @@ function startEdit(text: string | null, how: 'enter' | 'edit', where: 'cell' | '
   mode.value = how
   editing.value = true
   inBar.value = where === 'bar'
+  caret.value = draft.value.length
   void nextTick(() => {
     const el = where === 'bar' ? barInput.value : editor.value
     el?.focus()
@@ -244,8 +246,26 @@ function pointing(): boolean {
   return /[=(,;+\-*/^&<>:]\s*$/.test(draft.value.slice(0, at)) || refAtCaret.value !== null
 }
 const refAtCaret = ref<{ from: number; to: number } | null>(null) // the reference put in by clicking (a drag replaces it)
+// Function suggestions and argument hints while writing a formula.
+const assist = ref<InstanceType<typeof FormulaAssist> | null>(null)
+const caret = ref(0)
+function trackCaret(e: Event) {
+  caret.value = (e.target as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? draft.value.length
+}
+function applyPick(edit: { from: number; to: number; insert: string }) {
+  const el = inBar.value ? barInput.value : editor.value
+  draft.value = draft.value.slice(0, edit.from) + edit.insert + draft.value.slice(edit.to)
+  const at = edit.from + edit.insert.length
+  caret.value = at
+  refAtCaret.value = null
+  void nextTick(() => {
+    el?.focus()
+    el?.setSelectionRange(at, at)
+  })
+}
 function onEditorKey(e: KeyboardEvent) {
   if (e.isComposing) return
+  if (assist.value?.key(e)) return
   if (e.key === 'Escape') {
     e.preventDefault()
     e.stopPropagation()
@@ -269,8 +289,9 @@ function onEditorKey(e: KeyboardEvent) {
     commitMove(d[0], d[1])
   } else refAtCaret.value = null
 }
-function onEditorInput() {
+function onEditorInput(e?: Event) {
   refAtCaret.value = null
+  if (e) trackCaret(e)
 }
 
 // ---- The grid's keys (not editing) ----
@@ -574,6 +595,7 @@ function putRef(r1: number, c1: number, r2: number, c2: number) {
   const to = refAtCaret.value?.to ?? el?.selectionEnd ?? draft.value.length
   draft.value = draft.value.slice(0, from) + ref + draft.value.slice(to)
   refAtCaret.value = { from, to: from + ref.length }
+  caret.value = from + ref.length
   void nextTick(() => {
     el?.focus()
     el?.setSelectionRange(from + ref.length, from + ref.length)
@@ -694,8 +716,10 @@ defineExpose({ tabId })
         spellcheck="false"
         data-testid="sheet-bar"
         @focus="!editing && startEdit(null, 'edit', 'bar')"
-        @input="((draft = ($event.target as HTMLInputElement).value), onEditorInput())"
+        @input="((draft = ($event.target as HTMLInputElement).value), onEditorInput($event))"
         @keydown="onEditorKey"
+        @keyup="trackCaret"
+        @click="trackCaret"
       />
     </div>
 
@@ -794,6 +818,8 @@ defineExpose({ tabId })
             data-testid="sheet-cell-editor"
             @keydown="onEditorKey"
             @input="onEditorInput"
+            @keyup="trackCaret"
+            @click="trackCaret"
             @blur="!pointing() && stopEdit(true)"
           />
         </div>
@@ -809,9 +835,12 @@ defineExpose({ tabId })
         :aria-label="activeAddr"
         @keydown="onEditorKey"
         @input="onEditorInput"
+        @keyup="trackCaret"
+        @click="trackCaret"
         @blur="!pointing() && stopEdit(true)"
       />
     </div>
+    <FormulaAssist ref="assist" :el="inBar ? barInput : editor" :text="draft" :caret="caret" :on="editing && draft.startsWith('=')" @pick="applyPick" />
 
     <!-- Tabs -->
     <div class="sh-tabs">

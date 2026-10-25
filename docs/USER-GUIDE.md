@@ -302,7 +302,9 @@ write in it; its values show under its title.
   formula, click a property for its value on this row or a total of its
   column — sum, average, min, max, count (the same sums the totals row
   shows, but over every row, whatever the filter) — and the **Functions**
-  row puts in the common ones with the cursor inside. Results that are
+  row puts in the common ones with the cursor inside. Typing a function's
+  first letters lists those that fit (Tab puts one in), and inside its
+  brackets its arguments show, the current one in bold. Results that are
   numbers line up on the right, like number columns. Filters, sorts and boards
   use a formula's result like any value.
 - **Totals**: the row under a table — click under a column for its **sum**,
@@ -963,7 +965,10 @@ it too).
 `=B2*$C$1`, `=IF(B2>100, "big", "small")`, `=VLOOKUP("Food", A2:B10, 2,
 FALSE)`, `=Rates!B2` (another tab), `='My tab'!A1:A5`, `=SUM(B:B)` (the
 whole column). While writing one, **click a cell** (or drag over several)
-to put its reference in. Function names work in English or Portuguese
+to put its reference in. Typing a function's first letters lists the ones
+that fit, each with what it does (↑ ↓ to choose, **Tab** or **Enter** puts
+it in with its bracket, **Esc** hides the list); inside its brackets a line
+shows its arguments, the one you're writing in bold — as in Excel. Function names work in English or Portuguese
 (`SOMA`, `SE`, `PROCV`…), with `,` or `;`. Besides the database ones (see
 Databases) there are VLOOKUP, HLOOKUP, XLOOKUP, INDEX, MATCH, CHOOSE,
 PRODUCT, MEDIAN, SUMIFS, COUNTIFS, AVERAGEIFS, PI, LN, LOG, LOG10, EXP,

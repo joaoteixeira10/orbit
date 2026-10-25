@@ -73,6 +73,7 @@ export const edEn = {
     doing: 'Doing',
     doneOpt: 'Done',
   },
+  formulaHelp: { keys: 'Tab puts it in · Esc hides' },
   importer: {
     title: 'Import pages',
     intro: 'Pick files, or a .zip of them: they become pages of this workspace — folders as pages inside pages, links between them kept, their pictures and files uploaded.',
@@ -252,6 +253,7 @@ export const edPt: typeof edEn = {
     doing: 'Em curso',
     doneOpt: 'Feito',
   },
+  formulaHelp: { keys: 'Tab insere · Esc esconde' },
   importer: {
     title: 'Importar páginas',
     intro: 'Escolha ficheiros, ou um .zip com eles: passam a páginas deste espaço — as pastas como páginas dentro de páginas, as ligações entre elas mantidas, as imagens e os ficheiros carregados.',

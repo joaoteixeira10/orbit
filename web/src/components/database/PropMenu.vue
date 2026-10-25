@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { EyeOff, Plus, Trash2, X } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
+import FormulaAssist from '@/components/ui/FormulaAssist.vue'
 import { ChevronRight } from 'lucide-vue-next'
 import { OPTION_COLORS, PROP_TYPES, formulaProblem, newId, type DBProp, type PropType } from '@/lib/database'
 
@@ -16,6 +17,27 @@ const { t } = useI18n()
 const draft = ref<DBProp>(JSON.parse(JSON.stringify(props.prop)))
 const optionName = ref('')
 const formulaEl = ref<HTMLTextAreaElement | null>(null)
+// Function suggestions and argument hints (FormulaAssist).
+const assist = ref<InstanceType<typeof FormulaAssist> | null>(null)
+const caret = ref(0)
+const trackCaret = () => (caret.value = formulaEl.value?.selectionStart ?? 0)
+function formulaKey(e: KeyboardEvent) {
+  if (assist.value?.key(e)) return
+  if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault()
+    done()
+  }
+}
+function applyPick(edit: { from: number; to: number; insert: string }) {
+  const f = draft.value.formula ?? ''
+  draft.value.formula = f.slice(0, edit.from) + edit.insert + f.slice(edit.to)
+  const at = edit.from + edit.insert.length
+  caret.value = at
+  void nextTick(() => {
+    formulaEl.value?.focus()
+    formulaEl.value?.setSelectionRange(at, at)
+  })
+}
 // insert puts text where the caret is in the formula; back: how far from
 // its end the caret goes (inside a function's brackets).
 function insert(text: string, back = 0) {
@@ -23,10 +45,11 @@ function insert(text: string, back = 0) {
   const f = draft.value.formula ?? ''
   const at = el ? el.selectionStart : f.length
   draft.value.formula = f.slice(0, at) + text + f.slice(el ? el.selectionEnd : f.length)
-  const caret = at + text.length - back
-  requestAnimationFrame(() => {
+  const caretAt = at + text.length - back
+  caret.value = caretAt
+  void nextTick(() => {
     el?.focus()
-    el?.setSelectionRange(caret, caret)
+    el?.setSelectionRange(caretAt, caretAt)
   })
 }
 
@@ -104,8 +127,12 @@ function done() {
           placeholder="=[@Price]*[@Qty]"
           :aria-label="t('db.formula')"
           data-testid="prop-formula"
-          @keydown.enter.exact.prevent="done"
+          @keydown="formulaKey"
+          @input="trackCaret"
+          @keyup="trackCaret"
+          @click="trackCaret"
         />
+        <FormulaAssist ref="assist" :el="formulaEl" :text="draft.formula ?? ''" :caret="caret" :on="true" @pick="applyPick" />
         <p v-if="draft.formula && formulaProblem(draft.formula)" class="text-[12px] text-crit-text">{{ formulaProblem(draft.formula) }}</p>
         <p v-else class="text-[11.5px] leading-snug text-text-3">{{ t('db.formulaHint') }}</p>
         <div v-if="others?.length">

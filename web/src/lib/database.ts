@@ -360,7 +360,7 @@ export function guessType(values: string[]): PropType {
   const vs = values.map((v) => v.trim()).filter(Boolean)
   if (!vs.length) return 'text'
   if (vs.every((v) => /^-?\d+(?:[.,]\d+)?$/.test(v))) return 'number'
-  if (vs.every((v) => /^(yes|no|true|false|sim|não|nao)$/i.test(v))) return 'checkbox'
+  if (vs.every((v) => /^(yes|no|true|false|sim|não|nao|verdadeiro|falso)$/i.test(v))) return 'checkbox'
   if (vs.every((v) => /^\d{4}-\d{2}-\d{2}$/.test(v) || (!Number.isNaN(Date.parse(v)) && /\d{4}/.test(v) && /[a-z]/i.test(v)))) return 'date'
   const distinct = new Set(vs)
   if (distinct.size <= Math.max(6, vs.length / 3) && [...distinct].every((v) => v.length <= 40 && !v.includes(','))) return 'select'
@@ -373,10 +373,12 @@ export function importValue(p: DBProp, text: string): PropValue | undefined {
   const v = text.trim()
   if (!v) return undefined
   switch (p.type) {
-    case 'number':
-      return Number(v.replace(',', '.'))
+    case 'number': {
+      const n = Number(v.replace(',', '.'))
+      return Number.isFinite(n) ? n : undefined
+    }
     case 'checkbox':
-      return /^(yes|true|sim)$/i.test(v)
+      return /^(yes|true|sim|verdadeiro|1|✓|x)$/i.test(v)
     case 'date': {
       if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
       const t = Date.parse(v)

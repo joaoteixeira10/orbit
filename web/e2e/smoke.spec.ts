@@ -1574,3 +1574,76 @@ test('two-factor: set up with the six boxes, sign in with a code, then with a re
   await page.getByRole('button', { name: 'Verify' }).click()
   await page.waitForURL((u) => u.pathname === '/')
 })
+
+test('tasks: sub-tasks fold under their task, with a bar of how many are done', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Essays', kind: 'personal', modules: ['home', 'tasks'] } })).json()
+  const parent = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'History essay' } })).json()
+  for (const title of ['Find sources', 'Write the draft']) {
+    expect((await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title, parent_id: parent.id } })).ok()).toBeTruthy()
+  }
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/tasks/all`)
+  const fold = page.getByTestId('subtasks-toggle')
+  await expect(fold).toHaveText('0/2')
+  await expect(fold).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByText('Find sources')).toHaveCount(0)
+
+  await fold.click()
+  await expect(fold).toHaveAttribute('aria-expanded', 'true')
+  await page.getByRole('checkbox', { name: 'Find sources' }).click()
+  await expect(fold).toHaveText('1/2')
+  await expect(fold.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
+
+  // Open stays open, here.
+  await page.reload()
+  await expect(page.getByText('Write the draft')).toBeVisible()
+  await page.screenshot({ path: 'test-results/subtasks.png' })
+  await fold.click()
+  await expect(page.getByText('Write the draft')).toHaveCount(0)
+})
+
+test('databases: rows out as Excel and CSV, rows in from a CSV', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Library', kind: 'personal', modules: ['home', 'pages'] } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Books' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${list.id}`)
+  await page.getByTestId('make-database').click()
+  const dbv = page.getByTestId('database')
+  await expect(dbv.getByTestId('db-col')).toHaveText(['Status'])
+
+  // Rows in: Status matched by name (an option added), Pages and Read new.
+  await dbv.getByTestId('db-sheet-menu').click()
+  await page.getByTestId('db-import-input').setInputFiles({
+    name: 'books.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Name,Status,Pages,Read\nDune,Done,412,2026-03-01\nEmma,Shelved,300,\n'),
+  })
+  await expect(dbv.getByTestId('db-row')).toHaveCount(2)
+  await expect(dbv.getByTestId('db-col')).toHaveText(['Status', 'Pages', 'Read'])
+  const dune = dbv.getByTestId('db-row').filter({ hasText: 'Dune' })
+  await expect(dune).toContainText('Done')
+  await expect(dune.getByRole('textbox', { name: 'Pages' })).toHaveValue('412')
+  await expect(dbv.getByTestId('db-row').filter({ hasText: 'Emma' })).toContainText('Shelved')
+
+  // Rows out.
+  await dbv.getByTestId('db-sheet-menu').click()
+  await page.screenshot({ path: 'test-results/db-sheet-menu.png' })
+  const [csv] = await Promise.all([page.waitForEvent('download'), page.getByTestId('db-csv').click()])
+  expect(csv.suggestedFilename()).toBe('Books.csv')
+  const text = (await (await import('node:fs/promises')).readFile(await csv.path())).toString()
+  expect(text).toContain('Name,Status,Pages,Read')
+  expect(text).toContain('Dune,Done,412,2026-03-01')
+  await dbv.getByTestId('db-sheet-menu').click()
+  const [xlsx] = await Promise.all([page.waitForEvent('download'), page.getByTestId('db-xlsx').click()])
+  expect(xlsx.suggestedFilename()).toBe('Books.xlsx')
+  const bytes = await (await import('node:fs/promises')).readFile(await xlsx.path())
+  expect(bytes.subarray(0, 2).toString()).toBe('PK')
+})

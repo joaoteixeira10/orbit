@@ -932,6 +932,14 @@ definitions:
         minimum: 0
         type: number
     type: object
+  api.googleSheetRequest:
+    properties:
+      url:
+        maxLength: 2000
+        type: string
+    required:
+    - url
+    type: object
   api.gradeRequest:
     properties:
       date:
@@ -7506,6 +7514,40 @@ paths:
       summary: New goal
       tags:
       - goals
+  /workspaces/{ws}/google-sheet:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Its link
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.googleSheetRequest'
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: A Google Sheets spreadsheet, as Excel
+      tags:
+      - sheets
   /workspaces/{ws}/grades:
     get:
       parameters:

@@ -210,6 +210,7 @@ const status = computed(() =>
         <button type="button" class="menu-item w-full" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('sheets.copyLink') }}</button>
         <button type="button" class="menu-item w-full" data-testid="sheet-xlsx" @click="download('xlsx')"><Download class="h-4 w-4 text-text-2" />{{ t('sheets.downloadXlsx') }}</button>
         <button type="button" class="menu-item w-full" data-testid="sheet-csv" @click="download('csv')"><Download class="h-4 w-4 text-text-2" />{{ t('sheets.downloadCsv') }}</button>
+        <p class="px-2.5 pb-1 pt-1 text-[11.5px] leading-snug text-text-3">{{ t('sheets.toGoogle') }}</p>
         <template v-if="editable">
           <div class="menu-sep" />
           <button type="button" class="menu-item danger w-full" @click="(menu = false), (confirmDelete = true)"><Trash2 class="h-4 w-4" />{{ t('sheets.delete') }}</button>

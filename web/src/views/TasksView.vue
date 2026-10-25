@@ -283,6 +283,27 @@ async function change(x: Task, patch: TaskInput) {
   }
 }
 const peopleOf = (x: Task) => x.assignee_ids.map((id) => memberById.value.get(id)).filter((m): m is Member => !!m)
+// Sub-tasks start folded under their task; the ones opened stay open
+// (in this browser).
+const openSubs = ref(new Set<string>(readOpenSubs()))
+function readOpenSubs(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem('orbit_open_subtasks') || '[]')
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+function foldSubs(id: string) {
+  const s = new Set(openSubs.value)
+  if (!s.delete(id)) s.add(id)
+  openSubs.value = s
+  try {
+    localStorage.setItem('orbit_open_subtasks', JSON.stringify([...s].slice(-300)))
+  } catch {
+    /* private window: open for now only */
+  }
+}
 function subCount(x: Task) {
   const subs = all.value.filter((s) => s.parent_id === x.id)
   return { done: subs.filter((s) => s.done).length, total: subs.length }
@@ -468,14 +489,16 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
               :color="listById.get(x.list_id)?.color"
               :list-name="!list && sel !== 'all' ? listById.get(x.list_id)?.name : ''"
               :subtasks="subCount(x)"
+              :expanded="openSubs.has(x.id)"
               :assignees="peopleOf(x)"
               :members="members.length > 1 ? members : []"
               :editable="editable && listById.get(x.list_id)?.git?.write !== 'none'"
               @toggle="toggle(x)"
               @open="openTask = x.id"
               @update="(p) => change(x, p)"
+              @expand="foldSubs(x.id)"
             />
-            <div v-for="sub in all.filter((y) => y.parent_id === x.id && (!y.done || showDone))" :key="sub.id" class="pl-8">
+            <div v-for="sub in openSubs.has(x.id) ? all.filter((y) => y.parent_id === x.id && (!y.done || showDone)) : []" :key="sub.id" class="pl-8">
               <TaskRow :task="sub" :color="listById.get(x.list_id)?.color" compact :editable="editable" @toggle="toggle(sub)" @open="openTask = sub.id" />
             </div>
           </div>

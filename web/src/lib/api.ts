@@ -226,14 +226,9 @@ export async function downloadAuthed(path: string, filename: string): Promise<vo
   saveBlob(blob, filename)
 }
 
-// downloadAuthedPost POSTs a JSON body to a bearer-protected endpoint and saves
-// the (binary/blob) response as a file. Used for the backup export, which needs
-// a request body (the optional passphrase) yet streams a file back.
-export async function downloadAuthedPost(
-  path: string,
-  body: unknown,
-  filename: string,
-): Promise<void> {
+// postFile POSTs a JSON body to a bearer-protected endpoint and returns the
+// (binary) answer, and its file name when it gives one.
+export async function postFile(path: string, body: unknown): Promise<{ blob: Blob; name: string }> {
   const init: RequestInit = { method: 'POST', body: JSON.stringify(body ?? {}) }
   let res = await rawFetch(path, init)
   if (res.status === 401 && (await tryRefresh())) {
@@ -250,7 +245,22 @@ export async function downloadAuthedPost(
     }
     throw new ApiError(res.status, msg)
   }
-  saveBlob(await res.blob(), filename)
+  const cd = res.headers.get('Content-Disposition') ?? ''
+  const m = /filename\*=UTF-8''([^;]+)/i.exec(cd)
+  let name = ''
+  try {
+    name = m ? decodeURIComponent(m[1]) : (/filename="([^"]*)"/i.exec(cd)?.[1] ?? '')
+  } catch {
+    /* a name badly written: none */
+  }
+  return { blob: await res.blob(), name }
+}
+
+// downloadAuthedPost POSTs a JSON body to a bearer-protected endpoint and saves
+// the (binary/blob) response as a file. Used for the backup export, which needs
+// a request body (the optional passphrase) yet streams a file back.
+export async function downloadAuthedPost(path: string, body: unknown, filename: string): Promise<void> {
+  saveBlob((await postFile(path, body)).blob, filename)
 }
 
 // saveBlob triggers a browser download for an in-memory blob (internal helper).

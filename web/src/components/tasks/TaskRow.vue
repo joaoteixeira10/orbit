@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Repeat, Flag, ListTree, MessageSquare, Milestone } from 'lucide-vue-next'
+import { Check, ChevronRight, Repeat, Flag, MessageSquare, Milestone } from 'lucide-vue-next'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'
@@ -11,8 +11,9 @@ import { firstLine } from '@/lib/markdown'
 
 // One task, Reminders-style: a round check in its list's colour, the title
 // and a line of details — when it's due (red when late), repeat, priority,
-// tags, sub-task progress, who it's for (one or several). A click anywhere but the check
-// opens the details (as in Plane); the title is renamed there.
+// tags, who it's for (one or several). A click anywhere but the check
+// opens the details (as in Plane); the title is renamed there. With
+// sub-tasks, a bar of how many are done that folds them open and shut.
 const props = withDefaults(
   defineProps<{
     task: Task
@@ -20,6 +21,8 @@ const props = withDefaults(
     listName?: string
     workspaceName?: string
     subtasks?: { done: number; total: number }
+    // The sub-tasks are showing (with subtasks: the bar's arrow points down).
+    expanded?: boolean
     assignees?: Member[]
     // With the workspace's members: date, priority and assignees as chips
     // at the end, changed in place (wide screens).
@@ -29,7 +32,7 @@ const props = withDefaults(
   }>(),
   { color: 'var(--ws)', listName: '', workspaceName: '', editable: true, compact: false },
 )
-const emit = defineEmits<{ toggle: []; open: []; update: [patch: TaskInput] }>()
+const emit = defineEmits<{ toggle: []; open: []; update: [patch: TaskInput]; expand: [] }>()
 const { t } = useI18n()
 
 const overdue = computed(() => isOverdue(props.task.due, props.task.due_time, props.task.done))
@@ -69,11 +72,24 @@ const prio = computed(() => '!'.repeat(props.task.priority))
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
         <span v-if="listName">{{ listName }}</span>
         <span v-if="workspaceName">{{ workspaceName }}</span>
-        <span v-if="subtasks && subtasks.total" class="inline-flex items-center gap-0.5"><ListTree class="h-3 w-3" />{{ subtasks.done }}/{{ subtasks.total }}</span>
         <span v-if="task.comment_count" class="inline-flex items-center gap-0.5" :title="t('comments.count', { n: task.comment_count }, task.comment_count)"><MessageSquare class="h-3 w-3" />{{ task.comment_count }}</span>
         <span v-for="tag in task.tags" :key="tag" class="text-accent-text">#{{ tag }}</span>
         <span v-if="task.notes && !compact" class="truncate">{{ firstLine(task.notes) }}</span>
       </div>
+    </button>
+    <button
+      v-if="subtasks && subtasks.total"
+      type="button"
+      class="subs"
+      :class="{ open: expanded, full: subtasks.done === subtasks.total }"
+      :aria-expanded="!!expanded"
+      :title="t(expanded ? 'tasks.subsHide' : 'tasks.subsShow')"
+      data-testid="subtasks-toggle"
+      @click.stop="emit('expand')"
+    >
+      <span class="bar" role="progressbar" :aria-valuenow="subtasks.done" aria-valuemin="0" :aria-valuemax="subtasks.total"><span :style="{ width: `${(100 * subtasks.done) / subtasks.total}%`, background: color }" /></span>
+      <span class="tabular-nums">{{ subtasks.done }}/{{ subtasks.total }}</span>
+      <ChevronRight class="chev h-3.5 w-3.5" />
     </button>
     <Flag v-if="task.priority === 3 && !task.done" class="row-flag mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" />
     <AvatarStack v-if="assignees?.length" :people="assignees" :size="20" class="row-people mt-0.5" />
@@ -152,6 +168,49 @@ const prio = computed(() => '!'.repeat(props.task.priority))
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-2);
+}
+.subs {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text-3);
+  transition: background var(--speed);
+}
+.subs:hover {
+  background: var(--fill);
+  color: var(--text-2);
+}
+.subs:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.subs .bar {
+  position: relative;
+  width: 56px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--fill);
+}
+.subs .bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  transition: width 0.3s;
+}
+.subs.full {
+  color: var(--text-2);
+}
+.subs .chev {
+  transition: transform var(--speed);
+}
+.subs.open .chev {
+  transform: rotate(90deg);
 }
 .exam {
   padding: 0 6px;

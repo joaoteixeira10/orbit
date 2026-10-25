@@ -7068,6 +7068,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/google-sheet": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "sheets"
+                ],
+                "summary": "A Google Sheets spreadsheet, as Excel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Its link",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.googleSheetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/grades": {
             "get": {
                 "security": [
@@ -9727,6 +9781,18 @@ const docTemplate = `{
                     "description": "null clears",
                     "type": "number",
                     "minimum": 0
+                }
+            }
+        },
+        "api.googleSheetRequest": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "maxLength": 2000
                 }
             }
         },

@@ -8,6 +8,13 @@ merge, not at release time.
 
 ### Added
 
+- **Spreadsheets in and out** — a database's view downloads as Excel or
+  CSV, and rows come in from an Excel file, a CSV or a Google Sheets link
+  (columns matched to properties by name, new ones made); a sheet comes in
+  from a Google Sheets link too (`POST /workspaces/{ws}/google-sheet`,
+  Google's hosts only).
+- **Folded sub-tasks** — a task with sub-tasks shows a bar of how many are
+  done, which opens and shuts them; the task details are wider.
 - **Workspaces with their own modules** — create one from a template
   (School, Work, Personal, Shared, Blank), choose its modules (Overview,
   Notes, Pages, Tasks, Board, Timeline, Charts, Calendar), colour and icon;

@@ -299,6 +299,7 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/goals/:id", h.deleteGoal)
 			authed.GET("/workspaces/:ws/sheets", h.listSheets)
 			authed.POST("/workspaces/:ws/sheets", h.createSheet)
+			authed.POST("/workspaces/:ws/google-sheet", h.googleSheet)
 			authed.GET("/sheets/:id", h.getSheet)
 			authed.PUT("/sheets/:id", h.updateSheet)
 			authed.DELETE("/sheets/:id", h.deleteSheet)

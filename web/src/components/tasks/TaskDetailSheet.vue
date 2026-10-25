@@ -293,7 +293,7 @@ async function remove() {
 </script>
 
 <template>
-  <Overlay :open="open && !!task" size="md" @close="emit('close')">
+  <Overlay :open="open && !!task" size="lg" @close="emit('close')">
     <template v-if="task">
       <div class="flex items-start gap-3 pt-2">
         <button

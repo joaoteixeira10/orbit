@@ -330,6 +330,15 @@ ones. **Turn back into a page** keeps the rows as pages. Exported as
 Markdown, a database page gets a table of its rows, and each row its values
 under its title; Notion databases come in as databases (see Import).
 
+**Excel, CSV and Google Sheets.** The spreadsheet button by **Filter** has
+**Download as Excel (.xlsx)** and **Download as CSV** — the view's rows,
+filtered and sorted, with its columns — and adds rows from a file or a
+Google Sheets link: a *Name* column (or else the first) names them, the
+other columns fill the properties of the same name (a new option is added
+to a select when needed), and columns it doesn't have become new
+properties (numbers, dates, yes / no, choices or text, as they look).
+Rows come in below the others, up to 2,000 at a time.
+
 **@-mentions.** Type **@** in either editor for people, pages and dates:
 - a **person** of the workspace goes in as `@username` — they're told
   (in the bell, and where they get comments), once per page;
@@ -569,6 +578,10 @@ board column), **Assignees** (one or several members — each gets the reminders
 **Attachments** (add files or drop them; images show as thumbnails — click to
 open, other files download) and **Sub-tasks**. **Delete** is at the bottom
 (it deletes the task's attachments too).
+
+A task with sub-tasks shows a bar of how many are done (*1/3*) at the end of
+its row; the sub-tasks stay folded under it until you click the bar, and the
+ones you open stay open (in that browser).
 
 **Comments** (at the bottom of the details, as in Planner): any member
 writes them, viewers too — in Markdown; type **@** to mention someone (pick
@@ -949,7 +962,12 @@ A **drawing on a note** works the same way: see [Notes](#6-notes).
 
 **Sheets** (a module: turn it on in the workspace's settings) are
 spreadsheets, like Excel or Google Sheets. **New sheet** opens an empty one;
-**Import** brings in an Excel file (`.xlsx`) or a CSV as a new sheet.
+**Import** brings in an Excel file (`.xlsx`) or a CSV as a new sheet, and
+**From Google Sheets** one from its link — in Google Sheets first
+**Share** → **General access** → *Anyone with the link*, so Orbit can fetch
+it (Orbit asks Google only for that spreadsheet, as an Excel file). To go
+the other way, download as Excel and in Google Sheets use **File** →
+**Import** → **Upload**.
 
 **Cells.** Click a cell and type — a number (`1,234.5`, or `1234,5` in
 Portuguese), a percentage (`15%`), euros (`€12`), a date (`2026-11-05` or

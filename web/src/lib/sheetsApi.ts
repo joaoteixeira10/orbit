@@ -1,5 +1,5 @@
 // The sheets' endpoints (api/internal/api/handlers_sheets.go).
-import { api } from './api'
+import { api, postFile } from './api'
 import type { SheetData } from './sheet'
 
 export interface SheetSummary {
@@ -23,4 +23,13 @@ export const sheetsApi = {
   get: (id: string) => api<SheetDoc>(`/sheets/${id}`),
   save: (id: string, b: { title?: string; data?: SheetData; text?: string; version: number }) => api<SheetDoc>(`/sheets/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/sheets/${id}`, { method: 'DELETE' }),
+  // A Google Sheets spreadsheet (shared "Anyone with the link"), as .xlsx,
+  // and its name.
+  google: async (ws: string, url: string) => {
+    const f = await postFile(`/workspaces/${ws}/google-sheet`, { url })
+    return { bytes: new Uint8Array(await f.blob.arrayBuffer()), name: f.name.replace(/\.xlsx$/i, '') }
+  },
 }
+
+// isGoogleSheet: a Google Sheets link.
+export const isGoogleSheet = (s: string) => /^\s*https:\/\/docs\.google\.com\/spreadsheets\/d\//i.test(s)

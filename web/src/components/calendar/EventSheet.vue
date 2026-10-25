@@ -17,7 +17,8 @@ import {
 // Calendar's event sheet: title and location, all-day, when it starts and
 // ends (typed in the event's time zone — the device's unless changed; the
 // calendar shows it in the device's), repeat, alert, colour and notes. Editing a repeating event edits its
-// whole series; deleting one asks whether to drop just that occurrence.
+// series, at the occurrence opened; saving asks whether for only it, it and
+// the ones after, or all of them — and deleting the same.
 // choices (in the all-workspaces calendar) adds a workspace picker on create.
 const props = defineProps<{
   open: boolean
@@ -80,15 +81,17 @@ watch(
         location.value = e.location
         notes.value = e.notes
         allDay.value = e.all_day
+        // A series shows the occurrence opened (its own day and time).
+        const occ = props.occurrence.recurring ? { starts_at: props.occurrence.start, ends_at: props.occurrence.end } : e
         if (e.all_day) {
-          startIn.value = allDayDate(e.starts_at)
-          const last = dateStr(addDays(parseDate(allDayDate(e.ends_at)), -1))
+          startIn.value = allDayDate(occ.starts_at)
+          const last = dateStr(addDays(parseDate(allDayDate(occ.ends_at)), -1))
           endIn.value = last < startIn.value ? startIn.value : last
         } else {
           tz.value = e.tz && e.tz !== 'Local' && e.tz !== 'UTC' ? e.tz : deviceTZ()
           if (!zones.value.includes(tz.value)) tz.value = deviceTZ()
-          startIn.value = toZoneInput(new Date(e.starts_at), tz.value)
-          endIn.value = toZoneInput(new Date(e.ends_at), tz.value)
+          startIn.value = toZoneInput(new Date(occ.starts_at), tz.value)
+          endIn.value = toZoneInput(new Date(occ.ends_at), tz.value)
         }
         repeat.value = repeatPreset(e.rrule)
         customRule.value = e.rrule
@@ -208,6 +211,12 @@ async function save() {
       if (color.value !== e.color) body.color = color.value
       const before = e.remind_minutes == null ? '' : String(e.remind_minutes)
       if (remind.value !== before) body.remind_minutes = remind.value === '' ? -1 : Number(remind.value)
+      if (props.occurrence?.recurring) {
+        // A series: which ones? (asked; saved from there)
+        pending.value = body
+        askScope.value = true
+        return
+      }
       await calendarApi.updateEvent(e.id, body)
     } else {
       const body: EventInput = { title: title.value.trim(), location: location.value.trim(), notes: notes.value, ...tm }
@@ -232,14 +241,51 @@ async function save() {
   }
 }
 
+// ---- A series: only this one, this and the following, or all ----
+const askScope = ref(false)
+const pending = ref<EventInput | null>(null)
+async function saveScope(scope: 'this' | 'following' | 'all') {
+  const o = props.occurrence
+  const e = ev.value
+  const body = pending.value
+  askScope.value = false
+  if (!o || !e || !body) return
+  saving.value = true
+  try {
+    if (scope === 'all') {
+      // The occurrence's change, made to the series: moved by as much.
+      if (body.starts_at && body.ends_at) {
+        const shift = Date.parse(body.starts_at) - Date.parse(o.start)
+        const length = Date.parse(body.ends_at) - Date.parse(body.starts_at)
+        const start = Date.parse(e.starts_at) + shift
+        body.starts_at = new Date(start).toISOString()
+        body.ends_at = new Date(start + length).toISOString()
+      }
+      await calendarApi.updateEvent(e.id, body)
+    } else {
+      if (scope === 'this') delete body.rrule
+      await calendarApi.updateEvent(e.id, body, { scope, occurrence: o.start })
+    }
+    emit('saved')
+    emit('close')
+  } catch (err: any) {
+    toast.error(err.message)
+  } finally {
+    saving.value = false
+    pending.value = null
+  }
+}
+// The repeat changed: "only this one" doesn't apply.
+const ruleChanged = computed(() => !!ev.value && rule.value !== ev.value.rrule)
+
 // ---- Delete ----
 const askDelete = ref(false)
-async function remove(onlyThis: boolean) {
+async function remove(onlyThis: boolean, following = false) {
   const o = props.occurrence
   if (!o) return
   askDelete.value = false
   try {
-    await calendarApi.removeEvent(o.id, onlyThis ? o.start : undefined)
+    await calendarApi.removeEvent(o.id, onlyThis || following ? o.start : undefined, following)
     emit('saved')
     emit('close')
   } catch (err: any) {
@@ -383,9 +429,22 @@ async function remove(onlyThis: boolean) {
       <p class="mt-1.5 text-[13px] leading-relaxed text-text-2">{{ t('cal.deleteRecurringBody') }}</p>
     </div>
     <div class="mt-5 grid gap-2">
-      <button class="btn-danger" @click="remove(true)">{{ t('cal.deleteThis') }}</button>
-      <button class="btn !text-danger" @click="remove(false)">{{ t('cal.deleteAll') }}</button>
+      <button class="btn-danger" data-testid="delete-this" @click="remove(true)">{{ t('cal.deleteThis') }}</button>
+      <button class="btn !text-danger" data-testid="delete-following" @click="remove(false, true)">{{ t('cal.deleteFollowing') }}</button>
+      <button class="btn !text-danger" data-testid="delete-all" @click="remove(false)">{{ t('cal.deleteAll') }}</button>
       <button class="btn" @click="askDelete = false">{{ t('common.cancel') }}</button>
+    </div>
+  </Overlay>
+  <Overlay :open="askScope" size="sm" @close="(askScope = false), (pending = null)">
+    <div class="pt-3 text-center">
+      <h2 class="title-3">{{ t('cal.scopeTitle') }}</h2>
+      <p class="mt-1.5 text-[13px] leading-relaxed text-text-2">{{ t('cal.scopeBody') }}</p>
+    </div>
+    <div class="mt-5 grid gap-2" data-testid="event-scope">
+      <button class="btn-primary justify-center" :disabled="ruleChanged" :title="ruleChanged ? t('cal.scopeThisNoRepeat') : ''" data-testid="scope-this" @click="saveScope('this')">{{ t('cal.scopeThis') }}</button>
+      <button class="btn justify-center" data-testid="scope-following" @click="saveScope('following')">{{ t('cal.scopeFollowing') }}</button>
+      <button class="btn justify-center" data-testid="scope-all" @click="saveScope('all')">{{ t('cal.scopeAll') }}</button>
+      <button class="btn justify-center" @click="(askScope = false), (pending = null)">{{ t('common.cancel') }}</button>
     </div>
   </Overlay>
 </template>

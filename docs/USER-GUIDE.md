@@ -840,9 +840,13 @@ workspace together, in each workspace's colour (the key is under the title).
   Title, location, **All-day**, **Starts** / **Ends**, **Time zone**, **Repeat**, **Alert**
   (none, at time of event, 5–30 minutes, 1 hour, 1 day before), colour (or the
   workspace's), notes. From the merged calendar you also choose the workspace.
-- **Open an event** to edit it. Editing a repeating event changes the whole
-  series. **Delete** on a repeating event asks: **Delete this event only** or
-  **Delete all events**.
+- **Open an event** to edit it. A repeating event opens at the occurrence
+  you clicked; **Save** asks: **Only this event** (it becomes an event of its
+  own, the series skips that day), **This and following events** (the series
+  ends before it and carries on, changed, from there — a repeat of "10
+  times" keeps counting) or **All events** (a new time moves the whole
+  series by as much). **Delete** on a repeating event asks the same: **this
+  event only**, **this and following**, or **all events**.
 - **Drag** an event to another day in Month to move it (not repeating ones).
   In Week and Day, drag it to another time or day (15-minute steps; it shows
   where it will land), or drag its **bottom edge** to make it longer or

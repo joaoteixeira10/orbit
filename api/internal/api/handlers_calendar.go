@@ -16,6 +16,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // maxRangeDays bounds one calendar query.
@@ -368,16 +369,22 @@ func (h *Handlers) getEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, toEventResponse(ev))
 }
 
-// updateEvent changes an event; for a series, every occurrence (editors).
+// updateEvent changes an event (editors). For a series: every occurrence;
+// with ?scope=this&occurrence=<start> only that one (it leaves the series
+// as an event of its own); with ?scope=following from that one on (the
+// series ends before it and a new one carries on, changed). The answer is
+// the event changed or made.
 //
 //	@Summary	Update an event
 //	@Tags		calendar
 //	@Accept		json
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		id		path		string			true	"Event id"
-//	@Param		body	body		eventRequest	true	"Fields to change"
-//	@Success	200		{object}	eventResponse
+//	@Param		id			path		string			true	"Event id"
+//	@Param		scope		query		string			false	"all (default) | this | following"
+//	@Param		occurrence	query		string			false	"RFC 3339 start of the occurrence (with this / following)"
+//	@Param		body		body		eventRequest	true	"Fields to change"
+//	@Success	200			{object}	eventResponse
 //	@Router		/events/{id} [put]
 func (h *Handlers) updateEvent(c *gin.Context) {
 	ev, ok := h.eventAccess(c, models.WSEditor)
@@ -390,6 +397,21 @@ func (h *Handlers) updateEvent(c *gin.Context) {
 	}
 	var req eventRequest
 	if !bindJSON(c, &req) {
+		return
+	}
+	if scope := c.Query("scope"); ev.RRule != "" && (scope == "this" || scope == "following") {
+		at, ok := h.occurrenceOf(c, ev)
+		if !ok {
+			return
+		}
+		out, code, msg := h.splitEvent(ev, at, scope, req)
+		if msg != "" {
+			c.JSON(code, gin.H{"error": msg})
+			return
+		}
+		h.publishWS(c, ev.WorkspaceID, "events")
+		h.caldavKick(ev.WorkspaceID)
+		c.JSON(http.StatusOK, toEventResponse(out))
 		return
 	}
 	if msg := applyEvent(req, &ev); msg != "" {
@@ -406,13 +428,15 @@ func (h *Handlers) updateEvent(c *gin.Context) {
 }
 
 // deleteEvent deletes an event, or with ?occurrence=<start> only that
-// occurrence of a series (editors).
+// occurrence of a series — with &scope=following, that one and all after it
+// (editors).
 //
 //	@Summary	Delete an event or one occurrence
 //	@Tags		calendar
 //	@Security	BearerAuth
 //	@Param		id			path	string	true	"Event id"
 //	@Param		occurrence	query	string	false	"RFC 3339 start of the one occurrence to remove"
+//	@Param		scope		query	string	false	"this (default with occurrence) | following"
 //	@Success	204
 //	@Router		/events/{id} [delete]
 func (h *Handlers) deleteEvent(c *gin.Context) {
@@ -420,7 +444,25 @@ func (h *Handlers) deleteEvent(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if o := c.Query("occurrence"); o != "" && ev.RRule != "" {
+	if o := c.Query("occurrence"); o != "" && ev.RRule != "" && c.Query("scope") == "following" {
+		at, ok := h.occurrenceOf(c, ev)
+		if !ok {
+			return
+		}
+		before, _, first, err := planner.SplitRule(ev, at)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "the series' repeat rule can't be read"})
+			return
+		}
+		if first && ev.CourseID == "" {
+			h.db.Delete(&ev)
+		} else if !first {
+			ev.RRule = before
+			ev.ExDates, _ = planner.SplitExDates(ev.ExDates, at)
+			ev.Until = planner.SeriesUntil(ev)
+			h.db.Model(&ev).Select("RRule", "ExDates", "Until").Updates(&ev)
+		}
+	} else if o := c.Query("occurrence"); o != "" && ev.RRule != "" {
 		t, err := time.Parse(time.RFC3339, o)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "occurrence must be an RFC 3339 time"})
@@ -437,6 +479,72 @@ func (h *Handlers) deleteEvent(c *gin.Context) {
 	h.publishWS(c, ev.WorkspaceID, "events")
 	h.caldavKick(ev.WorkspaceID)
 	c.Status(http.StatusNoContent)
+}
+
+// occurrenceOf reads ?occurrence= and checks it is one of the series'.
+func (h *Handlers) occurrenceOf(c *gin.Context, ev models.Event) (time.Time, bool) {
+	at, err := time.Parse(time.RFC3339, c.Query("occurrence"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "occurrence must be the RFC 3339 start of an occurrence"})
+		return at, false
+	}
+	at = at.UTC()
+	if !planner.IsOccurrence(ev, at) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "the series has no occurrence starting then"})
+		return at, false
+	}
+	return at, true
+}
+
+// splitEvent changes one occurrence of a series (scope "this": it becomes
+// an event of its own, the series skips it) or the occurrences from it on
+// (scope "following": the series ends before it; a new series, changed,
+// carries on). From the first occurrence, "following" is the whole series.
+// It returns the event changed or made.
+func (h *Handlers) splitEvent(ev models.Event, at time.Time, scope string, req eventRequest) (models.Event, int, string) {
+	dur := ev.EndsAt.Sub(ev.StartsAt)
+	next := ev
+	next.ID = ""
+	next.CreatedAt, next.UpdatedAt = time.Time{}, time.Time{}
+	next.StartsAt, next.EndsAt = at, at.Add(dur)
+	series := ev
+	if scope == "this" {
+		req.RRule = nil // one occurrence doesn't repeat
+		next.RRule, next.ExDates = "", ""
+		series.ExDates = planner.EncodeExDates(append(planner.DecodeExDates(ev.ExDates), at))
+	} else {
+		before, after, first, err := planner.SplitRule(ev, at)
+		if err != nil {
+			return ev, http.StatusBadRequest, "the series' repeat rule can't be read"
+		}
+		if first {
+			if msg := applyEvent(req, &series); msg != "" {
+				return ev, http.StatusBadRequest, msg
+			}
+			if err := h.db.Save(&series).Error; err != nil {
+				return ev, http.StatusInternalServerError, "could not update the event"
+			}
+			return series, 0, ""
+		}
+		series.RRule = before
+		series.ExDates, next.ExDates = planner.SplitExDates(ev.ExDates, at)
+		next.RRule = after
+	}
+	series.Until = planner.SeriesUntil(series)
+	next.Until = planner.SeriesUntil(next)
+	if msg := applyEvent(req, &next); msg != "" {
+		return ev, http.StatusBadRequest, msg
+	}
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&series).Select("RRule", "ExDates", "Until").Updates(&series).Error; err != nil {
+			return err
+		}
+		return tx.Create(&next).Error
+	})
+	if err != nil {
+		return ev, http.StatusInternalServerError, "could not change the series"
+	}
+	return next, 0, ""
 }
 
 // ---- Subscriptions --------------------------------------------------------------

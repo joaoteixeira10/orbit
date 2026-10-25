@@ -4284,6 +4284,10 @@ paths:
         in: query
         name: occurrence
         type: string
+      - description: this (default with occurrence) | following
+        in: query
+        name: scope
+        type: string
       responses:
         "204":
           description: No Content
@@ -4319,6 +4323,14 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: all (default) | this | following
+        in: query
+        name: scope
+        type: string
+      - description: RFC 3339 start of the occurrence (with this / following)
+        in: query
+        name: occurrence
         type: string
       - description: Fields to change
         in: body

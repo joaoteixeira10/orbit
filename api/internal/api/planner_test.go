@@ -506,3 +506,61 @@ func TestReadOnlyCatalog(t *testing.T) {
 		t.Errorf("catalog: %+v", cat)
 	}
 }
+
+// TestSeriesScopes: one occurrence changed alone, then the series changed
+// from one occurrence on; then deleted from one on.
+func TestSeriesScopes(t *testing.T) {
+	r, _, alice, _ := plannerSetup(t)
+	ws := createWS(t, r, alice, `{"name":"Work","kind":"work"}`)
+	base := "/api/v1/workspaces/" + ws.ID
+	var ev eventResponse
+	decode(t, authdo(r, "POST", base+"/events", `{"title":"Standup","starts_at":"2026-11-02T09:00:00Z","ends_at":"2026-11-02T09:15:00Z","tz":"UTC","rrule":"FREQ=WEEKLY;BYDAY=MO;COUNT=8"}`, alice), &ev)
+	id := "/api/v1/events/" + ev.ID
+	rng := "?from=2026-11-01T00:00:00Z&to=2027-01-31T00:00:00Z"
+	titles := func() []string {
+		var cal calendarResponse
+		decode(t, authdo(r, "GET", base+"/calendar"+rng, "", alice), &cal)
+		out := []string{}
+		for _, e := range cal.Events {
+			out = append(out, e.Start.UTC().Format("01-02 15:04")+" "+e.Title)
+		}
+		return out
+	}
+	expect(t, authdo(r, "PUT", id+"?scope=this&occurrence=2026-11-04T09:00:00Z", `{"title":"x"}`, alice), http.StatusBadRequest, "not an occurrence")
+
+	// Only the 9 Nov one: later, renamed, on its own (not repeating).
+	var one eventResponse
+	w := authdo(r, "PUT", id+"?scope=this&occurrence=2026-11-09T09:00:00Z", `{"title":"Standup (late)","starts_at":"2026-11-09T11:00:00Z","ends_at":"2026-11-09T11:15:00Z","rrule":"FREQ=DAILY"}`, alice)
+	expect(t, w, http.StatusOK, "this one")
+	decode(t, w, &one)
+	if one.ID == ev.ID || one.RRule != "" {
+		t.Fatalf("this one: %+v", one.Event)
+	}
+	got := titles()
+	if len(got) != 8 || got[1] != "11-09 11:00 Standup (late)" {
+		t.Fatalf("after this one: %v", got)
+	}
+
+	// From 23 Nov on: at 10:00, renamed; the 5 left keep counting.
+	w = authdo(r, "PUT", id+"?scope=following&occurrence=2026-11-23T09:00:00Z", `{"title":"Sync","starts_at":"2026-11-23T10:00:00Z","ends_at":"2026-11-23T10:30:00Z"}`, alice)
+	expect(t, w, http.StatusOK, "following")
+	got = titles()
+	want := []string{"11-02 09:00 Standup", "11-09 11:00 Standup (late)", "11-16 09:00 Standup", "11-23 10:00 Sync", "11-30 10:00 Sync", "12-07 10:00 Sync", "12-14 10:00 Sync", "12-21 10:00 Sync"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("after following:\n%v\nwant\n%v", got, want)
+	}
+
+	// Deleting the new series from 7 Dec on.
+	var cal calendarResponse
+	decode(t, authdo(r, "GET", base+"/calendar"+rng, "", alice), &cal)
+	sync := cal.Events[3].ID
+	expect(t, authdo(r, "DELETE", "/api/v1/events/"+sync+"?scope=following&occurrence=2026-12-07T10:00:00Z", "", alice), http.StatusNoContent, "delete following")
+	if got := titles(); len(got) != 5 || got[4] != "11-30 10:00 Sync" {
+		t.Errorf("after delete following: %v", got)
+	}
+	// From the first: the whole series goes.
+	expect(t, authdo(r, "DELETE", id+"?scope=following&occurrence=2026-11-02T09:00:00Z", "", alice), http.StatusNoContent, "delete all from first")
+	if got := titles(); len(got) != 3 {
+		t.Errorf("after deleting the first series: %v", got)
+	}
+}

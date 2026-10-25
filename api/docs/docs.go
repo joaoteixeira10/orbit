@@ -1506,6 +1506,18 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "all (default) | this | following",
+                        "name": "scope",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339 start of the occurrence (with this / following)",
+                        "name": "occurrence",
+                        "in": "query"
+                    },
+                    {
                         "description": "Fields to change",
                         "name": "body",
                         "in": "body",
@@ -1546,6 +1558,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "RFC 3339 start of the one occurrence to remove",
                         "name": "occurrence",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "this (default with occurrence) | following",
+                        "name": "scope",
                         "in": "query"
                     }
                 ],

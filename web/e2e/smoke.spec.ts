@@ -684,6 +684,40 @@ test('calendar Week view: an event drags to another day and time, its bottom edg
   await request.delete(`/api/v1/events/${ev.id}`, { headers: H })
 })
 
+test('calendar: a repeating event changed from one occurrence on, and one occurrence deleted', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Team', kind: 'work', modules: ['home', 'calendar'] } })).json()
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  // Wednesdays 10:00 from 2 December 2026, six times.
+  const at = (d: number, h = 10) => new Date(2026, 11, d, h).toISOString()
+  await request.post(`/api/v1/workspaces/${ws.id}/events`, { headers: H, data: { title: 'Weekly sync', starts_at: at(2), ends_at: at(2, 11), tz, rrule: 'FREQ=WEEKLY;BYDAY=WE;COUNT=6' } })
+  const titles = async () => {
+    const c = await (await request.get(`/api/v1/workspaces/${ws.id}/calendar?from=2026-12-01T00:00:00Z&to=2027-01-31T00:00:00Z`, { headers: H })).json()
+    return c.events.map((e: { title: string; start: string }) => `${new Date(e.start).getDate()} ${e.title}`)
+  }
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1500, height: 900 })
+  await page.goto(`/w/${ws.id}/calendar?date=2026-12-16`)
+  await page.getByRole('tab', { name: 'Week' }).click()
+  await page.locator('.tg-ev', { hasText: 'Weekly sync' }).click()
+  // The sheet shows the occurrence opened, not the series' first.
+  await expect(page.locator('input[type="datetime-local"]').first()).toHaveValue('2026-12-16T10:00')
+  await page.getByPlaceholder('Title').fill('Planning')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('scope-following').click()
+  await expect.poll(titles).toEqual(['2 Weekly sync', '9 Weekly sync', '16 Planning', '23 Planning', '30 Planning', '6 Planning'])
+
+  // One of the new ones deleted alone.
+  await page.goto(`/w/${ws.id}/calendar?date=2026-12-23`)
+  await page.getByRole('tab', { name: 'Week' }).click()
+  await page.locator('.tg-ev', { hasText: 'Planning' }).click()
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+  await page.getByTestId('delete-this').click()
+  await expect.poll(titles).toEqual(['2 Weekly sync', '9 Weekly sync', '16 Planning', '30 Planning', '6 Planning'])
+})
+
 test('a workspace exported to a file comes back as a new one with its tasks', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

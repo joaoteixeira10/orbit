@@ -286,3 +286,42 @@ END:VCALENDAR
 		t.Fatalf("the weekly event is missing: %d occurrences", weekly)
 	}
 }
+
+func TestSplitRule(t *testing.T) {
+	start := time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC) // a Monday
+	ev := models.Event{StartsAt: start, EndsAt: start.Add(time.Hour), TZ: "Europe/Lisbon", RRule: "FREQ=WEEKLY;BYDAY=MO;COUNT=10"}
+	at := start.AddDate(0, 0, 21) // the 4th
+	if !IsOccurrence(ev, at) || IsOccurrence(ev, at.Add(time.Hour)) {
+		t.Fatal("IsOccurrence")
+	}
+	before, after, first, err := SplitRule(ev, at)
+	if err != nil || first {
+		t.Fatalf("split: %v %v", err, first)
+	}
+	if before != "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261123T085959Z" || after != "FREQ=WEEKLY;BYDAY=MO;COUNT=7" {
+		t.Errorf("rules: %q %q", before, after)
+	}
+	b := ev
+	b.RRule = before
+	if n := len(Occurrences(b, start, start.AddDate(1, 0, 0))); n != 3 {
+		t.Errorf("before keeps %d", n)
+	}
+	a := ev
+	a.StartsAt, a.RRule = at, after
+	if n := len(Occurrences(a, start, start.AddDate(1, 0, 0))); n != 7 {
+		t.Errorf("after has %d", n)
+	}
+	// From the first: no split.
+	if _, _, first, _ := SplitRule(ev, start); !first {
+		t.Error("first")
+	}
+	// A rule with no end keeps none after.
+	ev.RRule = "FREQ=DAILY"
+	if _, after, _, _ := SplitRule(ev, start.AddDate(0, 0, 3)); after != "FREQ=DAILY" {
+		t.Errorf("open-ended after: %q", after)
+	}
+	bx, ax := SplitExDates(EncodeExDates([]time.Time{start.AddDate(0, 0, 7), start.AddDate(0, 0, 28)}), at)
+	if len(DecodeExDates(bx)) != 1 || len(DecodeExDates(ax)) != 1 {
+		t.Errorf("exdates: %s %s", bx, ax)
+	}
+}

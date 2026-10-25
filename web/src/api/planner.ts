@@ -575,8 +575,11 @@ export const calendarApi = {
   mine: (p: { from: string; to: string; from_date?: string; to_date?: string }) => api<CalendarData>(`/calendar?${qs(p)}`),
   createEvent: (ws: string, b: EventInput) => api<CalEvent>(`/workspaces/${ws}/events`, { method: 'POST', body: j(b) }),
   getEvent: (id: string) => api<CalEvent>(`/events/${id}`),
-  updateEvent: (id: string, b: EventInput) => api<CalEvent>(`/events/${id}`, { method: 'PUT', body: j(b) }),
-  removeEvent: (id: string, occurrence?: string) => api<void>(`/events/${id}${occurrence ? `?${qs({ occurrence })}` : ''}`, { method: 'DELETE' }),
+  // scope: for a series, only one occurrence (this) or it and those after (following).
+  updateEvent: (id: string, b: EventInput, scope?: { scope: 'this' | 'following'; occurrence: string }) =>
+    api<CalEvent>(`/events/${id}${scope ? `?${qs(scope)}` : ''}`, { method: 'PUT', body: j(b) }),
+  removeEvent: (id: string, occurrence?: string, following = false) =>
+    api<void>(`/events/${id}${occurrence ? `?${qs(following ? { occurrence, scope: 'following' } : { occurrence })}` : ''}`, { method: 'DELETE' }),
   subscriptions: (ws: string) => api<Subscription[]>(`/workspaces/${ws}/subscriptions`),
   subscribe: (ws: string, b: { name?: string; url: string; color?: string; refresh_minutes?: number }) =>
     api<Subscription>(`/workspaces/${ws}/subscriptions`, { method: 'POST', body: j(b) }),

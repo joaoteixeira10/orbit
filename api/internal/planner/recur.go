@@ -3,6 +3,7 @@ package planner
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -222,4 +223,77 @@ func ShiftDate(d string, n int) (string, bool) {
 		return "", false
 	}
 	return t.AddDate(0, 0, n).Format(DateLayout), true
+}
+
+// IsOccurrence reports whether at is the start of one of the event's
+// occurrences (a removed one is not).
+func IsOccurrence(ev models.Event, at time.Time) bool {
+	for _, t := range Occurrences(ev, at.Add(-time.Second), at.Add(time.Second)) {
+		if t.Equal(at) {
+			return true
+		}
+	}
+	return false
+}
+
+// SplitRule cuts a series at the occurrence starting at `at`: before is the
+// rule of what comes earlier (it now ends just before at), after the rule of
+// at and what follows (a COUNT keeps counting what was left). first is true
+// when at is the series' first occurrence (nothing comes before: no split).
+func SplitRule(ev models.Event, at time.Time) (before, after string, first bool, err error) {
+	loc := location(ev.TZ)
+	if ev.AllDay {
+		loc = time.UTC
+	}
+	opt, err := rrule.StrToROptionInLocation(ev.RRule, loc)
+	if err != nil {
+		return "", "", false, err
+	}
+	opt.Dtstart = ev.StartsAt.In(loc)
+	r, err := rrule.NewRRule(*opt)
+	if err != nil {
+		return "", "", false, err
+	}
+	// Occurrences of the rule (removed ones too: they count for COUNT) before at.
+	earlier := r.Between(ev.StartsAt.In(loc), at.In(loc), true)
+	n := 0
+	for _, t := range earlier {
+		if t.Before(at) {
+			n++
+		}
+	}
+	if n == 0 {
+		return ev.RRule, ev.RRule, true, nil
+	}
+	var parts []string
+	for _, p := range strings.Split(ev.RRule, ";") {
+		k := strings.ToUpper(strings.SplitN(p, "=", 2)[0])
+		if k != "COUNT" && k != "UNTIL" && strings.TrimSpace(p) != "" {
+			parts = append(parts, p)
+		}
+	}
+	base := strings.Join(parts, ";")
+	before = base + ";UNTIL=" + at.Add(-time.Second).UTC().Format("20060102T150405Z")
+	after = ev.RRule
+	if opt.Count > 0 {
+		left := opt.Count - n
+		if left <= 0 {
+			return before, "", false, nil
+		}
+		after = base + ";COUNT=" + strconv.Itoa(left)
+	}
+	return before, after, false, nil
+}
+
+// SplitExDates parts removed occurrences at at: those before, those from it on.
+func SplitExDates(s string, at time.Time) (before, after string) {
+	var b, a []time.Time
+	for _, x := range DecodeExDates(s) {
+		if x.Before(at) {
+			b = append(b, x)
+		} else {
+			a = append(a, x)
+		}
+	}
+	return EncodeExDates(b), EncodeExDates(a)
 }

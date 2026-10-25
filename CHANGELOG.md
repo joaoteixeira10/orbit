@@ -8,6 +8,10 @@ merge, not at release time.
 
 ### Added
 
+- **Repeating events: "only this" and "this and following"** — editing an
+  occurrence asks which; the series splits (a COUNT keeps counting) or the
+  one occurrence leaves it; delete "this and following" too
+  (`PUT /events/{id}?scope=this|following&occurrence=`).
 - **Folders and Files** — a workspace's sheets, diagrams and whiteboards in
   shared folders that nest; each module shows its own kind in them, and a
   new Files module shows them all (tiles or a list, a details panel, drag

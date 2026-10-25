@@ -1026,6 +1026,40 @@ definitions:
         minimum: 0
         type: number
     type: object
+  api.googleAppRequest:
+    properties:
+      client_id:
+        maxLength: 300
+        type: string
+      client_secret:
+        description: '"" keeps the one there is'
+        maxLength: 300
+        type: string
+    type: object
+  api.googleAppResponse:
+    properties:
+      client_id:
+        type: string
+      has_secret:
+        type: boolean
+      redirect_uri:
+        description: to add in Google Cloud's OAuth client
+        type: string
+    type: object
+  api.googleLinkRequest:
+    properties:
+      calendar_id:
+        maxLength: 500
+        type: string
+      calendar_name:
+        maxLength: 200
+        type: string
+      pending:
+        type: string
+    required:
+    - calendar_id
+    - pending
+    type: object
   api.googleSheetRequest:
     properties:
       url:
@@ -1383,6 +1417,12 @@ definitions:
         type: string
     required:
     - role
+    type: object
+  api.moveDrawingRequest:
+    properties:
+      workspace_id:
+        description: '"" = my own (Quick Draw)'
+        type: string
     type: object
   api.moveNoteRequest:
     properties:
@@ -2868,6 +2908,11 @@ definitions:
         type: string
       last_error:
         type: string
+      provider:
+        description: |-
+          Provider: "" a CalDAV account (user name and password); "google" a
+          Google account (signed in; PasswordSealed holds its refresh token).
+        type: string
       synced_at:
         type: string
       updated_at:
@@ -4341,6 +4386,34 @@ paths:
       summary: Save a drawing
       tags:
       - drawings
+  /drawings/{id}/move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Drawing id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Where to
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.moveDrawingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Drawing'
+      security:
+      - BearerAuth: []
+      summary: Move a drawing
+      tags:
+      - drawings
   /events/{id}:
     delete:
       parameters:
@@ -4605,6 +4678,64 @@ paths:
       summary: Change a goal
       tags:
       - goals
+  /google/app:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.googleAppResponse'
+      security:
+      - BearerAuth: []
+      summary: Google sign-in for Calendar
+      tags:
+      - calendar
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: The OAuth client
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.googleAppRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.googleAppResponse'
+      security:
+      - BearerAuth: []
+      summary: Set Google sign-in for Calendar
+      tags:
+      - calendar
+  /google/oauth/callback:
+    get:
+      responses: {}
+      summary: Google sign-in callback
+      tags:
+      - calendar
+  /google/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Is Google Calendar sync available
+      tags:
+      - calendar
   /grades/{id}:
     delete:
       parameters:
@@ -8100,6 +8231,82 @@ paths:
       summary: A Google Sheets spreadsheet, as Excel
       tags:
       - sheets
+  /workspaces/{ws}/google/calendars:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The sign-in (from the callback)
+        in: query
+        name: pending
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: A Google account's calendars
+      tags:
+      - calendar
+  /workspaces/{ws}/google/link:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The sign-in and the calendar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.googleLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.caldavLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: Sync with a Google calendar
+      tags:
+      - calendar
+  /workspaces/{ws}/google/start:
+    post:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Sign in with Google for Calendar
+      tags:
+      - calendar
   /workspaces/{ws}/grades:
     get:
       parameters:

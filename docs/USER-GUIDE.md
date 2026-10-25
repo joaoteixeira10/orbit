@@ -549,6 +549,10 @@ one straight away (or ⌘K → **New sketch**). Sketches have a canvas of their
 own, made for drawing by hand (whiteboards stay on Excalidraw, for diagrams;
 sketches made before this canvas keep opening in Excalidraw). It saves as you
 draw; Quick Draw lists them with their pictures (name, rename, delete).
+**Move to…** (a sketch's `⋯`, or the button at the top of an open one) puts
+it in a workspace that has Whiteboards, as one of its whiteboards — and a
+whiteboard moves the same way to another workspace or back into your Quick
+Draw (in a workspace's file browser: **Move to another workspace…**).
 
 - **Pens**: pen, pencil (a rougher edge), marker, highlighter (see-through,
   it doesn't hide what's under it) and brush (thin at both ends). With a

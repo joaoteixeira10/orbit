@@ -13,6 +13,9 @@ merge, not at release time.
 
 ### Added
 
+- **Move drawings** — a Quick Draw sketch moves into a workspace (as a
+  whiteboard), a whiteboard to another workspace or back to Quick Draw
+  (`POST /drawings/{id}/move`), as quick notes do.
 - **Google Calendar, both ways** — the owner registers a Google OAuth client
   (Owner → Google Calendar); workspace owners sign in with Google, pick a
   calendar, and it syncs through Google's CalDAV interface with the same

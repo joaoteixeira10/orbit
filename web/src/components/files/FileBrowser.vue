@@ -9,6 +9,8 @@ import {
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import Overlay from '@/components/ui/Overlay.vue'
+import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
+import { drawingsApi } from '@/components/draw/drawing'
 import { filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type Folder } from '@/lib/filesApi'
 import { download, duplicate, linkOf, remove, rename, routeOf } from '@/lib/fileOps'
 import { svgUrl } from '@/lib/drawio'
@@ -165,6 +167,21 @@ async function linkTo(f: FileItem) {
   menu.value = null
   await navigator.clipboard.writeText(linkOf(props.ws, f))
   toast.success(t('drive.linkCopied'))
+}
+
+// A whiteboard to another workspace, or to its mover's Quick Draw.
+const elsewhere = ref<FileItem | null>(null)
+async function sendTo(target: string) {
+  const f = elsewhere.value
+  elsewhere.value = null
+  if (!f) return
+  try {
+    await drawingsApi.move(f.id, target)
+    toast.success(t('draw.moved', { where: target === 'me' ? t('draw.quick') : (wss.byId(target)?.name ?? '') }))
+    await load()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
 }
 
 // ---- New folder ----
@@ -527,6 +544,7 @@ defineExpose({ here, reload: load })
           <button type="button" class="menu-item w-full" data-testid="file-rename" @click="startRename"><Pencil class="h-4 w-4 text-text-2" />{{ t('drive.rename') }}</button>
           <button type="button" class="menu-item w-full" data-testid="file-duplicate" @click="copyOf(menu.target.file)"><Copy class="h-4 w-4 text-text-2" />{{ t('drive.duplicate') }}</button>
           <button type="button" class="menu-item w-full" data-testid="file-move" @click="startMove(menu.target)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('drive.move') }}</button>
+          <button v-if="menu.target.file.kind === 'board'" type="button" class="menu-item w-full" data-testid="file-elsewhere" @click="(elsewhere = menu.target.file), (menu = null)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('drive.elsewhere') }}</button>
         </template>
         <button type="button" class="menu-item w-full" data-testid="file-download" @click="downloadOf(menu.target.file)"><Download class="h-4 w-4 text-text-2" />{{ t(`drive.downloadAs.${menu.target.file.kind}`) }}</button>
         <button type="button" class="menu-item w-full" @click="linkTo(menu.target.file)"><Link class="h-4 w-4 text-text-2" />{{ t('drive.copyLink') }}</button>
@@ -592,6 +610,7 @@ defineExpose({ here, reload: load })
         <button type="button" class="btn-primary" data-testid="move-here" @click="doMove">{{ t('drive.moveHere') }}</button>
       </div>
     </Overlay>
+    <NotePlacePicker :open="!!elsewhere" mode="move" drawing :current="ws" @close="elsewhere = null" @pick="sendTo" />
     <Confirm :open="!!removing" :title="removeTitle" :message="removeBody" :confirm-label="t('drive.delete')" danger @confirm="doRemove" @close="removing = null" />
   </div>
 </template>

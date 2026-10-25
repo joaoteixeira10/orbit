@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -131,4 +132,62 @@ func TestQuickDraw(t *testing.T) {
 		}
 	}
 	expect(t, authdo(r, "DELETE", "/api/v1/drawings/"+d.ID, "", alice), http.StatusNoContent, "delete")
+}
+
+// TestMoveDrawing: a Quick Draw sketch goes into a workspace with
+// whiteboards (not one without; not by someone who can't edit there), on
+// to another, and back to its mover's Quick Draw; a note's drawing stays
+// with its note.
+func TestMoveDrawing(t *testing.T) {
+	r, _, alice, bob := plannerSetup(t)
+	boards := createWS(t, r, alice, `{"name":"Studio","kind":"custom","starter":false,"modules":["home","whiteboards"]}`)
+	other := createWS(t, r, alice, `{"name":"Lab","kind":"custom","starter":false,"modules":["home","whiteboards"]}`)
+	plain := createWS(t, r, alice, `{"name":"Plain","kind":"custom","starter":false,"modules":["home","notes"]}`)
+	var d struct {
+		ID          string `json:"id"`
+		WorkspaceID string `json:"workspace_id"`
+		OwnerID     string `json:"owner_id"`
+	}
+	decode(t, authdo(r, "POST", "/api/v1/me/drawings", `{"title":"Napkin"}`, alice), &d)
+	move := func(to, who string) *httptest.ResponseRecorder {
+		return authdo(r, "POST", "/api/v1/drawings/"+d.ID+"/move", `{"workspace_id":"`+to+`"}`, who)
+	}
+	expect(t, move(plain.ID, alice), http.StatusBadRequest, "no whiteboards there")
+	expect(t, move(boards.ID, bob), http.StatusNotFound, "someone else's sketch")
+	w := move(boards.ID, alice)
+	expect(t, w, http.StatusOK, "into a workspace")
+	var moved struct {
+		WorkspaceID string `json:"workspace_id"`
+		OwnerID     string `json:"owner_id"`
+	}
+	decode(t, w, &moved)
+	if moved.WorkspaceID != boards.ID || moved.OwnerID != "" {
+		t.Fatalf("moved: %+v", moved)
+	}
+	var list []struct {
+		ID string `json:"id"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+boards.ID+"/drawings", "", alice), &list)
+	if len(list) != 1 || list[0].ID != d.ID {
+		t.Errorf("the workspace's: %+v", list)
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/drawings", "", alice), &list)
+	if len(list) != 0 {
+		t.Errorf("still in Quick Draw: %+v", list)
+	}
+	expect(t, move(other.ID, alice), http.StatusOK, "to another workspace")
+	expect(t, move("", alice), http.StatusOK, "back to Quick Draw")
+	decode(t, authdo(r, "GET", "/api/v1/me/drawings", "", alice), &list)
+	if len(list) != 1 {
+		t.Errorf("back in Quick Draw: %+v", list)
+	}
+	var note struct {
+		ID string `json:"id"`
+	}
+	decode(t, authdo(r, "POST", "/api/v1/me/notes", `{"title":"Sketch"}`, alice), &note)
+	var nd struct {
+		ID string `json:"id"`
+	}
+	decode(t, authdo(r, "POST", "/api/v1/notes/"+note.ID+"/drawing", "", alice), &nd)
+	expect(t, authdo(r, "POST", "/api/v1/drawings/"+nd.ID+"/move", `{"workspace_id":"`+boards.ID+`"}`, alice), http.StatusBadRequest, "a note's drawing")
 }

@@ -2,10 +2,11 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, MoreHorizontal, Pencil, Trash2, Brush } from 'lucide-vue-next'
+import { Plus, MoreHorizontal, Pencil, Trash2, Brush, FolderInput } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
+import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
 import { emptySketch } from '@/lib/sketch'
 import { ago } from '@/components/notes/noteModel'
@@ -100,6 +101,21 @@ async function remove() {
     toast.error(e.message)
   }
 }
+
+// A sketch into a workspace (as one of its whiteboards).
+const moving = ref<Drawing | null>(null)
+async function moveTo(target: string) {
+  const d = moving.value
+  moving.value = null
+  if (!d) return
+  try {
+    await drawingsApi.move(d.id, target)
+    list.value = list.value.filter((x) => x.id !== d.id)
+    toast.success(t('draw.moved', { where: wss.byId(target)?.name ?? '' }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 </script>
 
 <template>
@@ -142,8 +158,10 @@ async function remove() {
 
     <Popover v-if="menu" :anchor="menu.el" placement="bottom-end" :width="200" @close="menu = null">
       <button class="menu-item" @click="startRename(menu.d)"><Pencil class="h-4 w-4 text-text-2" />{{ t('draw.rename') }}</button>
+      <button class="menu-item" data-testid="drawing-move" @click="(moving = menu.d), (menu = null)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('draw.moveTo') }}</button>
       <button class="menu-item danger" @click="removing = menu.d; menu = null"><Trash2 class="h-4 w-4" />{{ t('draw.delete') }}</button>
     </Popover>
+    <NotePlacePicker :open="!!moving" mode="move" drawing current="me" @close="moving = null" @pick="moveTo" />
     <Confirm
       :open="!!removing"
       :title="t('draw.deleteTitle', { name: removing?.title || t('draw.untitled') })"

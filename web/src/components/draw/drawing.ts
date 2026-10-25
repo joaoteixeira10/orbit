@@ -36,6 +36,8 @@ export const drawingsApi = {
   // make is a new whiteboard with all it starts with (a copy, an import), in a folder.
   make: (ws: string, b: { title: string; scene?: string; preview?: string; text?: string; folder_id?: string }) =>
     api<Drawing>(`/workspaces/${ws}/drawings`, { method: 'POST', body: j(b) }),
+  // move puts a sketch or whiteboard in a workspace ("me": back to Quick Draw).
+  move: (id: string, ws: string) => api<Drawing>(`/drawings/${id}/move`, { method: 'POST', body: j({ workspace_id: ws === 'me' ? '' : ws }) }),
   // ofNote is a note's drawing (made the first time).
   ofNote: (noteId: string) => api<Drawing>(`/notes/${noteId}/drawing`, { method: 'POST' }),
 }

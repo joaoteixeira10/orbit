@@ -2,7 +2,10 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft } from 'lucide-vue-next'
+import { ChevronLeft, FolderInput } from 'lucide-vue-next'
+import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
+import { drawingsApi } from '@/components/draw/drawing'
+import { useToastStore } from '@/stores/toast'
 import DrawingEditor from '@/components/draw/DrawingEditor.vue'
 import type { Drawing } from '@/components/draw/drawing'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
@@ -41,6 +44,21 @@ async function back() {
   void router.push(personal.value ? { name: 'my-drawings' } : { name: 'ws-whiteboards', params: { ws: ws.value } })
 }
 
+// Move: a sketch into a workspace, a whiteboard to another one or to Quick
+// Draw; then it opens where it went.
+const toast = useToastStore()
+const moving = ref(false)
+async function moveTo(target: string) {
+  moving.value = false
+  try {
+    await editor.value?.flush()
+    await drawingsApi.move(id.value, target)
+    toast.success(t('draw.moved', { where: target === 'me' ? t('draw.quick') : (wss.byId(target)?.name ?? '') }))
+    void router.replace(target === 'me' ? { name: 'my-drawing', params: { id: id.value } } : { name: 'ws-whiteboard', params: { ws: target, id: id.value } })
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 const fill = ref<HTMLElement | null>(null)
 useFillHeight(fill, 420)
 </script>
@@ -59,7 +77,9 @@ useFillHeight(fill, 420)
         @keydown.enter="($event.target as HTMLInputElement).blur()"
         @blur="saveTitle"
       />
+      <button v-if="!readonly" class="btn btn-sm shrink-0" :title="t('draw.moveTo')" data-testid="whiteboard-move" @click="moving = true"><FolderInput class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('draw.moveTo') }}</span></button>
     </header>
+    <NotePlacePicker :open="moving" mode="move" drawing :current="personal ? 'me' : ws" @close="moving = false" @pick="moveTo" />
     <div ref="fill" class="board-frame">
       <DrawingEditor ref="editor" :id="id" :readonly="readonly" @loaded="loaded" />
     </div>

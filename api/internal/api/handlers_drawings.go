@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 
 	"github.com/gin-gonic/gin"
 )
@@ -347,4 +349,69 @@ func (h *Handlers) createMyDrawing(c *gin.Context) {
 	}
 	h.publishDrawing(c, d)
 	c.JSON(http.StatusCreated, d)
+}
+
+type moveDrawingRequest struct {
+	WorkspaceID string `json:"workspace_id"` // "" = my own (Quick Draw)
+}
+
+// moveDrawing puts a whiteboard or a Quick Draw sketch somewhere else: from
+// the caller's Quick Draw into a workspace they can edit (with whiteboards
+// on), between workspaces, or back to their Quick Draw. A note's drawing
+// goes with its note. It lands at the top, out of any folder.
+//
+//	@Summary	Move a drawing
+//	@Tags		drawings
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string				true	"Drawing id"
+//	@Param		body	body		moveDrawingRequest	true	"Where to"
+//	@Success	200		{object}	models.Drawing
+//	@Router		/drawings/{id}/move [post]
+func (h *Handlers) moveDrawing(c *gin.Context) {
+	d, ok := h.drawingAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	if d.NoteID != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "a note's drawing moves with its note"})
+		return
+	}
+	var req moveDrawingRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if req.WorkspaceID == d.WorkspaceID {
+		c.JSON(http.StatusOK, d)
+		return
+	}
+	uid := auth.UserID(c)
+	from := d
+	if req.WorkspaceID != "" {
+		ws, _, ok := h.wsAccess(c, req.WorkspaceID, models.WSEditor)
+		if !ok {
+			return
+		}
+		if !slices.Contains(decodeList(ws.Modules), planner.ModBoards) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "turn on Whiteboards in that workspace first"})
+			return
+		}
+		d.WorkspaceID, d.OwnerID = ws.ID, ""
+	} else {
+		if auth.Effective(c).ReadOnly {
+			c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+			return
+		}
+		d.WorkspaceID, d.OwnerID = "", uid
+	}
+	d.FolderID, d.UpdatedBy = "", uid
+	if err := h.db.Model(&models.Drawing{}).Where("id = ?", d.ID).
+		Updates(map[string]any{"workspace_id": d.WorkspaceID, "owner_id": d.OwnerID, "folder_id": "", "updated_by": uid}).Error; err != nil {
+		h.internalError(c, err, "could not move the drawing")
+		return
+	}
+	h.publishDrawing(c, from)
+	h.publishDrawing(c, d)
+	c.JSON(http.StatusOK, d)
 }

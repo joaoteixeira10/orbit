@@ -318,6 +318,7 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/workspaces/:ws/google/start", notImpersonating(), h.startGoogle)
 			authed.GET("/workspaces/:ws/google/calendars", h.googleCalendars)
 			authed.POST("/workspaces/:ws/google/link", h.linkGoogle)
+			authed.POST("/drawings/:id/move", h.moveDrawing)
 			authed.GET("/me/blocks", h.listBlocks)
 			authed.PUT("/me/blocks", h.planBlocks)
 			authed.DELETE("/me/blocks/:id", h.deleteBlock)

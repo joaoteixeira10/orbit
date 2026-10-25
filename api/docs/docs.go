@@ -1449,6 +1449,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/drawings/{id}/move": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drawings"
+                ],
+                "summary": "Move a drawing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Drawing id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Where to",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.moveDrawingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Drawing"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{id}": {
             "get": {
                 "security": [
@@ -1873,6 +1918,102 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/google/app": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Google sign-in for Calendar",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.googleAppResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Set Google sign-in for Calendar",
+                "parameters": [
+                    {
+                        "description": "The OAuth client",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.googleAppRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.googleAppResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/google/oauth/callback": {
+            "get": {
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Google sign-in callback",
+                "responses": {}
+            }
+        },
+        "/google/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Is Google Calendar sync available",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
                     }
                 }
             }
@@ -7623,6 +7764,128 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/google/calendars": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "A Google account's calendars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "The sign-in (from the callback)",
+                        "name": "pending",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/google/link": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Sync with a Google calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The sign-in and the calendar",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.googleLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/google/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Sign in with Google for Calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/grades": {
             "get": {
                 "security": [
@@ -10419,6 +10682,55 @@ const docTemplate = `{
                 }
             }
         },
+        "api.googleAppRequest": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "client_secret": {
+                    "description": "\"\" keeps the one there is",
+                    "type": "string",
+                    "maxLength": 300
+                }
+            }
+        },
+        "api.googleAppResponse": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "has_secret": {
+                    "type": "boolean"
+                },
+                "redirect_uri": {
+                    "description": "to add in Google Cloud's OAuth client",
+                    "type": "string"
+                }
+            }
+        },
+        "api.googleLinkRequest": {
+            "type": "object",
+            "required": [
+                "calendar_id",
+                "pending"
+            ],
+            "properties": {
+                "calendar_id": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "calendar_name": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "pending": {
+                    "type": "string"
+                }
+            }
+        },
         "api.googleSheetRequest": {
             "type": "object",
             "required": [
@@ -10939,6 +11251,15 @@ const docTemplate = `{
                         "editor",
                         "viewer"
                     ]
+                }
+            }
+        },
+        "api.moveDrawingRequest": {
+            "type": "object",
+            "properties": {
+                "workspace_id": {
+                    "description": "\"\" = my own (Quick Draw)",
+                    "type": "string"
                 }
             }
         },
@@ -13058,6 +13379,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "last_error": {
+                    "type": "string"
+                },
+                "provider": {
+                    "description": "Provider: \"\" a CalDAV account (user name and password); \"google\" a\nGoogle account (signed in; PasswordSealed holds its refresh token).",
                     "type": "string"
                 },
                 "synced_at": {

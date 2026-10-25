@@ -1264,6 +1264,33 @@ test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours 
   await expect(page.locator('.excalidraw canvas.interactive')).toBeVisible({ timeout: 20000 })
 })
 
+test('Quick Draw: a sketch moved into a workspace as a whiteboard, and back', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Atelier', kind: 'custom', modules: ['home', 'whiteboards'], starter: false } })).json()
+  const sketch = await (await request.post('/api/v1/me/drawings', { headers: H, data: { title: 'Logo idea' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto('/draw')
+  const card = page.getByTestId('whiteboard-card').filter({ hasText: 'Logo idea' })
+  await card.getByRole('button', { name: 'More' }).click()
+  await page.getByTestId('drawing-move').click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Atelier' }).click()
+  await expect(card).toHaveCount(0)
+
+  // In the workspace's whiteboards now.
+  await page.goto(`/w/${ws.id}/whiteboards`)
+  await page.getByTestId('whiteboard-card').filter({ hasText: 'Logo idea' }).click()
+  await expect(page).toHaveURL(new RegExp(`/w/${ws.id}/whiteboards/${sketch.id}$`))
+  // And back to Quick Draw, from the drawing itself.
+  await page.getByTestId('whiteboard-move').click()
+  await page.getByRole('dialog').getByRole('button', { name: /Quick Draw/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/draw/${sketch.id}$`))
+  const mine = await (await request.get('/api/v1/me/drawings', { headers: H })).json()
+  expect(mine.map((d: { id: string }) => d.id)).toContain(sketch.id)
+})
+
 test('smart lists: a filter saved with a name, kept on the server; quick add reads a repeat', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

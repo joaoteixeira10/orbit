@@ -111,8 +111,18 @@ func Export(db *gorm.DB, sealer *keystore.Sealer, passphrase, appVersion string,
 	return json.MarshalIndent(env, "", "  ")
 }
 
+// ErrNotSQLite: the archives here hold an SQLite database; a PostgreSQL
+// one is backed up with its own tools.
+var ErrNotSQLite = errors.New("backups made here are of an SQLite database; on PostgreSQL use its own tools (pg_dump, or your provider's snapshots)")
+
+// Supported reports whether this database can be backed up here.
+func Supported(db *gorm.DB) bool { return db.Name() == "sqlite" }
+
 // snapshot copies the live database consistently (VACUUM INTO a temp file).
 func snapshot(db *gorm.DB) ([]byte, error) {
+	if !Supported(db) {
+		return nil, ErrNotSQLite
+	}
 	dir, err := os.MkdirTemp("", "orbit-backup-")
 	if err != nil {
 		return nil, err

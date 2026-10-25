@@ -116,7 +116,7 @@ func lastGood(db *gorm.DB) time.Time {
 // next call.
 func RunDueScheduled(db *gorm.DB, sealer *keystore.Sealer, appVersion string, now time.Time) *LastRun {
 	s := LoadSchedule(db)
-	if !s.Enabled || s.Validate() != nil {
+	if !s.Enabled || s.Validate() != nil || !Supported(db) {
 		return nil
 	}
 	if last := lastGood(db); !last.IsZero() && now.Sub(last) < time.Duration(s.IntervalHours)*time.Hour {

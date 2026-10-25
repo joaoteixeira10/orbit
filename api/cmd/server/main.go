@@ -102,6 +102,10 @@ func restoreBackup(path string, force bool) int {
 		fmt.Fprintln(os.Stderr, "orbit: configuration error:", err)
 		return 1
 	}
+	if cfg.DBDriver != "sqlite" {
+		fmt.Fprintln(os.Stderr, "orbit: restore: the backups here are of SQLite; restore PostgreSQL with its own tools (pg_restore)")
+		return 1
+	}
 	pass := os.Getenv("BACKUP_PASSPHRASE")
 	if f := os.Getenv("BACKUP_PASSPHRASE_FILE"); pass == "" && f != "" {
 		b, err := os.ReadFile(filepath.Clean(f))

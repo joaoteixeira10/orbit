@@ -1,13 +1,17 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/linkpreview"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/linkpreview"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/audit"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
@@ -23,7 +27,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 // newTestRouter wires the full engine over an in-memory DB with a seeded admin,
@@ -41,15 +47,7 @@ func newTestRouterCfg(t *testing.T, metrics bool) *gin.Engine {
 func newTestRouterDB(t *testing.T, metrics bool) (*gin.Engine, *gorm.DB) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	// Each connection to ":memory:" is its own empty database: keep one, so
-	// every request sees the same data.
-	if sqlDB, err := db.DB(); err == nil {
-		sqlDB.SetMaxOpenConns(1)
-	}
+	db := openTestDB(t)
 	if err := db.AutoMigrate(models.AllModels()...); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
@@ -179,4 +177,52 @@ func TestMetricsToggle(t *testing.T) {
 	if on.Code != 200 || !strings.Contains(on.Body.String(), "go_goroutines") {
 		t.Errorf("metrics should be exposed when enabled: code=%d", on.Code)
 	}
+}
+
+// openTestDB is an empty database for one test: SQLite in memory, or — with
+// ORBIT_TEST_POSTGRES set to a connection string — a schema of its own on
+// that PostgreSQL (dropped after), so the API's tests check both engines.
+func openTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	if dsn := os.Getenv("ORBIT_TEST_POSTGRES"); dsn != "" {
+		quiet := &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)}
+		admin, err := gorm.Open(postgres.Open(dsn), quiet)
+		if err != nil {
+			t.Fatalf("open postgres: %v", err)
+		}
+		b := make([]byte, 6)
+		_, _ = rand.Read(b)
+		schema := "t_" + hex.EncodeToString(b)
+		if err := admin.Exec("CREATE SCHEMA " + schema).Error; err != nil {
+			t.Fatalf("schema: %v", err)
+		}
+		sep := "?"
+		if strings.Contains(dsn, "?") {
+			sep = "&"
+		}
+		db, err := gorm.Open(postgres.Open(dsn+sep+"search_path="+schema), quiet)
+		if err != nil {
+			t.Fatalf("open schema: %v", err)
+		}
+		t.Cleanup(func() {
+			if sqlDB, err := db.DB(); err == nil {
+				_ = sqlDB.Close()
+			}
+			admin.Exec("DROP SCHEMA " + schema + " CASCADE")
+			if sqlDB, err := admin.DB(); err == nil {
+				_ = sqlDB.Close()
+			}
+		})
+		return db
+	}
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	// Each connection to ":memory:" is its own empty database: keep one, so
+	// every request sees the same data.
+	if sqlDB, err := db.DB(); err == nil {
+		sqlDB.SetMaxOpenConns(1)
+	}
+	return db
 }

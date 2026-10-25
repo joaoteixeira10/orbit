@@ -20,6 +20,7 @@ export const sysEn = {
   },
   bk: {
     title: 'Backups',
+    postgres: 'This Orbit keeps its data in PostgreSQL: back it up with PostgreSQL’s own tools (pg_dump, or your provider’s snapshots), with ORBIT_MASTER_KEY kept safely apart. The backups below are for SQLite.',
     intro: 'One encrypted archive of the whole database: accounts, roles, settings, the audit log, and every workspace with its pages, notes, tasks, events and calendars. Secrets inside stay sealed with ORBIT_MASTER_KEY.',
     now: 'Download a backup now',
     masterHint: 'Sealed with ORBIT_MASTER_KEY: restore it with the same key.',
@@ -97,6 +98,7 @@ export const sysPt: typeof sysEn = {
   },
   bk: {
     title: 'Cópias de segurança',
+    postgres: 'Este Orbit guarda os dados no PostgreSQL: faça as cópias com as ferramentas do próprio PostgreSQL (pg_dump, ou os snapshots do seu fornecedor), com o ORBIT_MASTER_KEY guardado à parte. As cópias abaixo são para SQLite.',
     intro: 'Um arquivo cifrado com toda a base de dados: contas, perfis, definições, o registo de auditoria e todos os espaços com as suas páginas, notas, tarefas, eventos e calendários. Os segredos lá dentro continuam selados com o ORBIT_MASTER_KEY.',
     now: 'Transferir uma cópia agora',
     masterHint: 'Selada com o ORBIT_MASTER_KEY: restaure-a com a mesma chave.',

@@ -8,6 +8,11 @@ merge, not at release time.
 
 ### Added
 
+- **PostgreSQL** — `DB_DRIVER=postgres` with `DB_URL` a connection string;
+  search uses PostgreSQL full text (triggers, title weighted, prefix,
+  accent-insensitive with `unaccent`). The API's tests and the end-to-end
+  suite pass on both engines (`make test-pg`). In-app backups stay
+  SQLite's (Postgres: pg_dump; the owner's Backups card says so).
 - **Board swimlanes and column limits** — lanes by person or by priority
   (drag across lanes to reassign or reprioritise); a column's limit shows
   its count red when passed.

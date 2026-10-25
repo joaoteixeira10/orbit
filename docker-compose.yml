@@ -27,6 +27,21 @@ services:
       # - ./backups:/backups
     restart: unless-stopped
 
+  # Optional: PostgreSQL instead of the SQLite file. Set in .env:
+  #   DB_DRIVER=postgres
+  #   DB_URL=postgres://orbit:<password>@db:5432/orbit?sslmode=disable
+  # and remove DB_DRIVER / DB_URL from the api service's environment above.
+  # Back it up with pg_dump (Orbit's own backups are of SQLite).
+  # db:
+  #   image: postgres:17-alpine
+  #   environment:
+  #     POSTGRES_USER: orbit
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+  #     POSTGRES_DB: orbit
+  #   volumes:
+  #     - orbit-pg:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
   # Optional: your own draw.io editor for Diagrams, so nothing loads from
   # draw.io's site. Put it behind your proxy on HTTPS, then set
   # DRAWIO_URL=https://drawio.example.org in .env (or Owner → Owner →

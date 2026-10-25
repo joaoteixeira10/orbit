@@ -93,8 +93,18 @@ Used once, when the database has no users. Later changes have no effect.
 
 | Variable | Req | Default | Notes |
 |---|---|---|---|
-| `DB_DRIVER` | – | `sqlite` | Only `sqlite` is supported. Any other value stops start-up. See [BLUEPRINT-FIT.md](BLUEPRINT-FIT.md). |
-| `DB_URL` | – | `orbit.db` | Path of the SQLite file. Goes through the secrets backend. The compose files set `/data/orbit.db` (the volume). |
+| `DB_DRIVER` | – | `sqlite` | `sqlite` (one file, the default) or `postgres`. Any other value stops start-up. |
+| `DB_URL` | – | `orbit.db` | SQLite: the file's path (the compose files set `/data/orbit.db`, the volume). PostgreSQL: a connection string, `postgres://orbit:secret@db:5432/orbit?sslmode=require` (`sslmode=disable` only on a private network). Goes through the secrets backend. |
+
+**PostgreSQL** suits an instance whose database lives on its own server (or
+a managed one). Everything works the same — search uses PostgreSQL's full
+text (accent-insensitive when the `unaccent` extension can be created; Orbit
+tries) — except the in-app **backups**, which are of SQLite: back PostgreSQL
+up with its own tools (`pg_dump`, or your provider's snapshots), and keep
+`ORBIT_MASTER_KEY` safely apart (the secrets in the database are sealed with
+it). Orbit creates its tables on start; give its user a database of its own.
+There is no tool to move an SQLite Orbit into PostgreSQL yet — start empty,
+or move workspaces across with workspace export / import.
 
 The database holds everything: users, roles, workspaces and their content,
 the audit log and the runtime settings below. Back up the file and

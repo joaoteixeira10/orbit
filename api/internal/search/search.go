@@ -4,8 +4,12 @@
 // triggers keep it in step with every write — the app's, the git and
 // calendar syncs', an import's — so nothing has to remember to index.
 //
-// The index is SQLite's. Where it can't be made (another engine, an SQLite
-// without FTS5) Ready reports false and callers fall back to a plain search.
+// On PostgreSQL the same index is a table with a tsvector (title weighted
+// over body), kept by triggers, prefix-matched and — where the unaccent
+// extension can be had — accent-insensitive too (postgres.go).
+//
+// Where it can't be made (an SQLite without FTS5, a Postgres that refuses
+// the triggers) Ready reports false and callers fall back to a plain search.
 package search
 
 import (
@@ -56,6 +60,9 @@ func Setup(db *gorm.DB) bool {
 }
 
 func setup(db *gorm.DB) bool {
+	if db.Name() == "postgres" {
+		return setupPostgres(db)
+	}
 	if db.Name() != "sqlite" {
 		return false
 	}
@@ -99,7 +106,11 @@ func setup(db *gorm.DB) bool {
 // Rebuild fills the index again from the tables.
 func Rebuild(db *gorm.DB) error {
 	return db.Transaction(func(tx *gorm.DB) error {
-		for _, q := range []string{`DELETE FROM search_index`, `DELETE FROM search_rows`} {
+		clear := []string{`DELETE FROM search_index`, `DELETE FROM search_rows`}
+		if tx.Name() == "postgres" {
+			clear = clear[:1]
+		}
+		for _, q := range clear {
 			if err := tx.Exec(q).Error; err != nil {
 				return err
 			}
@@ -151,6 +162,9 @@ func Find(db *gorm.DB, q string, wsIDs []string, uid string, limit int) ([]Hit, 
 	}
 	if len(wsIDs) == 0 {
 		wsIDs = []string{""}
+	}
+	if db.Name() == "postgres" {
+		return findPostgres(db, q, wsIDs, uid, limit)
 	}
 	err := db.Raw(`SELECT kind, id, ref, workspace_id FROM search_index
 		WHERE search_index MATCH ? AND (workspace_id IN ? OR (workspace_id = '' AND owner_id = ?))

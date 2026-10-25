@@ -66,7 +66,7 @@ Modules).
 
 | Path | What |
 |---|---|
-| [api/](api/) | The backend (Go, Gin, GORM + SQLite); API reference at `/api/docs`, see [docs/API.md](docs/API.md) |
+| [api/](api/) | The backend (Go, Gin, GORM + SQLite or PostgreSQL); API reference at `/api/docs`, see [docs/API.md](docs/API.md) |
 | [web/](web/) | The app (Vue 3, Vite, Tailwind, TipTap) |
 | [docs/](docs/) | Guides and blueprints (see [Documentation](#documentation)) |
 | [deploy/](deploy/) | Monitoring: Prometheus + Grafana, a dashboard and alert rules |

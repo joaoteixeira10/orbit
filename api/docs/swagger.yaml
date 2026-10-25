@@ -145,6 +145,11 @@ definitions:
         type: string
       s3_region:
         type: string
+      supported:
+        description: |-
+          Supported: backups can be made here (SQLite); on PostgreSQL they're
+          made with its own tools.
+        type: boolean
     type: object
   api.blockResponse:
     properties:

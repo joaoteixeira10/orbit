@@ -1,9 +1,11 @@
 // Package db opens the database for the configured driver and runs migrations.
 //
-// SQLite (pure Go, no CGO) is the only engine for now: an engine counts as
-// supported only once it is smoke-tested (docs/BLUEPRINT-FIT.md). The models
-// stay portable (GORM AutoMigrate, no dialect-specific SQL), so adding
-// Postgres later is a driver + smoke test, not a rewrite.
+// SQLite (pure Go, no CGO; one file) is the default; PostgreSQL is the other
+// engine, for an instance whose database lives on its own server. The models
+// stay portable (GORM AutoMigrate, no dialect-specific SQL); what only SQLite
+// has — the FTS5 search index, VACUUM INTO backups — is used only there
+// (search falls back to plain matching; Postgres is backed up with its own
+// tools).
 package db
 
 import (
@@ -17,6 +19,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
 
 	"github.com/glebarez/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -57,6 +60,9 @@ func dialector(cfg *config.Config) (gorm.Dialector, error) {
 		// _pragma busy_timeout + foreign_keys for sane sqlite behavior.
 		dsn := cfg.DBURL + "?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
 		return sqlite.Open(dsn), nil
+	case "postgres":
+		// DB_URL is a connection string: postgres://user:pass@host:5432/orbit?sslmode=require
+		return postgres.Open(cfg.DBURL), nil
 	default:
 		return nil, fmt.Errorf("unsupported driver %q", cfg.DBDriver)
 	}

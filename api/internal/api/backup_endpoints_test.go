@@ -9,8 +9,23 @@ import (
 // TestBackupEndpoints: owner only; the export is an Orbit archive; the
 // schedule is validated; "run now" writes to the directory.
 func TestBackupEndpoints(t *testing.T) {
-	r, _ := newTestRouterDB(t, false)
+	r, db := newTestRouterDB(t, false)
 	owner := loginTok(t, r, "admin", "adminpass")
+	if db.Name() == "postgres" {
+		// Postgres is backed up with its own tools: said so, plainly.
+		w := authdo(r, "POST", "/api/v1/backup/export", "", owner)
+		if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "pg_dump") {
+			t.Fatalf("export on postgres: %d %s", w.Code, w.Body.String())
+		}
+		var v struct {
+			Supported bool `json:"supported"`
+		}
+		decode(t, authdo(r, "GET", "/api/v1/backup/schedule", "", owner), &v)
+		if v.Supported {
+			t.Error("supported on postgres")
+		}
+		return
+	}
 	createUserVia(t, r, owner, `{"username":"bob","password":"bobpassword1","role_ids":[]}`)
 	bob := loginTok(t, r, "bob", "bobpassword1")
 	if w := authdo(r, "POST", "/api/v1/backup/export", "", bob); w.Code != http.StatusForbidden {

@@ -30,6 +30,10 @@ type backupExportRequest struct {
 func (h *Handlers) exportBackup(c *gin.Context) {
 	var req backupExportRequest
 	_ = c.ShouldBindJSON(&req) // the body is optional
+	if !backup.Supported(h.db) {
+		c.JSON(http.StatusConflict, gin.H{"error": backup.ErrNotSQLite.Error()})
+		return
+	}
 	archive, err := backup.Export(h.db, h.sealer, req.Passphrase, version.Current().Version, time.Now())
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -48,6 +52,9 @@ func (h *Handlers) exportBackup(c *gin.Context) {
 type backupScheduleView struct {
 	backup.Schedule
 	Last backup.LastRun `json:"last"`
+	// Supported: backups can be made here (SQLite); on PostgreSQL they're
+	// made with its own tools.
+	Supported bool `json:"supported"`
 }
 
 // getBackupSchedule returns the automatic backup and how its last run went (owner).
@@ -59,7 +66,7 @@ type backupScheduleView struct {
 //	@Success	200	{object}	backupScheduleView
 //	@Router		/backup/schedule [get]
 func (h *Handlers) getBackupSchedule(c *gin.Context) {
-	c.JSON(http.StatusOK, backupScheduleView{backup.LoadSchedule(h.db), backup.LoadLastRun(h.db)})
+	c.JSON(http.StatusOK, backupScheduleView{backup.LoadSchedule(h.db), backup.LoadLastRun(h.db), backup.Supported(h.db)})
 }
 
 // updateBackupSchedule sets the automatic backup (owner).

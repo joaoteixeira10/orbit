@@ -23,14 +23,17 @@ interface Schedule {
   s3_endpoint: string
   s3_region: string
   last?: { at: string; ok: boolean; where?: string; error?: string }
+  supported?: boolean // false on PostgreSQL (backed up with its own tools)
 }
 const sched = reactive<Schedule>({ enabled: false, interval_hours: 24, dest: 'dir', dir: '/backups', keep: 14, s3_bucket: '', s3_prefix: 'orbit', s3_endpoint: '', s3_region: '' })
 const last = ref<Schedule['last'] | null>(null)
+const supported = ref(true)
 async function load() {
   try {
     const s = await api<Schedule>('/backup/schedule')
     Object.assign(sched, { ...s, dest: s.dest || 'dir', interval_hours: s.interval_hours || 24, dir: s.dir || '/backups' })
     last.value = s.last && s.last.at && !s.last.at.startsWith('0001') ? s.last : null
+    supported.value = s.supported !== false
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -39,7 +42,7 @@ onMounted(load)
 
 async function save() {
   try {
-    const { last: _l, ...body } = sched
+    const { last: _l, supported: _s, ...body } = sched
     await api('/backup/schedule', { method: 'PUT', body: JSON.stringify(body) })
     toast.success(t('bk.saved'))
     await load()
@@ -89,6 +92,7 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
     <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Archive class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('bk.title') }}</h3></div>
     <div class="flex flex-col gap-5 p-5">
       <p class="text-[12px] text-text-3">{{ t('bk.intro') }}</p>
+      <p v-if="!supported" class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-postgres">{{ t('bk.postgres') }}</p>
 
       <!-- Download now -->
       <div class="flex flex-col gap-3">

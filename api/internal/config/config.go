@@ -26,7 +26,7 @@ type Config struct {
 	GinMode  string // "debug" | "release" | "test"
 
 	// Database
-	DBDriver string // "sqlite" (the only supported engine for now)
+	DBDriver string // "sqlite" (default) | "postgres"
 	DBURL    string // file path
 
 	// Auth / crypto
@@ -193,10 +193,10 @@ func Load() (*Config, error) {
 	// Auth cookies default to Secure in release or when the app serves TLS.
 	c.CookieSecure = envBool("COOKIE_SECURE", c.GinMode == "release" || c.TLSCertFile != "")
 
-	// SQLite only for now: an engine counts as supported only once it's
-	// smoke-tested (see docs/BLUEPRINT-FIT.md). The GORM drivers stay in place.
-	if c.DBDriver != "sqlite" {
-		return nil, fmt.Errorf("unsupported DB_DRIVER %q (only sqlite is supported for now)", c.DBDriver)
+	// SQLite (one file) or PostgreSQL (DB_URL a connection string); both are
+	// tested (the API's tests also run on Postgres, ORBIT_TEST_POSTGRES).
+	if c.DBDriver != "sqlite" && c.DBDriver != "postgres" {
+		return nil, fmt.Errorf("unsupported DB_DRIVER %q (sqlite or postgres)", c.DBDriver)
 	}
 
 	// In release mode secrets must be supplied explicitly. In dev we fall back

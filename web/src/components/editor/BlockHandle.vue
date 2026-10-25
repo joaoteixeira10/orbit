@@ -118,6 +118,8 @@ function addBelow() {
   if (n.type.name === 'paragraph' && !n.content.size) chain.focus(at.value.pos + 1)
   else chain.insertContentAt(end, { type: 'paragraph' }).focus(end + 1)
   chain.insertContent('/').run()
+  // Now, not a frame later (TipTap's focus waits one): what's typed next goes in.
+  props.editor.view.focus()
   at.value = null
 }
 

@@ -9158,6 +9158,10 @@ const docTemplate = `{
                 },
                 "s3_region": {
                     "type": "string"
+                },
+                "supported": {
+                    "description": "Supported: backups can be made here (SQLite); on PostgreSQL they're\nmade with its own tools.",
+                    "type": "boolean"
                 }
             }
         },

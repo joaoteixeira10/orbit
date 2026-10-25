@@ -365,6 +365,7 @@ func AllModels() []any {
 		&SmartList{},
 		&Sheet{},
 		&Diagram{},
+		&Folder{},
 		&JournalEntry{},
 		&Bookmark{},
 		&BookmarkImage{},

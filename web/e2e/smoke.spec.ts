@@ -1817,3 +1817,88 @@ test('diagrams: draw.io in a frame saves the file, a picture and its words; a fi
   await expect(page.getByTestId('diagram-embed')).toContainText('Checkout')
   await expect(page.getByTestId('diagram-embed').locator('img')).toBeVisible()
 })
+
+test('files: sheets, diagrams and whiteboards in folders inside folders — moved, dragged, renamed, copied, a folder deleted keeps what it held', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio', kind: 'personal', modules: ['home', 'files', 'sheets', 'diagrams', 'whiteboards'] } })).json()
+  const base = `/api/v1/workspaces/${ws.id}`
+  await request.post(`${base}/sheets`, { headers: H, data: { title: 'Budget', data: { tabs: [] } } })
+  await request.post(`${base}/diagrams`, { headers: H, data: { title: 'Flow', data: '<mxfile><diagram name="A"><mxGraphModel><root/></mxGraphModel></diagram></mxfile>', preview: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#ff9500"/></svg>' } })
+  await request.post(`${base}/drawings`, { headers: H, data: { title: 'Board' } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto(`/w/${ws.id}/files`)
+  await expect(page.getByTestId('sheet-row')).toHaveCount(1)
+  await expect(page.getByTestId('diagram-card')).toHaveCount(1)
+  await expect(page.getByTestId('whiteboard-card')).toHaveCount(1)
+
+  // A folder, and one inside it.
+  const newFolder = async (name: string) => {
+    await page.getByTestId('new-folder').click()
+    await page.getByTestId('folder-name').fill(name)
+    await page.getByTestId('folder-name').press('Enter')
+    await expect(page.getByTestId('folder-tile').filter({ hasText: name })).toBeVisible()
+  }
+  await newFolder('Design')
+  await page.getByTestId('folder-tile').filter({ hasText: 'Design' }).click()
+  await expect(page).toHaveURL(/folder=/)
+  await expect(page.getByTestId('files-empty')).toBeVisible()
+  await newFolder('Logos')
+  await expect(page.getByTestId('crumb')).toHaveText(['Files', 'Design'])
+  await page.getByTestId('crumb').first().click()
+
+  // The diagram moved with "Move to…", the sheet dragged onto the folder.
+  await page.getByTestId('diagram-card').getByTestId('file-more').click()
+  await page.getByTestId('file-move').click()
+  await page.getByTestId('move-target').filter({ hasText: 'Design' }).click()
+  await page.getByTestId('move-here').click()
+  await expect(page.getByTestId('diagram-card')).toHaveCount(0)
+  await page.getByTestId('sheet-row').dragTo(page.getByTestId('folder-tile').filter({ hasText: 'Design' }))
+  await expect(page.getByTestId('sheet-row')).toHaveCount(0)
+  await expect(page.getByTestId('folder-tile').filter({ hasText: 'Design' })).toContainText('3 items')
+  const folders = (await (await request.get(`${base}/folders`, { headers: H })).json()) as { id: string; name: string; parent_id: string }[]
+  const design = folders.find((f) => f.name === 'Design')!
+  expect(folders.find((f) => f.name === 'Logos')!.parent_id).toBe(design.id)
+  const sheets = await (await request.get(`${base}/sheets`, { headers: H })).json()
+  expect(sheets[0].folder_id).toBe(design.id)
+
+  // A list, and the details of one.
+  await page.getByTestId('view-list').click()
+  await expect(page.locator('table.fb-list')).toBeVisible()
+  await page.getByTestId('whiteboard-card').getByTestId('file-more').click()
+  await page.getByTestId('file-info').click()
+  await expect(page.getByTestId('files-details')).toContainText('Whiteboard')
+  await expect(page.getByTestId('files-details')).toContainText('Files')
+  await page.getByTestId('view-grid').click()
+
+  // Renamed; then deleted — what it held moves up.
+  await page.getByTestId('folder-tile').filter({ hasText: 'Design' }).getByTestId('folder-more').click()
+  await page.getByTestId('folder-rename').click()
+  await page.getByTestId('rename-input').fill('Design 2026')
+  await page.getByTestId('rename-input').press('Enter')
+  await expect(page.getByTestId('folder-tile').filter({ hasText: 'Design 2026' })).toBeVisible()
+  await page.getByTestId('folder-tile').filter({ hasText: 'Design 2026' }).getByTestId('folder-more').click()
+  await page.getByTestId('folder-delete').click()
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect(page.getByTestId('folder-tile')).toHaveText([/Logos/])
+  await expect(page.getByTestId('sheet-row')).toHaveCount(1)
+  await expect(page.getByTestId('diagram-card')).toHaveCount(1)
+
+  // A copy; a draw.io file brought in, into the folder shown.
+  await page.getByTestId('sheet-row').getByTestId('file-more').click()
+  await page.getByTestId('file-duplicate').click()
+  await expect(page.getByTestId('sheet-row')).toHaveCount(2)
+  await expect(page.getByTestId('sheet-row').filter({ hasText: 'Budget (copy)' })).toBeVisible()
+  await page.getByTestId('folder-tile').filter({ hasText: 'Logos' }).click()
+  await page.getByTestId('files-upload-input').setInputFiles({ name: 'Network.drawio', mimeType: 'application/xml', buffer: Buffer.from('<mxfile><diagram name="LAN"><mxGraphModel><root><mxCell id="2" value="Router" vertex="1"/></root></mxGraphModel></diagram></mxfile>') })
+  await expect(page.getByTestId('diagram-card').filter({ hasText: 'Network' })).toBeVisible()
+  await page.screenshot({ path: 'test-results/files.png' })
+
+  // The module shows its own kind, in the same folders.
+  await page.goto(`/w/${ws.id}/diagrams`)
+  await expect(page.getByTestId('folder-tile')).toHaveText([/Logos/])
+  await expect(page.getByTestId('diagram-card')).toHaveCount(1)
+  await expect(page.getByTestId('sheet-row')).toHaveCount(0)
+})

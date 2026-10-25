@@ -8,6 +8,11 @@ merge, not at release time.
 
 ### Added
 
+- **Folders and Files** — a workspace's sheets, diagrams and whiteboards in
+  shared folders that nest; each module shows its own kind in them, and a
+  new Files module shows them all (tiles or a list, a details panel, drag
+  to move, copy, rename, download, import several at once). Deleting a
+  folder moves what it held up; moving doesn't make a new version.
 - **Quick Draw's own canvas** — new sketches get a drawing canvas made for
   the hand (old ones stay on Excalidraw): pen, pencil, marker, highlighter
   and brush with stylus pressure (perfect-freehand); a full colour picker

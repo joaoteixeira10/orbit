@@ -326,6 +326,7 @@ type Drawing struct {
 	WorkspaceID string  `gorm:"size:36;not null;default:'';index" json:"workspace_id"`
 	OwnerID     string  `gorm:"size:36;not null;default:'';index" json:"owner_id,omitempty"`
 	NoteID      string  `gorm:"size:36;not null;default:'';index" json:"note_id,omitempty"`
+	FolderID    string  `gorm:"size:36;not null;default:'';index" json:"folder_id"` // its folder ("" at the top)
 	Title       string  `gorm:"size:300" json:"title"`
 	Scene       string  `gorm:"type:text" json:"scene,omitempty"`
 	Preview     string  `gorm:"type:text" json:"preview,omitempty"`
@@ -345,6 +346,7 @@ type Drawing struct {
 type Sheet struct {
 	Base
 	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	FolderID    string  `gorm:"size:36;not null;default:'';index" json:"folder_id"` // its folder ("" at the top)
 	Title       string  `gorm:"size:300" json:"title"`
 	Data        string  `gorm:"type:text" json:"data,omitempty"`
 	Text        string  `gorm:"type:text" json:"-"`
@@ -352,6 +354,19 @@ type Sheet struct {
 	Rank        float64 `gorm:"not null;default:0" json:"rank"`
 	CreatedBy   string  `gorm:"size:36" json:"created_by"`
 	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+}
+
+// ---- Folders ----------------------------------------------------------------
+
+// Folder holds a workspace's sheets, diagrams and whiteboards (each says
+// which, FolderID); folders go inside folders (ParentID, "" at the top).
+type Folder struct {
+	Base
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	ParentID    string `gorm:"size:36;not null;default:'';index" json:"parent_id"`
+	Name        string `gorm:"size:200;not null" json:"name"`
+	Color       string `gorm:"size:9" json:"color,omitempty"`
+	CreatedBy   string `gorm:"size:36" json:"created_by"`
 }
 
 // ---- Diagrams ---------------------------------------------------------------
@@ -363,6 +378,7 @@ type Sheet struct {
 type Diagram struct {
 	Base
 	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	FolderID    string  `gorm:"size:36;not null;default:'';index" json:"folder_id"` // its folder ("" at the top)
 	Title       string  `gorm:"size:300" json:"title"`
 	Data        string  `gorm:"type:text" json:"data,omitempty"`
 	Preview     string  `gorm:"type:text" json:"preview,omitempty"`

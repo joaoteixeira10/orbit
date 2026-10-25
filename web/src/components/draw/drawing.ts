@@ -33,6 +33,9 @@ export const drawingsApi = {
   get: (id: string) => api<Drawing>(`/drawings/${id}`),
   save: (id: string, b: Partial<Snapshot> & { title?: string; version: number }) => api<Drawing>(`/drawings/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/drawings/${id}`, { method: 'DELETE' }),
+  // make is a new whiteboard with all it starts with (a copy, an import), in a folder.
+  make: (ws: string, b: { title: string; scene?: string; preview?: string; text?: string; folder_id?: string }) =>
+    api<Drawing>(`/workspaces/${ws}/drawings`, { method: 'POST', body: j(b) }),
   // ofNote is a note's drawing (made the first time).
   ofNote: (noteId: string) => api<Drawing>(`/notes/${noteId}/drawing`, { method: 'POST' }),
 }

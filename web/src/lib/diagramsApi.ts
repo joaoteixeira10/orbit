@@ -3,6 +3,7 @@ import { api } from './api'
 
 export interface DiagramSummary {
   id: string
+  folder_id?: string
   title: string
   preview?: string // an SVG picture of it
   version: number
@@ -16,6 +17,7 @@ export interface DiagramDoc extends DiagramSummary {
   created_at: string
 }
 export interface DiagramSave {
+  folder_id?: string // where a new one goes
   title?: string
   data?: string
   preview?: string

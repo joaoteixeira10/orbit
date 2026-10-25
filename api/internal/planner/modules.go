@@ -23,6 +23,7 @@ const (
 	ModBookmarks = "bookmarks"   // links with a preview, tags, read later
 	ModSheets    = "sheets"      // spreadsheets (cells, Excel's formulas)
 	ModDiagrams  = "diagrams"    // draw.io diagrams
+	ModFiles     = "files"       // sheets, diagrams and whiteboards together, in folders
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -48,6 +49,7 @@ var Catalog = []Module{
 	{Key: ModBoards, Icon: "brush"},
 	{Key: ModSheets, Icon: "sheet"},
 	{Key: ModDiagrams, Icon: "workflow"},
+	{Key: ModFiles, Icon: "folder"},
 	{Key: ModHabits, Icon: "repeat"},
 	{Key: ModJournal, Icon: "notebook-pen"},
 	{Key: ModGoals, Icon: "target"},

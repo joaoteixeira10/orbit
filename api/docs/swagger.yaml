@@ -571,6 +571,9 @@ definitions:
       data:
         description: draw.io's XML
         type: string
+      folder_id:
+        description: where a new one goes ("" the top)
+        type: string
       preview:
         description: an SVG picture of it
         type: string
@@ -585,10 +588,19 @@ definitions:
     type: object
   api.diagramSummary:
     properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      folder_id:
+        type: string
       id:
         type: string
       preview:
         type: string
+      size:
+        description: its file's bytes
+        type: integer
       title:
         type: string
       updated_at:
@@ -600,6 +612,9 @@ definitions:
     type: object
   api.drawingRequest:
     properties:
+      folder_id:
+        description: where a new whiteboard goes ("" the top)
+        type: string
       preview:
         type: string
       scene:
@@ -615,10 +630,19 @@ definitions:
     type: object
   api.drawingSummary:
     properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      folder_id:
+        type: string
       id:
         type: string
       preview:
         type: string
+      size:
+        description: its scene's bytes
+        type: integer
       title:
         type: string
       updated_at:
@@ -779,6 +803,16 @@ definitions:
         items:
           $ref: '#/definitions/api.focusSessionView'
         type: array
+    type: object
+  api.folderRequest:
+    properties:
+      color:
+        type: string
+      name:
+        maxLength: 200
+        type: string
+      parent_id:
+        type: string
     type: object
   api.gitAccountResponse:
     properties:
@@ -1340,6 +1374,32 @@ definitions:
         description: null = top level
         type: string
     type: object
+  api.moveRequest:
+    properties:
+      diagrams:
+        items:
+          type: string
+        maxItems: 500
+        type: array
+      drawings:
+        items:
+          type: string
+        maxItems: 500
+        type: array
+      folder_id:
+        description: where to ("" the top)
+        type: string
+      folders:
+        items:
+          type: string
+        maxItems: 500
+        type: array
+      sheets:
+        items:
+          type: string
+        maxItems: 500
+        type: array
+    type: object
   api.moveTaskRequest:
     properties:
       after_id:
@@ -1846,6 +1906,9 @@ definitions:
         type: string
       data:
         type: object
+      folder_id:
+        description: its folder ("" at the top)
+        type: string
       id:
         type: string
       rank:
@@ -1865,6 +1928,9 @@ definitions:
     properties:
       data:
         type: object
+      folder_id:
+        description: where a new one goes ("" the top)
+        type: string
       text:
         type: string
       title:
@@ -1876,8 +1942,17 @@ definitions:
     type: object
   api.sheetSummary:
     properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      folder_id:
+        type: string
       id:
         type: string
+      size:
+        description: its data's bytes
+        type: integer
       title:
         type: string
       updated_at:
@@ -2801,6 +2876,9 @@ definitions:
         type: string
       data:
         type: string
+      folder_id:
+        description: its folder ("" at the top)
+        type: string
       id:
         type: string
       preview:
@@ -2824,6 +2902,9 @@ definitions:
         type: string
       created_by:
         type: string
+      folder_id:
+        description: its folder ("" at the top)
+        type: string
       id:
         type: string
       note_id:
@@ -2844,6 +2925,25 @@ definitions:
         type: string
       version:
         type: integer
+      workspace_id:
+        type: string
+    type: object
+  models.Folder:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      updated_at:
+        type: string
       workspace_id:
         type: string
     type: object
@@ -4280,6 +4380,49 @@ paths:
       summary: Update feature flags
       tags:
       - owner
+  /folders/{id}:
+    delete:
+      parameters:
+      - description: Folder id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a folder
+      tags:
+      - folders
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Folder id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.folderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Folder'
+      security:
+      - BearerAuth: []
+      summary: Change a folder
+      tags:
+      - folders
   /git/hook/{link}:
     post:
       consumes:
@@ -7653,6 +7796,79 @@ paths:
       summary: Create an event
       tags:
       - calendar
+  /workspaces/{ws}/files/move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: What, where
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.moveRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Move into a folder
+      tags:
+      - folders
+  /workspaces/{ws}/folders:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Folder'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's folders
+      tags:
+      - folders
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Name, where
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.folderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Folder'
+      security:
+      - BearerAuth: []
+      summary: New folder
+      tags:
+      - folders
   /workspaces/{ws}/goals:
     get:
       parameters:

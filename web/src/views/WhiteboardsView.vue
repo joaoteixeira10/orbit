@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Plus, MoreHorizontal, Pencil, Trash2, Brush } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
+import FileBrowser from '@/components/files/FileBrowser.vue'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
 import { emptySketch } from '@/lib/sketch'
 import { ago } from '@/components/notes/noteModel'
@@ -14,9 +15,9 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
-// A workspace's whiteboards — or, with no workspace in the address, Quick
-// Draw: one's own sketches. A card each with its picture, newest change
-// first. A click opens it, full size.
+// A workspace's whiteboards, in its folders (the file browser) — or, with no
+// workspace in the address, Quick Draw: one's own sketches, a card each with
+// its picture, newest change first. A click opens it, full size.
 const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
@@ -34,6 +35,7 @@ const editable = computed(() =>
 const list = ref<Drawing[]>([])
 const loaded = ref(false)
 async function load() {
+  if (!personal.value) return // the file browser lists them
   try {
     list.value = await drawingsApi.list(ws.value)
   } catch (e: any) {
@@ -51,12 +53,16 @@ const off = onLiveEvent('ws', (e) => {
 })
 onUnmounted(off)
 
+const browser = ref<InstanceType<typeof FileBrowser> | null>(null)
 const open = (d: Drawing) =>
   personal.value ? router.push({ name: 'my-drawing', params: { id: d.id } }) : router.push({ name: 'ws-whiteboard', params: { ws: ws.value, id: d.id } })
 async function create() {
   try {
-    // Quick Draw's sketches have its own canvas; whiteboards are Excalidraw's.
-    const d = await drawingsApi.create(ws.value, '', personal.value ? JSON.stringify(emptySketch(t('sketch.layerN', { n: 1 }))) : undefined)
+    // Quick Draw's sketches have its own canvas; whiteboards are Excalidraw's
+    // (made in the folder shown).
+    const d = personal.value
+      ? await drawingsApi.create(ws.value, '', JSON.stringify(emptySketch(t('sketch.layerN', { n: 1 }))))
+      : await drawingsApi.make(ws.value, { title: '', folder_id: browser.value?.here ?? '' })
     await open(d)
   } catch (e: any) {
     toast.error(e.message)
@@ -101,19 +107,23 @@ async function remove() {
     <header class="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
       <div class="min-w-0 flex-1">
         <h1 class="large-title">{{ personal ? t('draw.quick') : t('modules.whiteboards') }}</h1>
-        <p class="subhead mt-0.5">{{ personal ? t('draw.quickSub') : `${workspace?.name} · ${list.length}` }}</p>
+        <p class="subhead mt-0.5">{{ personal ? t('draw.quickSub') : workspace?.name }}</p>
       </div>
       <button v-if="editable" class="btn-primary" data-testid="new-whiteboard" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</button>
     </header>
 
-    <div v-if="loaded && !list.length" class="flex flex-col items-center py-16 text-center">
+    <FileBrowser v-if="!personal" ref="browser" :ws="ws" :kinds="['board']" :editable="editable" :root-name="t('modules.whiteboards')">
+      <template #empty>{{ t('draw.noneHint') }}</template>
+    </FileBrowser>
+
+    <div v-else-if="loaded && !list.length" class="flex flex-col items-center py-16 text-center">
       <span class="tile h-14 w-14" style="--tile: #ff9500"><Brush class="h-7 w-7" /></span>
       <p class="mt-4 text-[15px] font-semibold">{{ personal ? t('draw.noneMine') : t('draw.none') }}</p>
       <p class="mt-1 max-w-[340px] text-[13px] text-text-2">{{ t('draw.noneHint') }}</p>
       <button v-if="editable" class="btn-primary mt-5" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</button>
     </div>
 
-    <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+    <div v-if="personal" class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
       <div v-for="d in list" :key="d.id" class="board card" role="link" tabindex="0" data-testid="whiteboard-card" @click="renaming !== d.id && open(d)" @keydown.enter="open(d)">
         <div class="thumb">
           <img v-if="d.preview" :src="previewSrc(d.preview)" alt="" draggable="false" />
@@ -159,16 +169,21 @@ async function remove() {
   transform: translateY(-2px);
 }
 .thumb {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 150px;
+  overflow: hidden;
   padding: 10px;
   background: #fff;
   border-bottom: 0.5px solid var(--border);
 }
+/* The picture fills the box and is scaled to fit it (a sketch's picture is
+   drawn at its full size). */
 .thumb img {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   object-fit: contain;
 }
 </style>

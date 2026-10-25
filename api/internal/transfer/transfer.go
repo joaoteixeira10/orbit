@@ -96,6 +96,7 @@ type Archive struct {
 	WorkspaceGoals []models.Goal        `json:"workspace_goals,omitempty"`
 	Sheets         []xSheet             `json:"sheets,omitempty"`
 	Diagrams       []xDiagram           `json:"diagrams,omitempty"`
+	Folders        []models.Folder      `json:"folders,omitempty"`
 	Bookmarks      []models.Bookmark    `json:"bookmarks,omitempty"` // their pictures are read again
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
@@ -217,6 +218,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	for _, sh := range sheets {
 		a.Sheets = append(a.Sheets, xSheet{Sheet: sh, Text: sh.Text})
 	}
+	db.Where("workspace_id = ?", wsID).Order("name").Find(&a.Folders)
 	var diagrams []models.Diagram
 	db.Where("workspace_id = ?", wsID).Order("rank").Find(&diagrams)
 	for _, d := range diagrams {
@@ -419,6 +421,12 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 	for _, x := range a.Sheets {
 		fresh(x.ID)
 	}
+	for _, x := range a.Diagrams {
+		fresh(x.ID)
+	}
+	for _, x := range a.Folders {
+		fresh(x.ID)
+	}
 	pairs := make([]string, 0, 2*len(newID))
 	for o, n := range newID {
 		if len(o) >= 8 { // ids, not stray short strings
@@ -529,15 +537,28 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 		}
 		for _, x := range a.Sheets {
 			sh := x.Sheet
-			sh.ID, sh.WorkspaceID, sh.Text, sh.Version = ref(x.ID), ws.ID, x.Text, 1
+			sh.ID, sh.WorkspaceID, sh.Text, sh.Version, sh.FolderID = ref(x.ID), ws.ID, x.Text, 1, ref(x.FolderID)
 			sh.CreatedBy, sh.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
 			if err := tx.Create(&sh).Error; err != nil {
 				return err
 			}
 		}
+		for _, x := range a.Folders {
+			f := x
+			f.ID, f.WorkspaceID, f.ParentID, f.CreatedBy = ref(x.ID), ws.ID, ref(x.ParentID), who(x.CreatedBy)
+			if f.Name = trim(strings.TrimSpace(f.Name), 200); f.Name == "" {
+				f.Name = "Folder"
+			}
+			if !validColor(f.Color) {
+				f.Color = ""
+			}
+			if err := tx.Create(&f).Error; err != nil {
+				return err
+			}
+		}
 		for _, x := range a.Diagrams {
 			d := x.Diagram
-			d.ID, d.WorkspaceID, d.Text, d.Version = ref(x.ID), ws.ID, x.Text, 1
+			d.ID, d.WorkspaceID, d.Text, d.Version, d.FolderID = ref(x.ID), ws.ID, x.Text, 1, ref(x.FolderID)
 			d.CreatedBy, d.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
 			if err := tx.Create(&d).Error; err != nil {
 				return err
@@ -696,7 +717,7 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			if x.NoteID != "" && ref(x.NoteID) == "" {
 				continue
 			}
-			d.ID, d.WorkspaceID, d.OwnerID, d.NoteID = ref(x.ID), ws.ID, "", ref(x.NoteID)
+			d.ID, d.WorkspaceID, d.OwnerID, d.NoteID, d.FolderID = ref(x.ID), ws.ID, "", ref(x.NoteID), ref(x.FolderID)
 			d.CreatedBy, d.UpdatedBy = who(x.CreatedBy), who(x.UpdatedBy)
 			if err := tx.Create(&d).Error; err != nil {
 				return err

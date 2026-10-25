@@ -1625,6 +1625,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/folders/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "Change a folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Folder id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.folderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Folder"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "Delete a folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Folder id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/git/hook/{link}": {
             "post": {
                 "consumes": [
@@ -7175,6 +7245,124 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/files/move": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "Move into a folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What, where",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.moveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/folders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "A workspace's folders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Folder"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "New folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Name, where",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.folderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Folder"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/goals": {
             "get": {
                 "security": [
@@ -9452,6 +9640,10 @@ const docTemplate = `{
                     "description": "draw.io's XML",
                     "type": "string"
                 },
+                "folder_id": {
+                    "description": "where a new one goes (\"\" the top)",
+                    "type": "string"
+                },
                 "preview": {
                     "description": "an SVG picture of it",
                     "type": "string"
@@ -9472,11 +9664,24 @@ const docTemplate = `{
         "api.diagramSummary": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "folder_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "preview": {
                     "type": "string"
+                },
+                "size": {
+                    "description": "its file's bytes",
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"
@@ -9495,6 +9700,10 @@ const docTemplate = `{
         "api.drawingRequest": {
             "type": "object",
             "properties": {
+                "folder_id": {
+                    "description": "where a new whiteboard goes (\"\" the top)",
+                    "type": "string"
+                },
                 "preview": {
                     "type": "string"
                 },
@@ -9517,11 +9726,24 @@ const docTemplate = `{
         "api.drawingSummary": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "folder_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "preview": {
                     "type": "string"
+                },
+                "size": {
+                    "description": "its scene's bytes",
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"
@@ -9751,6 +9973,21 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.focusSessionView"
                     }
+                }
+            }
+        },
+        "api.folderRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "parent_id": {
+                    "type": "string"
                 }
             }
         },
@@ -10566,6 +10803,43 @@ const docTemplate = `{
                 }
             }
         },
+        "api.moveRequest": {
+            "type": "object",
+            "properties": {
+                "diagrams": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "drawings": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "folder_id": {
+                    "description": "where to (\"\" the top)",
+                    "type": "string"
+                },
+                "folders": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sheets": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "api.moveTaskRequest": {
             "type": "object",
             "required": [
@@ -11298,6 +11572,10 @@ const docTemplate = `{
                 "data": {
                     "type": "object"
                 },
+                "folder_id": {
+                    "description": "its folder (\"\" at the top)",
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -11327,6 +11605,10 @@ const docTemplate = `{
                 "data": {
                     "type": "object"
                 },
+                "folder_id": {
+                    "description": "where a new one goes (\"\" the top)",
+                    "type": "string"
+                },
                 "text": {
                     "type": "string"
                 },
@@ -11343,8 +11625,21 @@ const docTemplate = `{
         "api.sheetSummary": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "folder_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "size": {
+                    "description": "its data's bytes",
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"
@@ -12657,6 +12952,10 @@ const docTemplate = `{
                 "data": {
                     "type": "string"
                 },
+                "folder_id": {
+                    "description": "its folder (\"\" at the top)",
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -12692,6 +12991,10 @@ const docTemplate = `{
                 "created_by": {
                     "type": "string"
                 },
+                "folder_id": {
+                    "description": "its folder (\"\" at the top)",
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -12721,6 +13024,35 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "integer"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Folder": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 },
                 "workspace_id": {
                     "type": "string"

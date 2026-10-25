@@ -24,10 +24,14 @@ const (
 
 type sheetSummary struct {
 	ID        string `json:"id"`
+	FolderID  string `json:"folder_id"`
 	Title     string `json:"title"`
 	Version   int    `json:"version"`
 	UpdatedBy string `json:"updated_by"`
 	UpdatedAt string `json:"updated_at"`
+	CreatedBy string `json:"created_by"`
+	CreatedAt string `json:"created_at"`
+	Size      int    `json:"size"` // its data's bytes
 }
 
 func (h *Handlers) sheetAccess(c *gin.Context, need string) (models.Sheet, bool) {
@@ -55,19 +59,20 @@ func (h *Handlers) listSheets(c *gin.Context) {
 		return
 	}
 	var list []models.Sheet
-	h.db.Select("id", "title", "version", "updated_by", "updated_at").Where("workspace_id = ?", ws.ID).Order("updated_at DESC").Find(&list)
+	h.db.Select("id", "folder_id", "title", "version", "updated_by", "updated_at", "created_by", "created_at", "length(data) AS data").Where("workspace_id = ?", ws.ID).Order("updated_at DESC").Find(&list)
 	out := make([]sheetSummary, 0, len(list))
 	for _, s := range list {
-		out = append(out, sheetSummary{ID: s.ID, Title: s.Title, Version: s.Version, UpdatedBy: s.UpdatedBy, UpdatedAt: s.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z")})
+		out = append(out, sheetSummary{ID: s.ID, FolderID: s.FolderID, Title: s.Title, Version: s.Version, UpdatedBy: s.UpdatedBy, UpdatedAt: stamp(s.UpdatedAt), CreatedBy: s.CreatedBy, CreatedAt: stamp(s.CreatedAt), Size: atoiSafe(s.Data)})
 	}
 	c.JSON(http.StatusOK, out)
 }
 
 type sheetRequest struct {
-	Title   *string          `json:"title" binding:"omitempty,max=300"`
-	Data    *json.RawMessage `json:"data" swaggertype:"object"`
-	Text    *string          `json:"text"`
-	Version int              `json:"version"` // the version saved over (0: don't check)
+	FolderID string           `json:"folder_id"` // where a new one goes ("" the top)
+	Title    *string          `json:"title" binding:"omitempty,max=300"`
+	Data     *json.RawMessage `json:"data" swaggertype:"object"`
+	Text     *string          `json:"text"`
+	Version  int              `json:"version"` // the version saved over (0: don't check)
 }
 
 // apply copies a request's fields, checked: the data is a JSON object.
@@ -132,8 +137,12 @@ func (h *Handlers) createSheet(c *gin.Context) {
 	if !h.bindSheet(c, &req) {
 		return
 	}
+	if !h.folderIn(ws.ID, req.FolderID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no such folder here"})
+		return
+	}
 	uid := auth.UserID(c)
-	s := models.Sheet{WorkspaceID: ws.ID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	s := models.Sheet{WorkspaceID: ws.ID, FolderID: req.FolderID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
 	if code, msg := req.apply(&s); msg != "" {
 		c.JSON(code, gin.H{"error": msg})
 		return

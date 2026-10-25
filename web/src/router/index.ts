@@ -49,6 +49,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'w/:ws/sheets', name: 'ws-sheets', component: () => import('@/views/SheetsView.vue') },
       { path: 'w/:ws/s/:id', name: 'ws-sheet', component: () => import('@/views/SheetView.vue') },
       { path: 'w/:ws/diagrams', name: 'ws-diagrams', component: () => import('@/views/DiagramsView.vue') },
+      { path: 'w/:ws/files', name: 'ws-files', component: () => import('@/views/FilesView.vue') },
       { path: 'w/:ws/d/:id', name: 'ws-diagram', component: () => import('@/views/DiagramView.vue') },
       { path: 'w/:ws/pages', name: 'ws-pages', component: () => import('@/views/PagesView.vue') },
       { path: 'w/:ws/p/:page', name: 'ws-page', component: () => import('@/views/PageView.vue') },

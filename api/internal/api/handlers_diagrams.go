@@ -24,11 +24,15 @@ const (
 
 type diagramSummary struct {
 	ID        string `json:"id"`
+	FolderID  string `json:"folder_id"`
 	Title     string `json:"title"`
 	Preview   string `json:"preview,omitempty"`
 	Version   int    `json:"version"`
 	UpdatedBy string `json:"updated_by"`
 	UpdatedAt string `json:"updated_at"`
+	CreatedBy string `json:"created_by"`
+	CreatedAt string `json:"created_at"`
+	Size      int    `json:"size"` // its file's bytes
 }
 
 func (h *Handlers) diagramAccess(c *gin.Context, need string) (models.Diagram, bool) {
@@ -57,20 +61,21 @@ func (h *Handlers) listDiagrams(c *gin.Context) {
 		return
 	}
 	var list []models.Diagram
-	h.db.Select("id", "title", "preview", "version", "updated_by", "updated_at").Where("workspace_id = ?", ws.ID).Order("updated_at DESC").Find(&list)
+	h.db.Select("id", "folder_id", "title", "preview", "version", "updated_by", "updated_at", "created_by", "created_at", "length(data) AS data").Where("workspace_id = ?", ws.ID).Order("updated_at DESC").Find(&list)
 	out := make([]diagramSummary, 0, len(list))
 	for _, d := range list {
-		out = append(out, diagramSummary{ID: d.ID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: d.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z")})
+		out = append(out, diagramSummary{ID: d.ID, FolderID: d.FolderID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: stamp(d.UpdatedAt), CreatedBy: d.CreatedBy, CreatedAt: stamp(d.CreatedAt), Size: atoiSafe(d.Data)})
 	}
 	c.JSON(http.StatusOK, out)
 }
 
 type diagramRequest struct {
-	Title   *string `json:"title" binding:"omitempty,max=300"`
-	Data    *string `json:"data"`    // draw.io's XML
-	Preview *string `json:"preview"` // an SVG picture of it
-	Text    *string `json:"text"`
-	Version int     `json:"version"` // the version saved over (0: don't check)
+	FolderID string  `json:"folder_id"` // where a new one goes ("" the top)
+	Title    *string `json:"title" binding:"omitempty,max=300"`
+	Data     *string `json:"data"`    // draw.io's XML
+	Preview  *string `json:"preview"` // an SVG picture of it
+	Text     *string `json:"text"`
+	Version  int     `json:"version"` // the version saved over (0: don't check)
 }
 
 // apply copies a request's fields, checked: the file is draw.io's XML, the
@@ -134,8 +139,12 @@ func (h *Handlers) createDiagram(c *gin.Context) {
 	if !h.bindDiagram(c, &req) {
 		return
 	}
+	if !h.folderIn(ws.ID, req.FolderID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no such folder here"})
+		return
+	}
 	uid := auth.UserID(c)
-	d := models.Diagram{WorkspaceID: ws.ID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	d := models.Diagram{WorkspaceID: ws.ID, FolderID: req.FolderID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
 	if code, msg := req.apply(&d); msg != "" {
 		c.JSON(code, gin.H{"error": msg})
 		return

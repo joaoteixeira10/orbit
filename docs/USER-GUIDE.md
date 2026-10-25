@@ -25,16 +25,17 @@ the [API](API.md).
 14. [Whiteboards](#14-whiteboards)
 15. [Sheets](#15-sheets)
 16. [Diagrams](#16-diagrams)
-17. [Habits](#17-habits)
-18. [Focus timer](#18-focus-timer)
-19. [Goals](#19-goals)
-20. [Journal](#20-journal)
-21. [Bookmarks](#21-bookmarks)
-22. [Notifications](#22-notifications)
-23. [Your settings](#23-your-settings)
-24. [Administration](#24-administration)
-25. [Owner controls](#25-owner-controls)
-26. [On a phone](#26-on-a-phone)
+17. [Files and folders](#17-files-and-folders)
+18. [Habits](#18-habits)
+19. [Focus timer](#19-focus-timer)
+20. [Goals](#20-goals)
+21. [Journal](#21-journal)
+22. [Bookmarks](#22-bookmarks)
+23. [Notifications](#23-notifications)
+24. [Your settings](#24-your-settings)
+25. [Administration](#25-administration)
+26. [Owner controls](#26-owner-controls)
+27. [On a phone](#27-on-a-phone)
 
 ---
 
@@ -1085,7 +1086,33 @@ container, so nothing is loaded from outside (see
 [Configuration](CONFIGURATION.md)). With draw.io's own, the diagram is still
 handed to the editor inside your browser and saved only in Orbit.
 
-## 17. Habits
+## 17. Files and folders
+
+Sheets, diagrams and whiteboards live in **folders**, and folders go inside
+folders. A workspace has one set of folders for all three: **Sheets** shows
+its sheets in them, **Diagrams** its diagrams, **Whiteboards** its
+whiteboards, and **Files** (a module of its own) shows them all together.
+
+- **Where you are** is the path at the top (click a part to go back up). A
+  new sheet, diagram or whiteboard goes in the folder shown, and so do files
+  brought in.
+- **New folder** makes one here. A folder's `⋯` (or a right click): open,
+  rename, move, its colour, details, delete. **Deleting a folder deletes
+  nothing in it**: what it held moves up to where the folder was.
+- A file's `⋯` (or a right click): open, rename, **Make a copy**, **Move
+  to…**, download (Excel, draw.io or Excalidraw), copy its link, details,
+  delete. Or **drag** a file or folder onto a folder, or onto a part of the
+  path, to move it there.
+- **Tiles** or a **List** (name, kind, when it changed, size), sorted by
+  last change or name; your choice is remembered.
+- **Details** (ⓘ) shows, on the right, the folder you're in or the one
+  chosen: what it holds and its size, or a file's kind, size, place, and
+  who created and last changed it, and when.
+- In **Files**, **New** makes a sheet, diagram or whiteboard, and
+  **Import** brings in Excel or CSV files (as sheets), draw.io files (as
+  diagrams) and Excalidraw files (as whiteboards), several at once.
+
+## 18. Habits
 
 **Habits** (a module: turn it on in Workspace settings → Modules) are things
 you want to do again and again — read, run, practise the piano. They're
@@ -1107,7 +1134,7 @@ sees anyone else's.
   **Edit** changes it; **Archive** puts it away (with its history; **Bring
   back** later), **Delete** removes it and its history.
 
-## 18. Focus timer
+## 19. Focus timer
 
 **Focus timer** (a module) is for working in focused stretches — the
 Pomodoro way: 25 minutes on one thing, then a break.
@@ -1123,7 +1150,7 @@ Pomodoro way: 25 minutes on one thing, then a break.
   **Today** lists today's sessions; the top says how long you focused today.
 - One session runs at a time: starting another ends the one running.
 
-## 19. Goals
+## 20. Goals
 
 **Goals** (a module) are what a workspace works towards by a date — a
 launch, an exam, a trip.
@@ -1139,7 +1166,7 @@ launch, an exam, a trip.
 - **Mark achieved** puts it with the **Achieved** goals (folded at the
   bottom); **Delete** removes it — its tasks stay.
 
-## 20. Journal
+## 21. Journal
 
 The **Journal** (a module) is a page a day — what happened, how it went.
 It's **yours alone**: in a shared workspace each member writes their own,
@@ -1155,7 +1182,7 @@ and nobody reads anyone else's (search finds yours for you only).
 - **On this day** shows the same date in earlier years — what you wrote a
   year ago, two years ago…
 
-## 21. Bookmarks
+## 22. Bookmarks
 
 **Bookmarks** (a module) keep links worth coming back to.
 
@@ -1172,7 +1199,7 @@ and nobody reads anyone else's (search finds yours for you only).
 - Search (⌘K) finds bookmarks by their title, description, site, address
   and notes; choosing one opens the link.
 
-## 22. Notifications
+## 23. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -1235,7 +1262,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 23. Your settings
+## 24. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -1273,7 +1300,7 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
-## 24. Administration
+## 25. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -1368,7 +1395,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 25. Owner controls
+## 26. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1511,7 +1538,7 @@ the user gets the default role.
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 26. On a phone
+## 27. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

@@ -26,11 +26,15 @@ const (
 // drawingSummary is a whiteboard in a list: no scene.
 type drawingSummary struct {
 	ID        string `json:"id"`
+	FolderID  string `json:"folder_id,omitempty"`
 	Title     string `json:"title"`
 	Preview   string `json:"preview"`
 	Version   int    `json:"version"`
 	UpdatedBy string `json:"updated_by"`
 	UpdatedAt string `json:"updated_at"`
+	CreatedBy string `json:"created_by,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+	Size      int    `json:"size,omitempty"` // its scene's bytes
 }
 
 // drawingAccess loads the :id drawing: a note's follows its note, a
@@ -88,21 +92,22 @@ func (h *Handlers) listDrawings(c *gin.Context) {
 		return
 	}
 	var ds []models.Drawing
-	h.db.Select("id", "title", "preview", "version", "updated_by", "updated_at").
+	h.db.Select("id", "folder_id", "title", "preview", "version", "updated_by", "updated_at", "created_by", "created_at", "length(scene) AS scene").
 		Where("workspace_id = ? AND note_id = ''", ws.ID).Order("updated_at DESC").Find(&ds)
 	out := make([]drawingSummary, 0, len(ds))
 	for _, d := range ds {
-		out = append(out, drawingSummary{ID: d.ID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: d.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z")})
+		out = append(out, drawingSummary{ID: d.ID, FolderID: d.FolderID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: stamp(d.UpdatedAt), CreatedBy: d.CreatedBy, CreatedAt: stamp(d.CreatedAt), Size: atoiSafe(d.Scene)})
 	}
 	c.JSON(http.StatusOK, out)
 }
 
 type drawingRequest struct {
-	Title   *string `json:"title" binding:"omitempty,max=300"`
-	Scene   *string `json:"scene"`
-	Preview *string `json:"preview"`
-	Text    *string `json:"text"`
-	Version int     `json:"version"` // the version saved over (0: don't check)
+	FolderID string  `json:"folder_id"` // where a new whiteboard goes ("" the top)
+	Title    *string `json:"title" binding:"omitempty,max=300"`
+	Scene    *string `json:"scene"`
+	Preview  *string `json:"preview"`
+	Text     *string `json:"text"`
+	Version  int     `json:"version"` // the version saved over (0: don't check)
 }
 
 // apply copies a request's fields, checked.
@@ -153,8 +158,12 @@ func (h *Handlers) createDrawing(c *gin.Context) {
 	if !h.bindDrawing(c, &req) {
 		return
 	}
+	if !h.folderIn(ws.ID, req.FolderID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no such folder here"})
+		return
+	}
 	uid := auth.UserID(c)
-	d := models.Drawing{WorkspaceID: ws.ID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	d := models.Drawing{WorkspaceID: ws.ID, FolderID: req.FolderID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
 	if err := req.apply(&d); err != nil {
 		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": err.Error()})
 		return

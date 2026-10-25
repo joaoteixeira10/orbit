@@ -8,6 +8,13 @@ merge, not at release time.
 
 ### Added
 
+- **Board swimlanes and column limits** — lanes by person or by priority
+  (drag across lanes to reassign or reprioritise); a column's limit shows
+  its count red when passed.
+- **Time estimates and a week planner** — a task's estimate (details, or
+  "~2h" in quick add); Plan in the calendar fits open tasks into free
+  working hours around events, saved as personal time blocks
+  (`GET/PUT /me/blocks`).
 - **Block handles in pages** — beside the block under the pointer: + adds
   a block (with the / menu), ⋮⋮ drags it, or opens its menu: turn into,
   colour (as a GitHub alert callout), duplicate, move up / down, delete.

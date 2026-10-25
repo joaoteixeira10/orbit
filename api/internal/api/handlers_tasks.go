@@ -391,7 +391,8 @@ type taskRequest struct {
 	Title       *string   `json:"title" binding:"omitempty,max=500"`
 	Notes       *string   `json:"notes" binding:"omitempty,max=20000"`
 	Priority    *int      `json:"priority" binding:"omitempty,min=0,max=3"`
-	Kind        *string   `json:"kind" binding:"omitempty,oneof=task exam"` // "task" clears
+	Estimate    *int      `json:"estimate" binding:"omitempty,min=0,max=10080"` // minutes (0 clears), a week at most
+	Kind        *string   `json:"kind" binding:"omitempty,oneof=task exam"`     // "task" clears
 	Tags        *[]string `json:"tags"`
 	Start       *string   `json:"start"`                                   // YYYY-MM-DD, "" clears
 	Due         *string   `json:"due"`                                     // YYYY-MM-DD, "" clears
@@ -466,6 +467,9 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 	}
 	if req.Priority != nil {
 		t.Priority = *req.Priority
+	}
+	if req.Estimate != nil {
+		t.Estimate = *req.Estimate
 	}
 	if req.Tags != nil {
 		t.Tags = encodeList(cleanTags(*req.Tags))
@@ -891,6 +895,7 @@ func (h *Handlers) deleteTask(c *gin.Context) {
 	_ = uploads.DeleteFor(h.db, uploads.Task, ids) // its attachments go with it
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskComment{})
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskEvent{})
+	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskBlock{})
 	h.db.Where("id = ? OR parent_id = ?", t.ID, t.ID).Delete(&models.Task{})
 	h.forgetWaits(t.WorkspaceID, ids)
 	if h.git != nil {

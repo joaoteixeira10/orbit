@@ -351,7 +351,7 @@ const selLabel = computed(() => {
               v-for="p in placed[i]"
               :key="p.entry.key"
               class="tg-ev"
-              :class="{ ext: p.entry.occ.kind === 'external', short: p.height < 34, dragging: drag?.key === p.entry.key, movable: p.entry.movable }"
+              :class="{ ext: p.entry.occ.kind === 'external', blk: p.entry.occ.kind === 'block', short: p.height < 34, dragging: drag?.key === p.entry.key, movable: p.entry.movable }"
               :style="blockStyle(p)"
               role="button"
               tabindex="0"
@@ -598,6 +598,12 @@ const selLabel = computed(() => {
 }
 .tg-ev.ext {
   background: color-mix(in srgb, var(--c) 11%, var(--bg));
+}
+/* My time set aside for a task: striped, dashed edge. */
+.tg-ev.blk {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 14%, var(--bg)) 0 6px, color-mix(in srgb, var(--c) 8%, var(--bg)) 6px 12px);
+  box-shadow: inset 3px 0 0 var(--c), inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent);
+  cursor: pointer;
 }
 .tg-ev .ttl {
   font-weight: 600;

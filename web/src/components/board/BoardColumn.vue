@@ -34,6 +34,7 @@ const emit = defineEmits<{
   toggleDone: []
   shift: [by: -1 | 1]
   remove: []
+  limit: [n: number]
 }>()
 const tasks = useTasksStore()
 const toast = useToastStore()
@@ -103,6 +104,14 @@ function commitRename() {
   const v = nameDraft.value.trim()
   if (v && v !== props.column.name) emit('rename', v)
 }
+// The column's limit: shown with the count, red when it's passed.
+const over = computed(() => !!props.column.limit && props.cards.length > props.column.limit)
+const limitDraft = ref('')
+function setLimit() {
+  const n = Math.max(0, Math.min(999, Math.round(Number(limitDraft.value) || 0)))
+  menu.value = false
+  if (n !== (props.column.limit ?? 0)) emit('limit', n)
+}
 function act(fn: () => void) {
   menu.value = false
   fn()
@@ -162,7 +171,7 @@ function onComposerBlur() {
       />
       <h2 v-else class="col-name" :title="column.name" @dblclick="startRename">{{ column.name }}</h2>
       <span v-if="column.done && !renaming" class="grid shrink-0 place-items-center text-ok" :title="t('board.doneColumn')"><CircleCheck class="h-3.5 w-3.5" /></span>
-      <span v-if="!renaming" class="count">{{ cards.length }}</span>
+      <span v-if="!renaming" class="count" :class="{ over }" :title="column.limit ? t('board.limitOf', { n: column.limit }) : ''" data-testid="column-count">{{ cards.length }}<template v-if="column.limit">/{{ column.limit }}</template></span>
       <button
         v-if="!readonly"
         ref="menuBtn"
@@ -225,6 +234,10 @@ function onComposerBlur() {
       <button class="menu-item" @click="act(() => emit('toggleDone'))">
         <component :is="column.done ? Circle : CircleCheck" class="h-4 w-4 text-text-2" />{{ column.done ? t('board.markOpen') : t('board.markDone') }}
       </button>
+      <form class="flex items-center gap-2 px-2.5 py-1.5" @submit.prevent="setLimit">
+        <span class="text-[13px] text-text-2">{{ t('board.limit') }}</span>
+        <input v-model="limitDraft" class="input ml-auto !w-16 !py-1 text-[13px]" type="number" min="0" max="999" :placeholder="t('board.noLimit')" :aria-label="t('board.limit')" data-testid="column-limit" @focus="limitDraft = column.limit ? String(column.limit) : ''" @keydown.enter.prevent="setLimit" />
+      </form>
       <div class="menu-sep" />
       <p class="cap px-2.5 pb-0.5 pt-1">{{ t('board.colour') }}</p>
       <ColorDots :model-value="column.color ?? ''" @update:model-value="(v) => act(() => emit('recolor', v))" />
@@ -283,6 +296,13 @@ function onComposerBlur() {
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
   color: var(--text-3);
+}
+.count.over {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #ff3b30 14%, transparent);
+  color: var(--crit-text);
+  font-weight: 600;
 }
 .col-body {
   min-height: 0;

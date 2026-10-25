@@ -114,13 +114,15 @@ type TaskList struct {
 // instead of closing it. Rank orders tasks inside their column.
 type Task struct {
 	Base
-	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
-	ListID      string     `gorm:"size:36;not null;index" json:"list_id"`
-	ColumnID    string     `gorm:"size:36;not null" json:"column_id"`
-	ParentID    *string    `gorm:"size:36;index" json:"parent_id"`
-	Title       string     `gorm:"size:500;not null" json:"title"`
-	Notes       string     `gorm:"type:text" json:"notes"`
-	Priority    int        `gorm:"not null;default:0" json:"priority"`     // 0 none, 1 low, 2 medium, 3 high
+	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
+	ListID      string  `gorm:"size:36;not null;index" json:"list_id"`
+	ColumnID    string  `gorm:"size:36;not null" json:"column_id"`
+	ParentID    *string `gorm:"size:36;index" json:"parent_id"`
+	Title       string  `gorm:"size:500;not null" json:"title"`
+	Notes       string  `gorm:"type:text" json:"notes"`
+	Priority    int     `gorm:"not null;default:0" json:"priority"` // 0 none, 1 low, 2 medium, 3 high
+	// Estimate is how long it should take, in minutes (0: not estimated).
+	Estimate    int        `gorm:"not null;default:0" json:"estimate"`
 	Kind        string     `gorm:"size:8;not null;default:''" json:"kind"` // "" a task | exam (counted down to)
 	Tags        string     `gorm:"type:text" json:"-"`                     // JSON []string
 	Start       *string    `gorm:"size:10" json:"start"`                   // YYYY-MM-DD, on or before Due
@@ -354,6 +356,20 @@ type Sheet struct {
 	Rank        float64 `gorm:"not null;default:0" json:"rank"`
 	CreatedBy   string  `gorm:"size:36" json:"created_by"`
 	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+}
+
+// ---- Time blocks --------------------------------------------------------------
+
+// TaskBlock is time a person set aside to work on a task (the week planner
+// makes them): theirs alone, shown on their calendar. A task may have
+// several (a long one split across the week).
+type TaskBlock struct {
+	Base
+	WorkspaceID string    `gorm:"size:36;not null;index" json:"workspace_id"`
+	TaskID      string    `gorm:"size:36;not null;index" json:"task_id"`
+	UserID      string    `gorm:"size:36;not null;index" json:"-"`
+	StartsAt    time.Time `gorm:"not null;index" json:"starts_at"`
+	EndsAt      time.Time `gorm:"not null" json:"ends_at"`
 }
 
 // ---- Folders ----------------------------------------------------------------

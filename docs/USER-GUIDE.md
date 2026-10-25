@@ -639,6 +639,10 @@ click outside, or **Esc**, to save. The task list and the board show the
 notes' first line as plain text. A task linked to a git issue keeps the
 issue's body here, so it reads the same as on the server.
 
+**Estimates**: how long a task should take — **Estimate** in its details,
+or type it in quick add with a tilde: *Report ~2h*, *Call Ana ~15m*,
+*~1h30*. It shows on the task's row, and the week planner uses it.
+
 **Repeating tasks**: completing one moves it to its next date (counted from
 its due date, like Apple Reminders) instead of closing it.
 
@@ -769,8 +773,15 @@ adds one.
   Dropping a card in a **done** column (marked ✓) completes it; taking it out
   reopens it.
 - **Add a card** at the bottom of a column.
-- A column's `⋯`: rename, colour, mark as done / open, move left or right,
-  delete (its cards move to another column; you're asked first).
+- A column's `⋯`: rename, **Limit** (how many cards it should hold; the
+  count shows *4/3* in red when it's over — it doesn't stop you), colour,
+  mark as done / open, move left or right, delete (its cards move to another
+  column; you're asked first).
+- **Swimlanes** (the lanes menu by **Filter**, remembered in this browser):
+  **by person** — a lane for each member (a card with two people shows in
+  both) and *No one* — or **by priority**. Drag a card into another lane to
+  give it that person (in place of the lane's it left) or that priority;
+  the **+** in a cell adds a card there. A lane's name folds it.
 - **Add column** at the end.
 - Click a card for its details (same as in Tasks).
 
@@ -854,6 +865,15 @@ workspace together, in each workspace's colour (the key is under the title).
   times" keeps counting) or **All events** (a new time moves the whole
   series by as much). **Delete** on a repeating event asks the same: **this
   event only**, **this and following**, or **all events**.
+- **Plan** (Week and Day): fits your open tasks — for you or no one, due by
+  the last day shown or undated, with an estimate — into the free part of
+  your **working hours** (days and times, remembered in this browser),
+  around timed events, tasks at a set time and your other blocks: the
+  earliest due first, then the most important; a long one is split across
+  gaps, and what doesn't fit is said. A task without an estimate can get
+  one right there. **Apply** puts them on your calendar as **time blocks**
+  (striped; yours only — the tasks don't change; click one for its task).
+  Planning again replaces them; **Clear the plan** removes them.
 - **Drag** an event to another day in Month to move it (not repeating ones).
   In Week and Day, drag it to another time or day (15-minute steps; it shows
   where it will land), or drag its **bottom edge** to make it longer or

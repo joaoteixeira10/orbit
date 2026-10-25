@@ -15,6 +15,9 @@ type Column struct {
 	Name  string `json:"name"`
 	Color string `json:"color,omitempty"`
 	Done  bool   `json:"done"`
+	// Limit is how many cards the column should hold at most (0: no limit);
+	// the board shows when it's over, it doesn't refuse more.
+	Limit int `json:"limit,omitempty"`
 }
 
 // Columns builds columns from names; the last one is the done column. IDs
@@ -52,6 +55,9 @@ func CleanColumns(cols []Column) ([]Column, error) {
 		}
 		if c.Color != "" && !validColor(c.Color) {
 			return nil, errors.New("column colours are #rrggbb")
+		}
+		if c.Limit < 0 || c.Limit > 999 {
+			return nil, errors.New("a column's limit is between 0 (none) and 999")
 		}
 		if c.ID == "" || seen[c.ID] || len(c.ID) > 36 {
 			c.ID = shortID()

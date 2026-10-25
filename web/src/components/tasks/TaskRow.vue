@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronRight, Repeat, Flag, MessageSquare, Milestone } from 'lucide-vue-next'
+import { Check, ChevronRight, Hourglass, Repeat, Flag, MessageSquare, Milestone } from 'lucide-vue-next'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'
 import type { Task, Member, TaskInput } from '@/api/planner'
 import { countdown, dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
 import { firstLine } from '@/lib/markdown'
+import { estimateText } from '@/lib/weekPlan'
 
 // One task, Reminders-style: a round check in its list's colour, the title
 // and a line of details — when it's due (red when late), repeat, priority,
@@ -70,6 +71,7 @@ const prio = computed(() => '!'.repeat(props.task.priority))
         <span v-if="task.kind === 'exam'" class="exam">{{ t('school.exam') }}<template v-if="task.due && !task.done"> · {{ countdown(task.due) }}</template></span>
         <span v-if="due" class="due-meta" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
+        <span v-if="task.estimate" class="inline-flex items-center gap-0.5" :title="t('tasks.estimate')"><Hourglass class="h-3 w-3" />{{ estimateText(task.estimate) }}</span>
         <span v-if="listName">{{ listName }}</span>
         <span v-if="workspaceName">{{ workspaceName }}</span>
         <span v-if="task.comment_count" class="inline-flex items-center gap-0.5" :title="t('comments.count', { n: task.comment_count }, task.comment_count)"><MessageSquare class="h-3 w-3" />{{ task.comment_count }}</span>

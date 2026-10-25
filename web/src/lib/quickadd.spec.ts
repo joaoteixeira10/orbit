@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseQuick } from './quickadd'
+import { parseEstimate, parseQuick } from './quickadd'
 
 // Tuesday 13 October 2026, 10:00 local.
 const now = new Date(2026, 9, 13, 10, 0)
@@ -40,5 +40,19 @@ describe('parseQuick', () => {
     expect(parseQuick('Weekly review', now)).toEqual({ title: 'Weekly review', tags: [] })
     expect(parseQuick('Read Everyday Things', now)).toEqual({ title: 'Read Everyday Things', tags: [] })
     expect(parseQuick('Plan every month', now).repeat).toBe('FREQ=MONTHLY')
+  })
+})
+
+describe('estimates', () => {
+  it('reads how long a task takes', () => {
+    expect(parseEstimate('~45m')).toBe(45)
+    expect(parseEstimate('~90min')).toBe(90)
+    expect(parseEstimate('~1h30')).toBe(90)
+    expect(parseEstimate('~2h')).toBe(120)
+    expect(parseEstimate('~1.5h')).toBe(90)
+    expect(parseEstimate('45m')).toBeUndefined()
+    const q = parseQuick('Write the report ~2h tomorrow !!')
+    expect(q.title).toBe('Write the report')
+    expect(q.estimate).toBe(120)
   })
 })

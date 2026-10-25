@@ -20,6 +20,7 @@ export interface Column {
   name: string
   color?: string
   done: boolean
+  limit?: number // cards it should hold at most (0 / none: no limit)
 }
 export interface Template {
   kind: WorkspaceKind
@@ -127,6 +128,7 @@ export interface Task {
   title: string
   notes: string
   priority: 0 | 1 | 2 | 3
+  estimate?: number // minutes (0 / none: not estimated)
   kind: '' | 'exam' // an exam is counted down to
   tags: string[]
   start: string | null // YYYY-MM-DD (floating), on or before due: the timeline bar's left end
@@ -164,6 +166,7 @@ export interface TaskInput {
   title?: string
   notes?: string
   priority?: number
+  estimate?: number // minutes (0 clears)
   kind?: 'task' | 'exam' // "task" makes it a plain task again
   git_milestone_id?: number // a linked list's task: a milestone's ref (0 = none)
   goal_id?: string // a goal of its workspace ("" none)
@@ -238,7 +241,8 @@ export interface PushDevice {
 }
 
 export interface Occurrence {
-  kind: 'event' | 'external' | 'holiday'
+  kind: 'event' | 'external' | 'holiday' | 'block' // block: my time set aside for a task
+  task_id?: string // a block's task
   id: string
   workspace_id: string
   subscription_id?: string
@@ -713,4 +717,23 @@ export interface ActivityLine {
 }
 export const activityApi = {
   list: (ws: string, before?: string) => api<ActivityLine[]>(`/workspaces/${ws}/activity${before ? `?${qs({ before })}` : ''}`),
+}
+
+// ---- Time blocks: my time set aside for tasks (the week planner) ----
+export interface TimeBlock {
+  id: string
+  task_id: string
+  workspace_id: string
+  starts_at: string
+  ends_at: string
+  title: string
+  done: boolean
+  color: string
+}
+export const blocksApi = {
+  list: (from: string, to: string) => api<TimeBlock[]>(`/me/blocks?${qs({ from, to })}`),
+  // plan replaces my blocks in [from, to) in those workspaces.
+  plan: (b: { from: string; to: string; workspace_ids: string[]; blocks: { task_id: string; starts_at: string; ends_at: string }[] }) =>
+    api<TimeBlock[]>('/me/blocks', { method: 'PUT', body: j(b) }),
+  remove: (id: string) => api<void>(`/me/blocks/${id}`, { method: 'DELETE' }),
 }

@@ -718,6 +718,109 @@ test('calendar: a repeating event changed from one occurrence on, and one occurr
   await expect.poll(titles).toEqual(['2 Weekly sync', '9 Weekly sync', '16 Planning', '30 Planning', '6 Planning'])
 })
 
+test('board: swimlanes by priority and by person, and a column limit', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Sprint', kind: 'work', modules: ['home', 'tasks', 'board'], starter: false } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Backlog' } })).json()
+  const mk = async (title: string, priority: number) => (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title, list_id: list.id, priority } })).json()
+  await mk('Fix login', 3)
+  const docs = await mk('Write docs', 0)
+  await mk('Tidy CSS', 1)
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto(`/w/${ws.id}/board/${list.id}`)
+  await page.getByTestId('board-lanes-by').selectOption('priority')
+  const lanes = page.getByTestId('lane')
+  await expect(lanes).toHaveCount(4)
+  await expect(lanes.nth(0)).toContainText('Fix login')
+  await expect(lanes.nth(3)).toContainText('Write docs')
+
+  // Write docs dragged into the high lane: it becomes high priority.
+  const card = lanes.nth(3).locator('.board-card', { hasText: 'Write docs' })
+  const target = lanes.nth(0).locator('.cell-cards').first()
+  const a = (await card.boundingBox())!
+  const b = (await target.boundingBox())!
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(a.x + a.width / 2, a.y - 20, { steps: 5 })
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height - 6, { steps: 12 })
+  // Settle on the target before letting go (as a hand does).
+  await page.waitForTimeout(150)
+  await page.mouse.move(b.x + b.width / 2 + 2, b.y + b.height - 8, { steps: 2 })
+  await page.waitForTimeout(150)
+  await page.mouse.up()
+  const taskOf = async (id: string) => ((await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { id: string; priority: number }[]).find((x) => x.id === id)
+  await expect.poll(async () => (await taskOf(docs.id))?.priority).toBe(3)
+  await expect(lanes.nth(0)).toContainText('Write docs')
+
+  // By person: me, and no one.
+  await page.getByTestId('board-lanes-by').selectOption('person')
+  await expect(lanes).toHaveCount(2)
+  await expect(lanes.nth(1)).toContainText('Fix login')
+
+  // A limit of 2 on To do: 3 cards there is over.
+  await page.getByTestId('board-lanes-by').selectOption('')
+  const todo = page.locator('section.col').first()
+  await todo.getByRole('button', { name: 'Column options' }).click()
+  await page.getByTestId('column-limit').fill('2')
+  await page.getByTestId('column-limit').press('Enter')
+  await expect(todo.getByTestId('column-count')).toHaveText('3/2')
+  await expect(todo.getByTestId('column-count')).toHaveClass(/over/)
+  const lists = await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()
+  expect(lists[0].columns[0].limit).toBe(2)
+})
+
+test('time estimates and the week planner: tasks fitted into free working hours as time blocks', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Planner', kind: 'work', modules: ['home', 'tasks', 'calendar'], starter: false } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Work' } })).json()
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const monday = new Date()
+  monday.setHours(0, 0, 0, 0)
+  do monday.setDate(monday.getDate() + 1)
+  while (monday.getDay() !== 1)
+  const tuesday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 1)
+  // A meeting Monday 9:00–10:00: the planner works around it.
+  await request.post(`/api/v1/workspaces/${ws.id}/events`, { headers: H, data: { title: 'Standup', starts_at: new Date(monday.getFullYear(), monday.getMonth(), monday.getDate(), 9).toISOString(), ends_at: new Date(monday.getFullYear(), monday.getMonth(), monday.getDate(), 10).toISOString() } })
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Write the report', list_id: list.id, due: ymd(tuesday), estimate: 90, priority: 2 } })
+  const slides = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Prepare slides', list_id: list.id } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  // Quick add reads an estimate.
+  await page.goto(`/w/${ws.id}/tasks/${list.id}`)
+  await page.getByRole('button', { name: 'New Task' }).first().click()
+  await page.getByPlaceholder(/New task/).fill('Reply to emails ~30m')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.task-row', { hasText: 'Reply to emails' })).toContainText('30m')
+
+  await page.goto(`/w/${ws.id}/calendar?date=${ymd(monday)}`)
+  await page.getByRole('tab', { name: 'Week' }).click()
+  await page.getByTestId('plan-open').click()
+  const sheet = page.getByTestId('plan-sheet')
+  await expect(sheet.getByTestId('plan-task')).toHaveCount(3)
+  // Slides has no estimate yet: given one here.
+  await sheet.getByTestId('plan-task').filter({ hasText: 'Prepare slides' }).getByTestId('plan-estimate').selectOption('60')
+  await expect(sheet.getByTestId('plan-block')).toHaveCount(3)
+  // The report (due first) goes first, after the standup.
+  await expect(sheet.getByTestId('plan-block').first()).toContainText('10:00')
+  await expect(sheet.getByTestId('plan-block').first()).toContainText('Write the report')
+  await page.getByTestId('plan-apply').click()
+
+  const range = `from=${new Date(monday).toISOString()}&to=${new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7).toISOString()}`
+  await expect.poll(async () => ((await (await request.get(`/api/v1/me/blocks?${range}`, { headers: H })).json()) as { title: string }[]).map((b) => b.title)).toEqual(['Write the report', 'Prepare slides', 'Reply to emails'])
+  const all = (await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { id: string; estimate: number }[]
+  expect(all.find((x) => x.id === slides.id)?.estimate).toBe(60)
+  const block = page.locator('.tg-ev.blk', { hasText: 'Write the report' })
+  await expect(block).toBeVisible()
+  await page.screenshot({ path: 'test-results/planner.png' })
+  await block.click()
+  await expect(page.getByTestId('task-estimate')).toHaveValue('90')
+})
+
 test('a workspace exported to a file comes back as a new one with its tasks', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
@@ -1254,6 +1357,8 @@ test('pages: the block handle — turn into, colour, duplicate, move, drag, dele
   await block('Second').hover()
   await page.getByTestId('block-add').click()
   await page.keyboard.type('quote')
+  // The menu filtered down to Quote first.
+  await expect(page.locator('.slash-menu [role="option"]').first()).toContainText('Quote')
   await page.keyboard.press('Enter')
   await page.keyboard.type('Wise words')
   await expect.poll(content).toBe('## Second\n\n> Wise words\n\nThird\n\nThird')

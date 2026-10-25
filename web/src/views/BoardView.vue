@@ -2,8 +2,9 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, SlidersHorizontal, Columns3, X, Eye } from 'lucide-vue-next'
+import { Plus, SlidersHorizontal, Columns3, X, Eye, Rows3 } from 'lucide-vue-next'
 import BoardColumn from '@/components/board/BoardColumn.vue'
+import BoardLanes, { type Lane } from '@/components/board/BoardLanes.vue'
 import ListSheet from '@/components/tasks/ListSheet.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import TaskFilter from '@/components/tasks/TaskFilter.vue'
@@ -97,9 +98,60 @@ const byColumn = computed<Record<string, Task[]>>(() => {
   return out
 })
 
+// ---- Swimlanes: by person or by priority (chosen per browser) ----
+type LaneBy = '' | 'person' | 'priority'
+const laneKey = 'orbit_board_lanes'
+const laneBy = ref<LaneBy>(readLanes())
+function readLanes(): LaneBy {
+  try {
+    const v = localStorage.getItem(laneKey)
+    return v === 'person' || v === 'priority' ? v : ''
+  } catch {
+    return ''
+  }
+}
+watch(laneBy, (v) => {
+  try {
+    localStorage.setItem(laneKey, v)
+  } catch {
+    /* private window */
+  }
+})
+// Lanes by person need the members (even alone in a workspace: "me").
+watch(
+  () => [laneBy.value, ws.value] as const,
+  ([by, w]) => {
+    if (by === 'person' && w && !wss.members[w]) void wss.loadMembers(w).catch(() => {})
+  },
+  { immediate: true },
+)
+const lanes = computed<Lane[]>(() => {
+  if (laneBy.value === 'priority') return ['3', '2', '1', '0'].map((k) => ({ key: k, label: t(`board.lanes.priority${k}`) }))
+  if (laneBy.value !== 'person') return []
+  // The members with cards here first, then the others; "No one" last.
+  const all = Object.values(byColumn.value).flat()
+  const ids = new Set(all.flatMap((x) => x.assignee_ids))
+  const people = Object.values(members.value)
+  const ordered = [...people.filter((m) => ids.has(m.user_id)), ...people.filter((m) => !ids.has(m.user_id))]
+  return [...ordered.map((m) => ({ key: m.user_id, label: m.display_name || m.username, member: m })), { key: '', label: t('board.lanes.noOne') }]
+})
+// laneCards: a cell's cards (a card shows in each of its people's lanes).
+function laneCards(col: string, lane: string): Task[] {
+  const cards = byColumn.value[col] ?? []
+  if (laneBy.value === 'priority') return cards.filter((x) => String(x.priority) === lane)
+  return cards.filter((x) => (lane ? x.assignee_ids.includes(lane) : !x.assignee_ids.length))
+}
+const totals = computed(() => Object.fromEntries(Object.entries(byColumn.value).map(([k, v]) => [k, v.length])))
+
 // ---- Moving cards ----
 const dragging = ref(false)
 async function onMove(m: SortMove) {
+  // In lanes, a cell is "column|lane": a new lane is a new person or priority.
+  const [toCol, toLane] = m.toGroup.split('|')
+  const [fromCol, fromLane] = m.fromGroup.split('|')
+  if (laneBy.value && toLane !== undefined && toLane !== fromLane) await changeLane(m.id, fromLane ?? '', toLane)
+  if (toCol === fromCol && toLane !== undefined && toLane !== fromLane) return
+  m = { ...m, toGroup: toCol }
   const l = list.value
   const task = tasks.tasksOf(ws.value).find((x) => x.id === m.id)
   const col = l?.columns.find((c) => c.id === m.toGroup)
@@ -123,6 +175,20 @@ async function onMove(m: SortMove) {
     await tasks.move(ws.value, task.id, col.id, m.beforeId || '^')
   } catch (e: any) {
     tasks.put(ws.value, before)
+    toast.error(e.message)
+  }
+}
+
+async function changeLane(id: string, from: string, to: string) {
+  const task = tasks.tasksOf(ws.value).find((x) => x.id === id)
+  if (!task || readonly.value) return
+  const patch =
+    laneBy.value === 'priority'
+      ? { priority: Number(to) }
+      : { assignee_ids: [...task.assignee_ids.filter((x) => x !== from && x !== to), ...(to ? [to] : [])] }
+  try {
+    await tasks.update(ws.value, id, patch)
+  } catch (e: any) {
     toast.error(e.message)
   }
 }
@@ -271,7 +337,17 @@ watch(
           <h1 class="large-title truncate" :style="list ? { color: list.color } : {}">{{ list?.name ?? t('modules.board') }}</h1>
           <p v-if="list" class="subhead mt-0.5 tabular-nums">{{ t('board.openCount', { n: list.open_count }) }}</p>
         </div>
-        <div v-if="loaded && list" class="mb-1 flex shrink-0 items-center gap-1"><TaskFilter :ws="ws" /></div>
+        <div v-if="loaded && list" class="mb-1 flex shrink-0 items-center gap-1">
+          <label class="lanes-pick" :title="t('board.lanes.title')">
+            <Rows3 class="h-3.5 w-3.5" />
+            <select v-model="laneBy" :aria-label="t('board.lanes.title')" data-testid="board-lanes-by">
+              <option value="">{{ t('board.lanes.none') }}</option>
+              <option value="person">{{ t('board.lanes.person') }}</option>
+              <option value="priority">{{ t('board.lanes.priority') }}</option>
+            </select>
+          </label>
+          <TaskFilter :ws="ws" />
+        </div>
         <span v-if="readonly && loaded" class="pill mb-1 shrink-0"><Eye class="h-3 w-3" />{{ t('board.readOnly') }}</span>
         <template v-else-if="loaded">
           <button v-if="list" class="btn btn-sm mb-1 shrink-0 !px-2 sm:!px-2.5" :title="t('board.editList')" :aria-label="t('board.editList')" @click="openSheet(list.id)">
@@ -315,6 +391,25 @@ watch(
       <button v-if="!readonly" class="btn-primary mt-6" @click="openSheet('')"><Plus class="h-4 w-4" />{{ t('board.createList') }}</button>
     </div>
 
+    <!-- Swimlanes -->
+    <div v-else-if="laneBy" ref="trackEl" class="track lanes-track mt-5" :class="{ dragging }" :style="{ height: `calc(100dvh - ${top}px - var(--board-bottom))` }">
+      <BoardLanes
+        :ws="ws"
+        :list-id="list.id"
+        :columns="list.columns"
+        :lanes="lanes"
+        :cards="laneCards"
+        :totals="totals"
+        :color="list.color"
+        :members="members"
+        :readonly="readonly"
+        :by="laneBy"
+        @open="openTask = $event"
+        @move="onMove"
+        @dragging="dragging = $event"
+      />
+    </div>
+
     <!-- Columns -->
     <div v-else ref="trackEl" class="track board mt-5" :class="{ dragging }" :style="{ height: `calc(100dvh - ${top}px - var(--board-bottom))` }">
       <BoardColumn
@@ -336,6 +431,7 @@ watch(
         @recolor="patchColumn(i, { color: $event })"
         @toggle-done="patchColumn(i, { done: !c.done }, true)"
         @shift="shiftColumn(i, $event)"
+        @limit="patchColumn(i, { limit: $event })"
         @remove="askRemove(c)"
       />
 
@@ -380,6 +476,28 @@ watch(
 <style scoped>
 .strip {
   scrollbar-width: none;
+}
+.lanes-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 4px 0 9px;
+  border-radius: 9px;
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.lanes-pick select {
+  background: transparent;
+  outline: none;
+  color: var(--text);
+  cursor: pointer;
+}
+/* Lanes scroll both ways inside the page. */
+.lanes-track {
+  overflow: auto;
+  align-items: stretch;
 }
 .strip::-webkit-scrollbar {
   display: none;

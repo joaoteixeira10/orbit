@@ -3,6 +3,25 @@
 // exist in both (messages.spec.ts checks).
 
 export const calEn = {
+  plan: {
+    button: 'Plan',
+    title: 'Plan these days',
+    hint: 'Your open tasks — for you or no one, due by {to} or undated — fitted into your free working hours from {from} to {to}, around what’s already there: the earliest due first, then the most important. They become time blocks on your calendar; the tasks don’t change.',
+    hours: 'Working hours',
+    from: 'From',
+    to: 'To',
+    tasks: 'Tasks',
+    noTasks: 'No open tasks to plan.',
+    due: 'Due {day}',
+    howLong: 'How long?',
+    preview: 'The plan',
+    nothing: 'Nothing planned yet: give the tasks an estimate and tick them.',
+    noRoom: 'No room for {title}: {left} left over',
+    clear: 'Clear the plan',
+    apply: 'Apply',
+    saved: 'One block planned | {n} blocks planned',
+    cleared: 'The plan is cleared',
+  },
   cal: {
     day: 'Day',
     week: 'Week',
@@ -131,6 +150,25 @@ export const calEn = {
 }
 
 export const calPt: typeof calEn = {
+  plan: {
+    button: 'Planear',
+    title: 'Planear estes dias',
+    hint: 'As suas tarefas em aberto — para si ou para ninguém, até {to} ou sem data — encaixadas nas suas horas de trabalho livres de {from} a {to}, à volta do que já lá está: primeiro as de prazo mais próximo, depois as mais importantes. Ficam como blocos de tempo no seu calendário; as tarefas não mudam.',
+    hours: 'Horas de trabalho',
+    from: 'De',
+    to: 'Até',
+    tasks: 'Tarefas',
+    noTasks: 'Não há tarefas em aberto para planear.',
+    due: 'Até {day}',
+    howLong: 'Quanto tempo?',
+    preview: 'O plano',
+    nothing: 'Ainda nada planeado: dê às tarefas uma estimativa e marque-as.',
+    noRoom: 'Sem espaço para {title}: sobram {left}',
+    clear: 'Limpar o plano',
+    apply: 'Aplicar',
+    saved: 'Um bloco planeado | {n} blocos planeados',
+    cleared: 'O plano foi limpo',
+  },
   cal: {
     day: 'Dia',
     week: 'Semana',

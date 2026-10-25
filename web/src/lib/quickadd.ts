@@ -12,6 +12,15 @@ export interface Quick {
   priority?: number
   tags: string[]
   repeat?: string // an RRULE, e.g. FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+  estimate?: number // minutes, from "~45m", "~1h30", "~2h"
+}
+
+// parseEstimate reads "~45m", "~1h", "~1h30", "~1h30m", "~1.5h", "~90min".
+export function parseEstimate(w: string): number | undefined {
+  const m = w.match(/^~(?:(\d+(?:[.,]\d+)?)h(?:(\d{1,2})m?)?|(\d+)(?:m|min))$/i)
+  if (!m) return undefined
+  const n = m[3] ? +m[3] : Math.round(parseFloat(m[1].replace(',', '.')) * 60) + (m[2] ? +m[2] : 0)
+  return n > 0 && n <= 10080 ? n : undefined
 }
 
 const weekdays: Record<string, number> = {
@@ -120,6 +129,8 @@ export function parseQuick(input: string, now = new Date()): Quick {
     const next = (words[i + 1] ?? '').toLowerCase()
     if (/^!{1,3}$/.test(w)) {
       out.priority = w.length
+    } else if (parseEstimate(w) !== undefined) {
+      out.estimate = parseEstimate(w)
     } else if (/^#[\p{L}\p{N}_-]+$/u.test(raw)) {
       out.tags.push(raw.slice(1))
     } else if (w === 'today' || w === 'hoje') {

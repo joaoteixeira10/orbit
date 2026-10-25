@@ -2,11 +2,12 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, PanelLeft, PanelRight } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarClock, PanelLeft, PanelRight } from 'lucide-vue-next'
 import MonthGrid from '@/components/calendar/MonthGrid.vue'
 import TimeGrid from '@/components/calendar/TimeGrid.vue'
 import DayAgenda from '@/components/calendar/DayAgenda.vue'
 import EventSheet from '@/components/calendar/EventSheet.vue'
+import PlanSheet from '@/components/calendar/PlanSheet.vue'
 import EventDetail from '@/components/calendar/EventDetail.vue'
 import SubscriptionsSheet from '@/components/calendar/SubscriptionsSheet.vue'
 import CalendarSidebar, { type CalSource } from '@/components/calendar/CalendarSidebar.vue'
@@ -15,7 +16,7 @@ import type { DraggedTask } from '@/lib/taskDrag'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import { toEntry, type CalView, type Entry, type TaskItem } from '@/components/calendar/model'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
-import { calendarApi, tasksApi, type CalendarData, type EventInput, type Occurrence, type Subscription, type Task, type Workspace } from '@/api/planner'
+import { blocksApi, calendarApi, tasksApi, type TimeBlock, type CalendarData, type EventInput, type Occurrence, type Subscription, type Task, type Workspace } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useTasksStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
@@ -255,6 +256,8 @@ const subtitle = computed(() => {
 
 // ---- Data ----
 const data = ref<CalendarData>({ events: [], tasks: [] })
+// My time blocks (the week planner's), shown in Week and Day.
+const blocks = ref<TimeBlock[]>([])
 let seq = 0
 async function load() {
   const { start, end } = range.value
@@ -268,9 +271,10 @@ async function load() {
     to_date: dateStr(addDays(end, -1)),
   }
   try {
-    const d = wsId.value ? await calendarApi.workspace(wsId.value, p) : await calendarApi.mine(p)
+    const [d, b] = await Promise.all([wsId.value ? calendarApi.workspace(wsId.value, p) : calendarApi.mine(p), blocksApi.list(p.from, p.to).catch(() => [] as TimeBlock[])])
     if (mine === seq) {
       data.value = d
+      blocks.value = b
       version.value++
     }
   } catch (e: any) {
@@ -281,6 +285,17 @@ watch(wsId, () => (data.value = { events: [], tasks: [] }))
 watch(() => `${wsId.value}|${dateStr(range.value.start)}|${dateStr(range.value.end)}`, load, { immediate: true })
 
 const entries = computed(() => data.value.events.filter((occ) => visible({ occ })).map((o) => toEntry(o, canEditWs(wss.byId(o.workspace_id)))))
+// The time grid's: the events and my time blocks (of the workspace shown).
+const blockOccs = computed<Occurrence[]>(() =>
+  blocks.value
+    .filter((b) => (wsId.value ? b.workspace_id === wsId.value : !!wss.byId(b.workspace_id)))
+    .map((b) => ({ kind: 'block', id: b.id, task_id: b.task_id, workspace_id: b.workspace_id, title: b.done ? `✓ ${b.title}` : b.title, start: b.starts_at, end: b.ends_at, all_day: false, color: b.color || wss.byId(b.workspace_id)?.color || 'var(--ws)', recurring: false })),
+)
+const gridEntries = computed(() => [...entries.value, ...blockOccs.value.map((o) => toEntry(o, false))])
+
+// ---- Plan the days shown ----
+const planOpen = ref(false)
+const planWorkspaces = computed(() => (wsId.value ? [wsId.value] : wss.list.filter((w) => !w.archived_at && w.modules.includes('tasks')).map((w) => w.id)))
 const taskItems = computed<TaskItem[]>(() =>
   data.value.tasks.filter((task) => visible({ task })).map((task) => {
     const w = wss.byId(task.workspace_id)
@@ -291,6 +306,11 @@ const taskItems = computed<TaskItem[]>(() =>
 // Live: someone changed events, tasks or subscriptions of a workspace shown.
 let liveTimer: ReturnType<typeof setTimeout> | null = null
 const offLive = onLiveEvent('ws', (e) => {
+  if (e.what === 'blocks' && e.origin !== CLIENT_ID) {
+    if (liveTimer) clearTimeout(liveTimer)
+    liveTimer = setTimeout(load, 250)
+    return
+  }
   if (e.origin === CLIENT_ID || !['events', 'tasks', 'subscriptions'].includes(String(e.what))) return
   const ws = String(e.ws)
   if (wsId.value ? ws !== wsId.value : !wss.byId(ws)) return
@@ -342,6 +362,11 @@ const detailName = computed(() => {
   return wsId.value ? sub : `${sub} · ${wsName}`
 })
 function openEntry(e: Entry) {
+  // A time block opens its task.
+  if (e.occ.kind === 'block' && e.occ.task_id) {
+    void openTaskById(e.occ.workspace_id, e.occ.task_id)
+    return
+  }
   if (e.editable) {
     sheetOcc.value = e.occ
     sheetDraft.value = null
@@ -385,6 +410,14 @@ async function saveTiming(e: Entry, body: EventInput) {
 
 // ---- Tasks ----
 const taskOpen = ref<{ ws: string; id: string } | null>(null)
+async function openTaskById(ws: string, id: string) {
+  try {
+    if (!tasksStore.tasks[ws]) await tasksStore.load(ws)
+  } catch {
+    /* the sheet loads what it can */
+  }
+  taskOpen.value = { ws, id }
+}
 async function openTask(x: TaskItem) {
   const ws = x.task.workspace_id
   try {
@@ -537,6 +570,7 @@ const views: CalView[] = ['day', 'week', 'month']
           <button @click="goToday">{{ t('dates.today') }}</button>
           <button :aria-label="t('cal.next')" :title="t('cal.next')" @click="shift(1)"><ChevronRight class="h-4 w-4" :stroke-width="2.4" /></button>
         </div>
+        <button v-if="view !== 'month' && !agenda && planWorkspaces.length" class="btn btn-sm shrink-0" :title="t('plan.button')" data-testid="plan-open" @click="planOpen = true"><CalendarClock class="h-3.5 w-3.5" /><span class="hidden lg:inline">{{ t('plan.button') }}</span></button>
         <button v-if="!phone" class="icon-btn shrink-0" :class="{ on: rightOpen }" :title="t('cal.toggleRight')" :aria-label="t('cal.toggleRight')" :aria-pressed="rightOpen" data-testid="toggle-pane" @click="toggleRight"><PanelRight class="h-[18px] w-[18px]" /></button>
       </div>
     </header>
@@ -585,7 +619,7 @@ const views: CalView[] = ['day', 'week', 'month']
         v-else
         :key="view"
         :days="gridDays"
-        :entries="entries"
+        :entries="gridEntries"
         :tasks="taskItems"
         :can-create="canCreate"
         @open="openEntry"
@@ -617,6 +651,16 @@ const views: CalView[] = ['day', 'week', 'month']
    </div>
 
     <EventSheet :open="sheetOpen" :occurrence="sheetOcc" :draft="sheetDraft" :ws="sheetWs" :choices="choices" @close="sheetOpen = false" @saved="load" />
+    <PlanSheet
+      :open="planOpen"
+      :days="gridDays"
+      :workspace-ids="planWorkspaces"
+      :events="data.events"
+      :due-tasks="data.tasks"
+      :blocks="blocks"
+      @close="planOpen = false"
+      @saved="load"
+    />
     <EventDetail
       :open="detailOpen"
       :entry="detail"

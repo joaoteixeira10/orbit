@@ -2633,6 +2633,115 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/blocks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "My time blocks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.blockResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Save a plan of time blocks",
+                "parameters": [
+                    {
+                        "description": "The range, the workspaces, the blocks",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.planRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.blockResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/me/blocks/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Remove a time block",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Block id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/me/channels": {
             "get": {
                 "security": [
@@ -9052,6 +9161,36 @@ const docTemplate = `{
                 }
             }
         },
+        "api.blockResponse": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "its list's",
+                    "type": "string"
+                },
+                "done": {
+                    "type": "boolean"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "api.bookmarkRequest": {
             "type": "object",
             "properties": {
@@ -11302,6 +11441,51 @@ const docTemplate = `{
                 }
             }
         },
+        "api.planRequest": {
+            "type": "object",
+            "required": [
+                "from",
+                "to",
+                "workspace_ids"
+            ],
+            "properties": {
+                "blocks": {
+                    "type": "array",
+                    "maxItems": 300,
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "task_id"
+                        ],
+                        "properties": {
+                            "ends_at": {
+                                "type": "string"
+                            },
+                            "starts_at": {
+                                "type": "string"
+                            },
+                            "task_id": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "from": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                },
+                "workspace_ids": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "api.prefsResponse": {
             "type": "object",
             "properties": {
@@ -11836,6 +12020,12 @@ const docTemplate = `{
                     "description": "HH:MM, \"\" clears",
                     "type": "string"
                 },
+                "estimate": {
+                    "description": "minutes (0 clears), a week at most",
+                    "type": "integer",
+                    "maximum": 10080,
+                    "minimum": 0
+                },
                 "git_milestone": {
                     "type": "string",
                     "maxLength": 255
@@ -11937,6 +12127,10 @@ const docTemplate = `{
                 "due_time": {
                     "description": "HH:MM",
                     "type": "string"
+                },
+                "estimate": {
+                    "description": "Estimate is how long it should take, in minutes (0: not estimated).",
+                    "type": "integer"
                 },
                 "focus_minutes": {
                     "description": "FocusMinutes is the time focused on it (focus sessions).",
@@ -13611,6 +13805,10 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "limit": {
+                    "description": "Limit is how many cards the column should hold at most (0: no limit);\nthe board shows when it's over, it doesn't refuse more.",
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"

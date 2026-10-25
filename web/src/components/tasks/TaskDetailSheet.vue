@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarArrowUp, Clock, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer, Target, Link2 } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarArrowUp, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer, Target, Link2 } from 'lucide-vue-next'
+import { estimateText } from '@/lib/weekPlan'
 import { durationOf } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
 import Overlay from '@/components/ui/Overlay.vue'
@@ -290,6 +291,14 @@ async function remove() {
     toast.error(e.message)
   }
 }
+
+// How long it should take (the week planner fits it in): the usual ones,
+// and the task's own when it's another.
+const estimateChoices = computed(() => {
+  const base = [0, 15, 30, 45, 60, 90, 120, 180, 240, 360, 480]
+  const own = task.value?.estimate ?? 0
+  return own && !base.includes(own) ? [...base, own].sort((a, b) => a - b) : base
+})
 </script>
 
 <template>
@@ -394,6 +403,13 @@ async function remove() {
               {{ p === 0 ? t('tasks.prioNone') : '!'.repeat(p) }}
             </button>
           </div>
+        </div>
+        <div class="group-row">
+          <span class="tile h-7 w-7" style="--tile: #30b0c7"><Hourglass class="h-4 w-4" /></span>
+          <span class="flex-1 text-[14px]">{{ t('tasks.estimate') }}</span>
+          <select class="input !w-auto !py-1 text-[13.5px]" :value="String(task.estimate || 0)" :disabled="!editable" :aria-label="t('tasks.estimate')" data-testid="task-estimate" @change="save({ estimate: Number(($event.target as HTMLSelectElement).value) })">
+            <option v-for="m in estimateChoices" :key="m" :value="String(m)">{{ m ? estimateText(m) : t('tasks.noEstimate') }}</option>
+          </select>
         </div>
         <div class="group-row">
           <span class="tile h-7 w-7" style="--tile: #5856d6"><List class="h-4 w-4" /></span>

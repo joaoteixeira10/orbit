@@ -325,3 +325,19 @@ func TestSplitRule(t *testing.T) {
 		t.Errorf("exdates: %s %s", bx, ax)
 	}
 }
+
+func TestColumnLimit(t *testing.T) {
+	cols := Columns("To do", "Doing", "Done")
+	cols[1].Limit = 3
+	out, err := CleanColumns(cols)
+	if err != nil || out[1].Limit != 3 {
+		t.Fatalf("limit kept: %v %+v", err, out)
+	}
+	cols[1].Limit = -1
+	if _, err := CleanColumns(cols); err == nil {
+		t.Error("a negative limit")
+	}
+	if !strings.Contains(EncodeColumns(out), `"limit":3`) || strings.Contains(EncodeColumns(Columns("A", "B")), "limit") {
+		t.Error("limit in JSON only when set")
+	}
+}

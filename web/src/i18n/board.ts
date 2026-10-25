@@ -3,6 +3,20 @@
 
 export const boardEn = {
   board: {
+    lanes: {
+      title: 'Swimlanes',
+      none: 'No lanes',
+      person: 'Lanes by person',
+      priority: 'Lanes by priority',
+      noOne: 'No one',
+      priority3: 'High (!!!)',
+      priority2: 'Medium (!!)',
+      priority1: 'Low (!)',
+      priority0: 'No priority',
+    },
+    limit: 'Limit',
+    noLimit: 'none',
+    limitOf: 'At most {n} cards',
     lists: 'Lists',
     newList: 'New list',
     editList: 'Edit list',
@@ -63,6 +77,20 @@ export const boardEn = {
 
 export const boardPt: typeof boardEn = {
   board: {
+    lanes: {
+      title: 'Faixas',
+      none: 'Sem faixas',
+      person: 'Faixas por pessoa',
+      priority: 'Faixas por prioridade',
+      noOne: 'Ninguém',
+      priority3: 'Alta (!!!)',
+      priority2: 'Média (!!)',
+      priority1: 'Baixa (!)',
+      priority0: 'Sem prioridade',
+    },
+    limit: 'Limite',
+    noLimit: 'nenhum',
+    limitOf: 'No máximo {n} cartões',
     lists: 'Listas',
     newList: 'Nova lista',
     editList: 'Editar lista',

@@ -146,6 +146,26 @@ definitions:
       s3_region:
         type: string
     type: object
+  api.blockResponse:
+    properties:
+      color:
+        description: its list's
+        type: string
+      done:
+        type: boolean
+      ends_at:
+        type: string
+      id:
+        type: string
+      starts_at:
+        type: string
+      task_id:
+        type: string
+      title:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   api.bookmarkRequest:
     properties:
       description:
@@ -1705,6 +1725,37 @@ definitions:
         description: discord, slack, teams
         type: string
     type: object
+  api.planRequest:
+    properties:
+      blocks:
+        items:
+          properties:
+            ends_at:
+              type: string
+            starts_at:
+              type: string
+            task_id:
+              type: string
+          required:
+          - task_id
+          type: object
+        maxItems: 300
+        type: array
+      from:
+        type: string
+      to:
+        type: string
+      workspace_ids:
+        items:
+          type: string
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - from
+    - to
+    - workspace_ids
+    type: object
   api.prefsResponse:
     properties:
       accent_color:
@@ -2076,6 +2127,11 @@ definitions:
       due_time:
         description: HH:MM, "" clears
         type: string
+      estimate:
+        description: minutes (0 clears), a week at most
+        maximum: 10080
+        minimum: 0
+        type: integer
       git_milestone:
         maxLength: 255
         type: string
@@ -2153,6 +2209,9 @@ definitions:
       due_time:
         description: HH:MM
         type: string
+      estimate:
+        description: 'Estimate is how long it should take, in minutes (0: not estimated).'
+        type: integer
       focus_minutes:
         description: FocusMinutes is the time focused on it (focus sessions).
         type: integer
@@ -3346,6 +3405,11 @@ definitions:
         type: boolean
       id:
         type: string
+      limit:
+        description: |-
+          Limit is how many cards the column should hold at most (0: no limit);
+          the board shows when it's over, it doesn't refuse more.
+        type: integer
       name:
         type: string
     type: object
@@ -5003,6 +5067,73 @@ paths:
       summary: Revoke an API token
       tags:
       - auth
+  /me/blocks:
+    get:
+      parameters:
+      - description: RFC 3339
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: RFC 3339
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.blockResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My time blocks
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: The range, the workspaces, the blocks
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.planRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.blockResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Save a plan of time blocks
+      tags:
+      - tasks
+  /me/blocks/{id}:
+    delete:
+      parameters:
+      - description: Block id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove a time block
+      tags:
+      - tasks
   /me/channels:
     get:
       produces:

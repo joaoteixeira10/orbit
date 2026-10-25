@@ -14,6 +14,7 @@ import { downloadUpload, isUploadSrc, uploadFile } from '@/lib/uploads'
 import { useToastStore } from '@/stores/toast'
 import SlashMenu from './SlashMenu.vue'
 import BubbleToolbar from './BubbleToolbar.vue'
+import BlockHandle from './BlockHandle.vue'
 import './editor.css'
 import { MathAnswers } from './math'
 import { MentionCommand } from './mention'
@@ -168,6 +169,7 @@ defineExpose({ getContent, setContent, focusStart })
   <div ref="root" class="page-editor" :class="{ 'is-readonly': !editable || invalid }">
     <EditorContent :editor="editor" />
     <BubbleToolbar v-if="editor" ref="bubble" :editor="editor" />
+    <BlockHandle v-if="editor && root && editable && !invalid" :editor="editor" :root="root" />
     <SlashMenu :state="slash" :context="root" @hover="(i) => (slash.index = i)" />
     <SlashMenu :state="mention" :context="root" :label="t('mention.label')" :empty="t('mention.none')" @hover="(i) => (mention.index = i)" />
   </div>

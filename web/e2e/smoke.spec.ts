@@ -1064,7 +1064,7 @@ test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours 
   await page.getByTestId('color-code').fill('#ff3b30')
   await page.getByTestId('color-code').press('Enter')
   await page.getByTestId('color-keep').click()
-  await expect(page.getByTestId('my-colors').getByRole('button', { name: '#ff3b30' })).toBeVisible()
+  await expect(page.getByTestId('my-colors').getByRole('button', { name: '#ff3b30', exact: true })).toBeVisible()
   await expect.poll(async () => (await (await request.get('/api/v1/me/prefs', { headers: H })).json()).sketch_colors).toContain('#ff3b30')
   await page.keyboard.press('Escape')
 
@@ -1197,6 +1197,67 @@ test('page templates: a new page starts as meeting notes, or from a page made a 
   await expect.poll(async () => (await content(next.id)).content).toMatch(/## Yesterday\s+- admin/)
   await expect.poll(async () => (await content(next.id)).title).toMatch(/^Standup [A-Z][a-z]+day$/)
   await page.screenshot({ path: 'test-results/page-templates.png' })
+})
+
+test('pages: the block handle — turn into, colour, duplicate, move, drag, delete', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Blocks', kind: 'work', modules: ['home', 'pages'] } })).json()
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Plan', content: 'First\n\nSecond\n\nThird' } })).json()
+  const content = async () => ((await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()) as { content: string }).content
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  // The visual editor (an earlier test left Markdown chosen).
+  await page.getByRole('tab', { name: 'Visual' }).click()
+  await expect(page.locator('.ProseMirror[contenteditable="true"]')).toBeVisible()
+  const block = (text: string) => page.locator('.ProseMirror > *', { hasText: text })
+  const menuOf = async (text: string) => {
+    await block(text).hover()
+    await page.getByTestId('block-grip').click()
+    await expect(page.getByTestId('block-menu')).toBeVisible()
+  }
+
+  // Second becomes a heading, then a green callout.
+  await menuOf('Second')
+  await page.getByTestId('turn-h2').click()
+  await expect.poll(content).toBe('First\n\n## Second\n\nThird')
+  await menuOf('Second')
+  await page.getByTestId('colour-TIP').click()
+  await expect.poll(content).toBe('First\n\n> [!TIP]\n> ## Second\n\nThird')
+  // No colour: out of the callout again.
+  await menuOf('Second')
+  await page.getByTestId('colour-none').click()
+  await expect.poll(content).toBe('First\n\n## Second\n\nThird')
+
+  // Third duplicated and moved up.
+  await menuOf('Third')
+  await page.getByTestId('block-duplicate').click()
+  await expect.poll(content).toBe('First\n\n## Second\n\nThird\n\nThird')
+  await menuOf('First')
+  await page.getByTestId('block-down').click()
+  await expect.poll(content).toBe('## Second\n\nFirst\n\nThird\n\nThird')
+
+  // Dragged by its handle: First to the end.
+  await block('First').hover()
+  await page.getByTestId('block-grip').dragTo(page.locator('.ProseMirror > *').last(), { targetPosition: { x: 40, y: 20 } })
+  await expect.poll(content).toBe('## Second\n\nThird\n\nThird\n\nFirst')
+
+  // Deleted.
+  await menuOf('First')
+  await page.getByTestId('block-delete').click()
+  await expect.poll(content).toBe('## Second\n\nThird\n\nThird')
+
+  // + adds a block below with the / menu open.
+  await block('Second').hover()
+  await page.getByTestId('block-add').click()
+  await page.keyboard.type('quote')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Wise words')
+  await expect.poll(content).toBe('## Second\n\n> Wise words\n\nThird\n\nThird')
+  await page.getByRole('tab', { name: 'Markdown' }).click()
 })
 
 test('mentions: @ links a page and a date (in both editors); the page shows what links to it', async ({ page, request }) => {

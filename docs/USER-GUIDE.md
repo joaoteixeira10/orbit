@@ -378,6 +378,13 @@ same page: it's the same Markdown.
   underline, strikethrough, code, highlight, link (⌘K), and turn into text or
   a heading. A **callout** is one of GitHub's five alerts — note, tip,
   important, warning, caution (click its icon to choose).
+  Point at a block and a **handle** shows on its left: **+** adds a block
+  under it (the **/** menu opens), and **⋮⋮** — drag it to move the block
+  anywhere in the page, or click it for the block's menu: **Turn into**
+  (text, a heading, a list, a to-do list, a quote, code, a callout),
+  **Colour** (blue, green, purple, yellow or red: a callout of that kind, so
+  the page stays plain Markdown; no colour takes it out again),
+  **Duplicate**, **Move up**, **Move down**, **Delete**.
 - **Markdown** — the page's source, coloured as you type. Enter continues a
   list, task or quote (an empty item ends it), Tab / ⇧Tab indent, ⌘B ⌘I ⌘E
   ⌘K make bold, italic, code and a link of every selection. It edits like

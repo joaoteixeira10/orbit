@@ -8,6 +8,9 @@ merge, not at release time.
 
 ### Added
 
+- **Block handles in pages** — beside the block under the pointer: + adds
+  a block (with the / menu), ⋮⋮ drags it, or opens its menu: turn into,
+  colour (as a GitHub alert callout), duplicate, move up / down, delete.
 - **Repeating events: "only this" and "this and following"** — editing an
   occurrence asks which; the series splits (a COUNT keeps counting) or the
   one occurrence leaves it; delete "this and following" too

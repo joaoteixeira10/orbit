@@ -559,6 +559,7 @@ export const pushApi = {
 export interface CalDAVLink {
   id: string
   workspace_id: string
+  provider?: string // "" CalDAV | "google"
   calendar_url: string
   calendar_name: string
   host: string
@@ -599,6 +600,13 @@ export const calendarApi = {
     api<{ link: CalDAVLink }>(`/workspaces/${ws}/caldav`, { method: 'PUT', body: j(b) }),
   syncCalDAV: (ws: string) => api<{ link: CalDAVLink }>(`/workspaces/${ws}/caldav/sync`, { method: 'POST' }),
   unlinkCalDAV: (ws: string) => api<void>(`/workspaces/${ws}/caldav`, { method: 'DELETE' }),
+  // Google Calendar: signed in with Google, then a calendar picked.
+  googleStatus: () => api<{ available: boolean }>('/google/status'),
+  googleStart: (ws: string) => api<{ url: string }>(`/workspaces/${ws}/google/start`, { method: 'POST' }),
+  googleCalendars: (ws: string, pending: string) =>
+    api<{ email: string; calendars: { id: string; name: string; color: string }[] }>(`/workspaces/${ws}/google/calendars?${qs({ pending })}`),
+  googleLink: (ws: string, b: { pending: string; calendar_id: string; calendar_name: string }) =>
+    api<{ link: CalDAVLink }>(`/workspaces/${ws}/google/link`, { method: 'POST', body: j(b) }),
   feeds: () => api<Feed[]>('/me/feeds'),
   createFeed: (b: { name?: string; workspace_ids?: string[]; include_tasks?: boolean }) =>
     api<{ feed: Feed; url: string; webcal: string }>('/me/feeds', { method: 'POST', body: j(b) }),

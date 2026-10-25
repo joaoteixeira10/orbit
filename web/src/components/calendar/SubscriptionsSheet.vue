@@ -16,8 +16,8 @@ import { locale } from '@/lib/dates'
 // on top), and its subscribed ones (ICS feeds from Google, iCloud,
 // Outlook…): add one by its secret address, rename or recolour it, fetch it
 // now, or remove it. Only the host of an address is ever shown again.
-const props = defineProps<{ open: boolean; ws: string; owner?: boolean; subscriptions?: boolean; caldav?: boolean }>()
-const emit = defineEmits<{ close: []; changed: [] }>()
+const props = defineProps<{ open: boolean; ws: string; owner?: boolean; subscriptions?: boolean; caldav?: boolean; googlePending?: string }>()
+const emit = defineEmits<{ close: []; changed: []; googleDone: [] }>()
 const toast = useToastStore()
 const { t } = useI18n()
 
@@ -149,7 +149,7 @@ function ago(iso: string): string {
 <template>
   <Overlay :open="open" :title="caldav ? t('cal.calendars') : t('cal.subsTitle')" size="md" @close="emit('close')">
     <div class="space-y-4">
-    <CalDAVSync v-if="caldav" :ws="ws" :open="open" :owner="!!owner" @changed="emit('changed')" />
+    <CalDAVSync v-if="caldav" :ws="ws" :open="open" :owner="!!owner" :google-pending="googlePending" @changed="emit('changed')" @google-done="emit('googleDone')" />
     <div v-if="subscriptions !== false" class="space-y-4">
       <h3 v-if="caldav" class="px-1 pt-2 text-[13px] font-semibold text-text-2">{{ t('cal.subsTitle') }}</h3>
       <div v-if="subs.length" class="group">

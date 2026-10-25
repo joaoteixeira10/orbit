@@ -10,8 +10,9 @@ import { locale } from '@/lib/dates'
 // Two-way sync with a calendar on a CalDAV server: owners connect an account
 // (server, username, app password), pick one of its calendars and sync;
 // editors can sync now. Shown at the top of the calendars sheet.
-const props = defineProps<{ ws: string; open: boolean; owner: boolean }>()
-const emit = defineEmits<{ changed: [] }>()
+// googlePending: back from signing in with Google (a calendar to pick).
+const props = defineProps<{ ws: string; open: boolean; owner: boolean; googlePending?: string }>()
+const emit = defineEmits<{ changed: []; googleDone: [] }>()
 const toast = useToastStore()
 const { t } = useI18n()
 
@@ -51,9 +52,55 @@ watch(
     loaded.value = false
     setup.value = false
     void load()
+    void calendarApi.googleStatus().then((s) => (googleOn.value = s.available), () => (googleOn.value = false))
+    if (props.googlePending) void loadGoogle(props.googlePending)
   },
   { immediate: true },
 )
+
+// ---- Google Calendar: sign in with Google, then pick a calendar ----
+const googleOn = ref(false)
+const google = ref<{ pending: string; email: string; calendars: { id: string; name: string; color: string }[] } | null>(null)
+const googleChosen = ref('')
+async function signInGoogle() {
+  try {
+    location.href = (await calendarApi.googleStart(props.ws)).url
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function loadGoogle(pending: string) {
+  error.value = ''
+  try {
+    const r = await calendarApi.googleCalendars(props.ws, pending)
+    google.value = { pending, ...r }
+    googleChosen.value = r.calendars[0]?.id ?? ''
+  } catch (e: any) {
+    toast.error(e.message)
+    emit('googleDone')
+  }
+}
+async function linkGoogle() {
+  const g = google.value
+  const cal = g?.calendars.find((c) => c.id === googleChosen.value)
+  if (!g || !cal || linking.value) return
+  linking.value = true
+  error.value = ''
+  try {
+    link.value = (await calendarApi.googleLink(props.ws, { pending: g.pending, calendar_id: cal.id, calendar_name: cal.name })).link
+    google.value = null
+    emit('googleDone')
+    emit('changed')
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    linking.value = false
+  }
+}
+function cancelGoogle() {
+  google.value = null
+  emit('googleDone')
+}
 
 function start() {
   server.value = ''
@@ -160,6 +207,27 @@ function ago(iso: string): string {
       <button v-if="owner" class="group-row w-full text-left text-[14px] !text-danger" @click="stopping = true">{{ t('cal.dav.stop') }}</button>
     </div>
 
+<!-- Back from Google: one of the account's calendars -->
+    <form v-else-if="google" class="card space-y-3 p-4" data-testid="google-pick" @submit.prevent="linkGoogle">
+      <p class="text-[13px] leading-relaxed text-text-2">{{ t('cal.dav.googlePick', { email: google.email }) }}</p>
+      <div v-if="google.calendars.length" class="group" role="radiogroup" :aria-label="t('cal.dav.pick')">
+        <button v-for="c in google.calendars" :key="c.id" type="button" class="group-row w-full text-left" role="radio" :aria-checked="googleChosen === c.id" @click="googleChosen = c.id">
+          <span class="h-3 w-3 shrink-0 rounded-full" :style="{ background: c.color || 'var(--ws)' }" />
+          <span class="flex-1 truncate text-[14px]">{{ c.name }}</span>
+          <Check v-if="googleChosen === c.id" class="h-4 w-4 text-accent" />
+        </button>
+      </div>
+      <p v-else class="footnote">{{ t('cal.dav.noCalendars') }}</p>
+      <p class="text-[12.5px] leading-relaxed text-text-3">{{ t('cal.dav.first') }}</p>
+      <p v-if="error" class="text-[12.5px] text-crit-text">{{ error }}</p>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn" :disabled="linking" @click="cancelGoogle">{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn-primary" :disabled="!googleChosen || linking" data-testid="google-link">
+          <RefreshCw v-if="linking" class="h-4 w-4 animate-spin" />{{ linking ? t('cal.dav.linking') : t('cal.dav.link') }}
+        </button>
+      </div>
+    </form>
+
     <!-- Set up -->
     <form v-else-if="setup" class="card space-y-3 p-4" @submit.prevent="calendars ? connect() : find()">
       <p class="text-[13px] leading-relaxed text-text-2">{{ t('cal.dav.intro') }}</p>
@@ -205,8 +273,9 @@ function ago(iso: string): string {
       </div>
     </form>
     <template v-else>
+      <button v-if="googleOn" class="btn-tinted w-full" data-testid="google-start" @click="signInGoogle"><ArrowLeftRight class="h-4 w-4" />{{ t('cal.dav.googleStart') }}</button>
       <button class="btn-tinted w-full" data-testid="caldav-start" @click="start"><ArrowLeftRight class="h-4 w-4" />{{ t('cal.dav.start') }}</button>
-      <p class="footnote px-1 leading-relaxed">{{ t('cal.dav.google') }}</p>
+      <p v-if="!googleOn" class="footnote px-1 leading-relaxed">{{ t('cal.dav.google') }}</p>
     </template>
   </section>
 

@@ -40,11 +40,19 @@ type Client struct {
 	http     *http.Client
 	username string
 	password string
+	// bearer, when set, signs in with an access token (Google's CalDAV)
+	// instead of the user name and password.
+	bearer func(ctx context.Context) (string, error)
 }
 
 // NewClient builds a client; hc must not follow redirects (Client does).
 func NewClient(hc *http.Client, username, password string) *Client {
 	return &Client{http: hc, username: username, password: password}
+}
+
+// NewBearerClient builds a client that signs in with an access token.
+func NewBearerClient(hc *http.Client, token func(ctx context.Context) (string, error)) *Client {
+	return &Client{http: hc, bearer: token}
 }
 
 // Calendar is a calendar collection that holds events.
@@ -159,7 +167,15 @@ func (c *Client) do(ctx context.Context, method, target string, body []byte, hea
 		for k, v := range header {
 			req.Header[k] = v
 		}
-		req.SetBasicAuth(c.username, c.password)
+		if c.bearer != nil {
+			tok, err := c.bearer(ctx)
+			if err != nil {
+				return nil, err
+			}
+			req.Header.Set("Authorization", "Bearer "+tok)
+		} else {
+			req.SetBasicAuth(c.username, c.password)
+		}
 		res, err := c.http.Do(req)
 		if err != nil {
 			return nil, plainErr(err)

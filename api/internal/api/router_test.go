@@ -11,10 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/linkpreview"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/audit"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/caldav"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	dbpkg "gitea.ubonito.org/jteixeira/orbit/api/internal/db"
@@ -88,7 +90,19 @@ func routerOn(t *testing.T, db *gorm.DB, cfg *config.Config, syncer *calsync.Syn
 		WebAuthn: wa,
 		Events:   events.New(),
 		Links:    testLinks,
+		CalDAV:   testDAV(db, sealer),
 	})
+}
+
+// testDAVClient, when set, is the CalDAV syncer's HTTP client (tests reach
+// httptest on loopback, which the guarded dialer refuses).
+var testDAVClient *http.Client
+
+func testDAV(db *gorm.DB, sealer *keystore.Sealer) *caldav.Syncer {
+	if testDAVClient == nil {
+		return nil
+	}
+	return caldav.New(db, sealer, zap.NewNop()).UseClient(testDAVClient)
 }
 
 // testLinks, when set, reads bookmark previews (tests reach httptest on

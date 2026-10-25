@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarClock, PanelLeft, PanelRight } from 'lucide-vue-next'
 import MonthGrid from '@/components/calendar/MonthGrid.vue'
@@ -34,6 +34,7 @@ import {
 // below, like iOS. Events open in the event sheet (or read-only when they
 // can't be changed), due tasks can be ticked off where they are.
 const route = useRoute()
+const router = useRouter()
 const wss = useWorkspacesStore()
 const tasksStore = useTasksStore()
 const auth = useAuthStore()
@@ -466,6 +467,18 @@ async function dropTask(d: DraggedTask, day: string, time: string | null = null)
 
 // ---- Subscribed calendars ----
 const subsOpen = ref(false)
+// Back from signing in with Google: the calendars sheet opens to pick one
+// (?google=…); a failure says why (?google_error=…).
+const googlePending = ref(typeof route.query.google === 'string' ? route.query.google : '')
+if (googlePending.value) subsOpen.value = true
+if (typeof route.query.google_error === 'string') {
+  const why = route.query.google_error
+  toast.error(t('cal.dav.googleFailed', { why: why === 'expired' ? t('cal.dav.googleExpired') : why === 'denied' ? t('cal.dav.googleDenied') : why }))
+}
+function googleDone() {
+  googlePending.value = ''
+  if (route.query.google || route.query.google_error) void router.replace({ query: { ...route.query, google: undefined, google_error: undefined } })
+}
 function onSubsChanged() {
   subsLoaded.clear()
   void loadSubs()
@@ -677,6 +690,8 @@ const views: CalView[] = ['day', 'week', 'month']
       :owner="workspace?.role === 'owner'"
       :subscriptions="auth.features.calendar_subscriptions !== false"
       :caldav="auth.features.caldav_sync !== false"
+      :google-pending="googlePending"
+      @google-done="googleDone"
       @close="subsOpen = false"
       @changed="onSubsChanged"
     />

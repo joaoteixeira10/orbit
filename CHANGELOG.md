@@ -8,6 +8,10 @@ merge, not at release time.
 
 ### Added
 
+- **Google Calendar, both ways** — the owner registers a Google OAuth client
+  (Owner → Google Calendar); workspace owners sign in with Google, pick a
+  calendar, and it syncs through Google's CalDAV interface with the same
+  engine as iCloud / Nextcloud (tokens refreshed, refresh token sealed).
 - **PostgreSQL** — `DB_DRIVER=postgres` with `DB_URL` a connection string;
   search uses PostgreSQL full text (triggers, title weighted, prefix,
   accent-insensitive with `unaccent`). The API's tests and the end-to-end

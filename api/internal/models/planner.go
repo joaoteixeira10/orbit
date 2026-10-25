@@ -472,7 +472,10 @@ type ExternalEvent struct {
 // an app-specific one, for iCloud — is sealed.
 type CalDAVLink struct {
 	Base
-	WorkspaceID    string     `gorm:"size:36;not null;uniqueIndex" json:"workspace_id"`
+	WorkspaceID string `gorm:"size:36;not null;uniqueIndex" json:"workspace_id"`
+	// Provider: "" a CalDAV account (user name and password); "google" a
+	// Google account (signed in; PasswordSealed holds its refresh token).
+	Provider       string     `gorm:"size:12;not null;default:''" json:"provider"`
 	CalendarURL    string     `gorm:"size:1000;not null" json:"calendar_url"`
 	CalendarName   string     `gorm:"size:200" json:"calendar_name"`
 	Host           string     `gorm:"size:255" json:"host"` // shown

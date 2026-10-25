@@ -47,6 +47,9 @@ type Syncer struct {
 
 	// Changed is told which workspace's events a sync changed.
 	Changed func(wsID string)
+	// Bearer gives a link signed in with a provider (Google) its access
+	// token; links without a provider use their user name and password.
+	Bearer func(ctx context.Context, link models.CalDAVLink) (string, error)
 
 	mu      sync.Mutex
 	running map[string]bool // link id → again after this one
@@ -82,6 +85,12 @@ func (s *Syncer) NotifyHub(hub *events.Hub) *Syncer {
 
 // Client opens a link's account.
 func (s *Syncer) Client(link models.CalDAVLink) (*Client, error) {
+	if link.Provider != "" {
+		if s.Bearer == nil {
+			return nil, errors.New("signing in with " + link.Provider + " isn't set up here")
+		}
+		return NewBearerClient(s.hc, func(ctx context.Context) (string, error) { return s.Bearer(ctx, link) }), nil
+	}
 	pass, err := s.sealer.Unseal(link.PasswordSealed)
 	if err != nil {
 		return nil, errors.New("the saved password can't be read (was the master key changed?)")

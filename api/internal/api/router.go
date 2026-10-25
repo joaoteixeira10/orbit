@@ -72,6 +72,9 @@ type Handlers struct {
 	git       *gitsync.Engine
 	dav       *caldav.Syncer
 	links     *linkpreview.Fetcher // nil: the public-only guarded one
+	// googleTokens: Google access tokens while they last (by link, or by a
+	// sign-in waiting for its calendar).
+	googleTokens tokenCache
 }
 
 // New builds the configured *gin.Engine.
@@ -86,6 +89,9 @@ func New(d Deps) *gin.Engine {
 	}
 	if h.dav == nil {
 		h.dav = caldav.New(d.DB, d.Sealer, d.Log).NotifyHub(d.Events)
+	}
+	if h.dav.Bearer == nil {
+		h.dav.Bearer = h.googleBearer // Google links sign in with a token
 	}
 	if h.git == nil {
 		h.git = gitsync.New(d.DB, d.Sealer, d.Cfg.GitServers, d.Log)
@@ -156,6 +162,7 @@ func New(d Deps) *gin.Engine {
 		v1.GET("/invites/:token", authLimit, h.previewInvite)
 		// "Sign in with Gitea" comes back here (the state names who started it).
 		v1.GET("/git/oauth/callback", authLimit, h.gitOAuthCallback)
+		v1.GET("/google/oauth/callback", authLimit, h.googleCallback)
 		// A repository's webhook (signed with the list's secret).
 		v1.POST("/git/hook/:link", feedLimit, h.gitHook)
 		// A push notification's "Snooze" button (a signed link).
@@ -305,6 +312,12 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/sheets/:id", h.getSheet)
 			authed.PUT("/sheets/:id", h.updateSheet)
 			authed.DELETE("/sheets/:id", h.deleteSheet)
+			authed.GET("/google/status", h.googleStatus)
+			authed.GET("/google/app", h.auth.RequireOwner(), h.getGoogleApp)
+			authed.PUT("/google/app", h.auth.RequireOwner(), h.requireStepUp(), h.setGoogleApp)
+			authed.POST("/workspaces/:ws/google/start", notImpersonating(), h.startGoogle)
+			authed.GET("/workspaces/:ws/google/calendars", h.googleCalendars)
+			authed.POST("/workspaces/:ws/google/link", h.linkGoogle)
 			authed.GET("/me/blocks", h.listBlocks)
 			authed.PUT("/me/blocks", h.planBlocks)
 			authed.DELETE("/me/blocks/:id", h.deleteBlock)

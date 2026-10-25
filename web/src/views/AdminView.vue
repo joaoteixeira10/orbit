@@ -22,8 +22,10 @@ import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
-  Info, Workflow,
+  Info, Workflow, CalendarDays,
 } from 'lucide-vue-next'
+import CopyButton from '@/components/ui/CopyButton.vue'
+import { api as apiCall } from '@/lib/api'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 import DevThemesCard from '@/components/admin/DevThemesCard.vue'
@@ -707,6 +709,31 @@ const offUsersLive = onLiveEvent('users', async () => {
 onUnmounted(() => offUsersLive())
 
 // ---------- Owner (god mode) ----------
+// Google Calendar: the instance's OAuth client (workspaces then sync with
+// their owners' Google calendars).
+const googleApp = ref<{ client_id: string; has_secret: boolean; redirect_uri: string } | null>(null)
+const googleId = ref('')
+const googleSecret = ref('')
+async function loadGoogleApp() {
+  try {
+    googleApp.value = await apiCall<{ client_id: string; has_secret: boolean; redirect_uri: string }>('/google/app')
+    googleId.value = googleApp.value.client_id
+  } catch {
+    googleApp.value = null
+  }
+}
+watch(isOwnerArea, (o) => o && void loadGoogleApp(), { immediate: true })
+async function saveGoogleApp(clear = false) {
+  try {
+    googleApp.value = await apiCall('/google/app', { method: 'PUT', body: JSON.stringify(clear ? { client_id: '' } : { client_id: googleId.value.trim(), client_secret: googleSecret.value.trim() }) })
+    googleId.value = googleApp.value!.client_id
+    googleSecret.value = ''
+    toast.success(t(clear ? 'adm.owner.googleCleared' : 'adm.owner.googleSaved'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 // Where Diagrams load the draw.io editor from.
 const drawioUrl = ref(branding.drawioUrl)
 async function saveDrawio(v: string) {
@@ -1413,6 +1440,29 @@ function switchTab(t: Tab) {
           </div>
           </template>
         </div>
+      </div>
+
+      <!-- Google Calendar: the OAuth client -->
+      <div class="card overflow-hidden" data-testid="google-admin">
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
+          <CalendarDays class="h-[18px] w-[18px] text-violet" /><h3 class="text-[14px] font-semibold">{{ t('adm.owner.google') }}</h3>
+        </div>
+        <form class="flex flex-col gap-3 p-5" @submit.prevent="saveGoogleApp()">
+          <p class="text-[12px] leading-relaxed text-text-3">{{ t('adm.owner.googleHint') }}</p>
+          <div v-if="googleApp" class="rounded-xl bg-fill-2 p-3 text-[12px]">
+            <div class="mb-1 text-text-2">{{ t('adm.owner.googleRedirect') }}</div>
+            <div class="flex items-center gap-2">
+              <code class="min-w-0 flex-1 break-all font-mono text-[11.5px]">{{ googleApp.redirect_uri }}</code>
+              <CopyButton :value="googleApp.redirect_uri" />
+            </div>
+          </div>
+          <input v-model="googleId" class="input" :placeholder="t('adm.owner.googleId')" :aria-label="t('adm.owner.googleId')" autocomplete="off" spellcheck="false" data-testid="google-client-id" />
+          <input v-model="googleSecret" class="input" type="password" autocomplete="new-password" :placeholder="googleApp?.has_secret ? t('adm.owner.googleSecretKept') : t('adm.owner.googleSecret')" :aria-label="t('adm.owner.googleSecret')" data-testid="google-client-secret" />
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="btn-primary btn-sm" :disabled="!googleId.trim() || (!googleSecret.trim() && !googleApp?.has_secret)">{{ t('adm.owner.googleSave') }}</button>
+            <button v-if="googleApp?.client_id" type="button" class="btn btn-sm !text-danger" @click="saveGoogleApp(true)">{{ t('adm.owner.googleClear') }}</button>
+          </div>
+        </form>
       </div>
 
       <!-- Diagrams: the draw.io editor's address -->

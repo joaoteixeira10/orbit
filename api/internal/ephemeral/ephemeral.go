@@ -29,6 +29,10 @@ const (
 	KindSSOCode   = "sso_code"
 	KindSSETicket = "sse_ticket" // must match events.ticketKind
 	KindGitOAuth  = "git_oauth"  // a "Sign in with Gitea" in progress
+	// A "Sign in with Google" for a calendar in progress; then done, waiting
+	// for a calendar to be picked.
+	KindGoogleOAuth   = "google_oauth"
+	KindGooglePending = "google_pending"
 )
 
 // Store persists ephemeral tokens in the shared database.
@@ -81,6 +85,31 @@ func (s *Store) Take(kind, id string, out any) (bool, error) {
 		return false, res.Error
 	}
 	if res.RowsAffected != 1 || s.now().After(row.ExpiresAt) {
+		return false, nil
+	}
+	if out != nil {
+		if err := json.Unmarshal([]byte(row.Data), out); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// Peek reads id's value without redeeming it (false when unknown, expired
+// or of another kind).
+func (s *Store) Peek(kind, id string, out any) (bool, error) {
+	if id == "" {
+		return false, nil
+	}
+	var row models.EphemeralToken
+	err := s.db.Where(&models.EphemeralToken{KeyHash: hash(id), Kind: kind}).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if s.now().After(row.ExpiresAt) {
 		return false, nil
 	}
 	if out != nil {

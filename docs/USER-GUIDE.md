@@ -946,8 +946,16 @@ Orbit, within five minutes from the other app; **Sync now** to not wait).
 Edited in both places before a sync, the later change wins. What Orbit
 doesn't keep — another app's alerts, invitees, an occurrence moved on its own
 — stays on the server as it was. Classes of courses stay in Orbit only.
-**Stop syncing** leaves the events in both places. Google Calendar needs a
-sign-in Orbit doesn't do yet: subscribe to its secret address instead.
+**Stop syncing** leaves the events in both places.
+
+**Sync both ways with Google Calendar** (owners; once the instance's owner
+has set up signing in with Google — Owner → **Google Calendar**):
+**Calendars** → **Sync with Google Calendar** takes you to Google to sign in
+and allow access to your calendars; back in Orbit, pick which of your Google
+calendars becomes this workspace's, and **Sync**. It then works exactly as
+above (Orbit keeps the sign-in sealed and renews it by itself; signing out
+of Orbit or changing your Google password doesn't stop it — **Stop syncing**
+does, or removing Orbit's access in your Google account).
 
 **See Orbit in your phone's calendar**: Settings → [Calendar
 feeds](#calendar-feeds).
@@ -1433,6 +1441,14 @@ until they transfer it. Your name → **Owner** has these tabs: **Owner**,
 **Branding**, **Notifications**, **Security**, **SSO**.
 
 ### Owner tab
+
+**Google Calendar**: lets workspace owners sync with their Google calendars.
+In Google Cloud, create a project, turn on the **Google Calendar API** and
+the **CalDAV API**, set up the OAuth consent screen, and create an **OAuth
+client ID** (*Web application*) whose authorised redirect URI is the address
+the card shows; paste its client ID and secret, **Save**. The secret is kept
+sealed with the master key. **Remove** turns it off (syncs already linked
+stop at their next run).
 
 **Diagrams (draw.io)**: the address the Diagrams module loads the draw.io
 editor from — draw.io's own (`embed.diagrams.net`, the default), or your

@@ -821,6 +821,52 @@ test('time estimates and the week planner: tasks fitted into free working hours 
   await expect(page.getByTestId('task-estimate')).toHaveValue('90')
 })
 
+test('Google Calendar: the owner sets up signing in with Google; a workspace owner is sent to Google to sign in', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Family', kind: 'personal', modules: ['home', 'calendar'], starter: false } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  // Not set up yet: the calendars sheet says how it gets set up.
+  await page.goto(`/w/${ws.id}/calendar`)
+  await page.getByRole('button', { name: 'Calendars', exact: true }).click()
+  await expect(page.getByTestId('caldav')).toContainText('Owner → Google Calendar')
+  await expect(page.getByTestId('google-start')).toHaveCount(0)
+
+  await page.goto('/owner')
+  const card = page.getByTestId('google-admin')
+  await expect(card).toContainText('/api/v1/google/oauth/callback')
+  await page.getByTestId('google-client-id').fill('123-abc.apps.googleusercontent.com')
+  await page.getByTestId('google-client-secret').fill('GOCSPX-secret')
+  await card.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByTestId('google-client-secret')).toHaveAttribute('placeholder', /kept/)
+
+  // Signing in goes to Google with this instance's client, offline, with PKCE.
+  let asked = ''
+  await page.route('https://accounts.google.com/**', (route) => {
+    asked = route.request().url()
+    return route.fulfill({ contentType: 'text/html', body: '<h1>Google</h1>' })
+  })
+  await page.goto(`/w/${ws.id}/calendar`)
+  await page.getByRole('button', { name: 'Calendars', exact: true }).click()
+  await page.getByTestId('google-start').click()
+  await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible()
+  const q = new URL(asked).searchParams
+  expect(q.get('client_id')).toBe('123-abc.apps.googleusercontent.com')
+  expect(q.get('redirect_uri')).toMatch(/\/api\/v1\/google\/oauth\/callback$/)
+  expect(q.get('access_type')).toBe('offline')
+  expect(q.get('code_challenge_method')).toBe('S256')
+  // Back without a valid sign-in: said so, on the calendar.
+  await page.goto(`/api/v1/google/oauth/callback?state=nope&code=x`)
+  await expect(page).toHaveURL(/\/\?google_error=expired|calendar\?google_error=expired/)
+
+  // Removed again (the other tests don't expect it).
+  await page.goto('/owner')
+  await page.getByTestId('google-admin').getByRole('button', { name: 'Remove' }).click()
+  await expect(page.getByTestId('google-client-secret')).not.toHaveAttribute('placeholder', /kept/)
+})
+
 test('a workspace exported to a file comes back as a new one with its tasks', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

@@ -9,7 +9,7 @@
 
 services:
   api:
-    image: golang:1.26.9
+    image: golang:1.26.10
     working_dir: /src/api
     command: sh -c "go install github.com/air-verse/air@v1.67.1 && exec air"
     ports:

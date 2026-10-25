@@ -2,7 +2,7 @@
 # runs in a pinned container (PKI Management's web-* targets used host npm;
 # this one doesn't). Tool versions are pinned here on purpose.
 
-GO_IMAGE      ?= golang:1.26.9
+GO_IMAGE      ?= golang:1.26.10
 NODE_IMAGE    ?= node:22-alpine
 AIR_VERSION   ?= v1.67.1
 SWAG_VERSION  ?= v1.16.6

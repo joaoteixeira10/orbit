@@ -6,6 +6,11 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Security
+
+- **Go 1.26.10** — the toolchain moves up for GO-2026-6809 (crypto/x509
+  certificate checks, reached through passkey sign-in).
+
 ### Added
 
 - **Google Calendar, both ways** — the owner registers a Google OAuth client

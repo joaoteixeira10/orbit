@@ -15,7 +15,7 @@ COPY web/ ./
 RUN npm run build
 
 # ---------- Stage 2: build the Go binary (SPA embedded) ----------
-FROM --platform=$BUILDPLATFORM golang:1.26.9 AS api
+FROM --platform=$BUILDPLATFORM golang:1.26.10 AS api
 WORKDIR /src/api
 COPY api/go.mod api/go.sum ./
 RUN go mod download

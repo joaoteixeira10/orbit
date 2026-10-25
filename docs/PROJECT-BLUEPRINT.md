@@ -128,7 +128,7 @@ Backend packages (`api/internal/`), one concern each. Service packages never imp
 
 | Service | Image | Command | Key points |
 |---|---|---|---|
-| `api` | `golang:1.26.9` | `go install github.com/air-verse/air@latest && exec air` | bind-mount `.:/src`; named volumes for build cache, module cache, `/go/bin` (keeps `air` between restarts) and `/data` (dev DB); dev env with insecure throwaway secrets and `CORS_ORIGINS=http://localhost:5173`; port 8080 |
+| `api` | `golang:1.26.10` | `go install github.com/air-verse/air@latest && exec air` | bind-mount `.:/src`; named volumes for build cache, module cache, `/go/bin` (keeps `air` between restarts) and `/data` (dev DB); dev env with insecure throwaway secrets and `CORS_ORIGINS=http://localhost:5173`; port 8080 |
 | `web` | `node:22-alpine` | `npm install && npm run dev` | bind-mount `.:/src`; **`node_modules` in a named volume** so the container's Linux/musl native binaries (esbuild, rollup) never mix with the host's; `VITE_PROXY_TARGET=http://api:8080`; `VITE_POLL=1`; port 5173 |
 
 **Why polling.** Bind mounts on Docker Desktop (macOS/Windows) don't deliver inotify events,
@@ -158,7 +158,7 @@ Nothing on the host. The Makefile runs Go in a pinned container with named cache
 ```make
 DOCKER_GO = docker run --rm -v "$(CURDIR)":/src \
   -v pki-go-cache:/root/.cache/go-build -v pki-go-modcache:/go/pkg/mod \
-  -w /src/api -e GOFLAGS=-buildvcs=false golang:1.26.9
+  -w /src/api -e GOFLAGS=-buildvcs=false golang:1.26.10
 ```
 Targets: `go ARGS=…`, `tidy`, `build`, `test`, `vet`, `lint` (golangci-lint pinned, installed once
 into a `/go/bin` volume), `fmt`, `swag`, `db-smoke DB=postgres|mysql`, `set-version VERSION=x.y.z`,
@@ -171,7 +171,7 @@ compose's `web` service (`docker compose -f docker-compose.dev.yml run --rm --no
 ### 3.3 Production image (`Dockerfile`)
 ```
 stage web      FROM --platform=$BUILDPLATFORM node:22-alpine   → npm build (arch-independent, never emulated)
-stage api      FROM --platform=$BUILDPLATFORM golang:1.26.9   → COPY web dist → internal/webui/dist
+stage api      FROM --platform=$BUILDPLATFORM golang:1.26.10   → COPY web dist → internal/webui/dist
                CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-s -w -X …version.Version=$VERSION …"
 stage migrator FROM distroless/static:nonroot                  → optional: `docker build --target migrator`
 final          FROM gcr.io/distroless/static-debian12:nonroot  → /pki-management binary, USER nonroot, VOLUME /data, EXPOSE 8080

@@ -21,7 +21,8 @@ import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch } from 'lucide-vue-next'
+import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot } from 'lucide-vue-next'
+import CopyButton from '@/components/ui/CopyButton.vue'
 import { calendarApi, type Feed } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import type { APIToken } from '@/api/types'
@@ -306,6 +307,9 @@ async function removePasskey() {
   }
 }
 onMounted(loadPasskeys)
+
+// ---- Assistants (MCP) ----
+const mcpUrl = `${location.origin}/mcp`
 
 // ---- API tokens ----
 const tokens = ref<APIToken[]>([])
@@ -754,6 +758,25 @@ onMounted(loadSessions)
               </div>
             </div>
             <p v-else class="text-[12px] text-text-3">{{ t('acct.tokens.none') }}</p>
+          </div>
+        </section>
+
+        <!-- Assistants (MCP) -->
+        <section id="mcp" class="card overflow-hidden scroll-mt-4" data-testid="mcp-card">
+          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Bot class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('mcp.title') }}</h2></div>
+          <div class="flex flex-col gap-3 p-5 text-[13px]">
+            <p class="text-text-2">{{ t('mcp.lead') }}</p>
+            <div class="flex items-center gap-2 rounded-lg bg-fill-2 px-3 py-2">
+              <code class="min-w-0 flex-1 truncate font-mono text-[12.5px]" data-testid="mcp-url">{{ mcpUrl }}</code>
+              <CopyButton :value="mcpUrl" />
+            </div>
+            <ul class="flex list-disc flex-col gap-1.5 pl-5 text-[12.5px] text-text-2">
+              <li>{{ t('mcp.claude') }}</li>
+              <li>{{ t('mcp.chatgpt') }}</li>
+              <li><span>{{ t('mcp.code') }}</span> <code class="font-mono text-[12px]">claude mcp add --transport http orbit {{ mcpUrl }}</code></li>
+              <li>{{ t('mcp.cursor') }}</li>
+            </ul>
+            <p class="text-[12px] text-text-3">{{ t('mcp.how') }}</p>
           </div>
         </section>
 

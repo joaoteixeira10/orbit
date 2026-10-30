@@ -1402,6 +1402,17 @@ token read your workspaces but not change them. **Limit this token's instance
 privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
+**Assistants (MCP)**: Claude, ChatGPT, Cursor and other assistants that
+speak MCP (the Model Context Protocol) can use Orbit as you — read and
+write pages, tasks and sub-tasks, comments, events, notes, Mermaid
+diagrams; read sheets, diagrams, history and the graph; search. Settings →
+**Assistants (MCP)** gives the address (`https://<your Orbit>/mcp`) and
+how to add it in each. The assistant then sends you to Orbit to allow it:
+**Read and change**, or **Only read**. Allowing it makes it an API token of
+yours, named after it ("OAuth: Claude"), listed under API tokens — revoke
+it there to cut it off. An assistant that takes a header can use an API
+token instead (`Authorization: Bearer orb_…`).
+
 ## 25. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:

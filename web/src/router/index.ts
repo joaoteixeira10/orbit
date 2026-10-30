@@ -18,6 +18,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/JoinView.vue'),
     meta: { public: true },
   },
+  // An app (an assistant, through MCP) asking to use Orbit as you.
+  { path: '/oauth/authorize', name: 'oauth', component: () => import('@/views/OAuthView.vue') },
   {
     path: '/',
     component: () => import('@/components/AppShell.vue'),

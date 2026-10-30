@@ -2424,3 +2424,48 @@ test('page history: each person\'s saves are versions; one shows its changes; it
   await expect(hist).toBeHidden()
   expect(other.id).toBeTruthy()
 })
+
+test('assistants: an app signs in with OAuth (allowed read only here), then uses Orbit over MCP', async ({ page, request }) => {
+  const { createHash } = await import('node:crypto')
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const mine = await (await request.post('/api/v1/workspaces', { headers: { Authorization: `Bearer ${login.access_token}` }, data: { name: 'Assisted', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+  const reg = await (await request.post('/api/v1/oauth/register', { data: { client_name: 'Test Assistant', redirect_uris: ['https://assistant.example/callback'] } })).json()
+  const verifier = 'e2e-verifier-' + 'x'.repeat(40)
+  const challenge = createHash('sha256').update(verifier).digest('base64url')
+  let back = ''
+  await page.route('https://assistant.example/**', (route) => {
+    back = route.request().url()
+    return route.fulfill({ contentType: 'text/html', body: '<p>Thanks</p>' })
+  })
+
+  await signIn(page, NEW_PASSWORD)
+  // Settings shows the address to give an assistant.
+  await page.goto('/settings')
+  await expect(page.getByTestId('mcp-url')).toHaveText(/\/mcp$/)
+
+  const q = new URLSearchParams({ response_type: 'code', client_id: reg.client_id, redirect_uri: 'https://assistant.example/callback', state: 'abc', code_challenge: challenge, code_challenge_method: 'S256' })
+  await page.goto(`/oauth/authorize?${q}`)
+  await expect(page.getByTestId('oauth-consent')).toContainText('Test Assistant wants to use Orbit')
+  await expect(page.getByTestId('oauth-consent')).toContainText('assistant.example')
+  await page.getByTestId('oauth-read-only').check()
+  await page.getByTestId('oauth-allow').click()
+  await expect.poll(() => back).toContain('code=')
+  const got = new URL(back)
+  expect(got.searchParams.get('state')).toBe('abc')
+
+  const tok = await (await request.post('/api/v1/oauth/token', { form: { grant_type: 'authorization_code', code: got.searchParams.get('code')!, redirect_uri: 'https://assistant.example/callback', client_id: reg.client_id, code_verifier: verifier } })).json()
+  expect(tok.scope).toBe('orbit:read')
+  const rpc = async (method: string, params: unknown) =>
+    (await (await request.post('/mcp', { headers: { Authorization: `Bearer ${tok.access_token}` }, data: { jsonrpc: '2.0', id: 1, method, params } })).json()) as any
+  const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'e2e' } })
+  expect(init.result.serverInfo.name).toBe('orbit')
+  const list = await rpc('tools/call', { name: 'list_workspaces', arguments: {} })
+  expect(list.result.isError).toBe(false)
+  expect(list.result.content[0].text).toContain(mine.id)
+  const write = await rpc('tools/call', { name: 'create_page', arguments: { workspace_id: mine.id, title: 'Nope' } })
+  expect(write.result.isError).toBe(true)
+
+  // The token is one of the person's, named after the app.
+  await page.goto('/settings')
+  await expect(page.locator('#apitokens')).toContainText('OAuth: Test Assistant')
+})

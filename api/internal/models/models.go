@@ -234,6 +234,15 @@ type EphemeralToken struct {
 	ExpiresAt time.Time `gorm:"index;not null"`
 }
 
+// OAuthClient is an app that signs people in to Orbit's API with OAuth
+// (registered by itself, RFC 7591): an MCP client such as Claude or ChatGPT.
+// What it gets is an API token of the person who allowed it.
+type OAuthClient struct {
+	Base
+	Name         string `gorm:"size:200" json:"client_name"`
+	RedirectURIs string `gorm:"type:text" json:"-"` // JSON []string
+}
+
 // APIToken is a long-lived, revocable bearer token for programmatic access
 // (scripts, shortcuts). It carries the owning user's access; only the sha256 hash is
 // stored. Prefix is a non-secret display hint.
@@ -334,6 +343,7 @@ func AllModels() []any {
 		&EphemeralToken{},
 		&Workspace{},
 		&WorkspaceMember{},
+		&OAuthClient{},
 		&Page{},
 		&PageVersion{},
 		&PageFavorite{},

@@ -324,6 +324,8 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/me/blocks/:id", h.deleteBlock)
 			authed.GET("/workspaces/:ws/folders", h.listFolders)
 			authed.GET("/workspaces/:ws/graph", h.workspaceGraph)
+			authed.GET("/oauth/clients/:id", h.oauthClientInfo)
+			authed.POST("/oauth/authorize", notImpersonating(), h.oauthAuthorize)
 			authed.GET("/pages/:id/versions", h.listPageVersions)
 			authed.GET("/page-versions/:id", h.getPageVersion)
 			authed.POST("/page-versions/:id/restore", h.restorePageVersion)
@@ -480,6 +482,25 @@ func New(d Deps) *gin.Engine {
 
 	// Private calendar feeds for other calendar apps (the token is the path).
 	r.GET("/ical/:file", feedLimit, h.serveFeed)
+
+	// MCP (Model Context Protocol): assistants use Orbit as the person who
+	// signed them in (mcp.go), with Orbit's OAuth to sign in (oauth.go).
+	open := openCORS()
+	mcp := r.Group("/mcp", open)
+	mcp.OPTIONS("", func(*gin.Context) {})
+	mcp.POST("", h.mcpChallenge(), h.auth.Required(), h.mcpHandler(r))
+	mcp.GET("", mcpNoStream)
+	mcp.DELETE("", mcpNoStream)
+	for _, p := range []string{"/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"} {
+		r.GET(p, open, h.oauthResource)
+		r.OPTIONS(p, open)
+	}
+	r.GET("/.well-known/oauth-authorization-server", open, h.oauthServer)
+	r.OPTIONS("/.well-known/oauth-authorization-server", open)
+	r.POST("/api/v1/oauth/register", open, authLimit, h.oauthRegister)
+	r.OPTIONS("/api/v1/oauth/register", open)
+	r.POST("/api/v1/oauth/token", open, authLimit, h.oauthToken)
+	r.OPTIONS("/api/v1/oauth/token", open)
 
 	registerSPA(r)
 	return r

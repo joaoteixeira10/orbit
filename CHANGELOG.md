@@ -13,6 +13,12 @@ merge, not at release time.
 
 ### Added
 
+- **MCP server for assistants** — Claude, ChatGPT, Cursor and others use
+  Orbit as the person at `/mcp` (about 30 tools: pages, tasks, comments,
+  calendar, notes, files, Mermaid diagrams, history, graph, search), signed
+  in with an API token or Orbit's OAuth 2.1 (PKCE, dynamic registration, a
+  consent page with "only read"); the token is the person's, revocable in
+  Settings. Settings → Assistants (MCP) says how to connect each.
 - **Page history** — every save kept with who made it (one person's saves
   close together are one version); read one with its changes marked,
   restore it, or compare up to five versions or pages side by side

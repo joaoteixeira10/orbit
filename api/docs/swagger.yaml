@@ -1672,6 +1672,41 @@ definitions:
       workspace_id:
         type: string
     type: object
+  api.oauthAuthorizeRequest:
+    properties:
+      client_id:
+        type: string
+      code_challenge:
+        type: string
+      code_challenge_method:
+        type: string
+      deny:
+        type: boolean
+      read_only:
+        type: boolean
+      redirect_uri:
+        type: string
+      state:
+        maxLength: 2000
+        type: string
+    required:
+    - client_id
+    - redirect_uri
+    type: object
+  api.oauthRegisterRequest:
+    properties:
+      client_name:
+        maxLength: 200
+        type: string
+      redirect_uris:
+        items:
+          type: string
+        maxItems: 10
+        minItems: 1
+        type: array
+    required:
+    - redirect_uris
+    type: object
   api.occurrence:
     properties:
       all_day:
@@ -6556,6 +6591,94 @@ paths:
       summary: Send a test notification
       tags:
       - notifications
+  /oauth/authorize:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The request and the answer
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.oauthAuthorizeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Allow an OAuth app (or not)
+      tags:
+      - mcp
+  /oauth/clients/{id}:
+    get:
+      parameters:
+      - description: Client id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Where it wants to come back
+        in: query
+        name: redirect_uri
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: An OAuth app (for its consent page)
+      tags:
+      - mcp
+  /oauth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Its name and where to come back
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.oauthRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register an OAuth app
+      tags:
+      - mcp
+  /oauth/token:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: An OAuth app's access token
+      tags:
+      - mcp
   /owner/transfer:
     post:
       consumes:

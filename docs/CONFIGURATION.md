@@ -87,7 +87,7 @@ Used once, when the database has no users. Later changes have no effect.
 | `TRUSTED_PROXIES` | – | trust none | Comma list of IPs or CIDRs of your reverse proxies. Only these may set `X-Forwarded-For`. **Set it behind a proxy**, or every request seems to come from the proxy (one shared rate limit, one IP in the audit log). An invalid list is logged and ignored (trust none). See [reverse-proxies.md](reverse-proxies.md). |
 | `MAX_BODY_BYTES` | – | `4194304` (4 MiB) | Largest request body. Branding logos are sent inline, so they count too. |
 | `CORS_ORIGINS` | – | | Comma list of origins allowed to call the API from a browser. **Dev only** (the Vite server, `:5180` on the host). In production the page is served from the same origin and needs no CORS. |
-| `PUBLIC_URL` | – | from the request | The address people use to reach Orbit (scheme and host, no trailing slash), e.g. `https://orbit.example.org`. Calendar-feed addresses (Settings → Calendar feeds) are built from it; unset, they use the request's host and `X-Forwarded-Proto`. An `https://` address also identifies the instance to the Web Push services (Google, Apple, Mozilla). |
+| `PUBLIC_URL` | – | from the request | The address people use to reach Orbit (scheme and host, no trailing slash), e.g. `https://orbit.example.org`. Calendar-feed addresses (Settings → Calendar feeds) are built from it; unset, they use the request's host and `X-Forwarded-Proto`. An `https://` address also identifies the instance to the Web Push services (Google, Apple, Mozilla), and is the address assistants are sent to sign in with (MCP's OAuth) — set it behind a proxy. |
 
 ## Database
 

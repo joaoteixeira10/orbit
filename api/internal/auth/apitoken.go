@@ -67,7 +67,9 @@ func (m *Manager) requireAPIToken(c *gin.Context, raw string) {
 	}
 	// A read-only token reads, everywhere: any other method is refused here,
 	// before a handler (workspace content checks it too, admin routes didn't).
-	if t.ReadOnly {
+	// MCP's POST is only an envelope: each of its tools calls the API with the
+	// same token, and those calls are checked here.
+	if t.ReadOnly && c.Request.URL.Path != "/mcp" {
 		switch c.Request.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
 		default:

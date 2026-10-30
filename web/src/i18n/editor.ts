@@ -195,6 +195,11 @@ export const edEn = {
       table: { title: 'Table', desc: 'A 3 × 3 table with a header row' },
       callout: { title: 'Callout', desc: 'Make a note stand out' },
       file: { title: 'Image or file', desc: 'Upload a picture or attach a file' },
+      sheet: { title: 'Sheet', desc: 'A new spreadsheet, shown in the page' },
+      drawio: { title: 'draw.io diagram', desc: 'A new diagram drawn with draw.io' },
+      mermaid: { title: 'Mermaid diagram', desc: 'A diagram written as text: flowchart, sequence, Gantt…' },
+      board: { title: 'Whiteboard', desc: 'A new whiteboard to sketch on' },
+      existing: { title: 'Existing sheet, diagram or whiteboard', desc: 'Show one there is in this page' },
     },
     tb: {
       turnInto: 'Turn into',
@@ -404,6 +409,11 @@ export const edPt: typeof edEn = {
       table: { title: 'Tabela', desc: 'Uma tabela 3 × 3 com linha de cabeçalho' },
       callout: { title: 'Destaque', desc: 'Faça uma nota sobressair' },
       file: { title: 'Imagem ou ficheiro', desc: 'Carregar uma imagem ou anexar um ficheiro' },
+      sheet: { title: 'Folha de cálculo', desc: 'Uma nova folha de cálculo, mostrada na página' },
+      drawio: { title: 'Diagrama draw.io', desc: 'Um novo diagrama desenhado com o draw.io' },
+      mermaid: { title: 'Diagrama Mermaid', desc: 'Um diagrama escrito como texto: fluxograma, sequência, Gantt…' },
+      board: { title: 'Quadro branco', desc: 'Um novo quadro para esboçar' },
+      existing: { title: 'Folha, diagrama ou quadro existente', desc: 'Mostrar nesta página um que já existe' },
     },
     tb: {
       turnInto: 'Transformar em',

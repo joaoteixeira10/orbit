@@ -4,7 +4,9 @@ import { PluginKey } from '@tiptap/pm/state'
 import Suggestion from '@tiptap/suggestion'
 import {
   Type, Heading1, Heading2, Heading3, ListTodo, List, ListOrdered, Quote, SquareCode, Minus, Table, MessageSquareQuote, Paperclip,
+  Sheet, Workflow, GitFork, Brush, FileSymlink,
 } from 'lucide-vue-next'
+import type { EmbedNew } from '@/lib/embeds'
 
 export interface SlashItem {
   key: string
@@ -28,8 +30,23 @@ export interface SlashState {
 
 type T = (key: string) => string
 
+// What "/" can put in a page besides blocks: a new sheet, diagram or
+// whiteboard (the kinds the workspace has), or one there is.
+export interface SlashDocs {
+  kinds: EmbedNew[]
+  make: (what: EmbedNew, editor: Editor) => void
+  pick: (editor: Editor) => void
+}
+const DOC_ICON: Record<EmbedNew, Component> = { sheet: Sheet, drawio: Workflow, mermaid: GitFork, board: Brush }
+const DOC_ALIASES: Record<EmbedNew, string[]> = {
+  sheet: ['sheet', 'spreadsheet', 'excel', 'grid', 'folha'],
+  drawio: ['drawio', 'draw.io', 'diagram', 'diagrama', 'flowchart'],
+  mermaid: ['mermaid', 'diagram', 'diagrama', 'sequence', 'gantt', 'mindmap'],
+  board: ['whiteboard', 'excalidraw', 'sketch', 'draw', 'quadro', 'desenho'],
+}
+
 // slashItems lists the blocks "/" can insert, titled in the current language.
-export function slashItems(t: T): SlashItem[] {
+export function slashItems(t: T, docs?: SlashDocs): SlashItem[] {
   const b = (key: string) => ({ title: t(`editor.block.${key}.title`), desc: t(`editor.block.${key}.desc`) })
   const chain = (e: Editor, r: Range) => e.chain().focus().deleteRange(r)
   const list: SlashItem[] = [
@@ -53,6 +70,15 @@ export function slashItems(t: T): SlashItem[] {
       },
     },
   ]
+  if (docs?.kinds.length) {
+    for (const k of docs.kinds) {
+      list.push({ key: k, ...b(k), icon: DOC_ICON[k], aliases: DOC_ALIASES[k], run: (e, r) => (chain(e, r).run(), docs.make(k, e)) })
+    }
+    list.push({
+      key: 'existing', ...b('existing'), icon: FileSymlink, aliases: ['existing', 'embed', 'link', 'insert', 'sheet', 'diagram', 'whiteboard'],
+      run: (e, r) => (chain(e, r).run(), docs.pick(e)),
+    })
+  }
   // Icons are components: keep them out of the reactive menu state.
   return list.map((it) => ({ ...it, icon: markRaw(it.icon) }))
 }

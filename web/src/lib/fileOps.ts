@@ -7,6 +7,7 @@ import { drawingsApi } from '@/components/draw/drawing'
 import { fileName } from './markdown'
 import { locale, todayStr } from './dates'
 import { fileOf, labelsOf, lightPicture } from './drawio'
+import { kindOf as mermaidKind, labelsOf as mermaidLabels } from './mermaid'
 import { textOf } from './sheet'
 import type { FileItem, FileKind } from './filesApi'
 
@@ -16,7 +17,7 @@ export function routeOf(ws: string, f: { kind: FileKind; id: string }): RouteLoc
   return { name: 'ws-whiteboard', params: { ws, id: f.id } }
 }
 
-// linkOf: its address (on its own line in a page, sheets and diagrams show).
+// linkOf: its address (on its own line in a page, it shows there).
 export function linkOf(ws: string, f: { kind: FileKind; id: string }): string {
   const path = f.kind === 'sheet' ? `s/${f.id}` : f.kind === 'diagram' ? `d/${f.id}` : `whiteboards/${f.id}`
   return `${location.origin}/w/${ws}/${path}`
@@ -44,7 +45,8 @@ export async function duplicate(ws: string, f: FileItem, copyWord: string): Prom
   }
   if (f.kind === 'diagram') {
     const d = await diagramsApi.get(f.id)
-    const c = await diagramsApi.create(ws, { title, data: d.data, preview: d.preview, text: d.data ? labelsOf(d.data) : '', folder_id: f.folder_id })
+    const text = !d.data ? '' : d.kind === 'mermaid' ? mermaidLabels(d.data) : labelsOf(d.data)
+    const c = await diagramsApi.create(ws, { title, kind: d.kind, data: d.data, preview: d.preview, text, folder_id: f.folder_id })
     return { kind: 'diagram', id: c.id }
   }
   const d = await drawingsApi.get(f.id)
@@ -72,7 +74,8 @@ export async function download(f: FileItem, untitled: string): Promise<void> {
     save(new Blob([writeXlsx(data, new Book(data, dayOf(todayStr()), locale().startsWith('pt'))) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${name}.xlsx`)
   } else if (f.kind === 'diagram') {
     const d = await diagramsApi.get(f.id)
-    save(new Blob([d.data ?? ''], { type: 'application/vnd.jgraph.mxfile' }), `${name}.drawio`)
+    if (d.kind === 'mermaid') save(new Blob([d.data ?? ''], { type: 'text/plain' }), `${name}.mmd`)
+    else save(new Blob([d.data ?? ''], { type: 'application/vnd.jgraph.mxfile' }), `${name}.drawio`)
   } else {
     const d = await drawingsApi.get(f.id)
     save(new Blob([d.scene || '{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}'], { type: 'application/json' }), `${name}.excalidraw`)
@@ -82,21 +85,28 @@ export async function download(f: FileItem, untitled: string): Promise<void> {
 // kindOfFile: which kind a file from the computer becomes (none: not one Orbit reads).
 export function kindOfFile(name: string): FileKind | null {
   if (/\.(xlsx|csv|tsv)$/i.test(name)) return 'sheet'
-  if (/\.(drawio|dio|xml)$/i.test(name) || /\.drawio\.svg$/i.test(name)) return 'diagram'
+  if (/\.(drawio|dio|xml|mmd|mermaid)$/i.test(name) || /\.drawio\.svg$/i.test(name)) return 'diagram'
   if (/\.excalidraw$/i.test(name)) return 'board'
   if (/\.svg$/i.test(name)) return 'diagram' // if draw.io saved it with its diagram
   return null
 }
 
 // bringIn makes a new file from one on the computer, in a folder.
-export async function bringIn(ws: string, file: File, folderId: string, words: { tab: string; notDrawio: string; notExcalidraw: string }): Promise<{ kind: FileKind; id: string; title: string }> {
+export async function bringIn(ws: string, file: File, folderId: string, words: { tab: string; notDrawio: string; notExcalidraw: string; notMermaid: string }): Promise<{ kind: FileKind; id: string; title: string }> {
   const kind = kindOfFile(file.name)
-  const title = file.name.replace(/\.(drawio\.svg|xlsx|csv|tsv|drawio|dio|xml|svg|excalidraw)$/i, '')
+  const title = file.name.replace(/\.(drawio\.svg|xlsx|csv|tsv|drawio|dio|xml|svg|excalidraw|mmd|mermaid)$/i, '')
   if (kind === 'sheet') {
     const { readCsv, readXlsx } = await import('./xlsx')
     const data = /\.xlsx$/i.test(file.name) ? readXlsx(new Uint8Array(await file.arrayBuffer())) : readCsv(await file.text(), title.slice(0, 31) || words.tab)
     const s = await sheetsApi.create(ws, { title, data, text: textOf(data), folder_id: folderId })
     return { kind, id: s.id, title }
+  }
+  if (kind === 'diagram' && /\.(mmd|mermaid)$/i.test(file.name)) {
+    const data = (await file.text()).trim()
+    if (!mermaidKind(data)) throw new Error(words.notMermaid)
+    const { renderMermaid } = await import('./mermaid')
+    const d = await diagramsApi.create(ws, { title, kind: 'mermaid', data, text: mermaidLabels(data), preview: (await renderMermaid(data)).svg, folder_id: folderId })
+    return { kind, id: d.id, title }
   }
   if (kind === 'diagram') {
     const text = await file.text()

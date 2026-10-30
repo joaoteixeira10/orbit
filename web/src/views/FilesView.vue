@@ -2,13 +2,14 @@
 import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Brush, ChevronDown, Plus, Sheet, Upload, Workflow } from 'lucide-vue-next'
+import { Brush, ChevronDown, GitFork, Plus, Sheet, Upload, Workflow } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
 import { FILE_KINDS, KIND_MODULE, type FileKind } from '@/lib/filesApi'
 import { bringIn, kindOfFile, routeOf } from '@/lib/fileOps'
 import { sheetsApi } from '@/lib/sheetsApi'
 import { diagramsApi } from '@/lib/diagramsApi'
+import { MERMAID_TEMPLATES } from '@/lib/mermaid'
 import { drawingsApi } from '@/components/draw/drawing'
 import { emptySheet } from '@/lib/sheet'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -37,15 +38,18 @@ const folder = () => browser.value?.here ?? ''
 
 const newOpen = ref(false)
 const newEl = ref<HTMLElement | null>(null)
-async function create(kind: FileKind) {
+// What "New" makes: a diagram is draw.io's or Mermaid's.
+const news = computed(() => kinds.value.flatMap((k): (FileKind | 'mermaid')[] => (k === 'diagram' ? ['diagram', 'mermaid'] : [k])))
+async function create(what: FileKind | 'mermaid') {
   newOpen.value = false
+  const kind: FileKind = what === 'mermaid' ? 'diagram' : what
   try {
     const f = folder()
     const id =
       kind === 'sheet'
         ? (await sheetsApi.create(ws.value, { title: '', data: emptySheet(t('sheets.tabName', { n: 1 })), folder_id: f })).id
         : kind === 'diagram'
-          ? (await diagramsApi.create(ws.value, { title: '', folder_id: f })).id
+          ? (await diagramsApi.create(ws.value, { title: '', folder_id: f, kind: what === 'mermaid' ? 'mermaid' : 'drawio', data: what === 'mermaid' ? MERMAID_TEMPLATES[0].code : undefined })).id
           : (await drawingsApi.make(ws.value, { title: '', folder_id: f })).id
     await router.push(routeOf(ws.value, { kind, id }))
   } catch (e: any) {
@@ -55,7 +59,7 @@ async function create(kind: FileKind) {
 
 const fileEl = ref<HTMLInputElement | null>(null)
 const accept = computed(() =>
-  [kinds.value.includes('sheet') && '.xlsx,.csv,.tsv', kinds.value.includes('diagram') && '.drawio,.dio,.xml,.svg', kinds.value.includes('board') && '.excalidraw'].filter(Boolean).join(','),
+  [kinds.value.includes('sheet') && '.xlsx,.csv,.tsv', kinds.value.includes('diagram') && '.drawio,.dio,.xml,.svg,.mmd,.mermaid', kinds.value.includes('board') && '.excalidraw'].filter(Boolean).join(','),
 )
 const busy = ref(false)
 async function upload(e: Event) {
@@ -71,7 +75,7 @@ async function upload(e: Event) {
       continue
     }
     try {
-      await bringIn(ws.value, f, folder(), { tab: t('sheets.tabName', { n: 1 }), notDrawio: t('diagrams.notDrawio'), notExcalidraw: t('drive.notExcalidraw') })
+      await bringIn(ws.value, f, folder(), { tab: t('sheets.tabName', { n: 1 }), notDrawio: t('diagrams.notDrawio'), notExcalidraw: t('drive.notExcalidraw'), notMermaid: t('mermaid.notMermaid') })
       n++
     } catch (err: any) {
       toast.error(t('drive.importFailed', { name: f.name, error: err?.message ?? String(err) }))
@@ -104,8 +108,8 @@ async function upload(e: Event) {
 
     <Popover v-if="newOpen" :anchor="newEl" placement="bottom-end" :width="220" @close="newOpen = false">
       <div class="p-1.5">
-        <button v-for="k in kinds" :key="k" type="button" class="menu-item w-full" :data-testid="`files-new-${k}`" @click="create(k)">
-          <component :is="ICON[k]" class="h-4 w-4 text-text-2" />{{ t(`drive.newKind.${k}`) }}
+        <button v-for="k in news" :key="k" type="button" class="menu-item w-full" :data-testid="`files-new-${k}`" @click="create(k)">
+          <component :is="k === 'mermaid' ? GitFork : ICON[k]" class="h-4 w-4 text-text-2" />{{ k === 'mermaid' ? t('mermaid.newFile') : t(`drive.newKind.${k}`) }}
         </button>
       </div>
     </Popover>

@@ -11,6 +11,7 @@ import (
 
 type diagramResp struct {
 	ID      string `json:"id"`
+	Kind    string `json:"kind"`
 	Title   string `json:"title"`
 	Version int    `json:"version"`
 	Data    string `json:"data"`
@@ -73,6 +74,25 @@ func TestDiagrams(t *testing.T) {
 	decode(t, authdo(r, "GET", "/api/v1/diagrams/"+list[0].ID, "", admin), &full)
 	if full.Data != flow {
 		t.Errorf("imported data: %q", full.Data)
+	}
+
+	// A Mermaid diagram: its file is text.
+	expect(t, authdo(r, "POST", base+"/diagrams", `{"title":"M","kind":"plantuml"}`, alice), http.StatusBadRequest, "unknown kind")
+	var m diagramResp
+	w = authdo(r, "POST", base+"/diagrams", body(map[string]any{"title": "Steps", "kind": "mermaid", "data": "flowchart TD\n  A[Pack] --> B[Ship]"}), alice)
+	expect(t, w, http.StatusCreated, "create mermaid")
+	decode(t, w, &m)
+	if m.Kind != "mermaid" || !strings.HasPrefix(m.Data, "flowchart") {
+		t.Fatalf("mermaid: %+v", m)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/diagrams/"+m.ID, `{"data":"sequenceDiagram\n  A->>B: hi","version":1}`, alice), http.StatusOK, "save mermaid")
+	decode(t, authdo(r, "GET", base+"/diagrams", "", alice), &list)
+	kinds := map[string]string{}
+	for _, x := range list {
+		kinds[x.Title] = x.Kind
+	}
+	if kinds["Steps"] != "mermaid" || kinds["Order flow"] != "drawio" {
+		t.Errorf("kinds: %v", kinds)
 	}
 
 	expect(t, authdo(r, "DELETE", "/api/v1/diagrams/"+d.ID, "", alice), http.StatusNoContent, "delete")

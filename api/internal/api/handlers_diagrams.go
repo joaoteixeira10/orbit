@@ -11,10 +11,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Diagrams: a workspace's draw.io diagrams. The app edits them in the
-// draw.io editor (at the address the instance sets) and hands over the file
-// (draw.io's XML), a picture of it (SVG) and its labels for search; the
-// server stores them as they come, capped, and guards saves by version.
+// Diagrams: a workspace's draw.io and Mermaid diagrams. The app edits them
+// (draw.io's in the draw.io editor at the address the instance sets,
+// Mermaid's as text) and hands over the file (draw.io's XML, or Mermaid's
+// text), a picture of it (SVG) and its labels for search; the server stores
+// them as they come, capped, and guards saves by version.
 
 const (
 	maxDiagramData    = 8 << 20
@@ -25,6 +26,7 @@ const (
 type diagramSummary struct {
 	ID        string `json:"id"`
 	FolderID  string `json:"folder_id"`
+	Kind      string `json:"kind"` // drawio | mermaid
 	Title     string `json:"title"`
 	Preview   string `json:"preview,omitempty"`
 	Version   int    `json:"version"`
@@ -61,24 +63,25 @@ func (h *Handlers) listDiagrams(c *gin.Context) {
 		return
 	}
 	var list []models.Diagram
-	h.db.Select("id", "folder_id", "title", "preview", "version", "updated_by", "updated_at", "created_by", "created_at", "length(data) AS data").Where("workspace_id = ?", ws.ID).Order("updated_at DESC").Find(&list)
+	h.db.Select("id", "folder_id", "kind", "title", "preview", "version", "updated_by", "updated_at", "created_by", "created_at", "length(data) AS data").Where("workspace_id = ?", ws.ID).Order("updated_at DESC").Find(&list)
 	out := make([]diagramSummary, 0, len(list))
 	for _, d := range list {
-		out = append(out, diagramSummary{ID: d.ID, FolderID: d.FolderID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: stamp(d.UpdatedAt), CreatedBy: d.CreatedBy, CreatedAt: stamp(d.CreatedAt), Size: atoiSafe(d.Data)})
+		out = append(out, diagramSummary{ID: d.ID, FolderID: d.FolderID, Kind: d.Kind, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: stamp(d.UpdatedAt), CreatedBy: d.CreatedBy, CreatedAt: stamp(d.CreatedAt), Size: atoiSafe(d.Data)})
 	}
 	c.JSON(http.StatusOK, out)
 }
 
 type diagramRequest struct {
-	FolderID string  `json:"folder_id"` // where a new one goes ("" the top)
+	FolderID string  `json:"folder_id"`                                     // where a new one goes ("" the top)
+	Kind     string  `json:"kind" binding:"omitempty,oneof=drawio mermaid"` // a new one's (drawio)
 	Title    *string `json:"title" binding:"omitempty,max=300"`
-	Data     *string `json:"data"`    // draw.io's XML
+	Data     *string `json:"data"`    // draw.io's XML, or Mermaid's text
 	Preview  *string `json:"preview"` // an SVG picture of it
 	Text     *string `json:"text"`
 	Version  int     `json:"version"` // the version saved over (0: don't check)
 }
 
-// apply copies a request's fields, checked: the file is draw.io's XML, the
+// apply copies a request's fields, checked: a draw.io file is XML, the
 // picture an SVG.
 func (req diagramRequest) apply(d *models.Diagram) (int, string) {
 	if req.Title != nil {
@@ -89,7 +92,7 @@ func (req diagramRequest) apply(d *models.Diagram) (int, string) {
 		if len(x) > maxDiagramData {
 			return http.StatusRequestEntityTooLarge, "the diagram is too large (8 MB at most)"
 		}
-		if x != "" && !strings.HasPrefix(x, "<") {
+		if x != "" && d.Kind != models.DiagramMermaid && !strings.HasPrefix(x, "<") {
 			return http.StatusBadRequest, "the diagram must be draw.io's XML"
 		}
 		d.Data = x
@@ -144,7 +147,10 @@ func (h *Handlers) createDiagram(c *gin.Context) {
 		return
 	}
 	uid := auth.UserID(c)
-	d := models.Diagram{WorkspaceID: ws.ID, FolderID: req.FolderID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	d := models.Diagram{WorkspaceID: ws.ID, FolderID: req.FolderID, Kind: req.Kind, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	if d.Kind == "" {
+		d.Kind = models.DiagramDrawio
+	}
 	if code, msg := req.apply(&d); msg != "" {
 		c.JSON(code, gin.H{"error": msg})
 		return

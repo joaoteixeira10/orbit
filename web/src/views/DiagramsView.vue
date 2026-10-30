@@ -2,17 +2,20 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Upload } from 'lucide-vue-next'
+import { ChevronDown, GitFork, Plus, Upload, Workflow } from 'lucide-vue-next'
+import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
 import { diagramsApi } from '@/lib/diagramsApi'
 import { fileOf, labelsOf, lightPicture } from '@/lib/drawio'
+import { MERMAID_TEMPLATES } from '@/lib/mermaid'
+import { bringIn } from '@/lib/fileOps'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
-// A workspace's diagrams (draw.io), in its folders, each with its picture;
-// a new one (in the folder shown), or one from a draw.io file (.drawio, or
-// an .svg draw.io saved with its diagram inside).
+// A workspace's diagrams (draw.io and Mermaid), in its folders, each with
+// its picture; a new one (in the folder shown), or one from a file (.drawio,
+// an .svg draw.io saved with its diagram inside, or Mermaid's .mmd).
 const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
@@ -27,9 +30,12 @@ const editable = computed(() => !!workspace.value && workspace.value.role !== 'v
 const browser = ref<InstanceType<typeof FileBrowser> | null>(null)
 const folder = () => browser.value?.here ?? ''
 const open = (id: string) => router.push({ name: 'ws-diagram', params: { ws: ws.value, id } })
-async function create() {
+const newEl = ref<HTMLElement | null>(null)
+const newOpen = ref(false)
+async function create(kind: 'drawio' | 'mermaid') {
+  newOpen.value = false
   try {
-    const d = await diagramsApi.create(ws.value, { title: '', folder_id: folder() })
+    const d = await diagramsApi.create(ws.value, { title: '', folder_id: folder(), kind, data: kind === 'mermaid' ? MERMAID_TEMPLATES[0].code : undefined })
     await open(d.id)
   } catch (e: any) {
     toast.error(e.message)
@@ -46,6 +52,12 @@ async function imported(e: Event) {
   if (!f) return
   importing.value = true
   try {
+    if (/\.(mmd|mermaid)$/i.test(f.name)) {
+      const d = await bringIn(ws.value, f, folder(), { tab: '', notDrawio: t('diagrams.notDrawio'), notExcalidraw: '', notMermaid: t('mermaid.notMermaid') })
+      toast.success(t('diagrams.imported', { name: d.title }))
+      await open(d.id)
+      return
+    }
     const text = await f.text()
     const data = fileOf(text)
     if (!data) throw new Error(t('diagrams.notDrawio'))
@@ -70,11 +82,24 @@ async function imported(e: Event) {
         <p class="subhead mt-0.5">{{ workspace?.name }}</p>
       </div>
       <template v-if="editable">
-        <input ref="fileEl" type="file" class="hidden" accept=".drawio,.dio,.xml,.svg,application/xml,image/svg+xml" data-testid="diagram-import-input" @change="imported" />
+        <input ref="fileEl" type="file" class="hidden" accept=".drawio,.dio,.xml,.svg,.mmd,.mermaid,application/xml,image/svg+xml" data-testid="diagram-import-input" @change="imported" />
         <button class="btn btn-ghost" :disabled="importing" :title="t('diagrams.importHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('diagrams.import') }}</button>
-        <button class="btn-primary" data-testid="new-diagram" @click="create"><Plus class="h-4 w-4" />{{ t('diagrams.new') }}</button>
+        <button ref="newEl" class="btn-primary" data-testid="new-diagram" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('diagrams.new') }}<ChevronDown class="h-3.5 w-3.5" /></button>
       </template>
     </header>
+
+    <Popover v-if="newOpen" :anchor="newEl" placement="bottom-end" :width="260" @close="newOpen = false">
+      <div class="p-1.5">
+        <button type="button" class="menu-item w-full !items-start" data-testid="new-drawio" @click="create('drawio')">
+          <Workflow class="mt-0.5 h-4 w-4 text-text-2" />
+          <span class="text-left"><span class="block">{{ t('mermaid.newDrawio') }}</span><span class="block text-[12px] text-text-3">{{ t('mermaid.newDrawioHint') }}</span></span>
+        </button>
+        <button type="button" class="menu-item w-full !items-start" data-testid="new-mermaid" @click="create('mermaid')">
+          <GitFork class="mt-0.5 h-4 w-4 text-text-2" />
+          <span class="text-left"><span class="block">{{ t('mermaid.newMermaid') }}</span><span class="block text-[12px] text-text-3">{{ t('mermaid.newMermaidHint') }}</span></span>
+        </button>
+      </div>
+    </Popover>
 
     <FileBrowser ref="browser" :ws="ws" :kinds="['diagram']" :editable="editable" :root-name="t('modules.diagrams')">
       <template #empty>{{ t('diagrams.noneHint') }}</template>

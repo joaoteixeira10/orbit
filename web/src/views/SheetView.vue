@@ -22,6 +22,10 @@ import { useToastStore } from '@/stores/toast'
 // .csv, delete), the editor. It saves itself a moment after each change; a
 // save over someone else's newer one is refused, and theirs is shown (with a
 // word saying so). Their changes show here when nothing of ours is waiting.
+// Embedded (ws and id given), it is the big editor over a page: Done instead
+// of the way back.
+const props = defineProps<{ ws?: string; id?: string; embedded?: boolean }>()
+const emit = defineEmits<{ close: [] }>()
 const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
@@ -29,8 +33,8 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const { t } = useI18n()
 
-const ws = computed(() => String(route.params.ws))
-const id = computed(() => String(route.params.id))
+const ws = computed(() => props.ws ?? String(route.params.ws))
+const id = computed(() => props.id ?? String(route.params.id))
 const workspace = computed(() => wss.byId(ws.value))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
 
@@ -95,7 +99,12 @@ async function flush() {
   if (state.value === 'waiting') await save()
   else await running
 }
-onBeforeRouteLeave(() => flush())
+if (!props.embedded) onBeforeRouteLeave(() => flush())
+async function done() {
+  await flush()
+  emit('close')
+}
+defineExpose({ flush })
 onBeforeUnmount(() => void flush())
 function onUnload(e: BeforeUnloadEvent) {
   if (state.value !== 'waiting' && state.value !== 'saving') return
@@ -166,23 +175,24 @@ async function remove() {
     clearTimeout(timer)
     state.value = 'idle'
     await sheetsApi.remove(sheet.value.id)
-    void router.push({ name: 'ws-sheets', params: { ws: ws.value } })
+    if (props.embedded) emit('close')
+    else void router.push({ name: 'ws-sheets', params: { ws: ws.value } })
   } catch (e: any) {
     toast.error(e.message)
   }
 }
 
 const fill = ref<HTMLElement | null>(null)
-useFillHeight(fill, 420)
+useFillHeight(props.embedded ? ref(null) : fill, 420)
 const status = computed(() =>
   state.value === 'waiting' || state.value === 'saving' ? t('common.saving') : state.value === 'saved' ? t('common.saved') : state.value === 'error' ? t('editor.saveFailed') : '',
 )
 </script>
 
 <template>
-  <div class="sheet-view">
+  <div class="sheet-view" :class="{ embedded }">
     <header class="mb-3 flex items-center gap-2">
-      <RouterLink :to="{ name: 'ws-sheets', params: { ws } }" class="btn-plain -ml-2 shrink-0"><ChevronLeft class="h-4 w-4" />{{ t('modules.sheets') }}</RouterLink>
+      <RouterLink v-if="!embedded" :to="{ name: 'ws-sheets', params: { ws } }" class="btn-plain -ml-2 shrink-0"><ChevronLeft class="h-4 w-4" />{{ t('modules.sheets') }}</RouterLink>
       <input
         v-model="title"
         class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[20px] font-bold outline-none hover:bg-fill-2 focus:bg-fill-2"
@@ -199,6 +209,7 @@ const status = computed(() =>
         {{ status }}
       </span>
       <button ref="menuEl" type="button" class="icon-btn shrink-0" :aria-label="t('sheets.more')" data-testid="sheet-menu" @click="menu = !menu"><MoreHorizontal class="h-[18px] w-[18px]" /></button>
+      <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
     </header>
     <p v-if="missing" class="py-24 text-center text-[14px] text-text-3">{{ t('sheets.notFound') }}</p>
     <div v-else ref="fill" class="sheet-frame">
@@ -229,5 +240,15 @@ const status = computed(() =>
   display: flex;
   flex-direction: column;
   min-height: 420px;
+}
+.sheet-view.embedded {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  padding: 12px 16px 16px;
+}
+.embedded .sheet-frame {
+  flex: 1;
+  min-height: 0;
 }
 </style>

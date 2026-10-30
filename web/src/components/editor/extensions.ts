@@ -18,6 +18,7 @@ import { Paragraph } from '@tiptap/extension-paragraph'
 import { Callout } from './callout'
 import { CodeBlock } from './codeblock'
 import { RawBlock, RawInline, FootnoteDef } from './raw'
+import { DocEmbed } from './embed'
 import { ALERTS, alertOf, type AlertType } from './alerts'
 
 
@@ -136,6 +137,7 @@ export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, 
     MarkdownHighlight,
     MarkdownCallout,
     PageImage.configure({ inline: true }),
+    DocEmbed,
     RawBlock,
     FootnoteDef,
     RawInline,

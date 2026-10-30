@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, getCurrentInstance, h, render } from 'vue'
-import SheetEmbed from '@/components/sheets/SheetEmbed.vue'
-import DiagramEmbed from '@/components/diagrams/DiagramEmbed.vue'
+import PageEmbed from '@/components/embeds/PageEmbed.vue'
+import { embedOf } from '@/lib/embeds'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { renderMarkdown } from '@/lib/markdown'
@@ -101,20 +101,20 @@ function addAnswers() {
   }
 }
 
-// A link to a sheet or a diagram alone on its line shows it (SheetEmbed,
-// DiagramEmbed, mounted into the rendered HTML with the app's plugins).
+// A link to a sheet, a diagram or a whiteboard alone on its line shows it
+// (PageEmbed, mounted into the rendered HTML with the app's plugins).
 const app = getCurrentInstance()?.appContext ?? null
 const embeds: HTMLElement[] = []
 function addSheets() {
   for (const el of embeds.splice(0)) render(null, el)
-  for (const a of root.value?.querySelectorAll<HTMLAnchorElement>('a.md-sheet, a.md-diagram') ?? []) {
+  for (const a of root.value?.querySelectorAll<HTMLAnchorElement>('a.md-sheet, a.md-diagram, a.md-whiteboard') ?? []) {
     const p = a.parentElement
     if (!p || p.tagName !== 'P' || p.textContent?.trim() !== a.textContent?.trim()) continue
-    const m = /^\/w\/([^/]+)\/(s|d)\/([^/?#]+)/.exec(a.getAttribute('href') ?? '')
-    if (!m) continue
+    const ref = embedOf(a.getAttribute('href') ?? '')
+    if (!ref) continue
     const box = document.createElement('div')
     p.replaceWith(box)
-    const vnode = h(m[2] === 's' ? SheetEmbed : DiagramEmbed, { ws: m[1], id: m[3] })
+    const vnode = h(PageEmbed, { ...ref })
     vnode.appContext = app
     render(vnode, box)
     embeds.push(box)
@@ -187,7 +187,7 @@ function onClick(e: MouseEvent) {
   emit('toggle', Number(box.dataset.task))
 }
 function onDblClick(e: MouseEvent) {
-  if (props.editable && !(e.target as HTMLElement).closest('a, input, pre')) emit('edit')
+  if (props.editable && !(e.target as HTMLElement).closest('a, input, pre, .page-embed')) emit('edit')
 }
 </script>
 

@@ -4,6 +4,7 @@ import { api } from './api'
 export interface DiagramSummary {
   id: string
   folder_id?: string
+  kind?: 'drawio' | 'mermaid'
   title: string
   preview?: string // an SVG picture of it
   version: number
@@ -12,12 +13,13 @@ export interface DiagramSummary {
 }
 export interface DiagramDoc extends DiagramSummary {
   workspace_id: string
-  data?: string // draw.io's XML
+  data?: string // draw.io's XML, or Mermaid's text
   created_by: string
   created_at: string
 }
 export interface DiagramSave {
   folder_id?: string // where a new one goes
+  kind?: 'drawio' | 'mermaid' // a new one's (drawio)
   title?: string
   data?: string
   preview?: string

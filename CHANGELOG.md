@@ -13,6 +13,16 @@ merge, not at release time.
 
 ### Added
 
+- **Mermaid diagrams** — a second kind of diagram, written as text and drawn
+  beside it (Mermaid): templates (flowchart, sequence, class, state, ER,
+  Gantt, timeline, pie, mind map), errors said under the text; on a
+  flowchart, Node and Connect on the drawing edit the text. Download as
+  .mmd, SVG or PNG; .mmd files import. (`kind` on diagrams.)
+- **Sheets, diagrams and whiteboards inside pages** — `/` makes a new one
+  (or picks one there is) at that line; it shows in place in both the
+  editor and the reading view, and a double click opens it in a big editor
+  over the page (a whiteboard with View / Edit). Each stays its own
+  document; in Markdown it is its link alone on a line.
 - **Move drawings** — a Quick Draw sketch moves into a workspace (as a
   whiteboard), a whiteboard to another workspace or back to Quick Draw
   (`POST /drawings/{id}/move`), as quick notes do.

@@ -387,14 +387,15 @@ type Folder struct {
 
 // ---- Diagrams ---------------------------------------------------------------
 
-// Diagram is a draw.io diagram: Data is its file (draw.io's XML, as the
-// desktop app saves a .drawio), Preview a picture of it (SVG, made by the
-// editor) for lists and pages. Text is its labels, for search. Version
-// guards saves as for drawings.
+// Diagram is a draw.io or a Mermaid diagram (Kind): Data is its file
+// (draw.io's XML, as the desktop app saves a .drawio; or Mermaid's text),
+// Preview a picture of it (SVG, made by the editor) for lists and pages.
+// Text is its labels, for search. Version guards saves as for drawings.
 type Diagram struct {
 	Base
 	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
 	FolderID    string  `gorm:"size:36;not null;default:'';index" json:"folder_id"` // its folder ("" at the top)
+	Kind        string  `gorm:"size:16;not null;default:'drawio'" json:"kind"`      // drawio | mermaid
 	Title       string  `gorm:"size:300" json:"title"`
 	Data        string  `gorm:"type:text" json:"data,omitempty"`
 	Preview     string  `gorm:"type:text" json:"preview,omitempty"`
@@ -404,6 +405,12 @@ type Diagram struct {
 	CreatedBy   string  `gorm:"size:36" json:"created_by"`
 	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
 }
+
+// The kinds of diagram.
+const (
+	DiagramDrawio  = "drawio"
+	DiagramMermaid = "mermaid"
+)
 
 // ---- Calendar ---------------------------------------------------------------
 

@@ -10061,12 +10061,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "description": "draw.io's XML",
+                    "description": "draw.io's XML, or Mermaid's text",
                     "type": "string"
                 },
                 "folder_id": {
                     "description": "where a new one goes (\"\" the top)",
                     "type": "string"
+                },
+                "kind": {
+                    "description": "a new one's (drawio)",
+                    "type": "string",
+                    "enum": [
+                        "drawio",
+                        "mermaid"
+                    ]
                 },
                 "preview": {
                     "description": "an SVG picture of it",
@@ -10098,6 +10106,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "drawio | mermaid",
                     "type": "string"
                 },
                 "preview": {
@@ -13498,6 +13510,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "drawio | mermaid",
                     "type": "string"
                 },
                 "preview": {

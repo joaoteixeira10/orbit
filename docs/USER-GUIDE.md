@@ -465,6 +465,18 @@ with the page — only the workspace's members can open them — and the page's
 Markdown links to them; **Export** puts them in the zip next to the pages.
 At most 25 MB a file (the owner can change it).
 
+**Sheets, diagrams and whiteboards in a page.** Type **/** → **Sheet**,
+**Mermaid diagram**, **draw.io diagram** or **Whiteboard** (the kinds the
+workspace has turned on) and a new one, named after the page, goes in at
+that line and opens at once in a big editor over the page; **Done** puts it
+back, shown in place. **/** → **Existing sheet, diagram or whiteboard**
+picks one there is. Double-click one in a page (or its ⤢ button) to open
+it over the page again — a whiteboard opens to look at (**View**), **Edit**
+to draw. Each stays a document of its own (in its module, in Files and in
+folders), so it can be in several pages and downloaded; in the page's
+Markdown it is its link alone on a line, and pasting such a link shows it
+too.
+
 **Pages inside** a page are listed under it, with **Add a page inside**.
 
 **Pages screen** (Pages in the sidebar): every page as a grid or a list,
@@ -1104,23 +1116,35 @@ own and the page shows the sheet there (a tab at a time, up to 50 rows and
 
 ## 16. Diagrams
 
-**Diagrams** (a module: turn it on in the workspace's settings) are drawn
-with [draw.io](https://www.drawio.com) — flowcharts, org charts, networks,
-UML, mind maps, floor plans. **New diagram** opens the draw.io editor inside
-Orbit with all its shapes; **Import** brings in a draw.io file (`.drawio`,
-or an `.svg` draw.io saved with the diagram inside).
+**Diagrams** (a module: turn it on in the workspace's settings) are of two
+kinds. **New diagram** → **draw.io diagram** opens the
+[draw.io](https://www.drawio.com) editor inside Orbit with all its shapes —
+flowcharts, org charts, networks, UML, floor plans, drawn by hand.
+**New diagram** → **Mermaid diagram** is written as text and drawn for you
+([Mermaid](https://mermaid.js.org)): the text on the left, the drawing on
+the right (one above the other on a phone), redrawn as you type, with what
+is wrong in the text said under it. **Templates** starts from a flowchart,
+sequence, class, state, entity-relationship, Gantt, timeline, pie chart or
+mind map. On a flowchart the drawing edits the text too: click a box to
+pick it, **Node** adds a box (joined to the one picked), **Connect** then
+two boxes adds an arrow between them. **Import** brings in a draw.io file
+(`.drawio`, or an `.svg` draw.io saved with the diagram inside) or a
+Mermaid file (`.mmd`).
 
 It saves itself as you draw: the diagram, a picture of it (shown in the
 list and in pages) and its labels (so search finds it by the words in its
 shapes). If someone else saved it meanwhile, theirs is kept and shown (with
 a note). Viewers see the picture. `⋯` (top right): **Copy link**,
 **Download as draw.io (.drawio)**, **Download as SVG** (opens again in
-draw.io, the diagram is inside), **Download as PNG** and **Delete diagram**.
+draw.io, the diagram is inside), **Download as PNG** and **Delete diagram**. A
+Mermaid diagram downloads as its text (**.mmd**), an SVG or a PNG.
 Downloaded files open in the draw.io desktop app and on drawio.com, and
 diagrams drawn there come back in with Import.
 
-**In a page**: paste the diagram's link (`⋯` → Copy link) on a line of its
-own and the page shows its picture there, with **Open**.
+**In a page**: type **/** → **Mermaid diagram** or **draw.io diagram**, or
+paste the diagram's link (`⋯` → Copy link) on a line of its own: the page
+shows its picture there, and a double click opens it over the page (see
+[Pages](#5-pages)).
 
 **Where the editor comes from.** The draw.io editor loads from draw.io's own
 address (`embed.diagrams.net`) unless the instance owner sets another in

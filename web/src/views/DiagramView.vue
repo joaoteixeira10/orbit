@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { Check, ChevronLeft, Download, Link, LoaderCircle, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import DrawioFrame from '@/components/diagrams/DrawioFrame.vue'
+import MermaidEditor from '@/components/diagrams/MermaidEditor.vue'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
 import { diagramsApi, type DiagramDoc } from '@/lib/diagramsApi'
 import { bytesOfDataUrl, labelsOf, lightPicture, svgUrl, textOfDataUrl } from '@/lib/drawio'
+import { labelsOf as mermaidLabels, pngOf } from '@/lib/mermaid'
 import { fileName } from '@/lib/markdown'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
@@ -17,10 +19,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
 // One diagram, as big as the window: its name, a menu (its link; download
-// as .drawio, an editable .svg or .png; delete), the draw.io editor. It
-// saves itself a moment after each change — the file, a picture of it (for
-// lists and pages) and its labels (for search); a save over someone else's
-// newer one is refused, and theirs is shown. Viewers see the picture.
+// as .drawio — or Mermaid's .mmd —, an .svg or .png; delete), the editor
+// (draw.io's, or Mermaid's text and drawing). It saves itself a moment after
+// each change — the file, a picture of it (for lists and pages) and its
+// labels (for search); a save over someone else's newer one is refused, and
+// theirs is shown. Viewers see the picture. Embedded (ws and id given), it
+// is the big editor over a page: Done instead of the way back.
+const props = defineProps<{ ws?: string; id?: string; embedded?: boolean }>()
+const emit = defineEmits<{ close: [] }>()
 const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
@@ -28,8 +34,8 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const { t } = useI18n()
 
-const ws = computed(() => String(route.params.ws))
-const id = computed(() => String(route.params.id))
+const ws = computed(() => props.ws ?? String(route.params.ws))
+const id = computed(() => props.id ?? String(route.params.id))
 const workspace = computed(() => wss.byId(ws.value))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
 
@@ -43,6 +49,12 @@ async function load() {
     doc.value = d
     title.value = d.title
     xml.value = d.data ?? ''
+    // A Mermaid diagram made from a template has no picture yet: make it.
+    if (d.kind === 'mermaid' && d.data && !d.preview && editable.value) {
+      await nextTick()
+      state.value = 'waiting'
+      void save()
+    }
   } catch (e: any) {
     if (e instanceof ApiError && e.status === 404) missing.value = true
     else toast.error(e.message)
@@ -51,6 +63,8 @@ async function load() {
 watch(id, load, { immediate: true })
 
 const editor = ref<InstanceType<typeof DrawioFrame> | null>(null)
+const mermaid = ref<InstanceType<typeof MermaidEditor> | null>(null)
+const isMermaid = computed(() => doc.value?.kind === 'mermaid')
 
 // ---- Saving ----
 const state = ref<'idle' | 'waiting' | 'saving' | 'saved' | 'error'>('idle')
@@ -66,6 +80,7 @@ function changed(x: string) {
 // The picture: the editor makes it (none when it can't).
 async function picture(): Promise<string | undefined> {
   try {
+    if (isMermaid.value) return await mermaid.value?.picture()
     return lightPicture(textOfDataUrl(await editor.value!.exportAs('svg')))
   } catch {
     return undefined
@@ -81,7 +96,7 @@ function save(extra: { title?: string } = {}): Promise<void> {
     state.value = 'saving'
     try {
       const data = xml.value
-      const body = withData ? { data, preview: await picture(), text: labelsOf(data) } : {}
+      const body = withData ? { data, preview: await picture(), text: isMermaid.value ? mermaidLabels(data) : labelsOf(data) } : {}
       const saved = await diagramsApi.save(d.id, { ...body, ...extra, version: d.version })
       doc.value = { ...saved, data }
       if (state.value === 'saving') state.value = 'saved'
@@ -108,7 +123,12 @@ async function flush() {
   if (state.value === 'waiting') await save()
   else await running
 }
-onBeforeRouteLeave(() => flush())
+if (!props.embedded) onBeforeRouteLeave(() => flush())
+async function done() {
+  await flush()
+  emit('close')
+}
+defineExpose({ flush })
 onBeforeUnmount(() => void flush())
 function onUnload(e: BeforeUnloadEvent) {
   if (state.value !== 'waiting' && state.value !== 'saving') return
@@ -156,6 +176,12 @@ function saveFile(blob: Blob, ext: string) {
 async function download(kind: 'drawio' | 'svg' | 'png') {
   menu.value = false
   try {
+    if (isMermaid.value) {
+      if (kind === 'drawio') return saveFile(new Blob([xml.value], { type: 'text/plain' }), 'mmd')
+      const svg = (await mermaid.value?.picture()) ?? doc.value?.preview ?? ''
+      if (kind === 'svg') return saveFile(new Blob([svg], { type: 'image/svg+xml' }), 'svg')
+      return saveFile(await pngOf(svg), 'png')
+    }
     if (kind === 'drawio') return saveFile(new Blob([xml.value], { type: 'application/vnd.jgraph.mxfile' }), 'drawio')
     if (!editor.value) {
       // Viewers: the picture there is.
@@ -180,23 +206,24 @@ async function remove() {
     clearTimeout(timer)
     state.value = 'idle'
     await diagramsApi.remove(doc.value.id)
-    void router.push({ name: 'ws-diagrams', params: { ws: ws.value } })
+    if (props.embedded) emit('close')
+    else void router.push({ name: 'ws-diagrams', params: { ws: ws.value } })
   } catch (e: any) {
     toast.error(e.message)
   }
 }
 
 const fill = ref<HTMLElement | null>(null)
-useFillHeight(fill, 480)
+useFillHeight(props.embedded ? ref(null) : fill, 480)
 const status = computed(() =>
   state.value === 'waiting' || state.value === 'saving' ? t('common.saving') : state.value === 'saved' ? t('common.saved') : state.value === 'error' ? t('editor.saveFailed') : '',
 )
 </script>
 
 <template>
-  <div class="diagram-view">
+  <div class="diagram-view" :class="{ embedded }">
     <header class="mb-3 flex items-center gap-2">
-      <RouterLink :to="{ name: 'ws-diagrams', params: { ws } }" class="btn-plain -ml-2 shrink-0"><ChevronLeft class="h-4 w-4" />{{ t('modules.diagrams') }}</RouterLink>
+      <RouterLink v-if="!embedded" :to="{ name: 'ws-diagrams', params: { ws } }" class="btn-plain -ml-2 shrink-0"><ChevronLeft class="h-4 w-4" />{{ t('modules.diagrams') }}</RouterLink>
       <input
         v-model="title"
         class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[20px] font-bold outline-none hover:bg-fill-2 focus:bg-fill-2"
@@ -213,11 +240,13 @@ const status = computed(() =>
         {{ status }}
       </span>
       <button ref="menuEl" type="button" class="icon-btn shrink-0" :aria-label="t('diagrams.more')" data-testid="diagram-menu" @click="menu = !menu"><MoreHorizontal class="h-[18px] w-[18px]" /></button>
+      <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
     </header>
     <p v-if="missing" class="py-24 text-center text-[14px] text-text-3">{{ t('diagrams.notFound') }}</p>
     <div v-else ref="fill" class="diagram-frame">
       <template v-if="doc">
-        <DrawioFrame v-if="editable" ref="editor" :xml="xml" :title="title" @change="changed" />
+        <MermaidEditor v-if="isMermaid" ref="mermaid" :code="xml" :readonly="!editable" @change="changed" />
+        <DrawioFrame v-else-if="editable" ref="editor" :xml="xml" :title="title" @change="changed" />
         <div v-else class="paper">
           <img v-if="doc.preview" :src="svgUrl(doc.preview)" :alt="title" class="max-h-full max-w-full" />
           <p v-else class="text-[13.5px] text-text-3">{{ t('diagrams.noPicture') }}</p>
@@ -228,9 +257,9 @@ const status = computed(() =>
     <Popover v-if="menu" :anchor="menuEl" :width="250" placement="bottom-end" @close="menu = false">
       <div class="p-1.5">
         <button type="button" class="menu-item w-full" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('diagrams.copyLink') }}</button>
-        <button type="button" class="menu-item w-full" :disabled="!xml" data-testid="diagram-drawio" @click="download('drawio')"><Download class="h-4 w-4 text-text-2" />{{ t('diagrams.downloadDrawio') }}</button>
-        <button type="button" class="menu-item w-full" data-testid="diagram-svg" @click="download('svg')"><Download class="h-4 w-4 text-text-2" />{{ t('diagrams.downloadSvg') }}</button>
-        <button v-if="editable" type="button" class="menu-item w-full" data-testid="diagram-png" @click="download('png')"><Download class="h-4 w-4 text-text-2" />{{ t('diagrams.downloadPng') }}</button>
+        <button type="button" class="menu-item w-full" :disabled="!xml" data-testid="diagram-drawio" @click="download('drawio')"><Download class="h-4 w-4 text-text-2" />{{ isMermaid ? t('mermaid.downloadMmd') : t('diagrams.downloadDrawio') }}</button>
+        <button type="button" class="menu-item w-full" data-testid="diagram-svg" @click="download('svg')"><Download class="h-4 w-4 text-text-2" />{{ isMermaid ? t('mermaid.downloadSvg') : t('diagrams.downloadSvg') }}</button>
+        <button v-if="editable || isMermaid" type="button" class="menu-item w-full" data-testid="diagram-png" @click="download('png')"><Download class="h-4 w-4 text-text-2" />{{ t('diagrams.downloadPng') }}</button>
         <template v-if="editable">
           <div class="menu-sep" />
           <button type="button" class="menu-item danger w-full" @click="(menu = false), (confirmDelete = true)"><Trash2 class="h-4 w-4" />{{ t('diagrams.delete') }}</button>
@@ -244,6 +273,16 @@ const status = computed(() =>
 <style scoped>
 .diagram-view {
   padding: 16px clamp(12px, 2vw, 24px) 0;
+}
+.diagram-view.embedded {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  padding: 12px 16px 16px;
+}
+.embedded .diagram-frame {
+  flex: 1;
+  min-height: 0;
 }
 .diagram-frame {
   display: flex;

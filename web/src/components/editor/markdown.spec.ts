@@ -77,6 +77,22 @@ describe('page Markdown', () => {
     }
   })
 
+  it('shows a sheet, a diagram or a whiteboard alone on its line as a block', () => {
+    const md = 'Intro.\n\n[Budget \\[2026\\]](/w/w1/s/abc)\n\n[Flow](/w/w1/d/d1)\n\n[Board](/w/w1/whiteboards/b1)\n\nAfter.'
+    const ed = load(md)
+    const blocks = (ed.getJSON().content ?? []).map((n: any) => (n.type === 'docEmbed' ? `${n.attrs.kind}:${n.attrs.id}:${n.attrs.title}` : n.type))
+    ed.destroy()
+    expect(blocks).toEqual(['paragraph', 'sheet:abc:Budget [2026]', 'diagram:d1:Flow', 'board:b1:Board', 'paragraph'])
+    expect(roundTrip(md)).toBe(md)
+    // Not alone on its line (in a sentence, or with a line after it): a link.
+    for (const inline of ['See [Flow](/w/w1/d/d1) here.', '[Flow](/w/w1/d/d1)\nmore', 'text\n[Flow](/w/w1/d/d1)', '[Page](/w/w1/p/p1)']) {
+      const e = load(inline)
+      expect(JSON.stringify(e.getJSON())).not.toContain('docEmbed')
+      e.destroy()
+      expect(roundTrip(inline)).toBe(inline)
+    }
+  })
+
   it('is stable: a second round trip changes nothing', () => {
     const md = '| A | B |\n| --- | --- |\n| 1 | 2 |\n\nText *with* `marks`, <mark>hl</mark>.\n\n- [ ] a\n  - [x] b'
     const once = roundTrip(md)

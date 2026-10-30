@@ -13,6 +13,10 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 
 // One whiteboard, as big as the window: its name on top, Excalidraw below.
+// Embedded (ws and id given), it is the big editor over a page: it opens to
+// look at (View), Edit to draw, Done instead of the way back.
+const props = defineProps<{ ws?: string; id?: string; embedded?: boolean }>()
+const emit = defineEmits<{ close: [] }>()
 const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
@@ -20,13 +24,20 @@ const auth = useAuthStore()
 const { t } = useI18n()
 
 // No workspace in the address: a Quick Draw sketch (one's own).
-const personal = computed(() => !route.params.ws)
-const ws = computed(() => String(route.params.ws ?? ''))
-const id = computed(() => String(route.params.id))
+const personal = computed(() => !props.embedded && !route.params.ws)
+const ws = computed(() => props.ws ?? String(route.params.ws ?? ''))
+const id = computed(() => props.id ?? String(route.params.id))
 const workspace = computed(() => wss.byId(ws.value))
-const readonly = computed(() =>
-  personal.value ? auth.privileges.read_only : !workspace.value || workspace.value.role === 'viewer' || !!workspace.value.archived_at || auth.privileges.read_only,
+const canEdit = computed(() =>
+  personal.value ? !auth.privileges.read_only : !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only,
 )
+const mode = ref<'view' | 'edit'>(props.embedded ? 'view' : 'edit')
+const readonly = computed(() => !canEdit.value || mode.value === 'view')
+async function done() {
+  await editor.value?.flush()
+  emit('close')
+}
+defineExpose({ flush: () => editor.value?.flush() })
 
 const editor = ref<InstanceType<typeof DrawingEditor> | null>(null)
 const title = ref('')
@@ -60,13 +71,13 @@ async function moveTo(target: string) {
   }
 }
 const fill = ref<HTMLElement | null>(null)
-useFillHeight(fill, 420)
+useFillHeight(props.embedded ? ref(null) : fill, 420)
 </script>
 
 <template>
-  <div class="board-view">
+  <div class="board-view" :class="{ embedded }">
     <header class="mb-3 flex items-center gap-2">
-      <button class="btn-plain -ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ personal ? t('draw.quick') : t('draw.back') }}</button>
+      <button v-if="!embedded" class="btn-plain -ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ personal ? t('draw.quick') : t('draw.back') }}</button>
       <input
         v-model="title"
         class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[20px] font-bold outline-none hover:bg-fill-2 focus:bg-fill-2"
@@ -77,7 +88,12 @@ useFillHeight(fill, 420)
         @keydown.enter="($event.target as HTMLInputElement).blur()"
         @blur="saveTitle"
       />
-      <button v-if="!readonly" class="btn btn-sm shrink-0" :title="t('draw.moveTo')" data-testid="whiteboard-move" @click="moving = true"><FolderInput class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('draw.moveTo') }}</span></button>
+      <div v-if="embedded && canEdit" class="seg shrink-0" role="group">
+        <button type="button" :class="{ on: mode === 'view' }" :aria-pressed="mode === 'view'" data-testid="whiteboard-view-mode" @click="mode = 'view'">{{ t('embed.view') }}</button>
+        <button type="button" :class="{ on: mode === 'edit' }" :aria-pressed="mode === 'edit'" data-testid="whiteboard-edit-mode" @click="mode = 'edit'">{{ t('embed.edit') }}</button>
+      </div>
+      <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
+      <button v-if="!embedded && !readonly" class="btn btn-sm shrink-0" :title="t('draw.moveTo')" data-testid="whiteboard-move" @click="moving = true"><FolderInput class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('draw.moveTo') }}</span></button>
     </header>
     <NotePlacePicker :open="moving" mode="move" drawing :current="personal ? 'me' : ws" @close="moving = false" @pick="moveTo" />
     <div ref="fill" class="board-frame">
@@ -89,6 +105,16 @@ useFillHeight(fill, 420)
 <style scoped>
 .board-view {
   padding: 16px clamp(12px, 2vw, 24px) 0;
+}
+.board-view.embedded {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  padding: 12px 16px 16px;
+}
+.embedded .board-frame {
+  flex: 1;
+  min-height: 0;
 }
 .board-frame {
   overflow: hidden;

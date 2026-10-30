@@ -2561,3 +2561,27 @@ test('page restrictions: a page open to only some people is not there for the ot
   const omar = auth(await login('omar', 'omar-e2e-password-42'))
   expect((await request.get(`/api/v1/pages/${pg.id}`, { headers: omar })).status()).toBe(404)
 })
+
+test('outline: a page\'s headings to jump to, its callouts and to-dos in one list, ticked from there', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Trips', kind: 'personal', starter: false, modules: ['home', 'pages'] } })).json()
+  const filler = Array.from({ length: 40 }, (_, i) => `Line ${i + 1}.`).join('\n\n')
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Lisbon', content: `# Plan\n\n> [!TIP]\n> Take the tram.\n\n${filler}\n\n## Packing\n\n- [ ] Sunscreen\n- [x] Tickets\n\n## Days\n\nDay one.` } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 800 })
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await page.getByTestId('outline-toggle').click()
+  const ol = page.getByTestId('outline')
+  await expect(ol.getByTestId('outline-heading')).toHaveText(['Plan', 'Packing', 'Days'])
+  await expect(ol.getByTestId('outline-callout')).toContainText('Take the tram.')
+  await ol.getByTestId('outline-heading').filter({ hasText: 'Days' }).click()
+  await expect(page.locator('.md-view h2', { hasText: 'Days' })).toBeInViewport()
+  await ol.getByTestId('outline-task').first().check()
+  await expect.poll(async () => (await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content).toContain('- [x] Sunscreen')
+  // Remembered.
+  await page.reload()
+  await expect(page.getByTestId('outline')).toBeVisible()
+  await page.getByTestId('outline-toggle').click()
+})

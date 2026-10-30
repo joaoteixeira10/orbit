@@ -203,6 +203,12 @@ export const embedsEn = {
     nowOnly: 'Only you can see it now | Only 1 person can see it now | Only {n} people can see it now',
     nowAll: 'Everyone in the workspace can see it again',
   },
+  outline: {
+    title: 'Outline',
+    headings: 'Headings',
+    notes: 'Callouts and to-dos',
+    empty: 'No headings, callouts or to-dos in this page yet.',
+  },
   embed: {
     view: 'View',
     edit: 'Edit',
@@ -418,6 +424,12 @@ export const embedsPt: typeof embedsEn = {
     restricted: 'Restrita',
     nowOnly: 'Agora só você a pode ver | Agora só 1 pessoa a pode ver | Agora só {n} pessoas a podem ver',
     nowAll: 'Todas as pessoas do espaço voltam a poder vê-la',
+  },
+  outline: {
+    title: 'Índice',
+    headings: 'Títulos',
+    notes: 'Destaques e tarefas',
+    empty: 'Ainda sem títulos, destaques ou tarefas nesta página.',
   },
   embed: {
     view: 'Ver',

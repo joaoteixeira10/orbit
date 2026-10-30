@@ -13,6 +13,8 @@ merge, not at release time.
 
 ### Added
 
+- **Outline beside a page** — its headings to jump to, its callouts and
+  checklist items in one list (tick from there); remembered open.
 - **Page restrictions** — a page (and what's under it) open to only some of
   the workspace's people (`PUT /pages/{id}/access`); to the others it isn't
   there anywhere (tree, search, Home, links, graph, history, files, exports).

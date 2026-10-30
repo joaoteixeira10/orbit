@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2, Lock } from 'lucide-vue-next'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2, Lock, ListTree } from 'lucide-vue-next'
 import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
@@ -25,6 +25,7 @@ import LocalGraph from '@/components/graph/LocalGraph.vue'
 import PageHistory from '@/components/pages/PageHistory.vue'
 import ShareSheet from '@/components/pages/ShareSheet.vue'
 import AccessSheet from '@/components/pages/AccessSheet.vue'
+import OutlinePanel from '@/components/pages/OutlinePanel.vue'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
@@ -532,6 +533,30 @@ const status = computed(() => {
   return t('editor.editedBy', { when, name: memberName(by) })
 })
 
+// ---- Outline (remembered) ----
+const outlineOpen = ref(localStorage.getItem('orbit_outline') === '1')
+watch(outlineOpen, (v) => {
+  try {
+    localStorage.setItem('orbit_outline', v ? '1' : '0')
+  } catch {
+    /* private mode */
+  }
+})
+const contentEl = ref<HTMLElement | null>(null)
+// The text as it is now: while editing, the editor's, read every moment the
+// panel is open.
+const outlineText = computed(() => draft.value)
+let outlineTimer: ReturnType<typeof setInterval> | undefined
+watch(
+  () => outlineOpen.value && editing.value,
+  (on) => {
+    clearInterval(outlineTimer)
+    if (on) outlineTimer = setInterval(syncDraft, 1500)
+  },
+  { immediate: true },
+)
+onUnmounted(() => clearInterval(outlineTimer))
+
 // ---- Who can see it (?access=1) ----
 const accessOpen = computed(() => route.query.access === '1')
 const openAccess = () => router.replace({ query: { ...route.query, access: '1' } })
@@ -671,7 +696,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-view">
+  <div class="page-view" :class="{ 'with-outline': outlineOpen }">
     <!-- Bar: breadcrumbs, status, favourite, actions -->
     <div class="page-bar px-4 sm:px-8">
       <nav class="crumbs" :aria-label="t('editor.breadcrumbs')">
@@ -712,6 +737,9 @@ onUnmounted(() => {
           </template>
           <button v-else class="btn btn-sm ml-2" :title="t('editor.edit') + ' (E)'" @click="startEdit()"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</button>
         </template>
+        <button type="button" class="icon-btn ml-1" :class="{ 'text-accent': outlineOpen }" :title="t('outline.title')" :aria-label="t('outline.title')" :aria-pressed="outlineOpen" data-testid="outline-toggle" @click="outlineOpen = !outlineOpen">
+          <ListTree class="h-[18px] w-[18px]" />
+        </button>
         <button
           v-if="!page.trashed_at"
           class="icon-btn ml-1"
@@ -780,7 +808,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="px-4 sm:px-8">
+      <div ref="contentEl" class="px-4 sm:px-8">
         <div class="page-col">
           <header class="page-head" :class="{ 'has-cover': !!coverBg, 'has-icon': !!page.icon }">
             <button
@@ -881,6 +909,7 @@ onUnmounted(() => {
     </template>
 
     <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
+    <OutlinePanel v-if="page" :open="outlineOpen" :content="outlineText" :root="contentEl" :can-tick="editable && !editing" @close="outlineOpen = false" @toggle="onToggle" />
     <AccessSheet v-if="page && editable" :open="accessOpen" :page="page" :ws="wsId" @close="closeAccess" @changed="accessChanged" />
     <ShareSheet v-if="page" :open="shareOpen" :page-id="page.id" :editable="editable" @close="closeShare" />
     <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
@@ -890,6 +919,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+@media (min-width: 1280px) {
+  /* The outline at the side: the page moves over, not under it. */
+  .page-view.with-outline > :not(.page-bar):not(.outline-aside) {
+    padding-right: 270px;
+  }
+}
 .page-view {
   min-height: 100%;
   padding-bottom: 96px;

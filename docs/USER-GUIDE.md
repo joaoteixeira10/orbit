@@ -465,6 +465,12 @@ read.
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
 
+**Outline.** The list button at the top right of a page opens its outline
+beside it: its headings — click one to go there — and, under them, its
+callouts and checklist items gathered in one list (click to go to one;
+tick a box right there when you can change the page). It stays open for
+the next pages until you close it.
+
 **Who can see a page.** A page's `⋯` → **Who can see it…**: **Everyone in
 the workspace**, or **Only some people** (you, and whom you tick). It
 counts for the pages inside it too; under a restricted page a page is seen

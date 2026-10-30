@@ -33,6 +33,9 @@ merge, not at release time.
 
 ### Added
 
+- **A list picks its folder** — the list's edit sheet has a **Folder**
+  choice (one there is, a new one named after the list, or none), the other
+  way round from the folder's **Task list…**.
 - **Bucket in Quick Draw** — fills what the lines close off with the
   current colour, under the lines (small gaps still count as closed; key G).
 - **Sketch in "/"** — a page's **/** menu makes a Quick Draw sketch in

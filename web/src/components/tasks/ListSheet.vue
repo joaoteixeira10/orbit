@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap } from 'lucide-vue-next'
+import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap, FolderOpen } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
@@ -18,9 +18,11 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { tasksApi, gitApi, type Column, type TaskList, type GitHookSetup } from '@/api/planner'
+import { filesApi, tree, type Folder } from '@/lib/filesApi'
 
 // Creates or edits a task list, as Reminders' list sheet: its name, colour
-// and icon, plus the board columns (statuses) its tasks move through.
+// and icon, the folder it's the project of (with Files on), plus the board
+// columns (statuses) its tasks move through.
 // Columns are edited locally and saved together; the server validates them
 // (names, ≤12, at least one open and one done) and re-homes the tasks of
 // removed columns.
@@ -56,6 +58,19 @@ const color = ref('#007AFF')
 const columns = ref<DraftColumn[]>([])
 const busy = ref(false)
 const tried = ref(false)
+// Its folder (a project): '' none, a folder's id, or NEW_FOLDER (one named
+// after the list). A folder has one list: picking one joined to another
+// list takes it over.
+const NEW_FOLDER = '+new'
+const hasFiles = computed(() => !!workspace.value?.modules.includes('files'))
+const folders = ref<Folder[]>([])
+const folderId = ref('')
+const folderOptions = computed(() =>
+  tree(folders.value).map((x) => {
+    const other = x.folder.list_id && x.folder.list_id !== props.listId ? tasks.listsOf(props.ws).find((l) => l.id === x.folder.list_id) : undefined
+    return { id: x.folder.id, label: `${'\u00a0\u00a0\u00a0'.repeat(x.depth)}${x.folder.name}${other ? ` · ${other.name}` : ''}` }
+  }),
+)
 // Creating from a git repository instead (its own sheet).
 const fromGit = ref(false)
 const gitOn = computed(() => auth.features.git_integration !== false)
@@ -85,6 +100,13 @@ watch(
       icon.value = 'list-checks'
       color.value = workspace.value?.color || '#007AFF'
       columns.value = [draft({ name: t('lists.todo') }), draft({ name: t('lists.doing') }), draft({ name: t('lists.finished'), done: true })]
+    }
+    folderId.value = list.value?.folder_id ?? ''
+    if (hasFiles.value) {
+      filesApi
+        .folders(props.ws)
+        .then((f) => (folders.value = f))
+        .catch(() => (folders.value = []))
     }
   },
   { immediate: true },
@@ -159,7 +181,14 @@ async function save() {
   try {
     const before = list.value?.columns.map((c) => c.id) ?? []
     const saved = props.listId ? await tasksApi.updateList(props.listId, body) : await tasksApi.createList(props.ws, body)
-    upsertList(saved)
+    const was = list.value?.folder_id ?? ''
+    let folder = folderId.value
+    if (hasFiles.value && folder !== was) {
+      if (folder === NEW_FOLDER) folder = (await filesApi.createFolder(props.ws, { name: saved.name, color: saved.color, list_id: saved.id })).id
+      else if (folder) await filesApi.updateFolder(folder, { list_id: saved.id })
+      else await filesApi.updateFolder(was, { list_id: '' })
+    }
+    upsertList({ ...saved, folder_id: hasFiles.value ? folder || undefined : saved.folder_id })
     // Tasks of removed columns were moved (and maybe completed): refetch them.
     if (before.some((id) => !saved.columns.some((c) => c.id === id))) void tasks.load(props.ws).catch(() => {})
     emit('saved', saved)
@@ -349,6 +378,22 @@ async function destroy() {
       <div v-if="editable" class="rounded-xl bg-fill-2 p-4">
         <IconColorPicker v-model:icon="icon" v-model:color="color" compact />
       </div>
+
+      <!-- Its folder -->
+      <section v-if="hasFiles">
+        <h3 class="cap mb-1.5 px-1">{{ t('lists.folder') }}</h3>
+        <div class="group">
+          <label class="group-row !gap-2.5">
+            <FolderOpen class="h-4 w-4 shrink-0 text-text-2" />
+            <select v-model="folderId" class="input min-w-0 flex-1 !py-1 text-[14px]" :disabled="!editable" :aria-label="t('lists.folder')" data-testid="list-folder-pick">
+              <option value="">{{ t('lists.noFolder') }}</option>
+              <option v-for="o in folderOptions" :key="o.id" :value="o.id">{{ o.label }}</option>
+              <option :value="NEW_FOLDER">{{ t('lists.newFolder', { name: name.trim() || t('lists.namePlaceholder') }) }}</option>
+            </select>
+          </label>
+        </div>
+        <p class="footnote mt-1 px-1 leading-snug">{{ t('lists.folderHint') }}</p>
+      </section>
 
       <!-- Columns -->
       <section>

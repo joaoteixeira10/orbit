@@ -2419,6 +2419,23 @@ test('projects: a folder joined to a task list shows its progress; the list show
   const made = page.url().split('/').pop()!
   const pages = (await (await request.get(`${base}/pages`, { headers: H })).json()) as { id: string; folder_id?: string }[]
   expect(pages.find((p) => p.id === made)?.folder_id).toBe(folder.id)
+
+  // The other way round: a list given a folder from its own sheet — a new
+  // one named after it, then none.
+  const ads = await (await request.post(`${base}/lists`, { headers: H, data: { name: 'Ads', color: '#34c759' } })).json()
+  const foldersNow = async () => (await (await request.get(`${base}/folders`, { headers: H })).json()) as { name: string; list_id?: string }[]
+  await page.goto(`/w/${ws.id}/tasks/${ads.id}`)
+  await page.getByTitle('Edit list').click()
+  await page.getByTestId('list-folder-pick').selectOption({ label: 'New folder “Ads”' })
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByTestId('list-folder')).toContainText('Ads')
+  expect((await foldersNow()).find((f) => f.name === 'Ads')?.list_id).toBe(ads.id)
+  await page.getByTitle('Edit list').click()
+  await expect(page.getByTestId('list-folder-pick')).toHaveValue(((await foldersNow()) as { id?: string; name: string }[]).find((f) => f.name === 'Ads')!.id!)
+  await page.getByTestId('list-folder-pick').selectOption('')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByTestId('list-folder')).toHaveCount(0)
+  expect((await foldersNow()).find((f) => f.name === 'Ads')?.list_id ?? '').toBe('')
 })
 
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {

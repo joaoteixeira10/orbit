@@ -1258,7 +1258,10 @@ them all together. A folder's tile says what it holds of every kind
   (its sub-pages stay under it in Pages); **New → New page** in Files makes
   one in the folder shown. Pages not filed anywhere are only in Pages.
 - **A folder is a project** when it has a task list: its `⋯` → **Task
-  list…** picks one (or **New list** named after the folder). Inside the
+  list…** picks one (or **New list** named after the folder) — or, from the
+  list's side, its edit sheet (the pencil in Tasks, **Edit list** on the
+  board) → **Folder**: one there is, **New folder** named after the list,
+  or **No folder**. Inside the
   folder, the list shows with its progress (*3 open · 5 done*) and buttons
   to its **List** and **Board**; the list, in Tasks, shows its folder and
   what's in it, a click away. One list per folder: picking a list another

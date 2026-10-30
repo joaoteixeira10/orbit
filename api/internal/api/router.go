@@ -333,6 +333,7 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/workspaces/:ws/folders", h.listFolders)
 			authed.GET("/workspaces/:ws/graph", h.workspaceGraph)
 			authed.GET("/oauth/clients/:id", h.oauthClientInfo)
+			authed.PUT("/pages/:id/access", h.setPageAccess)
 			authed.GET("/pages/:id/links", h.listShareLinks)
 			authed.POST("/pages/:id/links", h.createShareLink)
 			authed.PUT("/links/:id", h.updateShareLink)

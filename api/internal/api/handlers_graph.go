@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 
@@ -81,6 +82,15 @@ func (h *Handlers) workspaceGraph(c *gin.Context) {
 	var folders []models.Folder
 	h.db.Where("workspace_id = ?", ws.ID).Find(&folders)
 
+	// Pages the caller may not see aren't in it at all.
+	g := h.gate(auth.UserID(c), ws.ID)
+	visible := pages[:0]
+	for _, p := range pages {
+		if g.sees(p.ID) {
+			visible = append(visible, p)
+		}
+	}
+	pages = visible
 	for _, p := range pages {
 		node(graphNode{ID: p.ID, Kind: "page", Title: p.Title, Icon: p.Icon})
 	}

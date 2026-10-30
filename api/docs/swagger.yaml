@@ -1942,8 +1942,23 @@ definitions:
     required:
     - code
     type: object
+  api.pageAccessRequest:
+    properties:
+      restricted:
+        type: boolean
+      user_ids:
+        items:
+          type: string
+        maxItems: 500
+        type: array
+    type: object
   api.pageResponse:
     properties:
+      allowed_users:
+        description: a restricted page's
+        items:
+          type: string
+        type: array
       can_edit:
         type: boolean
       content:
@@ -1975,6 +1990,11 @@ definitions:
         type: object
       rank:
         type: number
+      restricted:
+        description: |-
+          Restricted: only AllowedUsers (JSON []user id) see it and what's
+          under it (api/page_access.go).
+        type: boolean
       template:
         description: |-
           Template: offered when a new page starts empty (its title and
@@ -2012,6 +2032,9 @@ definitions:
         type: object
       rank:
         type: number
+      restricted:
+        description: only some people see it (and what's under it)
+        type: boolean
       template:
         type: boolean
       title:
@@ -7171,6 +7194,34 @@ paths:
       security:
       - BearerAuth: []
       summary: Save a page
+      tags:
+      - pages
+  /pages/{id}/access:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Restricted, and to whom
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.pageAccessRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageResponse'
+      security:
+      - BearerAuth: []
+      summary: Who can see a page
       tags:
       - pages
   /pages/{id}/backlinks:

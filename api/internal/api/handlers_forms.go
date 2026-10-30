@@ -184,6 +184,10 @@ func (h *Handlers) formAccess(c *gin.Context, need string) (models.Form, models.
 		return f, p, false
 	}
 	_, _, ok := h.wsAccess(c, f.WorkspaceID, need)
+	if ok && !h.pageVisible(c, p) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return f, p, false
+	}
 	return f, p, ok
 }
 

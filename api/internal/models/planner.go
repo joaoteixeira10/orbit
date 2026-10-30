@@ -81,6 +81,10 @@ type Page struct {
 	// property id (JSON). The API answers both as JSON objects.
 	DB    string `gorm:"type:text" json:"db,omitempty"`
 	Props string `gorm:"type:text" json:"props,omitempty"`
+	// Restricted: only AllowedUsers (JSON []user id) see it and what's
+	// under it (api/page_access.go).
+	Restricted   bool   `gorm:"not null;default:false;index" json:"restricted"`
+	AllowedUsers string `gorm:"type:text" json:"-"`
 }
 
 // PageVersion is a page as it was after a save: its title and Markdown, and

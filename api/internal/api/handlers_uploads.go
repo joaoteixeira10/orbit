@@ -40,7 +40,7 @@ func (h *Handlers) uploadTarget(c *gin.Context, target, id, need string) (string
 	switch target {
 	case uploads.Page:
 		var p models.Page
-		if h.db.Select("id", "workspace_id").First(&p, "id = ?", id).Error != nil {
+		if h.db.Select("id", "workspace_id").First(&p, "id = ?", id).Error != nil || !h.pageVisible(c, p) {
 			return notFound()
 		}
 		wsID = p.WorkspaceID

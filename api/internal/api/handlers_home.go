@@ -101,10 +101,13 @@ func (h *Handlers) home(c *gin.Context) {
 		resp.Events = resp.Events[:60]
 	}
 	var pages []models.Page
-	h.db.Omit("content", "content_text").Where("workspace_id IN ? AND trashed_at IS NULL", wsIDs).Order("updated_at DESC").Limit(8).Find(&pages)
+	h.db.Omit("content", "content_text").Where("workspace_id IN ? AND trashed_at IS NULL", wsIDs).Order("updated_at DESC").Limit(40).Find(&pages)
 	fav := h.favoriteSet(uid)
+	g := h.gate(uid, wsIDs...)
 	for _, p := range pages {
-		resp.Pages = append(resp.Pages, summarize(p, fav))
+		if g.sees(p.ID) && len(resp.Pages) < 8 {
+			resp.Pages = append(resp.Pages, summarize(p, fav))
+		}
 	}
 	var notes []models.Note
 	q := h.db.Where("workspace_id IN ? AND pinned", wsIDs)
@@ -177,8 +180,14 @@ func (h *Handlers) search(c *gin.Context) {
 	var pages []models.Page
 	h.db.Select("id", "workspace_id", "title", "icon", "content_text").
 		Where(`workspace_id IN ? AND trashed_at IS NULL AND (LOWER(title) LIKE ? ESCAPE '\' OR LOWER(content_text) LIKE ? ESCAPE '\')`, wsIDs, pat, pat).
-		Order("updated_at DESC").Limit(12).Find(&pages)
+		Order("updated_at DESC").Limit(40).Find(&pages)
+	g := h.gate(auth.UserID(c), wsIDs...)
+	shown := 0
 	for _, p := range pages {
+		if !g.sees(p.ID) || shown >= 12 {
+			continue
+		}
+		shown++
 		out = append(out, searchHit{Kind: "page", ID: p.ID, WorkspaceID: p.WorkspaceID, Title: p.Title, Icon: p.Icon, Snippet: planner.Snippet(p.ContentText, q, 120)})
 	}
 	var tasks []models.Task
@@ -212,6 +221,7 @@ func (h *Handlers) search(c *gin.Context) {
 func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searchHit {
 	out := []searchHit{}
 	uid := auth.UserID(c)
+	gate := h.gate(uid, wsIDs...)
 	notesScope := uid
 	if c.Query("ws") != "" {
 		notesScope = "" // one workspace: not the caller's own notes
@@ -324,7 +334,7 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 		switch kind {
 		case "page":
 			p, ok := pages[x.Ref]
-			if !ok || p.TrashedAt != nil {
+			if !ok || p.TrashedAt != nil || !gate.sees(p.ID) {
 				continue
 			}
 			out = append(out, searchHit{Kind: "page", ID: p.ID, WorkspaceID: p.WorkspaceID, Title: p.Title, Icon: p.Icon, Snippet: planner.Snippet(p.ContentText, q, 120)})

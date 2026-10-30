@@ -168,7 +168,9 @@ func unraw(r json.RawMessage) string {
 
 // Export writes workspace wsID as a zip to w. uid is who exports it (their
 // own grades go with it).
-func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) error {
+// hide leaves out pages (and their files) the exporter may not see (nil:
+// none).
+func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time, hide func(pageID string) bool) error {
 	var ws models.Workspace
 	if err := db.First(&ws, "id = ?", wsID).Error; err != nil {
 		return err
@@ -191,6 +193,15 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 		a.Tasks = append(a.Tasks, xTask{Task: t, Tags: raw(t.Tags), Assignees: who, WaitsOn: t.WaitsOnList()})
 	}
 	db.Where("workspace_id = ? AND trashed_at IS NULL", wsID).Order("rank").Find(&a.Pages)
+	if hide != nil {
+		kept := a.Pages[:0]
+		for _, p := range a.Pages {
+			if !hide(p.ID) {
+				kept = append(kept, p)
+			}
+		}
+		a.Pages = kept
+	}
 	var notes []models.Note
 	db.Where("workspace_id = ?", wsID).Order("rank").Find(&notes)
 	for _, n := range notes {
@@ -211,6 +222,15 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time) erro
 	}
 	db.Where("course_id IN ? AND user_id = ?", courseIDs, uid).Find(&a.Goals)
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
+	if hide != nil {
+		kept := a.Files[:0]
+		for _, f := range a.Files {
+			if f.Target != "page" || !hide(f.TargetID) {
+				kept = append(kept, f)
+			}
+		}
+		a.Files = kept
+	}
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Drawings)
 	db.Where("workspace_id = ?", wsID).Order("rank").Find(&a.WorkspaceGoals)
 	var sheets []models.Sheet

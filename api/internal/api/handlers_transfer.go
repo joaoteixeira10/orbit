@@ -35,7 +35,9 @@ func (h *Handlers) exportWorkspace(c *gin.Context) {
 	}
 	// Built in memory first, so a failure is an error, not a broken download.
 	var buf bytes.Buffer
-	if err := transfer.Export(h.db, ws.ID, auth.UserID(c), version.Current().Version, &buf, time.Now()); err != nil {
+	g := h.gate(auth.UserID(c), ws.ID)
+	hide := func(id string) bool { return !g.sees(id) }
+	if err := transfer.Export(h.db, ws.ID, auth.UserID(c), version.Current().Version, &buf, time.Now(), hide); err != nil {
 		h.internalError(c, err, "could not export the workspace")
 		return
 	}

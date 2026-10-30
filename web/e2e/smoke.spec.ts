@@ -2531,3 +2531,33 @@ test('guest links and forms: a page read and edited by its link, no account; a p
   expect(rita?.props).toEqual({ level: 'a' })
   await guestCtx.close()
 })
+
+test('page restrictions: a page open to only some people is not there for the others', async ({ page, request }) => {
+  const json = async (r: { json: () => Promise<any> }) => r.json()
+  const login = async (username: string, password: string) => (await json(await request.post('/api/v1/auth/login', { data: { username, password } }))).access_token as string
+  const auth = (tok: string) => ({ Authorization: `Bearer ${tok}` })
+  const admin = auth(await login(ADMIN_USER, NEW_PASSWORD))
+  await request.post('/api/v1/users', { headers: admin, data: { username: 'nina', display_name: 'Nina', password: 'nina-e2e-password-42' } })
+  await request.post('/api/v1/users', { headers: admin, data: { username: 'omar', display_name: 'Omar', password: 'omar-e2e-password-42' } })
+  const ws = await json(await request.post('/api/v1/workspaces', { headers: admin, data: { name: 'Board room', kind: 'work', starter: false, modules: ['home', 'pages'] } }))
+  for (const u of ['nina', 'omar']) await request.post(`/api/v1/workspaces/${ws.id}/members`, { headers: admin, data: { user: u, role: 'editor' } })
+  const pg = await json(await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: admin, data: { title: 'Budget 2027', content: 'Draft numbers.' } }))
+  await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: admin, data: { title: 'Notes inside', parent_id: pg.id } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-access').click()
+  await page.getByTestId('access-only').check()
+  await page.getByTestId('access-person-Nina').check()
+  await page.getByTestId('access-save').click()
+  await expect(page.getByTestId('page-lock')).toBeVisible()
+
+  const titles = async (u: string, p: string) =>
+    ((await json(await request.get(`/api/v1/workspaces/${ws.id}/pages`, { headers: auth(await login(u, p)) }))) as { title: string }[]).map((x) => x.title).sort()
+  expect(await titles('nina', 'nina-e2e-password-42')).toEqual(['Budget 2027', 'Notes inside'])
+  expect(await titles('omar', 'omar-e2e-password-42')).toEqual([])
+  const omar = auth(await login('omar', 'omar-e2e-password-42'))
+  expect((await request.get(`/api/v1/pages/${pg.id}`, { headers: omar })).status()).toBe(404)
+})

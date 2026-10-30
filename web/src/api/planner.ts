@@ -64,6 +64,7 @@ export interface PageSummary {
   workspace_id: string
   parent_id: string | null
   folder_id?: string // a folder it's filed in
+  restricted?: boolean // only some people see it (and what's under it)
   title: string
   icon: string
   rank: number
@@ -82,6 +83,7 @@ export interface Page extends PageSummary {
   updated_by: string
   created_at: string
   can_edit: boolean
+  allowed_users?: string[] // a restricted page's
 }
 
 // A page as it was after a save (one person's saves close together are one).
@@ -448,6 +450,8 @@ export const pagesApi = {
   destroy: (id: string) => api<void>(`/pages/${id}?permanent=1`, { method: 'DELETE' }),
   restore: (id: string) => api<PageSummary>(`/pages/${id}/restore`, { method: 'POST' }),
   duplicate: (id: string) => api<Page>(`/pages/${id}/duplicate`, { method: 'POST' }),
+  // Who can see it: everyone in the workspace, or only these people (you always).
+  setAccess: (id: string, b: { restricted: boolean; user_ids?: string[] }) => api<Page>(`/pages/${id}/access`, { method: 'PUT', body: j(b) }).then(withContent),
   // History: its versions (newest first, no text), one with its text, one put back.
   versions: (id: string) => api<PageVersion[]>(`/pages/${id}/versions`),
   version: (vid: string) => api<PageVersion>(`/page-versions/${vid}`),

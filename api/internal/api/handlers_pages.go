@@ -34,6 +34,7 @@ type pageSummary struct {
 	TrashedAt   *time.Time `json:"trashed_at,omitempty"`
 	Favorite    bool       `json:"favorite"`
 	Template    bool       `json:"template"`
+	Restricted  bool       `json:"restricted,omitempty"` // only some people see it (and what's under it)
 	// A database's properties and views; a row's values (JSON objects).
 	DB    json.RawMessage `json:"db,omitempty" swaggertype:"object"`
 	Props json.RawMessage `json:"props,omitempty" swaggertype:"object"`
@@ -42,10 +43,11 @@ type pageSummary struct {
 // pageResponse is a full page plus what the caller may do with it.
 type pageResponse struct {
 	models.Page
-	Favorite bool            `json:"favorite"`
-	CanEdit  bool            `json:"can_edit"`
-	DB       json.RawMessage `json:"db,omitempty" swaggertype:"object"`
-	Props    json.RawMessage `json:"props,omitempty" swaggertype:"object"`
+	AllowedUsers []string        `json:"allowed_users,omitempty"` // a restricted page's
+	Favorite     bool            `json:"favorite"`
+	CanEdit      bool            `json:"can_edit"`
+	DB           json.RawMessage `json:"db,omitempty" swaggertype:"object"`
+	Props        json.RawMessage `json:"props,omitempty" swaggertype:"object"`
 }
 
 // rawJSON is s as JSON (nothing when empty).
@@ -57,7 +59,7 @@ func rawJSON(s string) json.RawMessage {
 }
 
 func pageOut(p models.Page, fav, canEdit bool) pageResponse {
-	return pageResponse{Page: p, Favorite: fav, CanEdit: canEdit, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
+	return pageResponse{Page: p, AllowedUsers: decodeIDs(p.AllowedUsers), Favorite: fav, CanEdit: canEdit, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
 }
 
 func (h *Handlers) favoriteSet(uid string) map[string]bool {
@@ -71,7 +73,7 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
 }
 
 // pageAccess loads a page and checks the caller's role in its workspace.
@@ -82,6 +84,10 @@ func (h *Handlers) pageAccess(c *gin.Context, need string) (models.Page, models.
 		return p, models.WorkspaceMember{}, false
 	}
 	_, m, ok := h.wsAccess(c, p.WorkspaceID, need)
+	if ok && !h.pageVisible(c, p) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
+		return p, m, false
+	}
 	return p, m, ok
 }
 
@@ -102,9 +108,12 @@ func (h *Handlers) listPages(c *gin.Context) {
 	var pages []models.Page
 	h.db.Omit("content", "content_text").Where("workspace_id = ? AND trashed_at IS NULL", ws.ID).Order("rank").Find(&pages)
 	fav := h.favoriteSet(auth.UserID(c))
+	g := h.gate(auth.UserID(c), ws.ID)
 	out := make([]pageSummary, 0, len(pages))
 	for _, p := range pages {
-		out = append(out, summarize(p, fav))
+		if g.sees(p.ID) {
+			out = append(out, summarize(p, fav))
+		}
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -125,9 +134,12 @@ func (h *Handlers) listTrash(c *gin.Context) {
 	}
 	var pages []models.Page
 	h.db.Omit("content", "content_text").Where("workspace_id = ? AND trashed_at IS NOT NULL", ws.ID).Order("trashed_at DESC").Find(&pages)
+	g := h.gate(auth.UserID(c), ws.ID)
 	out := make([]pageSummary, 0, len(pages))
 	for _, p := range pages {
-		out = append(out, summarize(p, nil))
+		if g.sees(p.ID) {
+			out = append(out, summarize(p, nil))
+		}
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -197,7 +209,7 @@ func (h *Handlers) checkParent(c *gin.Context, wsID string, parent *string) bool
 	}
 	var n int64
 	h.db.Model(&models.Page{}).Where("id = ? AND workspace_id = ? AND trashed_at IS NULL", *parent, wsID).Count(&n)
-	if n == 0 {
+	if n == 0 || !h.gate(auth.UserID(c), wsID).sees(*parent) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "the parent page isn't in this workspace"})
 		return false
 	}
@@ -270,7 +282,7 @@ func (h *Handlers) createPage(c *gin.Context) {
 	h.notifyPageMentions(c, p, "")
 	// A page made with a title (a copy, a note turned into a page) is news
 	// now; a blank one when it gets its title (updatePage).
-	if p.Title != "" {
+	if p.Title != "" && !h.gate("", ws.ID).lockedChain(p.ID) { // a restricted one isn't news to all
 		h.notifyActivity(c, ws, "page_added", p.Title, pageLink(p))
 	}
 	c.JSON(http.StatusCreated, pageOut(p, false, true))
@@ -408,7 +420,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		h.notifyPageMentions(c, p, before)
 	}
 	// A new page's first title: tell the others it exists.
-	if wasUntitled && p.Title != "" && p.CreatedBy == auth.UserID(c) && time.Since(p.CreatedAt) < 24*time.Hour {
+	if wasUntitled && p.Title != "" && p.CreatedBy == auth.UserID(c) && time.Since(p.CreatedAt) < 24*time.Hour && !h.gate("", p.WorkspaceID).lockedChain(p.ID) {
 		h.notifyActivity(c, h.workspaceOf(p.WorkspaceID), "page_added", p.Title, pageLink(p))
 	}
 	c.JSON(http.StatusOK, pageOut(p, false, true))
@@ -563,6 +575,7 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 	uid := auth.UserID(c)
 	cp := models.Page{
 		WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title + " (copy)", Icon: p.Icon, Cover: p.Cover,
+		Restricted: p.Restricted, AllowedUsers: p.AllowedUsers, // a copy is no wider
 		Content: p.Content, ContentText: p.ContentText, CreatedBy: uid, UpdatedBy: uid, DB: p.DB, Props: p.Props,
 		Rank: h.siblingRank(h.db, p.WorkspaceID, p.ParentID, p.ID, ""),
 	}
@@ -618,8 +631,12 @@ func (h *Handlers) listFavorites(c *gin.Context) {
 		Joins("JOIN page_favorites ON page_favorites.page_id = pages.id").
 		Where("page_favorites.user_id = ? AND pages.trashed_at IS NULL AND pages.workspace_id IN ?", uid, append(h.myWorkspaceIDs(c, true), "")).
 		Order("page_favorites.rank").Find(&pages)
+	g := h.gate(uid, h.myWorkspaceIDs(c, true)...)
 	out := make([]pageSummary, 0, len(pages))
 	for _, p := range pages {
+		if !g.sees(p.ID) {
+			continue
+		}
 		s := summarize(p, nil)
 		s.Favorite = true
 		out = append(out, s)
@@ -671,6 +688,14 @@ func (h *Handlers) exportPages(c *gin.Context) {
 	}
 	var pages []models.Page
 	h.db.Where("workspace_id = ? AND trashed_at IS NULL", ws.ID).Order("rank").Find(&pages)
+	g := h.gate(auth.UserID(c), ws.ID)
+	visible := pages[:0]
+	for _, p := range pages {
+		if g.sees(p.ID) {
+			visible = append(visible, p)
+		}
+	}
+	pages = visible
 	children := map[string][]models.Page{}
 	for _, p := range pages {
 		parent := ""
@@ -684,7 +709,9 @@ func (h *Handlers) exportPages(c *gin.Context) {
 	h.db.Where("workspace_id = ? AND target = ?", ws.ID, uploads.Page).Find(&files)
 	byID := map[string]models.Upload{}
 	for _, u := range files {
-		byID[u.ID] = u
+		if g.sees(u.TargetID) {
+			byID[u.ID] = u
+		}
 	}
 	attachment := func(u models.Upload) string { return "attachments/" + u.ID[len(u.ID)-8:] + "-" + u.Name } // UUIDv7: the end is the random part
 	used := map[string]bool{}

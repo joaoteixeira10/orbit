@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2 } from 'lucide-vue-next'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2, Lock } from 'lucide-vue-next'
 import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
@@ -24,6 +24,7 @@ import MarkdownView from '@/components/editor/MarkdownView.vue'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
 import PageHistory from '@/components/pages/PageHistory.vue'
 import ShareSheet from '@/components/pages/ShareSheet.vue'
+import AccessSheet from '@/components/pages/AccessSheet.vue'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
@@ -531,6 +532,14 @@ const status = computed(() => {
   return t('editor.editedBy', { when, name: memberName(by) })
 })
 
+// ---- Who can see it (?access=1) ----
+const accessOpen = computed(() => route.query.access === '1')
+const openAccess = () => router.replace({ query: { ...route.query, access: '1' } })
+const closeAccess = () => router.replace({ query: { ...route.query, access: undefined } })
+function accessChanged(p: Page) {
+  if (page.value) page.value = { ...page.value, restricted: p.restricted, allowed_users: p.allowed_users }
+}
+
 // ---- Guest links (?share=1) ----
 const shareOpen = computed(() => route.query.share === '1')
 const closeShare = () => router.replace({ query: { ...route.query, share: undefined } })
@@ -691,6 +700,7 @@ onUnmounted(() => {
       </nav>
       <div v-if="page && ready" class="flex shrink-0 items-center gap-0.5">
         <button type="button" class="status hover:underline" :class="{ 'text-warn-text': failed }" aria-live="polite" :title="t('history.open')" data-testid="page-status" @click="openHistory">{{ status }}</button>
+        <button v-if="page.restricted" type="button" class="pill ml-1.5" :title="t('access.title')" data-testid="page-lock" @click="openAccess"><Lock class="h-3 w-3" />{{ t('access.restricted') }}</button>
         <span v-if="viewOnly" class="pill ml-1.5"><Users class="h-3 w-3" />{{ t('editor.viewOnly') }}</span>
         <template v-if="editable">
           <template v-if="editing">
@@ -871,6 +881,7 @@ onUnmounted(() => {
     </template>
 
     <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
+    <AccessSheet v-if="page && editable" :open="accessOpen" :page="page" :ws="wsId" @close="closeAccess" @changed="accessChanged" />
     <ShareSheet v-if="page" :open="shareOpen" :page-id="page.id" :editable="editable" @close="closeShare" />
     <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
     <EmojiPicker v-if="iconOpen" :anchor="iconAnchor" :removable="!!page?.icon" @pick="setIcon" @close="iconOpen = false" />

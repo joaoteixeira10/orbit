@@ -465,6 +465,14 @@ read.
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
 
+**Who can see a page.** A page's `⋯` → **Who can see it…**: **Everyone in
+the workspace**, or **Only some people** (you, and whom you tick). It
+counts for the pages inside it too; under a restricted page a page is seen
+only by the people both let in — never more. To the others it isn't there:
+not in the pages, search, Home, backlinks, the graph, files or exports. A
+lock marks it in the sidebar and in its header. If none of the people it
+lets in are left in the workspace, its owners see it.
+
 **Share with a link.** A page's `⋯` → **Share with a link…** → **New link**
 makes a link that opens the page to anyone who has it — no account. **Can
 read** or **Can edit** (a guest edits the page's Markdown and saves; if

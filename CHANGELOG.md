@@ -13,6 +13,9 @@ merge, not at release time.
 
 ### Added
 
+- **Page restrictions** — a page (and what's under it) open to only some of
+  the workspace's people (`PUT /pages/{id}/access`); to the others it isn't
+  there anywhere (tree, search, Home, links, graph, history, files, exports).
 - **Guest links** — a page (and, if chosen, the pages inside it) opens to
   anyone with its link, without an account, to read or to edit (versioned,
   in its history); with what it shows (sheets, diagrams, whiteboards,

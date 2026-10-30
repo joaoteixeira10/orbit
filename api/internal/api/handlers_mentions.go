@@ -35,7 +35,7 @@ func (h *Handlers) notifyPageMentions(c *gin.Context, p models.Page, before stri
 		title = "Untitled"
 	}
 	for _, u := range users {
-		if u.ID == uid || was[u.ID] {
+		if u.ID == uid || was[u.ID] || !h.gate(u.ID, p.WorkspaceID).sees(p.ID) {
 			continue
 		}
 		params := map[string]any{"actor": h.actorName(uid), "title": title, "ws": ws.Name, "excerpt": excerpt(mentionLine(p.Content, u.Username))}
@@ -87,8 +87,11 @@ func (h *Handlers) pageBacklinks(c *gin.Context) {
 	var pages []models.Page
 	h.db.Omit("content_text").Where("workspace_id = ? AND trashed_at IS NULL AND id <> ? AND content LIKE ?", p.WorkspaceID, p.ID, like).
 		Order("title").Limit(200).Find(&pages)
+	g := h.gate(auth.UserID(c), p.WorkspaceID)
 	for _, x := range pages {
-		out.Pages = append(out.Pages, summarize(x, nil))
+		if g.sees(x.ID) {
+			out.Pages = append(out.Pages, summarize(x, nil))
+		}
 	}
 	var tasks []models.Task
 	h.db.Where("workspace_id = ? AND notes LIKE ?", p.WorkspaceID, like).Order("completed_at IS NOT NULL, title").Limit(200).Find(&tasks)

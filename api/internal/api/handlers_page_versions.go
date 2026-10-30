@@ -91,6 +91,10 @@ func (h *Handlers) versionAccess(c *gin.Context, need string) (models.PageVersio
 	if _, _, ok := h.wsAccess(c, p.WorkspaceID, need); !ok {
 		return v, p, false
 	}
+	if !h.pageVisible(c, p) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
+		return v, p, false
+	}
 	return v, p, true
 }
 

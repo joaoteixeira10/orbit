@@ -5382,6 +5382,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/pages/{id}/access": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "Who can see a page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Restricted, and to whom",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.pageAccessRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pageResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pages/{id}/backlinks": {
             "get": {
                 "security": [
@@ -12920,9 +12965,31 @@ const docTemplate = `{
                 }
             }
         },
+        "api.pageAccessRequest": {
+            "type": "object",
+            "properties": {
+                "restricted": {
+                    "type": "boolean"
+                },
+                "user_ids": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "api.pageResponse": {
             "type": "object",
             "properties": {
+                "allowed_users": {
+                    "description": "a restricted page's",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "can_edit": {
                     "type": "boolean"
                 },
@@ -12964,6 +13031,10 @@ const docTemplate = `{
                 },
                 "rank": {
                     "type": "number"
+                },
+                "restricted": {
+                    "description": "Restricted: only AllowedUsers (JSON []user id) see it and what's\nunder it (api/page_access.go).",
+                    "type": "boolean"
                 },
                 "template": {
                     "description": "Template: offered when a new page starts empty (its title and\ndocument, its placeholders — the date and the like — filled in).",
@@ -13016,6 +13087,10 @@ const docTemplate = `{
                 },
                 "rank": {
                     "type": "number"
+                },
+                "restricted": {
+                    "description": "only some people see it (and what's under it)",
+                    "type": "boolean"
                 },
                 "template": {
                     "type": "boolean"

@@ -486,11 +486,13 @@ trash, a move or a rename goes back, a page from the trash comes out. If
 the page changed since (someone wrote in it, it moved again), it asks
 first.
 
-**Outline.** The list button at the top right of a page opens its outline
-beside it: its headings — click one to go there — and, under them, its
-callouts and checklist items gathered in one list (click to go to one;
-tick a box right there when you can change the page). It stays open for
-the next pages until you close it.
+**Side panel.** Beside a page (on a wide window; the list button at the top
+right shows or hides it, and it stays as you leave it): its **graph** —
+what it links to and what links to it, 1, 2 or 3 links deep, ⤢ for the
+whole graph; its **outline** — its headings, click one to go there; and
+its **notes** — its callouts and checklist items in one list (click to go
+to one; tick a box right there when you can change the page). Each part
+folds.
 
 **Who can see a page.** A page's `⋯` → **Who can see it…**: **Everyone in
 the workspace**, or **Only some people** (you, and whom you tick). It
@@ -510,8 +512,9 @@ sheets, diagrams, whiteboards, pictures and files shown in those pages —
 nothing else of the workspace. Take a link back (🗑) and it stops at once.
 The owner can turn guest links off for the whole Orbit (Owner → Features).
 
-**Page history.** Every save of a page is kept, with who saved it (one
-person's saves within a few minutes count as one version). The history
+**Page history.** Every save of a page is kept, with who saved it — the
+last 50 of each page, or as many as the owner sets (Owner → Page history,
+5 to 1000). The history
 lists them by day; pick one to read it as it was, with what changed since
 the version before marked — added in green, removed in red (**Show
 changes**). **Restore this version** puts it back (what the page was stays
@@ -541,9 +544,9 @@ too.
 
 **Pages inside** a page are listed under it, with **Add a page inside**.
 
-**Graph.** Under a page, a small graph shows what it links to and what links
-to it — 1, 2 or 3 links deep (your choice is remembered); a click on a dot
-opens that one, **Whole graph** opens the workspace's. **Graph** (in Pages,
+**Graph.** In the side panel, a small graph shows what the page links to
+and what links to it — 1, 2 or 3 links deep (your choice is remembered); a
+click on a dot opens that one, ⤢ opens the workspace's. **Graph** (in Pages,
 in Files, or ⌘K) shows everything in the workspace and how it connects:
 pages, sheets, diagrams, whiteboards, task lists, folders and the people
 pages @-mention, joined by links (thicker when shown in the page), mentions

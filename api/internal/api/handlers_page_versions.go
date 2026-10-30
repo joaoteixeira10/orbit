@@ -2,7 +2,7 @@ package api
 
 import (
 	"net/http"
-	"time"
+	"strconv"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
@@ -12,16 +12,28 @@ import (
 	"gorm.io/gorm"
 )
 
-// Page history: each save of a page's text or title is kept as a version
-// (one person's saves within versionSession make one), up to maxVersions a
-// page; any of them can be put back (a new save, kept as a version too).
+// Page history: each save of a page's text or title is kept as a version,
+// the newest ones a page (how many: the owner's setting, default
+// defaultVersionsKept); any of them can be put back (a new save, kept as a
+// version too).
 
 const (
-	versionSession = 10 * time.Minute
-	maxVersions    = 300
+	defaultVersionsKept = 50
+	keyVersionsKept     = "page_versions_kept"
 )
 
-// recordVersion keeps p as it is now, saved by uid. prev is the page before
+// versionsKept is how many versions a page keeps (5–1000).
+func versionsKept(db *gorm.DB) int {
+	var s models.Setting
+	if db.Where(&models.Setting{Key: keyVersionsKept}).First(&s).Error == nil {
+		if n, err := strconv.Atoi(s.Value); err == nil && n >= 5 && n <= 1000 {
+			return n
+		}
+	}
+	return defaultVersionsKept
+}
+
+// recordVersion keeps p as it is now, saved by uid (a version per save). prev is the page before
 // the save: with no history yet, it's kept first (what the page was before
 // history began).
 func recordVersion(db *gorm.DB, p models.Page, uid string, prev *models.Page, restored int) {
@@ -34,15 +46,12 @@ func recordVersion(db *gorm.DB, p models.Page, uid string, prev *models.Page, re
 	if found && last.Title == p.Title && last.Content == p.Content && restored == 0 {
 		return // nothing new (a save of the icon, say)
 	}
-	if found && restored == 0 && last.Restored == 0 && last.UserID == uid && time.Since(last.CreatedAt) < versionSession {
-		db.Model(&models.PageVersion{}).Where("id = ?", last.ID).Updates(map[string]any{"title": p.Title, "content": p.Content, "version": p.Version, "updated_at": time.Now()})
-		return
-	}
 	db.Create(&models.PageVersion{PageID: p.ID, WorkspaceID: p.WorkspaceID, Version: p.Version, Title: p.Title, Content: p.Content, UserID: uid, Restored: restored})
-	// The oldest go beyond maxVersions.
+	// The oldest go beyond what's kept.
+	n := versionsKept(db)
 	var keep []string
-	db.Model(&models.PageVersion{}).Where("page_id = ?", p.ID).Order("created_at DESC").Limit(maxVersions).Pluck("id", &keep)
-	if len(keep) == maxVersions {
+	db.Model(&models.PageVersion{}).Where("page_id = ?", p.ID).Order("created_at DESC").Limit(n).Pluck("id", &keep)
+	if len(keep) == n {
 		db.Where("page_id = ? AND id NOT IN ?", p.ID, keep).Delete(&models.PageVersion{})
 	}
 }

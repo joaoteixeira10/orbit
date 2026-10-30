@@ -99,6 +99,7 @@ export interface Branding {
   asset_source_wordmark?: 'theme' | 'keep'
   asset_source_favicon?: 'theme' | 'keep'
   drawio_url?: string // where Diagrams load the draw.io editor from
+  page_versions_kept?: number // how many versions each page's history keeps
 }
 
 export interface OIDCConfig {

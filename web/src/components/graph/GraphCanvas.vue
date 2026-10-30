@@ -28,7 +28,9 @@ onBeforeUnmount(() => ro?.disconnect())
 
 const pos = computed(() => layout(props.graph, props.focus ? { pinned: { [props.focus]: { x: 0, y: 0 } } } : {}))
 const deg = computed(() => degrees(props.graph))
-const radius = (n: GraphNode) => Math.min(16, 4.5 + Math.sqrt(deg.value.get(n.id) ?? 0) * 2.2) + (n.id === props.focus ? 3 : 0)
+// Small dots in a small graph (as Folio's), bigger with more links.
+const radius = (n: GraphNode) =>
+  props.compact ? Math.min(7, 2.6 + Math.sqrt(deg.value.get(n.id) ?? 0) * 1.1) + (n.id === props.focus ? 2.5 : 0) : Math.min(16, 4.5 + Math.sqrt(deg.value.get(n.id) ?? 0) * 2.2) + (n.id === props.focus ? 3 : 0)
 const colorOf = (n: GraphNode) => (n.kind === 'list' || n.kind === 'folder' ? n.color || KIND_COLOR[n.kind] : KIND_COLOR[n.kind])
 
 // ---- The view: scale and offset; fitted to the graph ----
@@ -100,8 +102,14 @@ const near = computed(() => {
 const q = computed(() => (props.search ?? '').trim().toLowerCase())
 const hits = computed(() => (q.value ? new Set(props.graph.nodes.filter((n) => n.title.toLowerCase().includes(q.value)).map((n) => n.id)) : null))
 const dim = (id: string) => (near.value ? !near.value.has(id) : hits.value ? !hits.value.has(id) : false)
+// Labels: the one it's about, the one pointed at and its neighbours, the
+// ones found; all of them when there are few (or when zoomed in).
 const labelled = (n: GraphNode) =>
-  props.compact || n.id === props.focus || near.value?.has(n.id) || hits.value?.has(n.id) || props.graph.nodes.length <= 40 || scale.value * radius(n) >= 9
+  n.id === props.focus ||
+  near.value?.has(n.id) ||
+  hits.value?.has(n.id) ||
+  props.graph.nodes.length <= (props.compact ? 6 : 40) ||
+  (!props.compact && scale.value * radius(n) >= 9)
 
 const EDGE_DASH: Record<string, string> = { parent: '5 4', folder: '5 4', mention: '1.5 4' }
 const label = (n: GraphNode) => {
@@ -147,7 +155,7 @@ function click(n: GraphNode) {
           <circle v-if="n.id === focus" :r="(radius(n) + 4) / Math.sqrt(Math.max(scale, 0.3))" class="g-ring" :stroke="colorOf(n)" />
           <circle :r="(radius(n) + 8) / Math.sqrt(Math.max(scale, 0.3))" class="g-hit" />
           <circle :r="radius(n) / Math.sqrt(Math.max(scale, 0.3))" :fill="colorOf(n)" class="g-dot" />
-          <text v-if="labelled(n)" :y="(radius(n) + 13) / Math.max(scale, 0.3)" :font-size="12 / Math.max(scale, 0.3)" text-anchor="middle">{{ label(n) }}</text>
+          <text v-if="labelled(n)" :y="(radius(n) + (compact ? 10 : 13)) / Math.max(scale, 0.3)" :font-size="(compact ? 10 : 12) / Math.max(scale, 0.3)" text-anchor="middle">{{ label(n) }}</text>
         </g>
       </g>
     </svg>
@@ -178,6 +186,10 @@ svg {
 .g-edge {
   stroke: var(--text-3);
   stroke-opacity: 0.45;
+}
+.compact .g-edge {
+  stroke: color-mix(in srgb, var(--accent) 55%, var(--text-3));
+  stroke-opacity: 0.35;
   transition: stroke-opacity 0.15s;
 }
 .g-edge.dim {

@@ -115,10 +115,12 @@ const placed = computed(() => props.days.map((d) => layoutDay(props.entries, d, 
 function blockStyle(p: ReturnType<typeof layoutDay>[number]) {
   return {
     '--c': eventColor(p.entry),
-    top: `${p.top}px`,
-    height: `${p.height - 1}px`,
-    left: `calc(${p.col} * 100% / ${p.cols})`,
-    width: `calc(100% / ${p.cols} - 3px)`,
+    // A hairline between an event and the next (Apple's): where one ends
+    // and the next starts shows.
+    top: `${p.top + 1}px`,
+    height: `${Math.max(p.height - 3, 14)}px`,
+    left: `calc(${p.col} * 100% / ${p.cols} + 1px)`,
+    width: `calc(100% / ${p.cols} - 4px)`,
   }
 }
 
@@ -560,7 +562,10 @@ const selLabel = computed(() => {
 }
 .tg-cols {
   position: relative;
-  background-image: linear-gradient(to bottom, var(--border) 0.5px, transparent 0.5px);
+  /* An hour line, and a fainter half-hour one (as Apple's). */
+  background-image:
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% + 0.5px), transparent calc(50% + 0.5px));
   border-top: 0;
 }
 .tg-col {
@@ -578,13 +583,19 @@ const selLabel = computed(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 2px 5px 2px 7px;
-  border-radius: 5px;
+  padding: 3px 6px 2px 9px;
+  border-radius: 6px;
   font-size: 11.5px;
   line-height: 1.3;
-  background: color-mix(in srgb, var(--c) 18%, var(--bg));
-  color: color-mix(in srgb, var(--c) 58%, var(--text));
-  box-shadow: inset 3px 0 0 var(--c), 0 0 0 0.5px var(--bg);
+  /* Apple Calendar's look: a tinted block, outlined in its colour, a solid
+     bar at its start, and a ring of the page's colour around it so blocks
+     side by side or one after the other stay apart. */
+  background: color-mix(in srgb, var(--c) 20%, var(--bg));
+  color: color-mix(in srgb, var(--c) 62%, var(--text));
+  box-shadow:
+    inset 3px 0 0 var(--c),
+    inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent),
+    0 0 0 1.5px var(--bg);
   cursor: default;
   user-select: none;
   transition: filter 0.15s;
@@ -612,7 +623,8 @@ const selLabel = computed(() => {
 }
 .tg-ev .tm,
 .tg-ev .loc {
-  opacity: 0.85;
+  opacity: 0.9;
+  font-size: 10.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

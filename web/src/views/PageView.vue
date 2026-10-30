@@ -21,7 +21,6 @@ import WsIcon from '@/components/ui/WsIcon.vue'
 import PageEditor from '@/components/editor/PageEditor.vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
-import LocalGraph from '@/components/graph/LocalGraph.vue'
 import PageHistory from '@/components/pages/PageHistory.vue'
 import ShareSheet from '@/components/pages/ShareSheet.vue'
 import AccessSheet from '@/components/pages/AccessSheet.vue'
@@ -538,7 +537,10 @@ const status = computed(() => {
 const glossary = useGlossary(wsId, pageId)
 
 // ---- Outline (remembered) ----
-const outlineOpen = ref(localStorage.getItem('orbit_outline') === '1')
+// As Folio's side panel: open on a wide window unless closed before; on a
+// narrow one only when asked for (it would cover the page).
+const outlineSaved = localStorage.getItem('orbit_outline')
+const outlineOpen = ref(outlineSaved === '1' || (outlineSaved === null && window.matchMedia('(min-width: 1280px)').matches))
 watch(outlineOpen, (v) => {
   try {
     localStorage.setItem('orbit_outline', v ? '1' : '0')
@@ -907,13 +909,12 @@ onUnmounted(() => {
             </button>
           </section>
 
-          <LocalGraph :ws="wsId" :id="page.id" />
         </div>
       </div>
     </template>
 
     <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
-    <OutlinePanel v-if="page" :open="outlineOpen" :content="outlineText" :root="contentEl" :can-tick="editable && !editing" @close="outlineOpen = false" @toggle="onToggle" />
+    <OutlinePanel v-if="page" :open="outlineOpen" :content="outlineText" :root="contentEl" :can-tick="editable && !editing" :ws="wsId" :page-id="page.id" @close="outlineOpen = false" @toggle="onToggle" />
     <AccessSheet v-if="page && editable" :open="accessOpen" :page="page" :ws="wsId" @close="closeAccess" @changed="accessChanged" />
     <ShareSheet v-if="page" :open="shareOpen" :page-id="page.id" :editable="editable" @close="closeShare" />
     <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
@@ -926,7 +927,9 @@ onUnmounted(() => {
 @media (min-width: 1280px) {
   /* The outline at the side: the page moves over, not under it. */
   .page-view.with-outline > :not(.page-bar):not(.outline-aside) {
-    padding-right: 270px;
+    padding-right: 290px;
+    /* Room for the block handles left of the text. */
+    padding-left: 64px;
   }
 }
 .page-view {

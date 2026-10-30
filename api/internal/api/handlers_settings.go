@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,6 +69,8 @@ type brandingResponse struct {
 	AssetSourceFavicon      string `json:"asset_source_favicon"`  // theme | keep
 
 	DrawioURL string `json:"drawio_url"` // where Diagrams load the draw.io editor from
+	// PageVersionsKept: how many versions each page's history keeps.
+	PageVersionsKept int `json:"page_versions_kept"`
 }
 
 type updateSettingsRequest struct {
@@ -87,6 +90,8 @@ type updateSettingsRequest struct {
 	AssetSourceFavicon      *string `json:"asset_source_favicon"`
 
 	DrawioURL *string `json:"drawio_url"` // "" goes back to DRAWIO_URL (or draw.io's own)
+	// PageVersionsKept: how many versions each page keeps (5–1000).
+	PageVersionsKept *int `json:"page_versions_kept" binding:"omitempty,min=5,max=1000"`
 }
 
 // getBranding returns public branding (no auth) so the SPA can theme at boot.
@@ -125,7 +130,8 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		AssetSourceWordmark:     validAssetSource(m[keyAssetSrcWordmark]),
 		AssetSourceFavicon:      validAssetSource(m[keyAssetSrcFavicon]),
 
-		DrawioURL: h.refreshDrawio(),
+		DrawioURL:        h.refreshDrawio(),
+		PageVersionsKept: versionsKept(h.db),
 	})
 }
 
@@ -163,6 +169,9 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 	}
 	if req.DrawioURL != nil {
 		h.setSetting(keyDrawioURL, cleanDrawioURL(*req.DrawioURL))
+	}
+	if req.PageVersionsKept != nil {
+		h.setSetting(keyVersionsKept, strconv.Itoa(*req.PageVersionsKept))
 	}
 	if req.AppName != nil {
 		h.setSetting(keyAppName, *req.AppName)

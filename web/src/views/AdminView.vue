@@ -23,6 +23,7 @@ import {
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
   Info, Workflow, CalendarDays,
+  History,
 } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { api as apiCall } from '@/lib/api'
@@ -746,6 +747,18 @@ async function saveDrawio(v: string) {
     toast.error(e.message)
   }
 }
+// How many versions each page keeps in its history.
+const versionsKept = ref(50)
+void settingsApi.branding().then((b) => (versionsKept.value = b.page_versions_kept ?? 50)).catch(() => undefined)
+async function saveVersionsKept() {
+  try {
+    const b = await settingsApi.update({ page_versions_kept: Math.min(1000, Math.max(5, Math.round(versionsKept.value))) })
+    versionsKept.value = b.page_versions_kept ?? versionsKept.value
+    toast.success(t('history.keptSaved', { n: versionsKept.value }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() => [
   { key: 'sessions', label: t('adm.owner.feature.sessions'), hint: t('adm.owner.feature.sessionsHint') },
   { key: 'impersonation', label: t('adm.owner.feature.impersonation'), hint: t('adm.owner.feature.impersonationHint') },
@@ -1085,6 +1098,22 @@ function switchTab(t: Tab) {
         :has-logo="!!brandForm.logo_data_url"
         :has-favicon="!!brandForm.favicon_data_url"
       />
+
+      <!-- Page history: how many versions a page keeps -->
+      <div class="card overflow-hidden" data-testid="history-admin">
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
+          <History class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('history.title') }}</h3>
+        </div>
+        <form class="flex flex-col gap-3 p-5" @submit.prevent="saveVersionsKept">
+          <p class="text-[12px] text-text-3">{{ t('history.keptHint') }}</p>
+          <label class="flex items-center gap-2 text-[13px]">
+            {{ t('history.keep') }}
+            <input v-model.number="versionsKept" class="input !w-24" type="number" min="5" max="1000" data-testid="versions-kept" />
+            {{ t('history.perPage') }}
+          </label>
+          <div><button type="submit" class="btn-primary btn-sm" data-testid="versions-kept-save">{{ t('common.save') }}</button></div>
+        </form>
+      </div>
 
       </div><!-- /left column -->
 

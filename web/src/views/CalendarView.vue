@@ -549,7 +549,8 @@ const views: CalView[] = ['day', 'week', 'month']
 
    <div class="cal-main min-w-0 flex-1">
     <header class="flex flex-wrap items-center gap-x-4 gap-y-3">
-      <div class="min-w-0 flex-1">
+      <!-- The title keeps room for "October 2026": the buttons wrap first. -->
+      <div class="min-w-0 flex-1 basis-[250px]">
         <div class="flex min-w-0 items-center gap-2">
           <button v-if="!phone" class="icon-btn shrink-0" :class="{ on: leftOpen }" :title="t('cal.toggleLeft')" :aria-label="t('cal.toggleLeft')" :aria-pressed="leftOpen" @click="toggleLeft"><PanelLeft class="h-[18px] w-[18px]" /></button>
           <h1 class="large-title cal-title truncate">{{ title }}</h1>

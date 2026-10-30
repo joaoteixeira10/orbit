@@ -2,14 +2,15 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Waypoints } from 'lucide-vue-next'
+import { Maximize2, Waypoints } from 'lucide-vue-next'
 import GraphCanvas from './GraphCanvas.vue'
 import { loadGraph, neighbourhood, routeOf, type Graph, type GraphNode } from '@/lib/graph'
 import { onLiveEvent } from '@/lib/live'
 
 // The small graph beside a thing: what it links to and what links to it,
 // 1–3 links deep (remembered), and the way to the workspace's whole graph.
-const props = defineProps<{ ws: string; id: string }>()
+// rail: in the panel beside a page (small, as Folio's).
+const props = defineProps<{ ws: string; id: string; rail?: boolean }>()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -48,7 +49,18 @@ function open(n: GraphNode) {
 </script>
 
 <template>
-  <section v-if="near && near.nodes.length" class="local-graph" data-testid="local-graph">
+  <section v-if="rail && near" class="local-graph rail" data-testid="local-graph">
+    <div class="flex items-center gap-1.5 px-1 pb-1.5 text-[11.5px] text-text-3">
+      {{ t('graph.depthShort') }}
+      <div class="seg" role="group" :aria-label="t('graph.depth')">
+        <button v-for="d in [1, 2, 3]" :key="d" type="button" :class="{ on: depth === d }" :aria-pressed="depth === d" @click="depth = d">{{ d }}</button>
+      </div>
+      <RouterLink :to="{ name: 'ws-graph', params: { ws }, query: { focus: id, depth: String(depth) } }" class="icon-btn ml-auto h-6 w-6" :title="t('graph.openAll')" :aria-label="t('graph.openAll')" data-testid="local-graph-open"><Maximize2 class="h-3.5 w-3.5" /></RouterLink>
+    </div>
+    <p v-if="lonely" class="px-1 pb-1 text-[12px] text-text-3">{{ t('graph.lonely') }}</p>
+    <div v-else class="lg-canvas"><GraphCanvas :graph="near" :focus="id" compact @open="open" /></div>
+  </section>
+  <section v-else-if="near && near.nodes.length" class="local-graph" data-testid="local-graph">
     <div class="lg-head">
       <Waypoints class="h-4 w-4 text-text-3" />
       <h3 class="flex-1 text-[13px] font-semibold">{{ t('graph.local') }}</h3>
@@ -79,6 +91,22 @@ function open(n: GraphNode) {
 .lg-head .seg button {
   padding: 1px 9px;
   font-size: 12px;
+}
+.local-graph.rail {
+  margin: 0;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+.rail .seg button {
+  padding: 0 7px;
+  font-size: 11px;
+}
+.rail .lg-canvas {
+  height: 190px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fill-2);
 }
 .lg-canvas {
   height: 240px;

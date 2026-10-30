@@ -44,18 +44,17 @@ func TestPageHistory(t *testing.T) {
 		decode(t, w, &out)
 		return out.Version
 	}
+	// Every save is a version (the one it was made with first).
 	v := save("one two", pg.Version, alice)
+	db.Model(&models.PageVersion{}).Where("page_id = ? AND content = ?", pg.ID, "one").Update("created_at", time.Now().Add(-4*time.Hour))
+	db.Model(&models.PageVersion{}).Where("page_id = ? AND content = ?", pg.ID, "one two").Update("created_at", time.Now().Add(-3*time.Hour))
 	v = save("one two three", v, alice)
-	if vs := list(); len(vs) != 1 || vs[0].Chars != len("one two three") {
-		t.Fatalf("one session: %+v", vs)
-	}
-	v = save("one two three four", v, bob)
-	// An old session: a save after it starts another.
 	db.Model(&models.PageVersion{}).Where("page_id = ? AND content = ?", pg.ID, "one two three").Update("created_at", time.Now().Add(-2*time.Hour))
+	v = save("one two three four", v, bob)
 	db.Model(&models.PageVersion{}).Where("page_id = ? AND content = ?", pg.ID, "one two three four").Update("created_at", time.Now().Add(-time.Hour))
 	v = save("five", v, bob)
 	vs := list()
-	if len(vs) != 3 || vs[0].Chars != 4 {
+	if len(vs) != 5 || vs[0].Chars != 4 || vs[4].Chars != 3 {
 		t.Fatalf("versions: %+v", vs)
 	}
 	var old version
@@ -72,8 +71,16 @@ func TestPageHistory(t *testing.T) {
 	if back.Content != "one two three" || back.Version != v+1 {
 		t.Fatalf("restored: %+v", back)
 	}
-	if vs = list(); len(vs) != 4 || vs[0].Restored != old.Version {
+	if vs = list(); len(vs) != 6 || vs[0].Restored != old.Version {
 		t.Fatalf("after restore: %+v", vs)
+	}
+
+	// Only the newest are kept: as many as the owner says.
+	expect(t, authdo(r, "PUT", "/api/v1/settings", `{"page_versions_kept":2}`, admin), http.StatusBadRequest, "at least 5")
+	expect(t, authdo(r, "PUT", "/api/v1/settings", `{"page_versions_kept":5}`, admin), http.StatusOK, "keep 5")
+	save("six", back.Version, alice)
+	if vs = list(); len(vs) != 5 || vs[0].Chars != 3 {
+		t.Fatalf("kept: %d %+v", len(vs), vs)
 	}
 
 	// A page from before history: its first save keeps what it was.

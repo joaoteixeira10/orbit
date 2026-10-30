@@ -1622,16 +1622,15 @@ test('import from Notion and Apple Notes; a page out as PDF', async ({ page, req
   expect(Object.values(dune.props)).toContain(412)
   expect(by.Emma.parent_id).toBe(by.Books.id)
 
-  // The page out as PDF: a clean copy, printed.
+  // The page out as a PDF file, downloaded (no print dialog), its picture in.
   await page.goto(`/w/${ws.id}/p/${by.Garden.id}`)
   await expect(page.locator('.md-view img')).toBeVisible()
   await page.getByRole('button', { name: 'Page options' }).click()
-  await page.getByTestId('page-pdf').click()
-  const frame = page.frameLocator('iframe[data-print]')
-  await expect(frame.locator('h1.title')).toHaveText('Garden')
-  await expect(frame.locator('a', { hasText: 'Roses' })).toBeVisible()
-  await expect.poll(() => frame.locator('img').evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1)
-  await page.screenshot({ path: 'test-results/imported.png' })
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('page-pdf').click()])
+  expect(pdf.suggestedFilename()).toBe('Garden.pdf')
+  const bytes = await (await import('node:fs/promises')).readFile(await pdf.path())
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-')
+  expect(bytes.toString('latin1')).toContain('/Subtype /Image')
 })
 
 test('databases: a page of rows with properties, edited in place, filtered, on a board', async ({ page, request }) => {
@@ -2282,6 +2281,13 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
   await page.getByTestId('sheet-embed').dblclick()
   await expect(over.getByTestId('sheet-title')).toHaveValue('Launch plan')
   await over.getByTestId('embed-done').click()
+
+  // As a PDF: the diagrams' and the whiteboard's pictures drawn in.
+  await page.getByRole('button', { name: 'Page options' }).click()
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('page-pdf').click()])
+  const bytes = (await (await import('node:fs/promises')).readFile(await pdf.path())).toString('latin1')
+  expect(bytes.startsWith('%PDF-')).toBe(true)
+  expect((bytes.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3)
 })
 
 test('projects: a folder joined to a task list shows its progress; the list shows its folder; pages are filed in folders', async ({ page, request }) => {
@@ -2572,17 +2578,20 @@ test('outline: a page\'s headings to jump to, its callouts and to-dos in one lis
   await signIn(page, NEW_PASSWORD)
   await page.setViewportSize({ width: 1400, height: 800 })
   await page.goto(`/w/${ws.id}/p/${pg.id}`)
-  await page.getByTestId('outline-toggle').click()
+  // Open beside the page on a wide window (as Folio's).
   const ol = page.getByTestId('outline')
+  await expect(ol.getByTestId('local-graph')).toBeVisible()
   await expect(ol.getByTestId('outline-heading')).toHaveText(['Plan', 'Packing', 'Days'])
   await expect(ol.getByTestId('outline-callout')).toContainText('Take the tram.')
   await ol.getByTestId('outline-heading').filter({ hasText: 'Days' }).click()
   await expect(page.locator('.md-view h2', { hasText: 'Days' })).toBeInViewport()
   await ol.getByTestId('outline-task').first().check()
   await expect.poll(async () => (await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content).toContain('- [x] Sunscreen')
-  // Remembered.
+  // Closed, it stays closed.
+  await page.getByTestId('outline-toggle').click()
   await page.reload()
-  await expect(page.getByTestId('outline')).toBeVisible()
+  await expect(page.locator('.md-view')).toContainText('Day one.')
+  await expect(page.getByTestId('outline')).toBeHidden()
   await page.getByTestId('outline-toggle').click()
 })
 

@@ -101,13 +101,18 @@ const copyMd = () => run(async () => {
   await navigator.clipboard.writeText((await asMarkdown()).text)
   toast.success(t('editor.copied'))
 })
-// As PDF: printed from a clean copy (the print dialog saves a PDF).
+// As a PDF file, downloaded: the page with what it shows in place drawn in
+// (sheets' cells, diagrams' and whiteboards' pictures).
 const asPdf = () =>
   run(async () => {
+    toast.info(t('editor.pdfMaking'))
     const p = await pagesApi.get(props.pageId)
+    const title = p.title || t('pages.untitled')
     const meta = [wss.byId(props.ws)?.name, new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(new Date(p.updated_at))].filter(Boolean).join(' · ')
-    const { printPage } = await import('@/lib/printPage')
-    await printPage(p.title || t('pages.untitled'), p.content, meta)
+    const [{ docOf, downloadPdf }, { pageSources }] = await Promise.all([import('@/lib/pdf'), import('@/lib/pdfSources')])
+    const subpages = () => (pages.byWs[props.ws] ?? []).filter((x) => x.parent_id === props.pageId).map((x) => x.title || t('pages.untitled'))
+    const doc = await docOf(title, meta, p.content, pageSources({ subpages, tabName: t('sheets.tabName', { n: 1 }) }))
+    await downloadPdf(fileName(title), doc)
   })
 // A database of the pages inside it (or no longer: they stay as pages).
 const toggleDatabase = () =>

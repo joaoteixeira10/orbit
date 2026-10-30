@@ -11,6 +11,20 @@ merge, not at release time.
 - **Go 1.26.10** — the toolchain moves up for GO-2026-6809 (crypto/x509
   certificate checks, reached through passkey sign-in).
 
+### Changed
+
+- **Page history keeps every save** (it used to merge one person's saves
+  over ten minutes, so the version before an edit could be lost); the owner
+  sets how many each page keeps (Owner → Page history, 5–1000, default 50).
+- **Download as PDF** makes the file itself (no print dialog), with the
+  sheets' cells and the diagrams' and whiteboards' pictures drawn in.
+- **A side panel beside pages, as Folio's**: the local graph (depth 1–3,
+  small dots), the outline and the notes, each folding; open on wide
+  windows unless closed.
+- **Calendar**: events are outlined in their colour with a gap between one
+  and the next, so where each starts and ends shows; hour and half-hour
+  lines; the month title no longer gets cut.
+
 ### Added
 
 - **More page blocks** — toggle sections, 2–5 columns, a live sub-pages list

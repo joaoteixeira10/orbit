@@ -1,21 +1,41 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ListTree, X } from 'lucide-vue-next'
+import { ChevronDown, ListTree, X } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
+import LocalGraph from '@/components/graph/LocalGraph.vue'
 import { outlineOf } from '@/lib/outline'
 import { ALERTS } from '@/components/editor/alerts'
 
-// Beside a page: its headings, to jump to; and its callouts and checklist
+// Beside a page (as Folio's): its local graph — what it links to and what
+// links to it; its headings, to jump to; and its callouts and checklist
 // items gathered in one list — a click goes to one, a box ticks (when the
-// page can be changed and isn't being edited). Wide windows show it at the
-// side; narrow ones over the page.
-const props = defineProps<{ open: boolean; content: string; root: HTMLElement | null; canTick: boolean }>()
+// page can be changed and isn't being edited). Each part folds (remembered).
+// Wide windows show it at the side; narrow ones over the page.
+const props = defineProps<{ open: boolean; content: string; root: HTMLElement | null; canTick: boolean; ws: string; pageId: string }>()
 const emit = defineEmits<{ close: []; toggle: [index: number] }>()
 const { t } = useI18n()
 
 const outline = computed(() => outlineOf(props.content))
-const empty = computed(() => !outline.value.headings.length && !outline.value.callouts.length && !outline.value.tasks.length)
+type Part = 'graph' | 'outline' | 'notes'
+const folded = ref<Set<Part>>(new Set((() => {
+  try {
+    return JSON.parse(localStorage.getItem('orbit_rail_folded') ?? '[]') as Part[]
+  } catch {
+    return []
+  }
+})()))
+function fold(p: Part) {
+  const s = new Set(folded.value)
+  if (s.has(p)) s.delete(p)
+  else s.add(p)
+  folded.value = s
+  try {
+    localStorage.setItem('orbit_rail_folded', JSON.stringify([...s]))
+  } catch {
+    /* private mode */
+  }
+}
 
 const wide = ref(window.matchMedia('(min-width: 1280px)').matches)
 const mq = window.matchMedia('(min-width: 1280px)')
@@ -42,28 +62,35 @@ const emoji = (kind: string) => ALERTS[kind as keyof typeof ALERTS] ?? '💡'
 <template>
   <component :is="wide ? 'aside' : Overlay" v-if="open" v-bind="wide ? { class: 'outline-aside' } : { open: true, mode: 'side', title: t('outline.title') }" data-testid="outline" @close="emit('close')">
     <div class="ol-body">
-      <div v-if="wide" class="mb-2 flex items-center gap-2">
-        <ListTree class="h-4 w-4 text-text-3" />
-        <h2 class="flex-1 text-[13px] font-semibold">{{ t('outline.title') }}</h2>
+      <div v-if="wide" class="mb-1 flex justify-end">
         <button type="button" class="icon-btn h-7 w-7" :aria-label="t('common.close')" @click="emit('close')"><X class="h-4 w-4" /></button>
       </div>
-      <p v-if="empty" class="text-[12.5px] text-text-3">{{ t('outline.empty') }}</p>
-      <nav v-if="outline.headings.length" :aria-label="t('outline.headings')">
-        <button
-          v-for="h in outline.headings"
-          :key="'h' + h.index"
-          type="button"
-          class="ol-h"
-          :style="{ paddingLeft: `${8 + (h.level - 1) * 12}px` }"
-          :class="`l${h.level}`"
-          data-testid="outline-heading"
-          @click="go(HEADINGS, h.index)"
-        >
-          {{ h.text || t('pages.untitled') }}
-        </button>
-      </nav>
-      <template v-if="outline.callouts.length || outline.tasks.length">
-        <h3 class="cap mb-1 mt-4">{{ t('outline.notes') }}</h3>
+
+      <button type="button" class="ol-part" :aria-expanded="!folded.has('graph')" @click="fold('graph')"><ChevronDown class="chev" :class="{ shut: folded.has('graph') }" />{{ t('graph.local') }}</button>
+      <LocalGraph v-if="!folded.has('graph')" rail :ws="ws" :id="pageId" />
+
+      <button type="button" class="ol-part" :aria-expanded="!folded.has('outline')" @click="fold('outline')"><ChevronDown class="chev" :class="{ shut: folded.has('outline') }" /><ListTree class="h-3.5 w-3.5" />{{ t('outline.headings') }}</button>
+      <template v-if="!folded.has('outline')">
+        <p v-if="!outline.headings.length" class="px-2 text-[12px] text-text-3">{{ t('outline.noHeadings') }}</p>
+        <nav v-else :aria-label="t('outline.headings')">
+          <button
+            v-for="h in outline.headings"
+            :key="'h' + h.index"
+            type="button"
+            class="ol-h"
+            :style="{ paddingLeft: `${8 + (h.level - 1) * 12}px` }"
+            :class="`l${h.level}`"
+            data-testid="outline-heading"
+            @click="go(HEADINGS, h.index)"
+          >
+            {{ h.text || t('pages.untitled') }}
+          </button>
+        </nav>
+      </template>
+
+      <button type="button" class="ol-part" :aria-expanded="!folded.has('notes')" @click="fold('notes')"><ChevronDown class="chev" :class="{ shut: folded.has('notes') }" />{{ t('outline.notes') }}</button>
+      <template v-if="!folded.has('notes')">
+        <p v-if="!outline.callouts.length && !outline.tasks.length" class="px-2 text-[12px] text-text-3">{{ t('outline.noNotes') }}</p>
         <button v-for="c in outline.callouts" :key="'c' + c.index" type="button" class="ol-note" data-testid="outline-callout" @click="go(CALLOUTS, c.index)">
           <span class="w-4 shrink-0 text-center">{{ emoji(c.kind) }}</span><span class="line-clamp-2">{{ c.text || t(`editor.alert.${c.kind}`) }}</span>
         </button>
@@ -82,7 +109,7 @@ const emoji = (kind: string) => ALERTS[kind as keyof typeof ALERTS] ?? '💡'
   top: 64px;
   right: 16px;
   z-index: 5;
-  width: 250px;
+  width: 270px;
   max-height: calc(100dvh - 88px);
   overflow-y: auto;
   padding: 12px;
@@ -90,6 +117,30 @@ const emoji = (kind: string) => ALERTS[kind as keyof typeof ALERTS] ?? '💡'
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: 0 0 0 0.5px var(--border), 0 6px 24px rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(10px);
+}
+.ol-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 10px 0 4px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.ol-part:first-of-type {
+  margin-top: 0;
+}
+.ol-part .chev {
+  width: 13px;
+  height: 13px;
+  transition: transform var(--speed);
+}
+.ol-part .chev.shut {
+  transform: rotate(-90deg);
 }
 .ol-h {
   display: block;

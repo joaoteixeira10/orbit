@@ -63,6 +63,7 @@ export interface PageSummary {
   id: string
   workspace_id: string
   parent_id: string | null
+  folder_id?: string // a folder it's filed in
   title: string
   icon: string
   rank: number
@@ -92,6 +93,8 @@ export interface TaskList {
   columns: Column[]
   rank: number
   open_count: number
+  done_count?: number
+  folder_id?: string // the folder it's the project of
   git?: GitLink // the list holds a repository's issues
 }
 // A list's link to a repository on Gitea / Forgejo or GitHub.
@@ -419,7 +422,7 @@ export const withContent = (p: Page): Page => ({ ...p, content: p.content ?? '' 
 export const pagesApi = {
   list: (ws: string) => api<PageSummary[]>(`/workspaces/${ws}/pages`),
   trash: (ws: string) => api<PageSummary[]>(`/workspaces/${ws}/trash`),
-  create: (ws: string, b: { parent_id?: string | null; title?: string; icon?: string; content?: string; after_id?: string; db?: Database; props?: Props }) =>
+  create: (ws: string, b: { parent_id?: string | null; folder_id?: string; title?: string; icon?: string; content?: string; after_id?: string; db?: Database; props?: Props }) =>
     api<Page>(`/workspaces/${ws}/pages`, { method: 'POST', body: j(b) }),
   // An empty page comes without "content"; the app always has a string.
   get: (id: string) => api<Page>(`/pages/${id}`).then(withContent),

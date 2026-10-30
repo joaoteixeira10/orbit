@@ -7581,7 +7581,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Folder"
+                                "$ref": "#/definitions/api.folderResponse"
                             }
                         }
                     }
@@ -9956,6 +9956,10 @@ const docTemplate = `{
                     "description": "DB makes it a database; Props are its values as a row of one.",
                     "type": "object"
                 },
+                "folder_id": {
+                    "description": "a folder to file it in",
+                    "type": "string"
+                },
                 "icon": {
                     "type": "string",
                     "maxLength": 64
@@ -10412,10 +10416,34 @@ const docTemplate = `{
                 }
             }
         },
+        "api.folderCounts": {
+            "type": "object",
+            "properties": {
+                "boards": {
+                    "type": "integer"
+                },
+                "diagrams": {
+                    "type": "integer"
+                },
+                "folders": {
+                    "type": "integer"
+                },
+                "pages": {
+                    "type": "integer"
+                },
+                "sheets": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.folderRequest": {
             "type": "object",
             "properties": {
                 "color": {
+                    "type": "string"
+                },
+                "list_id": {
+                    "description": "ListID joins a task list to it (\"\" none); a list in another folder\nmoves here.",
                     "type": "string"
                 },
                 "name": {
@@ -10423,6 +10451,42 @@ const docTemplate = `{
                     "maxLength": 200
                 },
                 "parent_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.folderResponse": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "counts": {
+                    "$ref": "#/definitions/api.folderCounts"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "list_id": {
+                    "description": "its task list (\"\" none): a folder and a list make a project; a list is in one folder at most",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "workspace_id": {
                     "type": "string"
                 }
             }
@@ -11183,6 +11247,13 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "done_count": {
+                    "type": "integer"
+                },
+                "folder_id": {
+                    "description": "the folder it's the project of",
+                    "type": "string"
+                },
                 "git": {
                     "$ref": "#/definitions/api.gitLinkResponse"
                 },
@@ -11319,6 +11390,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "folders": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "pages": {
                     "type": "array",
                     "maxItems": 500,
                     "items": {
@@ -11649,6 +11727,10 @@ const docTemplate = `{
                 "favorite": {
                     "type": "boolean"
                 },
+                "folder_id": {
+                    "description": "a folder it's filed in (\"\" none); its sub-pages go with it",
+                    "type": "string"
+                },
                 "icon": {
                     "type": "string"
                 },
@@ -11697,6 +11779,9 @@ const docTemplate = `{
                 },
                 "favorite": {
                     "type": "boolean"
+                },
+                "folder_id": {
+                    "type": "string"
                 },
                 "icon": {
                     "type": "string"
@@ -13600,6 +13685,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "list_id": {
+                    "description": "its task list (\"\" none): a folder and a list make a project; a list is in one folder at most",
                     "type": "string"
                 },
                 "name": {

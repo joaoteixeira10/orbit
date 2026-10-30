@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2 } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2, Folder as FolderIcon, FolderX, Check } from 'lucide-vue-next'
+import { filesApi, tree, type Folder } from '@/lib/filesApi'
 import Popover from './ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import { usePagesStore } from '@/stores/pages'
@@ -11,7 +12,8 @@ import { useToastStore } from '@/stores/toast'
 import { pageFile, download, fileName } from '@/lib/markdown'
 
 // A page's actions: favourite, duplicate, copy link, download or copy it as
-// Markdown, move to another parent, move to the trash.
+// Markdown, move to another parent, file it in a folder (with Files on),
+// move to the trash.
 const props = defineProps<{ pageId: string; ws: string; anchor: HTMLElement | null }>()
 const emit = defineEmits<{ close: [] }>()
 const pages = usePagesStore()
@@ -22,6 +24,25 @@ const { t } = useI18n()
 
 const page = computed(() => pages.find(props.pageId))
 const picking = ref(false)
+
+// Filing: the workspace's folders, as a tree.
+const filing = ref(false)
+const folders = ref<Folder[]>([])
+const canFile = computed(() => !!wss.byId(props.ws)?.modules.includes('files'))
+async function startFiling() {
+  try {
+    folders.value = await filesApi.folders(props.ws)
+    filing.value = true
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const fileIn = (f: Folder | null) =>
+  run(async () => {
+    await filesApi.move(props.ws, f?.id ?? '', [{ kind: 'page', id: props.pageId }])
+    pages.patch({ id: props.pageId, folder_id: f?.id ?? '' })
+    toast.success(f ? t('project.filed', { name: f.name }) : t('project.unfiled'))
+  })
 
 // Pages it can move under: not itself or its descendants.
 const targets = computed(() => {
@@ -119,7 +140,19 @@ const trash = () =>
 
 <template>
   <Popover :anchor="anchor" :width="240" placement="right-start" @close="emit('close')">
-    <template v-if="!picking">
+    <template v-if="filing">
+      <button class="menu-item text-text-2" @click="filing = false"><ChevronLeft class="h-4 w-4" />{{ t('project.fileTitle') }}</button>
+      <div class="menu-sep" />
+      <div class="max-h-72 overflow-y-auto" data-testid="page-folders">
+        <button class="menu-item" @click="fileIn(null)"><FolderX class="h-4 w-4 text-text-2" />{{ t('project.noFolder') }}<Check v-if="!page?.folder_id" class="ml-auto h-4 w-4 text-accent" /></button>
+        <button v-for="x in tree(folders)" :key="x.folder.id" class="menu-item" data-testid="page-folder" @click="fileIn(x.folder)">
+          <FolderIcon class="h-4 w-4 shrink-0" :style="{ color: x.folder.color || '#5ac8fa', marginLeft: `${x.depth * 12}px` }" />
+          <span class="truncate">{{ x.folder.name }}</span>
+          <Check v-if="page?.folder_id === x.folder.id" class="ml-auto h-4 w-4 shrink-0 text-accent" />
+        </button>
+      </div>
+    </template>
+    <template v-else-if="!picking">
       <button class="menu-item" @click="favorite">
         <component :is="page?.favorite ? StarOff : Star" class="h-4 w-4 text-text-2" />
         {{ page?.favorite ? t('pages.unfavorite') : t('pages.favorite') }}
@@ -130,6 +163,7 @@ const trash = () =>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
       <button class="menu-item" data-testid="page-pdf" @click="asPdf"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
+      <button v-if="canFile" class="menu-item" data-testid="page-file-in" @click="startFiling"><FolderIcon class="h-4 w-4 text-text-2" />{{ t('project.fileIn') }}</button>
       <button class="menu-item" data-testid="page-db-toggle" @click="toggleDatabase">
         <Table2 class="h-4 w-4 text-text-2" />{{ page?.db ? t('db.stop') : t('db.turnInto') }}
       </button>

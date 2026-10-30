@@ -2131,7 +2131,7 @@ test('files: sheets, diagrams and whiteboards in folders inside folders — move
   await expect(page.getByTestId('diagram-card')).toHaveCount(0)
   await page.getByTestId('sheet-row').dragTo(page.getByTestId('folder-tile').filter({ hasText: 'Design' }))
   await expect(page.getByTestId('sheet-row')).toHaveCount(0)
-  await expect(page.getByTestId('folder-tile').filter({ hasText: 'Design' })).toContainText('3 items')
+  await expect(page.getByTestId('folder-tile').filter({ hasText: 'Design' })).toContainText('1 folder · 1 sheet · 1 diagram')
   const folders = (await (await request.get(`${base}/folders`, { headers: H })).json()) as { id: string; name: string; parent_id: string }[]
   const design = folders.find((f) => f.name === 'Design')!
   expect(folders.find((f) => f.name === 'Logos')!.parent_id).toBe(design.id)
@@ -2282,4 +2282,60 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
   await page.getByTestId('sheet-embed').dblclick()
   await expect(over.getByTestId('sheet-title')).toHaveValue('Launch plan')
   await over.getByTestId('embed-done').click()
+})
+
+test('projects: a folder joined to a task list shows its progress; the list shows its folder; pages are filed in folders', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio X', kind: 'work', modules: ['home', 'tasks', 'board', 'pages', 'sheets', 'diagrams', 'files'] } })).json()
+  const base = `/api/v1/workspaces/${ws.id}`
+  const list = await (await request.post(`${base}/lists`, { headers: H, data: { name: 'Launch', color: '#ff9500' } })).json()
+  const done = await (await request.post(`${base}/tasks`, { headers: H, data: { title: 'Logo', list_id: list.id } })).json()
+  await request.post(`${base}/tasks`, { headers: H, data: { title: 'Website', list_id: list.id } })
+  await request.put(`/api/v1/tasks/${done.id}`, { headers: H, data: { completed: true } })
+  const folder = await (await request.post(`${base}/folders`, { headers: H, data: { name: 'Launch' } })).json()
+  await request.post(`${base}/sheets`, { headers: H, data: { title: 'Budget', folder_id: folder.id, data: { tabs: [] } } })
+  await request.post(`${base}/diagrams`, { headers: H, data: { title: 'Flow', folder_id: folder.id } })
+  await request.post(`${base}/pages`, { headers: H, data: { title: 'Brief', folder_id: folder.id } })
+  const notes = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Meeting notes', content: 'Agenda' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  // In Sheets, the folder says what it holds of every kind.
+  await page.goto(`/w/${ws.id}/sheets`)
+  const tile = page.getByTestId('folder-tile').filter({ hasText: 'Launch' })
+  await expect(tile.getByTestId('folder-summary')).toHaveText('1 page · 1 sheet · 1 diagram')
+  // Joined to the task list.
+  await tile.getByTestId('folder-more').click()
+  await page.getByTestId('folder-list').click()
+  await page.getByTestId('list-pick').filter({ hasText: 'Launch' }).click()
+  await expect(tile.getByTestId('folder-summary')).toHaveText('1 page · 1 sheet · 1 diagram · 1 list')
+  // Open in Files: the project's progress, and the page in it.
+  await tile.getByTestId('folder-more').click()
+  await page.getByTestId('folder-in-files').click()
+  await expect(page).toHaveURL(new RegExp(`/w/${ws.id}/files\\?folder=${folder.id}`))
+  await expect(page.getByTestId('project-progress')).toHaveText('1 open · 1 done')
+  await expect(page.getByTestId('page-card')).toContainText('Brief')
+  // The list shows its folder, and leads back to it.
+  await page.getByTestId('project-list').click()
+  await expect(page.getByTestId('list-folder')).toContainText('Launch')
+  await page.getByTestId('list-folder').click()
+  await expect(page).toHaveURL(new RegExp(`folder=${folder.id}`))
+  await expect(page.getByTestId('project-card')).toBeVisible()
+
+  // A page is filed in the folder from its menu.
+  await page.goto(`/w/${ws.id}/p/${notes.id}`)
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-file-in').click()
+  await page.getByTestId('page-folder').filter({ hasText: 'Launch' }).click()
+  await expect.poll(async () => ((await (await request.get(`${base}/pages`, { headers: H })).json()) as { id: string; folder_id?: string }[]).find((p) => p.id === notes.id)?.folder_id).toBe(folder.id)
+  await page.goto(`/w/${ws.id}/files?folder=${folder.id}`)
+  await expect(page.getByTestId('page-card')).toHaveCount(2)
+  // A new page made here is filed here.
+  await page.getByTestId('files-new').click()
+  await page.getByTestId('files-new-page').click()
+  await expect(page).toHaveURL(/\/p\//)
+  const made = page.url().split('/').pop()!
+  const pages = (await (await request.get(`${base}/pages`, { headers: H })).json()) as { id: string; folder_id?: string }[]
+  expect(pages.find((p) => p.id === made)?.folder_id).toBe(folder.id)
 })

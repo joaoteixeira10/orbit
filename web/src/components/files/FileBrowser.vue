@@ -3,15 +3,16 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component 
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  Brush, ChevronRight, Copy, Download, ExternalLink, Folder as FolderIcon, FolderInput, FolderPlus, Info, LayoutGrid, Link, List, MoreHorizontal, Pencil, Sheet,
-  Trash2, Workflow, X,
+  Brush, Check, ChevronRight, Copy, Download, ExternalLink, FileText, Folder as FolderIcon, FolderInput, FolderOpen, FolderPlus, Info, LayoutGrid, Link, List, ListChecks,
+  MoreHorizontal, Pencil, Plus, Sheet, SquareKanban, Trash2, Workflow, X,
 } from 'lucide-vue-next'
+import { tasksApi, type TaskList } from '@/api/planner'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
 import { drawingsApi } from '@/components/draw/drawing'
-import { filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type Folder } from '@/lib/filesApi'
+import { countParts, filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type Folder } from '@/lib/filesApi'
 import { download, duplicate, linkOf, remove, rename, routeOf } from '@/lib/fileOps'
 import { svgUrl } from '@/lib/drawio'
 import { ago } from '@/components/notes/noteModel'
@@ -27,6 +28,8 @@ import { useToastStore } from '@/stores/toast'
 // folders. Each has a menu (also on a right click): open, rename, copy,
 // move, download, its link, its details, delete. Drag one onto a folder or
 // onto the path to move it. Where you are is in the address (?folder=).
+// A folder tile says what it holds of every kind; a folder joined to a task
+// list (a project) shows the list's progress inside it.
 const props = defineProps<{ ws: string; kinds: FileKind[]; editable: boolean; rootName: string }>()
 const { t } = useI18n()
 const route = useRoute()
@@ -36,12 +39,19 @@ const toast = useToastStore()
 
 const folders = ref<Folder[]>([])
 const files = ref<FileItem[]>([])
+const lists = ref<TaskList[]>([])
 const loaded = ref(false)
+const hasModule = (m: string) => !!wss.byId(props.ws)?.modules.includes(m)
 async function load() {
   try {
-    const [fs, xs] = await Promise.all([filesApi.folders(props.ws), filesApi.files(props.ws, props.kinds)])
+    const [fs, xs, ls] = await Promise.all([
+      filesApi.folders(props.ws),
+      filesApi.files(props.ws, props.kinds),
+      tasksApi.lists(props.ws).catch(() => [] as TaskList[]),
+    ])
     folders.value = fs
     files.value = xs
+    lists.value = ls
   } catch (e: any) {
     toast.error(e.message)
   } finally {
@@ -59,7 +69,7 @@ watch(
 )
 let reloadTimer: ReturnType<typeof setTimeout> | undefined
 const off = onLiveEvent('ws', (e) => {
-  if (String(e.ws) !== props.ws || !['files', 'sheets', 'diagrams', 'drawings'].includes(String(e.what))) return
+  if (String(e.ws) !== props.ws || !['files', 'sheets', 'diagrams', 'drawings', 'pages', 'lists', 'tasks'].includes(String(e.what))) return
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(() => void load(), 150)
 })
@@ -86,15 +96,27 @@ const items = computed(() =>
     .filter((f) => folderOf(f) === here.value)
     .sort((a, b) => (sort.value === 'name' ? (a.title || '').localeCompare(b.title || '') : b.updated_at.localeCompare(a.updated_at))),
 )
-const countIn = (id: string) => folders.value.filter((f) => f.parent_id === id).length + files.value.filter((f) => f.folder_id === id).length
+const countIn = (id: string) => {
+  const c = folders.value.find((f) => f.id === id)?.counts
+  return c ? c.sheets + c.diagrams + c.boards + c.pages + c.folders : folders.value.filter((f) => f.parent_id === id).length + files.value.filter((f) => f.folder_id === id).length
+}
+// summaryOf says what a folder holds, of every kind ("2 sheets · 1 list"),
+// whichever module shows it.
+function summaryOf(f: Folder): string {
+  const c = f.counts
+  if (!c) return t('drive.items', { n: countIn(f.id) }, countIn(f.id))
+  const parts = countParts(c).map((p) => t(`project.count.${p.key}`, { n: p.n }, p.n))
+  if (f.list_id && lists.value.some((l) => l.id === f.list_id)) parts.push(t('project.count.list'))
+  return parts.join(' · ') || t('project.empty')
+}
 
 const view = ref<'grid' | 'list'>(localStorage.getItem('orbit_files_view') === 'list' ? 'list' : 'grid')
 watch(view, (v) => localStorage.setItem('orbit_files_view', v))
 
 // ---- Kinds ----
-const KIND_ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush }
-const KIND_COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de' }
-const TESTID: Record<FileKind, string> = { sheet: 'sheet-row', diagram: 'diagram-card', board: 'whiteboard-card' }
+const KIND_ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText }
+const KIND_COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de', page: '#007aff' }
+const TESTID: Record<FileKind, string> = { sheet: 'sheet-row', diagram: 'diagram-card', board: 'whiteboard-card', page: 'page-card' }
 const kindName = (k: FileKind) => t(`drive.kind.${k}`)
 const untitled = (k: FileKind) => t(`drive.untitled.${k}`)
 const nameOf = (f: FileItem) => f.title || untitled(f.kind)
@@ -183,6 +205,40 @@ async function sendTo(target: string) {
     toast.error(e.message)
   }
 }
+
+// ---- Projects: a folder and its task list ----
+const project = computed(() => {
+  const f = folders.value.find((x) => x.id === here.value)
+  const list = f?.list_id ? lists.value.find((l) => l.id === f.list_id) : undefined
+  if (!f || !list) return null
+  const done = list.done_count ?? 0
+  const total = list.open_count + done
+  return { folder: f, list, done, total, pct: total ? Math.round((done / total) * 100) : 0 }
+})
+const listOf = (f: Folder) => (f.list_id ? lists.value.find((l) => l.id === f.list_id) : undefined)
+const folderName = (id?: string) => folders.value.find((f) => f.id === id)?.name ?? ''
+const joining = ref<Folder | null>(null)
+async function join(f: Folder, listId: string) {
+  joining.value = null
+  try {
+    await filesApi.updateFolder(f.id, { list_id: listId })
+    await load()
+    const l = lists.value.find((x) => x.id === listId)
+    toast.success(l ? t('project.joined', { list: l.name }) : t('project.unjoined'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function joinNew(f: Folder) {
+  try {
+    const l = await tasksApi.createList(props.ws, { name: f.name, color: f.color || undefined })
+    await join(f, l.id)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const inFiles = (f: Folder) => router.push({ name: 'ws-files', params: { ws: props.ws }, query: { folder: f.id } })
+const showInFiles = computed(() => route.name !== 'ws-files' && hasModule('files'))
 
 // ---- New folder ----
 const newOpen = ref(false)
@@ -365,6 +421,20 @@ defineExpose({ here, reload: load })
         </div>
       </div>
 
+      <!-- A project: the folder's task list -->
+      <div v-if="project" class="project" data-testid="project-card">
+        <span class="tile h-9 w-9" :style="{ '--tile': project.list.color || 'var(--ws)' }"><ListChecks class="h-5 w-5" /></span>
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-[14px] font-semibold">{{ project.list.name }}</div>
+          <div class="mt-1 flex items-center gap-2">
+            <div class="bar" role="progressbar" :aria-valuenow="project.pct" aria-valuemin="0" aria-valuemax="100"><span :style="{ width: `${project.pct}%`, background: project.list.color || 'var(--ws)' }" /></div>
+            <span class="shrink-0 text-[12px] text-text-3" data-testid="project-progress">{{ t('project.open', { n: project.list.open_count }) }} · {{ t('project.done', { n: project.done }) }}</span>
+          </div>
+        </div>
+        <RouterLink :to="{ name: 'ws-tasks', params: { ws, list: project.list.id } }" class="btn btn-sm" data-testid="project-list"><ListChecks class="h-3.5 w-3.5" />{{ t('project.list') }}</RouterLink>
+        <RouterLink v-if="hasModule('board')" :to="{ name: 'ws-board', params: { ws, list: project.list.id } }" class="btn btn-sm"><SquareKanban class="h-3.5 w-3.5" />{{ t('project.board') }}</RouterLink>
+      </div>
+
       <p v-if="loaded && !subfolders.length && !items.length" class="py-14 text-center text-[13.5px] text-text-3" data-testid="files-empty">
         <slot name="empty">{{ t('drive.empty') }}</slot>
       </p>
@@ -393,8 +463,11 @@ defineExpose({ here, reload: load })
             >
               <FolderIcon class="h-9 w-9 shrink-0" :style="{ color: folderColor(f), fill: `color-mix(in srgb, ${folderColor(f)} 30%, transparent)` }" :stroke-width="1.6" />
               <div class="min-w-0 flex-1">
-                <div class="truncate text-[13.5px] font-medium">{{ f.name }}</div>
-                <div class="text-[11.5px] text-text-3">{{ t('drive.items', { n: countIn(f.id) }, countIn(f.id)) }}</div>
+                <div class="flex items-center gap-1 truncate text-[13.5px] font-medium">
+                  <span class="truncate">{{ f.name }}</span>
+                  <ListChecks v-if="listOf(f)" class="h-3.5 w-3.5 shrink-0" :style="{ color: listOf(f)!.color || 'var(--text-3)' }" :aria-label="listOf(f)!.name" />
+                </div>
+                <div class="line-clamp-2 text-[11.5px] leading-snug text-text-3" data-testid="folder-summary">{{ summaryOf(f) }}</div>
               </div>
               <button type="button" class="icon-btn h-7 w-7 shrink-0" :aria-label="t('drive.more')" data-testid="folder-more" @click.stop="openMenu({ folder: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button>
             </div>
@@ -418,6 +491,7 @@ defineExpose({ here, reload: load })
             >
               <div class="pic">
                 <img v-if="f.preview" :src="svgUrl(f.preview)" alt="" draggable="false" loading="lazy" />
+                <span v-else-if="f.icon" class="text-[40px] leading-none">{{ f.icon }}</span>
                 <span v-else class="tile h-12 w-12" :style="{ '--tile': KIND_COLOR[f.kind] }"><component :is="KIND_ICON[f.kind]" class="h-6 w-6" /></span>
               </div>
               <div class="flex items-center gap-2 px-3 py-2.5">
@@ -463,7 +537,7 @@ defineExpose({ here, reload: load })
             </td>
             <td class="hide-sm text-text-3">{{ t('drive.kind.folder') }}</td>
             <td class="hide-sm" />
-            <td class="hide-sm text-right text-text-3">{{ t('drive.items', { n: countIn(f.id) }, countIn(f.id)) }}</td>
+            <td class="hide-sm text-right text-text-3">{{ summaryOf(f) }}</td>
             <td><button type="button" class="icon-btn h-7 w-7" :aria-label="t('drive.more')" @click.stop="openMenu({ folder: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button></td>
           </tr>
           <tr
@@ -556,7 +630,9 @@ defineExpose({ here, reload: load })
       </div>
       <div v-else class="p-1.5" data-testid="folder-menu">
         <button type="button" class="menu-item w-full" @click="(go(menu.target.folder.id), (menu = null))"><ExternalLink class="h-4 w-4 text-text-2" />{{ t('drive.open') }}</button>
+        <button v-if="showInFiles" type="button" class="menu-item w-full" data-testid="folder-in-files" @click="(inFiles(menu.target.folder), (menu = null))"><FolderOpen class="h-4 w-4 text-text-2" />{{ t('project.inFiles') }}</button>
         <template v-if="editable">
+          <button v-if="hasModule('tasks')" type="button" class="menu-item w-full" data-testid="folder-list" @click="(joining = menu.target.folder), (menu = null)"><ListChecks class="h-4 w-4 text-text-2" />{{ t('project.choose') }}</button>
           <button type="button" class="menu-item w-full" data-testid="folder-rename" @click="startRename"><Pencil class="h-4 w-4 text-text-2" />{{ t('drive.rename') }}</button>
           <button type="button" class="menu-item w-full" data-testid="folder-move" @click="startMove(menu.target)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('drive.move') }}</button>
           <div class="flex flex-wrap gap-1.5 px-2.5 py-2">
@@ -579,6 +655,26 @@ defineExpose({ here, reload: load })
         </template>
       </div>
     </Popover>
+
+    <Overlay :open="!!joining" :title="t('project.pickTitle')" size="sm" @close="joining = null">
+      <template v-if="joining">
+        <p class="mb-3 text-[12.5px] leading-snug text-text-3">{{ t('project.pickHint') }}</p>
+        <div class="move-list" data-testid="list-picker">
+          <button type="button" class="move-row" :class="{ on: !joining.list_id }" @click="join(joining, '')">
+            <X class="h-4 w-4 shrink-0 text-text-3" />{{ t('project.none') }}
+          </button>
+          <button v-for="l in lists" :key="l.id" type="button" class="move-row" :class="{ on: joining.list_id === l.id }" data-testid="list-pick" @click="join(joining, l.id)">
+            <ListChecks class="h-4 w-4 shrink-0" :style="{ color: l.color || 'var(--text-3)' }" />
+            <span class="min-w-0 flex-1 truncate text-left">{{ l.name }}</span>
+            <span v-if="l.folder_id && l.folder_id !== joining.id && folderName(l.folder_id)" class="shrink-0 text-[11.5px] text-text-3">{{ t('project.inFolder', { name: folderName(l.folder_id) }) }}</span>
+            <Check v-if="joining.list_id === l.id" class="h-4 w-4 shrink-0 text-accent" />
+          </button>
+          <button type="button" class="move-row" data-testid="list-new" @click="joinNew(joining)">
+            <Plus class="h-4 w-4 shrink-0 text-text-3" />{{ t('project.newList', { name: joining.name }) }}
+          </button>
+        </div>
+      </template>
+    </Overlay>
 
     <Popover v-if="newOpen" :anchor="newEl" :width="260" placement="bottom-end" @close="newOpen = false">
       <form class="flex gap-2 p-2.5" @submit.prevent="makeFolder">
@@ -616,6 +712,30 @@ defineExpose({ here, reload: load })
 </template>
 
 <style scoped>
+.project {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border);
+}
+.project .bar {
+  position: relative;
+  height: 6px;
+  flex: 1;
+  max-width: 260px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--fill);
+}
+.project .bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+}
 .fb {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

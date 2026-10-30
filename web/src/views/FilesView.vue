@@ -2,7 +2,8 @@
 import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Brush, ChevronDown, GitFork, Plus, Sheet, Upload, Workflow } from 'lucide-vue-next'
+import { Brush, ChevronDown, FileText, GitFork, Plus, Sheet, Upload, Workflow } from 'lucide-vue-next'
+import { pagesApi } from '@/api/planner'
 import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
 import { FILE_KINDS, KIND_MODULE, type FileKind } from '@/lib/filesApi'
@@ -31,7 +32,7 @@ const ws = computed(() => String(route.params.ws))
 const workspace = computed(() => wss.byId(ws.value))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
 const kinds = computed<FileKind[]>(() => FILE_KINDS.filter((k) => workspace.value?.modules.includes(KIND_MODULE[k])))
-const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush }
+const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText }
 
 const browser = ref<InstanceType<typeof FileBrowser> | null>(null)
 const folder = () => browser.value?.here ?? ''
@@ -46,7 +47,9 @@ async function create(what: FileKind | 'mermaid') {
   try {
     const f = folder()
     const id =
-      kind === 'sheet'
+      kind === 'page'
+        ? (await pagesApi.create(ws.value, { title: '', folder_id: f })).id
+        : kind === 'sheet'
         ? (await sheetsApi.create(ws.value, { title: '', data: emptySheet(t('sheets.tabName', { n: 1 })), folder_id: f })).id
         : kind === 'diagram'
           ? (await diagramsApi.create(ws.value, { title: '', folder_id: f, kind: what === 'mermaid' ? 'mermaid' : 'drawio', data: what === 'mermaid' ? MERMAID_TEMPLATES[0].code : undefined })).id

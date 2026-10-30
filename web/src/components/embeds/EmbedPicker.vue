@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Brush, Search, Sheet, Workflow } from 'lucide-vue-next'
+import { Brush, FileText, Search, Sheet, Workflow } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import { filesApi, type FileItem, type FileKind } from '@/lib/filesApi'
 import type { EmbedKind } from '@/lib/embeds'
@@ -13,9 +13,9 @@ const emit = defineEmits<{ close: []; pick: [it: { kind: EmbedKind; id: string; 
 const { t } = useI18n()
 
 const FILE: Record<EmbedKind, FileKind> = { sheet: 'sheet', diagram: 'diagram', board: 'board' }
-const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush }
-const COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de' }
-const UNTITLED: Record<FileKind, string> = { sheet: 'sheets.untitled', diagram: 'diagrams.untitled', board: 'draw.untitled' }
+const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText }
+const COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de', page: '#007aff' }
+const UNTITLED: Record<FileKind, string> = { sheet: 'sheets.untitled', diagram: 'diagrams.untitled', board: 'draw.untitled', page: 'drive.untitled.page' }
 
 const items = ref<FileItem[]>([])
 const loading = ref(false)

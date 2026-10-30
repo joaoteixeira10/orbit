@@ -2,7 +2,8 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Eye, EyeOff, Pencil, CalendarClock, Inbox, CheckCircle2, CalendarDays, ChevronLeft, ListPlus, Rows3, Check, ListFilter } from 'lucide-vue-next'
+import { Plus, Eye, EyeOff, Pencil, CalendarClock, Inbox, CheckCircle2, CalendarDays, ChevronLeft, ListPlus, Rows3, Check, ListFilter, FolderOpen } from 'lucide-vue-next'
+import { countParts, filesApi, type Folder } from '@/lib/filesApi'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import ListSheet from '@/components/tasks/ListSheet.vue'
@@ -45,6 +46,28 @@ type Smart = 'today' | 'scheduled' | 'all' | 'completed'
 const SMART: Smart[] = ['today', 'scheduled', 'all', 'completed']
 const sel = computed(() => (typeof route.params.list === 'string' ? route.params.list : ''))
 const list = computed(() => lists.value.find((l) => l.id === sel.value))
+
+// A list that's a folder's (a project): the folder, what it holds, a way there.
+const folders = ref<Folder[]>([])
+watch(
+  () => list.value?.folder_id,
+  async (id) => {
+    if (id) folders.value = await filesApi.folders(ws.value).catch(() => [])
+  },
+  { immediate: true },
+)
+const listFolder = computed(() => {
+  const f = folders.value.find((x) => x.id === list.value?.folder_id)
+  const mods = workspace.value?.modules ?? []
+  const view = ['files', 'sheets', 'diagrams', 'whiteboards'].find((m) => mods.includes(m))
+  if (!f || !view) return null
+  return {
+    name: f.name,
+    color: f.color || '#5ac8fa',
+    what: countParts(f.counts).map((p) => t(`project.count.${p.key}`, { n: p.n }, p.n)).join(' · '),
+    to: { name: `ws-${view}`, params: { ws: ws.value }, query: { folder: f.id } },
+  }
+})
 // A saved smart list (a filter with a name), when one is open.
 const smartLists = computed(() => tasks.smartOf(ws.value))
 const saved = computed(() => smartLists.value.find((l) => l.id === sel.value))
@@ -464,6 +487,11 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         <h1 class="large-title min-w-0 flex-1 truncate" :style="{ color: heading.color }">{{ heading.title }}</h1>
         <span class="text-[28px] font-semibold tabular-nums" :style="{ color: heading.color }">{{ total }}</span>
       </div>
+      <RouterLink v-if="listFolder" :to="listFolder.to" class="list-folder" data-testid="list-folder">
+        <FolderOpen class="h-4 w-4 shrink-0" :style="{ color: listFolder.color }" />
+        <span class="font-medium">{{ listFolder.name }}</span>
+        <span v-if="listFolder.what" class="truncate text-text-3">· {{ listFolder.what }}</span>
+      </RouterLink>
 
       <Popover v-if="groupOpen" :anchor="groupAnchor" placement="bottom-end" :width="220" @close="groupOpen = false">
         <div class="p-1.5">
@@ -553,6 +581,21 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
 </template>
 
 <style scoped>
+.list-folder {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  margin: -10px 0 18px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.list-folder:hover {
+  background: var(--fill);
+}
 .tasks-view {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);

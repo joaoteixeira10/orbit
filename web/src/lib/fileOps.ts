@@ -9,35 +9,40 @@ import { locale, todayStr } from './dates'
 import { fileOf, labelsOf, lightPicture } from './drawio'
 import { kindOf as mermaidKind, labelsOf as mermaidLabels } from './mermaid'
 import { textOf } from './sheet'
+import { pagesApi } from '@/api/planner'
 import type { FileItem, FileKind } from './filesApi'
 
 export function routeOf(ws: string, f: { kind: FileKind; id: string }): RouteLocationRaw {
   if (f.kind === 'sheet') return { name: 'ws-sheet', params: { ws, id: f.id } }
   if (f.kind === 'diagram') return { name: 'ws-diagram', params: { ws, id: f.id } }
+  if (f.kind === 'page') return { name: 'ws-page', params: { ws, page: f.id } }
   return { name: 'ws-whiteboard', params: { ws, id: f.id } }
 }
 
 // linkOf: its address (on its own line in a page, it shows there).
 export function linkOf(ws: string, f: { kind: FileKind; id: string }): string {
-  const path = f.kind === 'sheet' ? `s/${f.id}` : f.kind === 'diagram' ? `d/${f.id}` : `whiteboards/${f.id}`
+  const path = f.kind === 'sheet' ? `s/${f.id}` : f.kind === 'diagram' ? `d/${f.id}` : f.kind === 'page' ? `p/${f.id}` : `whiteboards/${f.id}`
   return `${location.origin}/w/${ws}/${path}`
 }
 
 export async function rename(f: FileItem, title: string): Promise<void> {
   if (f.kind === 'sheet') await sheetsApi.save(f.id, { title, version: 0 })
   else if (f.kind === 'diagram') await diagramsApi.save(f.id, { title })
+  else if (f.kind === 'page') await pagesApi.update(f.id, { title })
   else await drawingsApi.save(f.id, { title, version: 0 })
 }
 
 export async function remove(f: FileItem): Promise<void> {
   if (f.kind === 'sheet') await sheetsApi.remove(f.id)
   else if (f.kind === 'diagram') await diagramsApi.remove(f.id)
+  else if (f.kind === 'page') await pagesApi.trashPage(f.id) // to the trash, with the pages inside it
   else await drawingsApi.remove(f.id)
 }
 
 // duplicate makes a copy next to it, named "… (copy)".
 export async function duplicate(ws: string, f: FileItem, copyWord: string): Promise<{ kind: FileKind; id: string }> {
   const title = `${f.title || ''} (${copyWord})`.trim()
+  if (f.kind === 'page') return { kind: 'page', id: (await pagesApi.duplicate(f.id)).id } // the server names it, in the same folder
   if (f.kind === 'sheet') {
     const s = await sheetsApi.get(f.id)
     const c = await sheetsApi.create(ws, { title, data: s.data, text: s.data ? textOf(s.data) : '', folder_id: f.folder_id })
@@ -64,10 +69,13 @@ function save(blob: Blob, name: string) {
 }
 
 // download saves it as a file the matching app opens: Excel (.xlsx),
-// draw.io (.drawio), Excalidraw (.excalidraw).
+// draw.io (.drawio) or Mermaid (.mmd), Excalidraw (.excalidraw), Markdown (.md).
 export async function download(f: FileItem, untitled: string): Promise<void> {
   const name = fileName(f.title || untitled)
-  if (f.kind === 'sheet') {
+  if (f.kind === 'page') {
+    const p = await pagesApi.get(f.id)
+    save(new Blob([`# ${p.title || untitled}\n\n${p.content}`], { type: 'text/markdown;charset=utf-8' }), `${name}.md`)
+  } else if (f.kind === 'sheet') {
     const s = await sheetsApi.get(f.id)
     const [{ writeXlsx }, { Book, readData }, { dayOf }] = await Promise.all([import('./xlsx'), import('./sheet'), import('./formula')])
     const data = readData(s.data, 'Sheet 1')

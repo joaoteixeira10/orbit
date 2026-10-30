@@ -11,10 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// Folders: a workspace's sheets, diagrams and whiteboards in folders, which
-// go inside folders. Deleting a folder deletes nothing in it: what it held
-// moves up to where it was. Moving files doesn't change them (no new
-// version), so someone editing one isn't interrupted.
+// Folders: a workspace's sheets, diagrams, whiteboards and pages in
+// folders, which go inside folders. Deleting a folder deletes nothing in
+// it: what it held moves up to where it was. Moving files doesn't change
+// them (no new version), so someone editing one isn't interrupted. A folder
+// joined to a task list is a project (one list per folder, a list in one
+// folder at most).
 
 const maxFolderDepth = 32
 
@@ -44,22 +46,63 @@ func (h *Handlers) loops(wsID, id, parent string) bool {
 	return false
 }
 
-// listFolders lists a workspace's folders (all of them; the app makes the tree).
+// folderCounts is what is right inside a folder, of each kind.
+type folderCounts struct {
+	Sheets   int64 `json:"sheets"`
+	Diagrams int64 `json:"diagrams"`
+	Boards   int64 `json:"boards"`
+	Pages    int64 `json:"pages"`
+	Folders  int64 `json:"folders"`
+}
+
+type folderResponse struct {
+	models.Folder
+	Counts folderCounts `json:"counts"`
+}
+
+// listFolders lists a workspace's folders (all of them; the app makes the
+// tree), each with how many of each kind it holds.
 //
 //	@Summary	A workspace's folders
 //	@Tags		folders
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		ws	path	string	true	"Workspace id"
-//	@Success	200	{array}	models.Folder
+//	@Success	200	{array}	folderResponse
 //	@Router		/workspaces/{ws}/folders [get]
 func (h *Handlers) listFolders(c *gin.Context) {
 	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSViewer)
 	if !ok {
 		return
 	}
-	out := []models.Folder{}
-	h.db.Where("workspace_id = ?", ws.ID).Order("name").Find(&out)
+	var folders []models.Folder
+	h.db.Where("workspace_id = ?", ws.ID).Order("name").Find(&folders)
+	type row struct {
+		F string
+		N int64
+	}
+	count := func(m any, col, extra string) map[string]int64 {
+		var rows []row
+		q := h.db.Model(m).Select(col+" AS f, COUNT(*) AS n").Where("workspace_id = ? AND "+col+" <> ''", ws.ID)
+		if extra != "" {
+			q = q.Where(extra)
+		}
+		q.Group(col).Scan(&rows)
+		out := map[string]int64{}
+		for _, r := range rows {
+			out[r.F] = r.N
+		}
+		return out
+	}
+	sheets := count(&models.Sheet{}, "folder_id", "")
+	diagrams := count(&models.Diagram{}, "folder_id", "")
+	boards := count(&models.Drawing{}, "folder_id", "note_id = ''")
+	pages := count(&models.Page{}, "folder_id", "trashed_at IS NULL")
+	subs := count(&models.Folder{}, "parent_id", "")
+	out := make([]folderResponse, 0, len(folders))
+	for _, f := range folders {
+		out = append(out, folderResponse{Folder: f, Counts: folderCounts{Sheets: sheets[f.ID], Diagrams: diagrams[f.ID], Boards: boards[f.ID], Pages: pages[f.ID], Folders: subs[f.ID]}})
+	}
 	c.JSON(http.StatusOK, out)
 }
 
@@ -67,6 +110,9 @@ type folderRequest struct {
 	Name     *string `json:"name" binding:"omitempty,max=200"`
 	ParentID *string `json:"parent_id"`
 	Color    *string `json:"color"`
+	// ListID joins a task list to it ("" none); a list in another folder
+	// moves here.
+	ListID *string `json:"list_id"`
 }
 
 // createFolder makes a folder (editors).
@@ -98,7 +144,13 @@ func (h *Handlers) createFolder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "a folder needs a name"})
 		return
 	}
-	if err := h.db.Create(&f).Error; err != nil {
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := unlistElsewhere(tx, f); err != nil {
+			return err
+		}
+		return tx.Create(&f).Error
+	})
+	if err != nil {
 		h.internalError(c, err, "could not create the folder")
 		return
 	}
@@ -129,7 +181,27 @@ func (h *Handlers) applyFolder(f *models.Folder, req folderRequest) (int, string
 		}
 		f.ParentID = p
 	}
+	if req.ListID != nil {
+		l := *req.ListID
+		if l != "" {
+			var n int64
+			h.db.Model(&models.TaskList{}).Where("id = ? AND workspace_id = ?", l, f.WorkspaceID).Count(&n)
+			if n != 1 {
+				return http.StatusBadRequest, "no such list here"
+			}
+		}
+		f.ListID = l
+	}
 	return 0, ""
+}
+
+// unlistElsewhere takes the folder's list out of any other folder (a list
+// is in one folder at most).
+func unlistElsewhere(tx *gorm.DB, f models.Folder) error {
+	if f.ListID == "" {
+		return nil
+	}
+	return tx.Model(&models.Folder{}).Where("workspace_id = ? AND list_id = ? AND id <> ?", f.WorkspaceID, f.ListID, f.ID).UpdateColumn("list_id", "").Error
 }
 
 func (h *Handlers) folderAccess(c *gin.Context, need string) (models.Folder, bool) {
@@ -166,7 +238,13 @@ func (h *Handlers) updateFolder(c *gin.Context) {
 		c.JSON(code, gin.H{"error": msg})
 		return
 	}
-	if err := h.db.Model(&models.Folder{}).Where("id = ?", f.ID).Updates(map[string]any{"name": f.Name, "parent_id": f.ParentID, "color": f.Color}).Error; err != nil {
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := unlistElsewhere(tx, f); err != nil {
+			return err
+		}
+		return tx.Model(&models.Folder{}).Where("id = ?", f.ID).Updates(map[string]any{"name": f.Name, "parent_id": f.ParentID, "color": f.Color, "list_id": f.ListID}).Error
+	})
+	if err != nil {
 		h.internalError(c, err, "could not save the folder")
 		return
 	}
@@ -188,7 +266,7 @@ func (h *Handlers) deleteFolder(c *gin.Context) {
 		return
 	}
 	err := h.db.Transaction(func(tx *gorm.DB) error {
-		for _, m := range []any{&models.Sheet{}, &models.Diagram{}, &models.Drawing{}} {
+		for _, m := range []any{&models.Sheet{}, &models.Diagram{}, &models.Drawing{}, &models.Page{}} {
 			if err := tx.Model(m).Where("workspace_id = ? AND folder_id = ?", f.WorkspaceID, f.ID).UpdateColumn("folder_id", f.ParentID).Error; err != nil {
 				return err
 			}
@@ -211,10 +289,11 @@ type moveRequest struct {
 	Sheets   []string `json:"sheets" binding:"max=500"`
 	Diagrams []string `json:"diagrams" binding:"max=500"`
 	Drawings []string `json:"drawings" binding:"max=500"`
+	Pages    []string `json:"pages" binding:"max=500"`
 	Folders  []string `json:"folders" binding:"max=500"`
 }
 
-// moveFiles puts sheets, diagrams, whiteboards and folders in a folder
+// moveFiles puts sheets, diagrams, whiteboards, pages and folders in a folder
 // (editors). Only the workspace's own move; a folder can't go inside itself.
 //
 //	@Summary	Move into a folder
@@ -255,6 +334,7 @@ func (h *Handlers) moveFiles(c *gin.Context) {
 			{&models.Sheet{}, req.Sheets, "folder_id", ""},
 			{&models.Diagram{}, req.Diagrams, "folder_id", ""},
 			{&models.Drawing{}, req.Drawings, "folder_id", "note_id = ''"},
+			{&models.Page{}, req.Pages, "folder_id", ""},
 			{&models.Folder{}, req.Folders, "parent_id", ""},
 		}
 		for _, mv := range moves {
@@ -276,5 +356,8 @@ func (h *Handlers) moveFiles(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "files")
+	if len(req.Pages) > 0 {
+		h.publishWS(c, ws.ID, "pages")
+	}
 	c.Status(http.StatusNoContent)
 }

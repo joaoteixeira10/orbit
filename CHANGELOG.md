@@ -13,6 +13,12 @@ merge, not at release time.
 
 ### Added
 
+- **Projects: a folder and a task list** — a folder joins one task list
+  (a list is in one folder at most); inside the folder the list shows with
+  its progress, and the list shows its folder. Pages can be filed in
+  folders too (`folder_id`), and a folder tile says what it holds of every
+  kind — from any module (`counts` on folders; `done_count` and
+  `folder_id` on lists).
 - **Mermaid diagrams** — a second kind of diagram, written as text and drawn
   beside it (Mermaid): templates (flowchart, sequence, class, state, ER,
   Gantt, timeline, pie, mind map), errors said under the text; on a

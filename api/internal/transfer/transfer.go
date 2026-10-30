@@ -545,7 +545,7 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 		}
 		for _, x := range a.Folders {
 			f := x
-			f.ID, f.WorkspaceID, f.ParentID, f.CreatedBy = ref(x.ID), ws.ID, ref(x.ParentID), who(x.CreatedBy)
+			f.ID, f.WorkspaceID, f.ParentID, f.ListID, f.CreatedBy = ref(x.ID), ws.ID, ref(x.ParentID), ref(x.ListID), who(x.CreatedBy)
 			if f.Name = trim(strings.TrimSpace(f.Name), 200); f.Name == "" {
 				f.Name = "Folder"
 			}
@@ -594,7 +594,7 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 		}
 		for _, x := range a.Pages {
 			p := x
-			p.ID, p.WorkspaceID, p.ParentID = ref(x.ID), ws.ID, refp(x.ParentID)
+			p.ID, p.WorkspaceID, p.ParentID, p.FolderID = ref(x.ID), ws.ID, refp(x.ParentID), ref(x.FolderID)
 			p.Content = rewrite(p.Content)
 			p.ContentText = planner.DocText(p.Content)
 			p.CreatedBy, p.UpdatedBy, p.TrashedAt = who(x.CreatedBy), who(x.UpdatedBy), nil

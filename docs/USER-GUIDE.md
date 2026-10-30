@@ -1155,10 +1155,23 @@ handed to the editor inside your browser and saved only in Orbit.
 
 ## 17. Files and folders
 
-Sheets, diagrams and whiteboards live in **folders**, and folders go inside
-folders. A workspace has one set of folders for all three: **Sheets** shows
-its sheets in them, **Diagrams** its diagrams, **Whiteboards** its
-whiteboards, and **Files** (a module of its own) shows them all together.
+Sheets, diagrams, whiteboards and pages live in **folders**, and folders go
+inside folders. A workspace has one set of folders for all of them:
+**Sheets** shows its sheets in them, **Diagrams** its diagrams,
+**Whiteboards** its whiteboards, and **Files** (a module of its own) shows
+them all together. A folder's tile says what it holds of every kind
+("1 page · 2 sheets · 1 list"), whichever of them shows it; its `⋯` →
+**Open in Files** shows everything in it.
+
+- **Pages in folders.** A page's `⋯` → **File in a folder…** puts it in one
+  (its sub-pages stay under it in Pages); **New → New page** in Files makes
+  one in the folder shown. Pages not filed anywhere are only in Pages.
+- **A folder is a project** when it has a task list: its `⋯` → **Task
+  list…** picks one (or **New list** named after the folder). Inside the
+  folder, the list shows with its progress (*3 open · 5 done*) and buttons
+  to its **List** and **Board**; the list, in Tasks, shows its folder and
+  what's in it, a click away. One list per folder: picking a list another
+  folder has moves it here.
 
 - **Where you are** is the path at the top (click a part to go back up). A
   new sheet, diagram or whiteboard goes in the folder shown, and so do files

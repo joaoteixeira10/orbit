@@ -60,6 +60,7 @@ type Page struct {
 	Base
 	WorkspaceID string  `gorm:"size:36;not null;index" json:"workspace_id"`
 	ParentID    *string `gorm:"size:36;index" json:"parent_id"`
+	FolderID    string  `gorm:"size:36;not null;default:'';index" json:"folder_id"` // a folder it's filed in ("" none); its sub-pages go with it
 	Title       string  `gorm:"size:300" json:"title"`
 	Icon        string  `gorm:"size:64" json:"icon"`
 	Cover       string  `gorm:"size:64" json:"cover"` // a gradient key or #rrggbb; empty = none
@@ -374,14 +375,17 @@ type TaskBlock struct {
 
 // ---- Folders ----------------------------------------------------------------
 
-// Folder holds a workspace's sheets, diagrams and whiteboards (each says
-// which, FolderID); folders go inside folders (ParentID, "" at the top).
+// Folder holds a workspace's sheets, diagrams, whiteboards and pages (each
+// says which, FolderID); folders go inside folders (ParentID, "" at the
+// top). With a task list (ListID) it is a project: the list's tasks and the
+// folder's files together.
 type Folder struct {
 	Base
 	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
 	ParentID    string `gorm:"size:36;not null;default:'';index" json:"parent_id"`
 	Name        string `gorm:"size:200;not null" json:"name"`
 	Color       string `gorm:"size:9" json:"color,omitempty"`
+	ListID      string `gorm:"size:36;not null;default:'';index" json:"list_id"` // its task list ("" none): a folder and a list make a project; a list is in one folder at most
 	CreatedBy   string `gorm:"size:36" json:"created_by"`
 }
 

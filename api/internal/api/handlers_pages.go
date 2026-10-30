@@ -26,6 +26,7 @@ type pageSummary struct {
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
 	ParentID    *string    `json:"parent_id"`
+	FolderID    string     `json:"folder_id,omitempty"`
 	Title       string     `json:"title"`
 	Icon        string     `json:"icon"`
 	Rank        float64    `json:"rank"`
@@ -70,7 +71,7 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
 }
 
 // pageAccess loads a page and checks the caller's role in its workspace.
@@ -133,6 +134,7 @@ func (h *Handlers) listTrash(c *gin.Context) {
 
 type createPageRequest struct {
 	ParentID *string `json:"parent_id"`
+	FolderID string  `json:"folder_id"` // a folder to file it in
 	Title    string  `json:"title" binding:"max=300"`
 	Icon     string  `json:"icon" binding:"max=64"`
 	Content  string  `json:"content"`
@@ -228,6 +230,10 @@ func (h *Handlers) createPage(c *gin.Context) {
 	if !h.checkParent(c, ws.ID, req.ParentID) {
 		return
 	}
+	if !h.folderIn(ws.ID, req.FolderID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no such folder here"})
+		return
+	}
 	// Pages are Markdown; an old client's editor JSON is converted.
 	req.Content = planner.PageMarkdown(req.Content)
 	if err := planner.CheckDoc(req.Content); err != nil {
@@ -249,7 +255,7 @@ func (h *Handlers) createPage(c *gin.Context) {
 	uid := auth.UserID(c)
 	p := models.Page{
 		DB: dbJSON, Props: props,
-		WorkspaceID: ws.ID, ParentID: req.ParentID, Title: strings.TrimSpace(req.Title), Icon: req.Icon,
+		WorkspaceID: ws.ID, ParentID: req.ParentID, FolderID: req.FolderID, Title: strings.TrimSpace(req.Title), Icon: req.Icon,
 		Content: req.Content, ContentText: planner.DocText(req.Content),
 		Rank: h.siblingRank(h.db, ws.ID, req.ParentID, req.AfterID, ""), CreatedBy: uid, UpdatedBy: uid,
 	}
@@ -546,7 +552,7 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 	}
 	uid := auth.UserID(c)
 	cp := models.Page{
-		WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, Title: p.Title + " (copy)", Icon: p.Icon, Cover: p.Cover,
+		WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title + " (copy)", Icon: p.Icon, Cover: p.Cover,
 		Content: p.Content, ContentText: p.ContentText, CreatedBy: uid, UpdatedBy: uid, DB: p.DB, Props: p.Props,
 		Rank: h.siblingRank(h.db, p.WorkspaceID, p.ParentID, p.ID, ""),
 	}

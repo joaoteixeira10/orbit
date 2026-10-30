@@ -24,13 +24,18 @@ type listResponse struct {
 	models.TaskList
 	Columns   []planner.Column `json:"columns"`
 	OpenCount int64            `json:"open_count"`
+	DoneCount int64            `json:"done_count"`
+	FolderID  string           `json:"folder_id,omitempty"` // the folder it's the project of
 	Git       *gitLinkResponse `json:"git,omitempty"`
 }
 
 func (h *Handlers) toListResponse(c *gin.Context, l models.TaskList) listResponse {
-	var n int64
-	h.db.Model(&models.Task{}).Where("list_id = ? AND completed_at IS NULL AND parent_id IS NULL", l.ID).Count(&n)
-	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: n, Git: h.gitLinkOf(l.ID, auth.UserID(c))}
+	var open, done int64
+	h.db.Model(&models.Task{}).Where("list_id = ? AND completed_at IS NULL AND parent_id IS NULL", l.ID).Count(&open)
+	h.db.Model(&models.Task{}).Where("list_id = ? AND completed_at IS NOT NULL AND parent_id IS NULL", l.ID).Count(&done)
+	var f models.Folder
+	h.db.Select("id").Where("workspace_id = ? AND list_id = ?", l.WorkspaceID, l.ID).Limit(1).Find(&f)
+	return listResponse{TaskList: l, Columns: planner.DecodeColumns(l.Columns), OpenCount: open, DoneCount: done, FolderID: f.ID, Git: h.gitLinkOf(l.ID, auth.UserID(c))}
 }
 
 func (h *Handlers) listAccess(c *gin.Context, need string) (models.TaskList, bool) {
@@ -243,6 +248,9 @@ func (h *Handlers) deleteList(c *gin.Context) {
 			return err
 		}
 		if err := tx.Where("list_id = ?", l.ID).Delete(&models.GitLink{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&models.Folder{}).Where("workspace_id = ? AND list_id = ?", l.WorkspaceID, l.ID).UpdateColumn("list_id", "").Error; err != nil {
 			return err
 		}
 		return tx.Delete(&l).Error

@@ -200,6 +200,11 @@ export const edEn = {
       mermaid: { title: 'Mermaid diagram', desc: 'A diagram written as text: flowchart, sequence, Gantt…' },
       board: { title: 'Whiteboard', desc: 'A new whiteboard to sketch on' },
       existing: { title: 'Existing sheet, diagram or whiteboard', desc: 'Show one there is in this page' },
+      toggle: { title: 'Toggle section', desc: 'A title that folds what’s under it' },
+      columns2: { title: '2 columns', desc: 'Two blocks side by side' },
+      columns3: { title: '3 columns', desc: 'Three blocks side by side' },
+      pagetree: { title: 'Sub-pages list', desc: 'The pages inside this one, kept up to date' },
+      status: { title: 'Status', desc: 'A coloured badge: To do, Done, Late…' },
     },
     tb: {
       turnInto: 'Turn into',
@@ -414,6 +419,11 @@ export const edPt: typeof edEn = {
       mermaid: { title: 'Diagrama Mermaid', desc: 'Um diagrama escrito como texto: fluxograma, sequência, Gantt…' },
       board: { title: 'Quadro branco', desc: 'Um novo quadro para esboçar' },
       existing: { title: 'Folha, diagrama ou quadro existente', desc: 'Mostrar nesta página um que já existe' },
+      toggle: { title: 'Secção dobrável', desc: 'Um título que esconde o que está por baixo' },
+      columns2: { title: '2 colunas', desc: 'Dois blocos lado a lado' },
+      columns3: { title: '3 colunas', desc: 'Três blocos lado a lado' },
+      pagetree: { title: 'Lista de subpáginas', desc: 'As páginas dentro desta, sempre atualizadas' },
+      status: { title: 'Estado', desc: 'Uma etiqueta de cor: Por fazer, Feito, Atrasado…' },
     },
     tb: {
       turnInto: 'Transformar em',

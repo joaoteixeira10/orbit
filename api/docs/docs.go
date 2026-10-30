@@ -13143,6 +13143,10 @@ const docTemplate = `{
                     "description": "a folder it's filed in (\"\" none); its sub-pages go with it",
                     "type": "string"
                 },
+                "glossary": {
+                    "description": "Glossary: its terms (\"**Term** — what it means\") are explained where\nthe workspace's other pages use them.",
+                    "type": "boolean"
+                },
                 "icon": {
                     "type": "string"
                 },
@@ -13198,6 +13202,10 @@ const docTemplate = `{
                 },
                 "folder_id": {
                     "type": "string"
+                },
+                "glossary": {
+                    "description": "its terms are explained in the other pages",
+                    "type": "boolean"
                 },
                 "icon": {
                     "type": "string"
@@ -14211,6 +14219,10 @@ const docTemplate = `{
                 "db": {
                     "description": "DB: the whole database (null: no longer one). Props: a patch of the\nrow's values (a null value removes one).",
                     "type": "object"
+                },
+                "glossary": {
+                    "description": "Glossary: its terms are explained where other pages use them.",
+                    "type": "boolean"
                 },
                 "icon": {
                     "type": "string",

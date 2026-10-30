@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { filesApi, tree, type Folder } from '@/lib/filesApi'
 import Popover from './ui/Popover.vue'
@@ -115,6 +115,14 @@ const toggleDatabase = () =>
     const { newDatabase } = await import('@/lib/database')
     await pages.saveDB(props.pageId, page.value?.db ? null : newDatabase({ status: t('db.status'), todo: t('db.todo'), doing: t('db.doing'), done: t('db.doneOpt'), table: t('db.table') }))
   })
+// A glossary's terms are explained where the workspace's other pages use them.
+const toggleGlossary = () =>
+  run(async () => {
+    const on = !page.value?.glossary
+    await pagesApi.update(props.pageId, { glossary: on })
+    pages.patch({ id: props.pageId, glossary: on })
+    toast.success(on ? t('glossary.on') : t('glossary.off'))
+  })
 // A template is offered when a new page starts empty.
 const toggleTemplate = () =>
   run(async () => {
@@ -186,6 +194,9 @@ const trash = () =>
       <button v-if="canFile" class="menu-item" data-testid="page-file-in" @click="startFiling"><FolderIcon class="h-4 w-4 text-text-2" />{{ t('project.fileIn') }}</button>
       <button class="menu-item" data-testid="page-db-toggle" @click="toggleDatabase">
         <Table2 class="h-4 w-4 text-text-2" />{{ page?.db ? t('db.stop') : t('db.turnInto') }}
+      </button>
+      <button class="menu-item" data-testid="page-glossary-toggle" @click="toggleGlossary">
+        <BookA class="h-4 w-4 text-text-2" />{{ page?.glossary ? t('glossary.stop') : t('glossary.use') }}
       </button>
       <button class="menu-item" data-testid="page-template-toggle" @click="toggleTemplate">
         <LayoutTemplate class="h-4 w-4 text-text-2" />{{ page?.template ? t('pages.templateStop') : t('pages.templateUse') }}

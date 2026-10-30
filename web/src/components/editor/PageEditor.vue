@@ -13,6 +13,7 @@ import EmbedPicker from '@/components/embeds/EmbedPicker.vue'
 import { EMBED_MODULE, createEmbed, openEmbed, type EmbedKind, type EmbedNew } from '@/lib/embeds'
 import { FileUpload } from './upload'
 import { downloadUpload, isUploadSrc, uploadFile } from '@/lib/uploads'
+import { cleanPastedHTML } from '@/lib/paste'
 import { useToastStore } from '@/stores/toast'
 import SlashMenu from './SlashMenu.vue'
 import BubbleToolbar from './BubbleToolbar.vue'
@@ -126,6 +127,8 @@ const editor = useEditor({
   ),
   editorProps: {
     attributes: { class: 'orbit-prose', spellcheck: 'true' },
+    // From Google Docs, Word, Excel: their formatting, without their wrappers.
+    transformPastedHTML: cleanPastedHTML,
     handleClick: (_view, _pos, event) => {
       if (!(event.metaKey || event.ctrlKey)) return false
       const a = (event.target as HTMLElement | null)?.closest('a')

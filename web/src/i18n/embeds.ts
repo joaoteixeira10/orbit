@@ -228,6 +228,16 @@ export const embedsEn = {
     askBody: '“{title}” changed after this (someone wrote in it, or it moved again). Undo anyway?',
     undoAnyway: 'Undo anyway',
   },
+  blocks: {
+    noSubpages: 'No pages inside this one yet.',
+    statusText: 'What it says',
+  },
+  glossary: {
+    use: 'Use as a glossary',
+    stop: 'Stop using as a glossary',
+    on: 'Its terms (“**Term** — what it means”) are explained in the other pages now',
+    off: 'No longer a glossary',
+  },
   embed: {
     view: 'View',
     edit: 'Edit',
@@ -468,6 +478,16 @@ export const embedsPt: typeof embedsEn = {
     askTitle: 'Mudou entretanto',
     askBody: '“{title}” mudou depois disto (alguém escreveu nela, ou foi movida de novo). Desfazer mesmo assim?',
     undoAnyway: 'Desfazer mesmo assim',
+  },
+  blocks: {
+    noSubpages: 'Ainda sem páginas dentro desta.',
+    statusText: 'O que diz',
+  },
+  glossary: {
+    use: 'Usar como glossário',
+    stop: 'Deixar de usar como glossário',
+    on: 'Os seus termos (“**Termo** — o que significa”) são agora explicados nas outras páginas',
+    off: 'Já não é um glossário',
   },
   embed: {
     view: 'Ver',

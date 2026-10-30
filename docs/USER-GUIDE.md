@@ -465,6 +465,20 @@ read.
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
 
+**More blocks.** Type **/** for: **Toggle section** (a title that folds
+what's under it when reading), **2 columns** / **3 columns** (side by side;
+stacked on a phone), **Sub-pages list** (the pages inside this one, kept
+up to date) and **Status** (a coloured badge — click it to change its words
+and colour). In the page's Markdown they're written the way GitHub shows
+them: `<details>`, `<div data-columns>`, `::pagetree`, `<span
+data-status>`. Pasting from Google Docs, Word or Excel keeps bold, italics,
+links, lists and tables.
+
+**Glossary.** `⋯` → **Use as a glossary** on a page whose lines say
+"**Term** — what it means" (or "**Term**: …", or a heading with a paragraph
+under it): wherever the workspace's other pages use one of its terms, it's
+underlined with dots, and pointing at it explains it.
+
 **Recent changes (undo).** In Pages, **Recent changes** lists what you did
 to pages in the last two weeks — made, moved, renamed, copied, put in the
 trash — and **Undo** puts each back: a page made or copied goes to the

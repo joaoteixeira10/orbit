@@ -13,6 +13,10 @@ merge, not at release time.
 
 ### Added
 
+- **More page blocks** — toggle sections, 2–5 columns, a live sub-pages list
+  (`::pagetree`), coloured status badges; glossary pages whose terms are
+  explained (on hover) where other pages use them; pastes from Google Docs,
+  Word and Excel keep their formatting without the wrappers.
 - **Undo for page structure** — "Recent changes" in Pages: your own pages
   made, moved, renamed, copied or trashed in the last two weeks, each undone
   (asking first when the page changed since; `GET /me/page-changes`,

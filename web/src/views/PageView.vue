@@ -26,6 +26,7 @@ import PageHistory from '@/components/pages/PageHistory.vue'
 import ShareSheet from '@/components/pages/ShareSheet.vue'
 import AccessSheet from '@/components/pages/AccessSheet.vue'
 import OutlinePanel from '@/components/pages/OutlinePanel.vue'
+import { useGlossary } from '@/components/pages/useGlossary'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
@@ -533,6 +534,9 @@ const status = computed(() => {
   return t('editor.editedBy', { when, name: memberName(by) })
 })
 
+// The workspace's glossary terms, explained where this page uses them.
+const glossary = useGlossary(wsId, pageId)
+
 // ---- Outline (remembered) ----
 const outlineOpen = ref(localStorage.getItem('orbit_outline') === '1')
 watch(outlineOpen, (v) => {
@@ -869,7 +873,7 @@ onUnmounted(() => {
             @change="onEditorChange"
             @invalid="onInvalid"
           />
-          <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" math @toggle="onToggle" @edit="startEdit()" />
+          <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" math :terms="glossary" @toggle="onToggle" @edit="startEdit()" />
           <p v-else-if="!isDb" class="empty-read">
             {{ t('editor.emptyRead') }}
             <button v-if="editable" class="btn-plain" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</button>

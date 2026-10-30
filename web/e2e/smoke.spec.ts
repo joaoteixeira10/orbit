@@ -2610,3 +2610,82 @@ test('recent changes: moving and trashing pages undone from the list', async ({ 
   expect(pages.find((p) => p.id === a.id)).toBeTruthy()
   expect(pages.find((p) => p.id === b.id)?.parent_id).toBeNull()
 })
+
+test('page pieces: a toggle section, columns, the sub-pages list, status badges, glossary terms, and a Google Docs paste', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Ops', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+  const base = `/api/v1/workspaces/${ws.id}`
+  const gl = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Glossary', content: '- **SLA**: what we promise to answer within' } })).json()
+  await request.put(`/api/v1/pages/${gl.id}`, { headers: H, data: { glossary: true } })
+  const content = [
+    'Our SLA is short. <span data-status="green">Live</span>',
+    '',
+    '<details>',
+    '<summary>Escalation</summary>',
+    '',
+    'Call the lead.',
+    '',
+    '</details>',
+    '',
+    '<div data-columns="2">',
+    '<div data-column>',
+    '',
+    'Left.',
+    '',
+    '</div>',
+    '<div data-column>',
+    '',
+    'Right.',
+    '',
+    '</div>',
+    '</div>',
+    '',
+    '::pagetree',
+  ].join('\n')
+  const pg = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Runbook', content } })).json()
+  await request.post(`${base}/pages`, { headers: H, data: { title: 'Night shift', parent_id: pg.id } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  const view = page.locator('.md-view')
+  await expect(view.locator('span[data-status="green"]')).toHaveText('Live')
+  await expect(view.locator('details summary')).toHaveText('Escalation')
+  await expect(view.locator('details')).not.toHaveAttribute('open', '')
+  await expect(view.locator('[data-columns="2"] > [data-column]')).toHaveCount(2)
+  await expect(view.getByTestId('pagetree')).toContainText('Night shift')
+  const term = view.locator('.md-term', { hasText: 'SLA' })
+  await term.hover()
+  await expect(page.locator('.md-term-card')).toContainText('what we promise to answer within')
+
+  // The editor keeps them all, and "/" adds more.
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.getByRole('tab', { name: 'Visual' }).click()
+  await expect(page.locator('.ProseMirror .details-block')).toBeVisible()
+  await expect(page.locator('.ProseMirror .columns-block > .column')).toHaveCount(2)
+  await page.locator('.ProseMirror p', { hasText: 'Our SLA is short' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.type(' ')
+  await page.keyboard.type('/status')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.ProseMirror').getByTestId('status-badge')).toHaveCount(2)
+  // A paste from Google Docs: its bold wrapper doesn't make everything bold.
+  await page.locator('.ProseMirror p', { hasText: 'Left.' }).click()
+  await page.keyboard.press('End')
+  await page.locator('.ProseMirror').evaluate((el) => {
+    const dt = new DataTransfer()
+    dt.setData('text/html', '<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-1"><span>plain words</span></b>')
+    dt.setData('text/plain', 'plain words')
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  })
+  await expect(page.locator('.ProseMirror')).toContainText('plain words')
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect.poll(async () => (await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content).toContain('<span data-status="gray">To do</span>')
+  const md = (await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content as string
+  expect(md).toContain('<details>')
+  expect(md).toContain('<div data-columns="2">')
+  expect(md).toContain('::pagetree')
+  expect(md).toContain('plain words')
+  expect(md).not.toContain('**plain words**')
+})

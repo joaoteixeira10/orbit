@@ -4,7 +4,7 @@ import { PluginKey } from '@tiptap/pm/state'
 import Suggestion from '@tiptap/suggestion'
 import {
   Type, Heading1, Heading2, Heading3, ListTodo, List, ListOrdered, Quote, SquareCode, Minus, Table, MessageSquareQuote, Paperclip,
-  Sheet, Workflow, GitFork, Brush, FileSymlink,
+  Sheet, Workflow, GitFork, Brush, FileSymlink, ChevronsDownUp, Columns2, Columns3, ListTree, Tag,
 } from 'lucide-vue-next'
 import type { EmbedNew } from '@/lib/embeds'
 
@@ -62,6 +62,11 @@ export function slashItems(t: T, docs?: SlashDocs): SlashItem[] {
     { key: 'divider', ...b('divider'), icon: Minus, aliases: ['divider', 'hr', 'line', 'separator', '---'], run: (e, r) => chain(e, r).setHorizontalRule().run() },
     { key: 'table', ...b('table'), icon: Table, aliases: ['table', 'grid'], run: (e, r) => chain(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
     { key: 'callout', ...b('callout'), icon: MessageSquareQuote, aliases: ['callout', 'note', 'info', 'tip'], run: (e, r) => chain(e, r).setCallout().run() },
+    { key: 'toggle', ...b('toggle'), icon: ChevronsDownUp, aliases: ['toggle', 'collapse', 'details', 'fold', 'section'], run: (e, r) => chain(e, r).insertDetails().run() },
+    { key: 'columns2', ...b('columns2'), icon: Columns2, aliases: ['columns', 'two', 'layout', 'side'], run: (e, r) => chain(e, r).insertColumns(2).run() },
+    { key: 'columns3', ...b('columns3'), icon: Columns3, aliases: ['columns', 'three', 'layout'], run: (e, r) => chain(e, r).insertColumns(3).run() },
+    { key: 'pagetree', ...b('pagetree'), icon: ListTree, aliases: ['pagetree', 'subpages', 'children', 'contents'], run: (e, r) => chain(e, r).insertPageTree().run() },
+    { key: 'status', ...b('status'), icon: Tag, aliases: ['status', 'badge', 'label', 'tag'], run: (e, r) => chain(e, r).insertStatus().run() },
     {
       key: 'file', ...b('file'), icon: Paperclip, aliases: ['image', 'picture', 'photo', 'file', 'attachment', 'upload'],
       run: (e, r) => {

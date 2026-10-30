@@ -93,6 +93,46 @@ describe('page Markdown', () => {
     }
   })
 
+  it('keeps collapsible sections, columns, the sub-pages list and status badges', () => {
+    const md = [
+      '<details>',
+      '<summary>More **about** it</summary>',
+      '',
+      'Hidden text.',
+      '',
+      '- one',
+      '- two',
+      '',
+      '</details>',
+      '',
+      '<div data-columns="2">',
+      '<div data-column>',
+      '',
+      'Left side.',
+      '',
+      '</div>',
+      '<div data-column>',
+      '',
+      '## Right',
+      '',
+      'Right side.',
+      '',
+      '</div>',
+      '</div>',
+      '',
+      '::pagetree',
+      '',
+      'Now <span data-status="green">Done</span> and <span data-status="red">Late</span>.',
+    ].join('\n')
+    const ed = load(md)
+    const types = (ed.getJSON().content ?? []).map((n: any) => n.type)
+    const json = JSON.stringify(ed.getJSON())
+    ed.destroy()
+    expect(types).toEqual(['details', 'columns', 'pageTree', 'paragraph'])
+    expect(json).toContain('"color":"green"')
+    expect(roundTrip(md)).toBe(md)
+  })
+
   it('is stable: a second round trip changes nothing', () => {
     const md = '| A | B |\n| --- | --- |\n| 1 | 2 |\n\nText *with* `marks`, <mark>hl</mark>.\n\n- [ ] a\n  - [x] b'
     const once = roundTrip(md)

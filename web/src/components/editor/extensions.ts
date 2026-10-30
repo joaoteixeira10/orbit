@@ -19,6 +19,7 @@ import { Callout } from './callout'
 import { CodeBlock } from './codeblock'
 import { RawBlock, RawInline, FootnoteDef } from './raw'
 import { DocEmbed } from './embed'
+import { pageBlocks } from './blocks'
 import { ALERTS, alertOf, type AlertType } from './alerts'
 
 
@@ -138,6 +139,7 @@ export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, 
     MarkdownCallout,
     PageImage.configure({ inline: true }),
     DocEmbed,
+    ...pageBlocks,
     RawBlock,
     FootnoteDef,
     RawInline,

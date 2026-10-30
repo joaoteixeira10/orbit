@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, getCurrentInstance, h, render } from 'vue'
 import PageEmbed from '@/components/embeds/PageEmbed.vue'
+import SubpageList from '@/components/pages/SubpageList.vue'
 import { embedOf } from '@/lib/embeds'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -9,13 +10,15 @@ import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib
 import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
 import { evaluate } from '@/lib/mathnotes'
 import { guestApi } from '@/lib/shareApi'
+import { markTerms, type Term } from '@/lib/glossary'
 
 // A page as it reads: its Markdown rendered like a README on GitHub, with
 // the app's type. Task boxes can be ticked without editing (when allowed);
 // a double click asks to edit. Code blocks get a copy button, as on GitHub.
 // guest: a guest link's secret — pictures, files and what's shown in place
 // load through it, and a link to a page asks the guest view (page) to go.
-const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string }>()
+// terms: the workspace's glossary, marked where used (pointing explains them).
+const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string; terms?: Term[] }>()
 const emit = defineEmits<{ toggle: [index: number]; edit: []; page: [id: string] }>()
 const { t } = useI18n()
 const router = useRouter()
@@ -126,12 +129,62 @@ function addSheets() {
     render(vnode, box)
     embeds.push(box)
   }
+  // ::pagetree alone in a paragraph: the page's sub-pages, live (not for guests).
+  for (const p of root.value?.querySelectorAll<HTMLElement>('p') ?? []) {
+    if (p.textContent?.trim() !== '::pagetree' || props.guest) continue
+    const box = document.createElement('div')
+    p.replaceWith(box)
+    const vnode = h(SubpageList)
+    vnode.appContext = app
+    render(vnode, box)
+    embeds.push(box)
+  }
 }
 onBeforeUnmount(() => {
   for (const el of embeds.splice(0)) render(null, el)
 })
 
+// ---- Glossary terms: marked, and a card explaining the one pointed at ----
+let card: HTMLElement | null = null
+function hideCard() {
+  card?.remove()
+  card = null
+}
+function showCard(span: HTMLElement) {
+  const term = props.terms?.[Number(span.dataset.term)]
+  if (!term) return
+  hideCard()
+  card = document.createElement('div')
+  card.className = 'md-term-card'
+  card.setAttribute('role', 'tooltip')
+  const b = document.createElement('div')
+  b.className = 'md-term-name'
+  b.textContent = term.term
+  const d = document.createElement('div')
+  d.textContent = term.definition
+  const from = document.createElement('div')
+  from.className = 'md-term-from'
+  from.textContent = term.pageTitle
+  card.append(b, d, from)
+  document.body.append(card)
+  const r = span.getBoundingClientRect()
+  card.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 300))}px`
+  card.style.top = `${r.bottom + 6}px`
+}
+function onOver(e: Event) {
+  const span = (e.target as HTMLElement).closest?.('.md-term') as HTMLElement | null
+  if (span) showCard(span)
+  else hideCard()
+}
+onBeforeUnmount(hideCard)
+// Terms that come later are marked in what's shown (nothing else redrawn).
+function addTerms() {
+  if (props.terms?.length && root.value && !root.value.querySelector('.md-term')) markTerms(root.value, props.terms)
+}
+watch(() => props.terms, () => nextTick(addTerms))
+
 function afterRender() {
+  addTerms()
   addSheets()
   addCopyButtons()
   showImages()
@@ -212,6 +265,9 @@ function onDblClick(e: MouseEvent) {
     class="md-view"
     :class="{ editable }"
     @click="onClick"
+    @mouseover="onOver"
+    @focusin="onOver"
+    @mouseleave="hideCard"
     @dblclick="onDblClick"
     @keydown.enter.space="(e: KeyboardEvent) => { const ph = (e.target as HTMLElement).closest('.md-remote-img') as HTMLElement | null; if (ph) { e.preventDefault(); revealFrom(ph) } }"
     v-html="html"

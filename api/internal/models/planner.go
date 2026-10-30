@@ -83,7 +83,10 @@ type Page struct {
 	Props string `gorm:"type:text" json:"props,omitempty"`
 	// Restricted: only AllowedUsers (JSON []user id) see it and what's
 	// under it (api/page_access.go).
-	Restricted   bool   `gorm:"not null;default:false;index" json:"restricted"`
+	Restricted bool `gorm:"not null;default:false;index" json:"restricted"`
+	// Glossary: its terms ("**Term** — what it means") are explained where
+	// the workspace's other pages use them.
+	Glossary     bool   `gorm:"not null;default:false" json:"glossary"`
 	AllowedUsers string `gorm:"type:text" json:"-"`
 }
 

@@ -35,6 +35,7 @@ type pageSummary struct {
 	Favorite    bool       `json:"favorite"`
 	Template    bool       `json:"template"`
 	Restricted  bool       `json:"restricted,omitempty"` // only some people see it (and what's under it)
+	Glossary    bool       `json:"glossary,omitempty"`   // its terms are explained in the other pages
 	// A database's properties and views; a row's values (JSON objects).
 	DB    json.RawMessage `json:"db,omitempty" swaggertype:"object"`
 	Props json.RawMessage `json:"props,omitempty" swaggertype:"object"`
@@ -73,7 +74,7 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, Glossary: p.Glossary, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
 }
 
 // pageAccess loads a page and checks the caller's role in its workspace.
@@ -319,7 +320,9 @@ type updatePageRequest struct {
 	Icon  *string `json:"icon" binding:"omitempty,max=64"`
 	Cover *string `json:"cover" binding:"omitempty,max=64"`
 	// Template offers the page as a template for new pages.
-	Template *bool   `json:"template"`
+	Template *bool `json:"template"`
+	// Glossary: its terms are explained where other pages use them.
+	Glossary *bool   `json:"glossary"`
 	Content  *string `json:"content"`
 	// DB: the whole database (null: no longer one). Props: a patch of the
 	// row's values (a null value removes one).
@@ -371,6 +374,9 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	}
 	if req.Template != nil {
 		up["template"] = *req.Template
+	}
+	if req.Glossary != nil {
+		up["glossary"] = *req.Glossary
 	}
 	if len(req.DB) > 0 {
 		d, err := planner.CleanDatabase(string(req.DB))

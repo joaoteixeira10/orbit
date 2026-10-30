@@ -2016,6 +2016,11 @@ definitions:
       folder_id:
         description: a folder it's filed in ("" none); its sub-pages go with it
         type: string
+      glossary:
+        description: |-
+          Glossary: its terms ("**Term** — what it means") are explained where
+          the workspace's other pages use them.
+        type: boolean
       icon:
         type: string
       id:
@@ -2058,6 +2063,9 @@ definitions:
         type: boolean
       folder_id:
         type: string
+      glossary:
+        description: its terms are explained in the other pages
+        type: boolean
       icon:
         type: string
       id:
@@ -2776,6 +2784,9 @@ definitions:
           DB: the whole database (null: no longer one). Props: a patch of the
           row's values (a null value removes one).
         type: object
+      glossary:
+        description: 'Glossary: its terms are explained where other pages use them.'
+        type: boolean
       icon:
         maxLength: 64
         type: string

@@ -18,12 +18,14 @@ merge, not at release time.
   sets how many each page keeps (Owner → Page history, 5–1000, default 50).
 - **Download as PDF** makes the file itself (no print dialog), with the
   sheets' cells and the diagrams' and whiteboards' pictures drawn in.
-- **A side panel beside pages, as Folio's**: the local graph (depth 1–3,
-  small dots), the outline and the notes, each folding; open on wide
-  windows unless closed.
-- **Calendar**: events are outlined in their colour with a gap between one
-  and the next, so where each starts and ends shows; hour and half-hour
-  lines; the month title no longer gets cut.
+- **A side panel on every screen, as Folio's**: the graph of what's open
+  (a page, sheet, diagram, whiteboard, task list or folder; else the
+  workspace's), depth 1–3, small dots; on pages also the outline and the
+  notes; each part folds; opens by itself at 1440 px+, a tab reopens it.
+- **Calendar**: framed like draw.io's editor (a bordered box, a gray band
+  for the days), the side panes boxed too; events outlined in their colour
+  with a gap between one and the next; hour and half-hour lines; the month
+  title no longer gets cut.
 
 ### Added
 

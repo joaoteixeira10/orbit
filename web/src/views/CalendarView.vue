@@ -751,6 +751,30 @@ const views: CalView[] = ['day', 'week', 'month']
 .cal-fill {
   height: calc(100dvh - 220px);
   min-height: 360px;
+  /* Framed, as draw.io's editor in Diagrams: where the calendar ends and the
+     panes beside it start shows. */
+  overflow: hidden;
+  border: 1px solid var(--border-2, var(--border));
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+/* Its header: a gray band (draw.io's toolbar). */
+.cal-fill :deep(.tg-head),
+.cal-fill :deep(.mg-names) {
+  padding-top: 8px;
+  background: var(--fill-2);
+  border-bottom: 1px solid var(--border);
+}
+.cal-fill :deep(.tg-allday) {
+  background: color-mix(in srgb, var(--fill-2) 50%, var(--bg));
+}
+/* The panes beside it: boxes of their own. */
+.side:not(.floating) {
+  padding: 12px;
+  border: 1px solid var(--border-2, var(--border));
+  border-radius: 12px;
+  background: var(--fill-2);
 }
 .seg.nav button {
   display: inline-flex;

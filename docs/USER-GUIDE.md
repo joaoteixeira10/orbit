@@ -486,13 +486,16 @@ trash, a move or a rename goes back, a page from the trash comes out. If
 the page changed since (someone wrote in it, it moved again), it asks
 first.
 
-**Side panel.** Beside a page (on a wide window; the list button at the top
-right shows or hides it, and it stays as you leave it): its **graph** —
-what it links to and what links to it, 1, 2 or 3 links deep, ⤢ for the
-whole graph; its **outline** — its headings, click one to go there; and
-its **notes** — its callouts and checklist items in one list (click to go
-to one; tick a box right there when you can change the page). Each part
-folds.
+**Side panel.** On every screen, on the right (as Folio's): the graph of
+what's open — a page, a sheet, a diagram, a whiteboard, a task list, a
+folder — 1, 2 or 3 links deep, ⤢ for the whole graph (in a workspace with
+nothing open, the workspace's graph); on a page also its **outline** (its
+headings, click one to go there) and its **notes** (its callouts and
+checklist items; tick a box right there when you can change the page).
+Each part folds. It opens by itself on a wide window (1440 px or more);
+the tab at the right edge (or the list button on a page) opens it, ✕
+closes it, and it stays as you leave it. On a narrower window it slides
+over the page.
 
 **Who can see a page.** A page's `⋯` → **Who can see it…**: **Everyone in
 the workspace**, or **Only some people** (you, and whom you tick). It

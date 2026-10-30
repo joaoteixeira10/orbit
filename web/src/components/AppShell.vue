@@ -5,7 +5,10 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
   ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
+  PanelRight,
 } from 'lucide-vue-next'
+import SideRail from '@/components/SideRail.vue'
+import { rail, setRailOpen } from '@/lib/rail'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
@@ -226,6 +229,11 @@ const narrowMq = window.matchMedia('(max-width: 1023px)')
 const phoneMq = window.matchMedia('(max-width: 639px)')
 const narrow = ref(narrowMq.matches)
 const phone = ref(phoneMq.matches)
+// The side panel is a column beside the content on a wide window; on a
+// narrower one it slides over it.
+const railMq = window.matchMedia('(min-width: 1280px)')
+const railWide = ref(railMq.matches)
+railMq.addEventListener('change', (e) => (railWide.value = e.matches))
 const drawerOpen = ref(false)
 // Desktop: the sidebar can be hidden (⌘\ or the toolbar button), like macOS.
 const sideHidden = ref(localStorage.getItem('orbit_side_hidden') === '1')
@@ -311,7 +319,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 </script>
 
 <template>
-  <div class="app" :class="{ 'side-hidden': sideHidden && !narrow }">
+  <div class="app" :class="{ 'side-hidden': sideHidden && !narrow, 'rail-on': rail.open && railWide }">
     <div v-if="drawerOpen" class="side-backdrop" aria-hidden="true" @click="drawerOpen = false" />
     <aside id="sidebar" class="side material" :class="{ open: drawerOpen }" :inert="(narrow && !drawerOpen) || undefined">
       <div class="side-top">
@@ -530,6 +538,14 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       </nav>
     </main>
 
+    <!-- The side panel (as Folio's): a column, or a drawer on narrow windows. -->
+    <aside v-if="rail.open && railWide" class="rail-col" :aria-label="t('outline.title')"><SideRail /></aside>
+    <template v-else-if="rail.open">
+      <div class="rail-scrim" @click="setRailOpen(false)" />
+      <aside class="rail-drawer material" :aria-label="t('outline.title')"><SideRail /></aside>
+    </template>
+    <button v-if="!rail.open && !phone" type="button" class="rail-tab" :title="t('outline.title')" :aria-label="t('outline.title')" data-testid="rail-open" @click="setRailOpen(true)"><PanelRight class="h-4 w-4" /></button>
+
     <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
     <QuickNoteSheet :open="quickNoteOpen" @close="quickNoteOpen = false" />
     <NewWorkspaceSheet :open="newWsOpen" @close="newWsOpen = false" />
@@ -559,6 +575,53 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 }
 .app.side-hidden {
   grid-template-columns: 0 minmax(0, 1fr);
+}
+.app.rail-on {
+  grid-template-columns: var(--side-w) minmax(0, 1fr) 290px;
+}
+.app.side-hidden.rail-on {
+  grid-template-columns: 0 minmax(0, 1fr) 290px;
+}
+.rail-col {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  border-left: 0.5px solid var(--border);
+  background: var(--bg);
+}
+.rail-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  width: min(320px, 90vw);
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+}
+.rail-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background: var(--backdrop);
+}
+.rail-tab {
+  position: fixed;
+  top: 76px;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  width: 22px;
+  height: 40px;
+  place-items: center;
+  border-radius: 8px 0 0 8px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border), 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: var(--text-2);
+}
+.rail-tab:hover {
+  color: var(--text);
 }
 .app.side-hidden .side {
   visibility: hidden;

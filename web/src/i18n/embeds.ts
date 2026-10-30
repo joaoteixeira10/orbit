@@ -215,6 +215,7 @@ export const embedsEn = {
     empty: 'No headings, callouts or to-dos in this page yet.',
     noHeadings: 'No headings yet.',
     noNotes: 'No callouts or to-dos yet.',
+    openSomething: 'Open a page, a sheet, a diagram or a list in a workspace to see how it connects.',
   },
   changes: {
     title: 'Recent changes',
@@ -473,6 +474,7 @@ export const embedsPt: typeof embedsEn = {
     empty: 'Ainda sem títulos, destaques ou tarefas nesta página.',
     noHeadings: 'Ainda sem títulos.',
     noNotes: 'Ainda sem destaques ou tarefas.',
+    openSomething: 'Abra uma página, uma folha, um diagrama ou uma lista num espaço para ver as suas ligações.',
   },
   changes: {
     title: 'Alterações recentes',

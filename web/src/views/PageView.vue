@@ -24,7 +24,7 @@ import MarkdownView from '@/components/editor/MarkdownView.vue'
 import PageHistory from '@/components/pages/PageHistory.vue'
 import ShareSheet from '@/components/pages/ShareSheet.vue'
 import AccessSheet from '@/components/pages/AccessSheet.vue'
-import OutlinePanel from '@/components/pages/OutlinePanel.vue'
+import { rail, setRailOpen } from '@/lib/rail'
 import { useGlossary } from '@/components/pages/useGlossary'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
@@ -536,32 +536,29 @@ const status = computed(() => {
 // The workspace's glossary terms, explained where this page uses them.
 const glossary = useGlossary(wsId, pageId)
 
-// ---- Outline (remembered) ----
-// As Folio's side panel: open on a wide window unless closed before; on a
-// narrow one only when asked for (it would cover the page).
-const outlineSaved = localStorage.getItem('orbit_outline')
-const outlineOpen = ref(outlineSaved === '1' || (outlineSaved === null && window.matchMedia('(min-width: 1280px)').matches))
-watch(outlineOpen, (v) => {
-  try {
-    localStorage.setItem('orbit_outline', v ? '1' : '0')
-  } catch {
-    /* private mode */
-  }
-})
+// ---- The side panel: this page's outline and notes go in it ----
 const contentEl = ref<HTMLElement | null>(null)
-// The text as it is now: while editing, the editor's, read every moment the
-// panel is open.
-const outlineText = computed(() => draft.value)
+// While editing, the editor's text is read every moment the panel is open.
 let outlineTimer: ReturnType<typeof setInterval> | undefined
 watch(
-  () => outlineOpen.value && editing.value,
+  () => rail.open && editing.value,
   (on) => {
     clearInterval(outlineTimer)
     if (on) outlineTimer = setInterval(syncDraft, 1500)
   },
   { immediate: true },
 )
-onUnmounted(() => clearInterval(outlineTimer))
+watch(
+  [draft, contentEl, () => editable.value && !editing.value],
+  () => {
+    rail.page = { content: draft.value, root: contentEl.value, canTick: editable.value && !editing.value, toggle: onToggle }
+  },
+  { immediate: true },
+)
+onUnmounted(() => {
+  clearInterval(outlineTimer)
+  rail.page = null
+})
 
 // ---- Who can see it (?access=1) ----
 const accessOpen = computed(() => route.query.access === '1')
@@ -702,7 +699,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-view" :class="{ 'with-outline': outlineOpen }">
+  <div class="page-view">
     <!-- Bar: breadcrumbs, status, favourite, actions -->
     <div class="page-bar px-4 sm:px-8">
       <nav class="crumbs" :aria-label="t('editor.breadcrumbs')">
@@ -743,7 +740,7 @@ onUnmounted(() => {
           </template>
           <button v-else class="btn btn-sm ml-2" :title="t('editor.edit') + ' (E)'" @click="startEdit()"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</button>
         </template>
-        <button type="button" class="icon-btn ml-1" :class="{ 'text-accent': outlineOpen }" :title="t('outline.title')" :aria-label="t('outline.title')" :aria-pressed="outlineOpen" data-testid="outline-toggle" @click="outlineOpen = !outlineOpen">
+        <button type="button" class="icon-btn ml-1" :class="{ 'text-accent': rail.open }" :title="t('outline.title')" :aria-label="t('outline.title')" :aria-pressed="rail.open" data-testid="outline-toggle" @click="setRailOpen(!rail.open)">
           <ListTree class="h-[18px] w-[18px]" />
         </button>
         <button
@@ -914,7 +911,6 @@ onUnmounted(() => {
     </template>
 
     <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
-    <OutlinePanel v-if="page" :open="outlineOpen" :content="outlineText" :root="contentEl" :can-tick="editable && !editing" :ws="wsId" :page-id="page.id" @close="outlineOpen = false" @toggle="onToggle" />
     <AccessSheet v-if="page && editable" :open="accessOpen" :page="page" :ws="wsId" @close="closeAccess" @changed="accessChanged" />
     <ShareSheet v-if="page" :open="shareOpen" :page-id="page.id" :editable="editable" @close="closeShare" />
     <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
@@ -924,14 +920,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-@media (min-width: 1280px) {
-  /* The outline at the side: the page moves over, not under it. */
-  .page-view.with-outline > :not(.page-bar):not(.outline-aside) {
-    padding-right: 290px;
-    /* Room for the block handles left of the text. */
-    padding-left: 64px;
-  }
-}
 .page-view {
   min-height: 100%;
   padding-bottom: 96px;

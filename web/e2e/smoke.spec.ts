@@ -2360,6 +2360,7 @@ test('graph: a workspace\'s things and their links; a small graph beside a page;
   await page.setViewportSize({ width: 1300, height: 860 })
   // Beside the page: what it links to.
   await page.goto(`/w/${ws.id}/p/${plan.id}`)
+  await page.getByTestId('outline-toggle').click() // the side panel
   const local = page.getByTestId('local-graph')
   await expect(local.getByTestId('graph-node')).toHaveCount(3)
   await local.locator(`[data-testid="graph-node"][data-id="${goals.id}"]`).click()
@@ -2578,7 +2579,8 @@ test('outline: a page\'s headings to jump to, its callouts and to-dos in one lis
   await signIn(page, NEW_PASSWORD)
   await page.setViewportSize({ width: 1400, height: 800 })
   await page.goto(`/w/${ws.id}/p/${pg.id}`)
-  // Open beside the page on a wide window (as Folio's).
+  // The side panel (as Folio's), opened from the page.
+  await page.getByTestId('outline-toggle').click()
   const ol = page.getByTestId('outline')
   await expect(ol.getByTestId('local-graph')).toBeVisible()
   await expect(ol.getByTestId('outline-heading')).toHaveText(['Plan', 'Packing', 'Days'])

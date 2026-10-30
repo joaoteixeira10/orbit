@@ -6,7 +6,7 @@ import type { EmbedRef } from './embeds'
 import { sheetsApi } from './sheetsApi'
 import { diagramsApi } from './diagramsApi'
 import { drawingsApi } from '@/components/draw/drawing'
-import { Book, addr, parseAddr, readData, show } from './sheet'
+import { Book, addr, colName, parseAddr, readData, show } from './sheet'
 import { dayOf } from './formula'
 import { locale, todayStr } from './dates'
 import { uploadBlobUrl } from './uploads'
@@ -68,24 +68,27 @@ export function pageSources(opts: { subpages: () => string[]; tabName: string })
       const loc = locale()
       const book = new Book(data, dayOf(todayStr()), loc.startsWith('pt'))
       const tabs = data.tabs.map((tab) => {
-        let rows = 0
-        let cols = 0
+        // Only the rows and columns that hold something (in order).
+        const rowSet = new Set<number>()
+        const colSet = new Set<number>()
         for (const [a, c] of Object.entries(tab.cells)) {
           const p = parseAddr(a)
           if (p && c.v !== '') {
-            rows = Math.max(rows, p.r + 1)
-            cols = Math.max(cols, p.c + 1)
+            rowSet.add(p.r)
+            colSet.add(p.c)
           }
         }
-        rows = Math.min(rows, MAX_ROWS)
-        cols = Math.min(cols, MAX_COLS)
-        const out: string[][] = []
-        for (let r = 0; r < rows; r++) {
-          const row: string[] = []
-          for (let c = 0; c < cols; c++) row.push(show(book.value(tab.id, r, c), tab.cells[addr(r, c)], loc, { yes: '✓', no: '' }).text)
-          out.push(row)
-        }
-        return { name: tab.name, rows: out }
+        const allRows = [...rowSet].sort((x, y) => x - y)
+        const cols = [...colSet].sort((x, y) => x - y).slice(0, MAX_COLS)
+        const rows = allRows.slice(0, MAX_ROWS).map((r) => ({
+          n: r + 1,
+          cells: cols.map((c) => {
+            const cell = tab.cells[addr(r, c)]
+            const v = show(book.value(tab.id, r, c), cell, loc, { yes: '✓', no: '' })
+            return { text: v.text, bold: !!cell?.b, italics: !!cell?.i, align: v.align === 'r' ? ('right' as const) : v.align === 'c' ? ('center' as const) : ('left' as const) }
+          }),
+        }))
+        return { name: tab.name, cols: cols.map(colName), rows, more: allRows.length > MAX_ROWS || colSet.size > MAX_COLS }
       })
       return { title: s.title, tabs }
     },

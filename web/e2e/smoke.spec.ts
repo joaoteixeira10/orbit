@@ -1264,6 +1264,50 @@ test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours 
   await expect(page.locator('.excalidraw canvas.interactive')).toBeVisible({ timeout: 20000 })
 })
 
+test('Quick Draw: the bucket fills what the lines close off, under them', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.getByTestId('quick-draw-new').click()
+  await page.waitForURL(/\/draw\/[^/]+$/)
+  const id = page.url().split('/').pop()!
+  const items = async () =>
+    (JSON.parse((await (await request.get(`/api/v1/drawings/${id}`, { headers: H })).json()).scene || '{}').layers ?? []).flatMap(
+      (l: { items: unknown[] }) => l.items,
+    ) as { kind: string; fill?: boolean; src?: string; w?: number; h?: number }[]
+  const box = (await page.getByTestId('sketch-board').boundingBox())!
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2
+
+  // A closed square with the pen.
+  await page.mouse.move(cx - 80, cy - 80)
+  await page.mouse.down()
+  for (const [x, y] of [[80, -80], [80, 80], [-80, 80], [-80, -80]]) await page.mouse.move(cx + x, cy + y, { steps: 12 })
+  await page.mouse.up()
+  await expect.poll(async () => (await items()).length).toBe(1)
+
+  // The bucket inside it: a picture of the square's inside, under the line.
+  await page.getByTestId('sketch-fill').click()
+  await page.mouse.click(cx, cy)
+  await expect.poll(async () => (await items()).length).toBe(2)
+  const [fill, line] = await items()
+  expect(fill.kind).toBe('image')
+  expect(fill.fill).toBe(true)
+  expect(fill.src).toMatch(/^data:image\/png/)
+  expect(line.kind).toBe('stroke')
+  // As big as the square (not the whole paper).
+  expect(fill.w!).toBeGreaterThan(150)
+  expect(fill.w!).toBeLessThan(175)
+  // Again, with G: a fill isn't a wall, so it fills the same again (on top).
+  await page.keyboard.press('g')
+  await page.mouse.click(cx + 20, cy + 20)
+  await expect.poll(async () => (await items()).map((i) => i.kind)).toEqual(['image', 'image', 'stroke'])
+  await page.screenshot({ path: 'test-results/bucket.png' })
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await items()).length).toBe(2)
+})
+
 test('Quick Draw: a sketch moved into a workspace as a whiteboard, and back', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
@@ -2257,6 +2301,15 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
   await page.getByTestId('embed-pick-item').click()
   await expect(page.locator('.ProseMirror').getByTestId('diagram-embed')).toHaveCount(2)
   await expect.poll(content).toContain(`[Steps](/w/${ws.id}/d/${id})`)
+  await page.locator('.ProseMirror > p').last().click()
+
+  // A quick sketch, drawn over the page.
+  await page.keyboard.type('/sketch')
+  await page.keyboard.press('Enter')
+  await expect(over.getByTestId('sketch')).toBeVisible()
+  await over.getByTestId('embed-done').click()
+  await expect(page.locator('.ProseMirror').getByTestId('whiteboard-embed')).toBeVisible()
+  await expect.poll(content).toMatch(new RegExp(`\\[Launch plan\\]\\(/w/${ws.id}/whiteboards/[^)]+\\)`))
   const md = await content()
   expect(md).toMatch(new RegExp(`\\[Launch plan\\]\\(/w/${ws.id}/d/[^)]+\\)`))
   expect(md).toMatch(new RegExp(`\\[Launch plan\\]\\(/w/${ws.id}/s/[^)]+\\)`))
@@ -2265,11 +2318,17 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
   // to look at, or to draw on.
   const board = await (await request.post(`/api/v1/workspaces/${ws.id}/drawings`, { headers: H, data: { title: 'Sketches', preview: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#af52de"/></svg>' } })).json()
   const cur = await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()
-  const put = await request.put(`/api/v1/pages/${pg.id}`, { headers: H, data: { content: `${md}\n\n[Sketches](/w/${ws.id}/whiteboards/${board.id})\n`, version: cur.version } })
+  const costs = await (
+    await request.post(`/api/v1/workspaces/${ws.id}/sheets`, {
+      headers: H,
+      data: { title: 'Costs', data: { tabs: [{ id: 't1', name: 'Sheet 1', cells: { A1: { v: 'Item', b: true }, B1: { v: 'Cost', b: true }, A2: { v: 'Venue' }, B2: { v: '1200' }, A3: { v: 'Food' }, B3: { v: '450.5' }, A5: { v: 'Total', b: true }, B5: { v: '=SUM(B2:B3)' }, D2: { v: 'paid' } } }] } },
+    })
+  ).json()
+  const put = await request.put(`/api/v1/pages/${pg.id}`, { headers: H, data: { content: `${md}\n\n[Sketches](/w/${ws.id}/whiteboards/${board.id})\n\n[Costs](/w/${ws.id}/s/${costs.id})\n`, version: cur.version } })
   expect(put.ok()).toBe(true)
   await page.goto(`/w/${ws.id}/p/${pg.id}`)
-  await expect(page.getByTestId('whiteboard-embed').locator('img')).toBeVisible()
-  await page.getByTestId('whiteboard-embed').dblclick()
+  await expect(page.getByTestId('whiteboard-embed').last().locator('img')).toBeVisible()
+  await page.getByTestId('whiteboard-embed').last().dblclick()
   await expect(over.getByTestId('whiteboard-title')).toHaveValue('Sketches')
   await expect(over.getByTestId('whiteboard-view-mode')).toHaveAttribute('aria-pressed', 'true')
   await over.getByTestId('whiteboard-edit-mode').click()
@@ -2278,13 +2337,14 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
   await expect(over).toBeHidden()
   // Still reading (the double click didn't start editing the page).
   await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible()
-  await page.getByTestId('sheet-embed').dblclick()
+  await page.getByTestId('sheet-embed').first().dblclick()
   await expect(over.getByTestId('sheet-title')).toHaveValue('Launch plan')
   await over.getByTestId('embed-done').click()
 
   // As a PDF: the diagrams' and the whiteboard's pictures drawn in.
   await page.getByRole('button', { name: 'Page options' }).click()
   const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('page-pdf').click()])
+  await pdf.saveAs('test-results/page.pdf')
   const bytes = (await (await import('node:fs/promises')).readFile(await pdf.path())).toString('latin1')
   expect(bytes.startsWith('%PDF-')).toBe(true)
   expect((bytes.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3)
@@ -2595,6 +2655,11 @@ test('outline: a page\'s headings to jump to, its callouts and to-dos in one lis
   await expect(page.locator('.md-view')).toContainText('Day one.')
   await expect(page.getByTestId('outline')).toBeHidden()
   await page.getByTestId('outline-toggle').click()
+  await expect(page.getByTestId('outline')).toBeVisible()
+  // Only where something is open: not on the workspace's home.
+  await page.goto(`/w/${ws.id}`)
+  await expect(page.getByTestId('rail-open')).toHaveCount(0)
+  await expect(page.getByTestId('outline')).toHaveCount(0)
 })
 
 test('recent changes: moving and trashing pages undone from the list', async ({ page, request }) => {

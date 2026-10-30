@@ -8,10 +8,12 @@ import { sheetsApi } from './sheetsApi'
 import { diagramsApi } from './diagramsApi'
 import { drawingsApi } from '@/components/draw/drawing'
 import { MERMAID_TEMPLATES } from './mermaid'
+import { emptySketch } from './sketch'
 
 export type EmbedKind = 'sheet' | 'diagram' | 'board'
-// What "/" makes: a draw.io and a Mermaid diagram are both diagrams.
-export type EmbedNew = 'sheet' | 'drawio' | 'mermaid' | 'board'
+// What "/" makes: a draw.io and a Mermaid diagram are both diagrams; a
+// sketch (Quick Draw's canvas) is a whiteboard that draws by hand.
+export type EmbedNew = 'sheet' | 'drawio' | 'mermaid' | 'board' | 'sketch'
 
 const SEG: Record<EmbedKind, string> = { sheet: 's', diagram: 'd', board: 'whiteboards' }
 const KIND: Record<string, EmbedKind> = { s: 'sheet', d: 'diagram', whiteboards: 'board' }
@@ -45,10 +47,12 @@ export function closeEmbed() {
   embedEditor.open = false
 }
 
-// createEmbed makes a new one, named after the page it goes in.
-export async function createEmbed(what: EmbedNew, ws: string, title: string): Promise<EmbedRef> {
+// createEmbed makes a new one, named after the page it goes in (layer: a
+// sketch's first layer's name).
+export async function createEmbed(what: EmbedNew, ws: string, title: string, layer = 'Layer 1'): Promise<EmbedRef> {
   if (what === 'sheet') return { kind: 'sheet', ws, id: (await sheetsApi.create(ws, { title })).id }
   if (what === 'board') return { kind: 'board', ws, id: (await drawingsApi.make(ws, { title })).id }
+  if (what === 'sketch') return { kind: 'board', ws, id: (await drawingsApi.make(ws, { title, scene: JSON.stringify(emptySketch(layer)) })).id }
   const data = what === 'mermaid' ? MERMAID_TEMPLATES[0].code : undefined
   return { kind: 'diagram', ws, id: (await diagramsApi.create(ws, { title, kind: what, data })).id }
 }

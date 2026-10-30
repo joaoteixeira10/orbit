@@ -4,7 +4,7 @@ import { PluginKey } from '@tiptap/pm/state'
 import Suggestion from '@tiptap/suggestion'
 import {
   Type, Heading1, Heading2, Heading3, ListTodo, List, ListOrdered, Quote, SquareCode, Minus, Table, MessageSquareQuote, Paperclip,
-  Sheet, Workflow, GitFork, Brush, FileSymlink, ChevronsDownUp, Columns2, Columns3, ListTree, Tag,
+  Sheet, Workflow, GitFork, Brush, PenLine, FileSymlink, ChevronsDownUp, Columns2, Columns3, ListTree, Tag,
 } from 'lucide-vue-next'
 import type { EmbedNew } from '@/lib/embeds'
 
@@ -37,12 +37,13 @@ export interface SlashDocs {
   make: (what: EmbedNew, editor: Editor) => void
   pick: (editor: Editor) => void
 }
-const DOC_ICON: Record<EmbedNew, Component> = { sheet: Sheet, drawio: Workflow, mermaid: GitFork, board: Brush }
+const DOC_ICON: Record<EmbedNew, Component> = { sheet: Sheet, drawio: Workflow, mermaid: GitFork, board: Brush, sketch: PenLine }
 const DOC_ALIASES: Record<EmbedNew, string[]> = {
   sheet: ['sheet', 'spreadsheet', 'excel', 'grid', 'folha'],
   drawio: ['drawio', 'draw.io', 'diagram', 'diagrama', 'flowchart'],
   mermaid: ['mermaid', 'diagram', 'diagrama', 'sequence', 'gantt', 'mindmap'],
-  board: ['whiteboard', 'excalidraw', 'sketch', 'draw', 'quadro', 'desenho'],
+  board: ['whiteboard', 'excalidraw', 'quadro'],
+  sketch: ['sketch', 'draw', 'pencil', 'hand', 'quick draw', 'desenho', 'esboço'],
 }
 
 // slashItems lists the blocks "/" can insert, titled in the current language.

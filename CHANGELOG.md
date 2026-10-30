@@ -17,11 +17,14 @@ merge, not at release time.
   over ten minutes, so the version before an edit could be lost); the owner
   sets how many each page keeps (Owner → Page history, 5–1000, default 50).
 - **Download as PDF** makes the file itself (no print dialog), with the
-  sheets' cells and the diagrams' and whiteboards' pictures drawn in.
-- **A side panel on every screen, as Folio's**: the graph of what's open
-  (a page, sheet, diagram, whiteboard, task list or folder; else the
-  workspace's), depth 1–3, small dots; on pages also the outline and the
-  notes; each part folds; opens by itself at 1440 px+, a tab reopens it.
+  diagrams' and whiteboards' pictures drawn in and sheets as compact tables
+  (column letters, row numbers, only the cells used, numbers right-aligned);
+  a title stays on the page with what it names.
+- **A side panel where something is open, as Folio's**: the graph of
+  what's open (a page, sheet, diagram, whiteboard, task list or folder),
+  depth 1–3, small dots; on pages also the outline and the notes; each part
+  folds; opens by itself at 1440 px+, a tab reopens it. Screens with nothing
+  open (Today, a workspace's home, the graph itself) have none.
 - **Calendar**: framed like draw.io's editor (a bordered box, a gray band
   for the days), the side panes boxed too; events outlined in their colour
   with a gap between one and the next; hour and half-hour lines; the month
@@ -29,6 +32,10 @@ merge, not at release time.
 
 ### Added
 
+- **Bucket in Quick Draw** — fills what the lines close off with the
+  current colour, under the lines (small gaps still count as closed; key G).
+- **Sketch in "/"** — a page's **/** menu makes a Quick Draw sketch in
+  place, as it does a sheet or a diagram.
 - **More page blocks** — toggle sections, 2–5 columns, a live sub-pages list
   (`::pagetree`), coloured status badges; glossary pages whose terms are
   explained (on hover) where other pages use them; pastes from Google Docs,

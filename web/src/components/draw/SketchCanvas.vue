@@ -8,15 +8,16 @@ import {
 import Popover from '@/components/ui/Popover.vue'
 import ColorPicker from './ColorPicker.vue'
 import {
-  DEFAULT_SIZE, PAPER_COLORS, PAPERS, TOOLS, hits, isSketch, lassoed, looks, moved, newId, newLayer, outline, readSketch,
-  recognize, rub, toSvg, unionBounds, wipe, type Item, type Layer, type Paper, type Picture, type Sketch, type Stroke, type Tool,
+  DEFAULT_SIZE, PAPER_COLORS, PAPERS, TOOLS, floodFill, hits, isSketch, lassoed, looks, moved, newId, newLayer, outline, readSketch,
+  recognize, regionSvg, rub, toSvg, unionBounds, wipe, type Item, type Layer, type Paper, type Picture, type Sketch, type Stroke, type Tool,
 } from '@/lib/sketch'
+import { useToastStore } from '@/stores/toast'
 import type { Snapshot } from './drawing'
 
 // Quick Draw's own canvas: pens, a pencil, a marker, a highlighter and a
 // brush that answer a stylus's pressure; any colour; an eraser that takes
 // out just what it rubs (or whole strokes); a lasso to move, recolour,
-// copy or delete; hold at the end of a stroke and it snaps into a clean
+// copy or delete; a bucket that fills what the lines close off; hold at the end of a stroke and it snaps into a clean
 // line, circle, ellipse, triangle or rectangle; layers, with a photo or a
 // PDF page under the ink; plain, lined, squared or dotted paper. With a
 // stylus, fingers only move and zoom (the palm can rest); two fingers
@@ -25,6 +26,7 @@ import type { Snapshot } from './drawing'
 const props = defineProps<{ scene: string; readonly?: boolean; name?: string }>()
 const emit = defineEmits<{ change: [] }>()
 const { t } = useI18n()
+const toast = useToastStore()
 
 const layerName = (n: number) => t('sketch.layerN', { n })
 const sketch = shallowRef<Sketch>(readSketch(props.scene, layerName(1)))
@@ -73,7 +75,7 @@ const layerOf = (id = active.value) => sketch.value.layers.find((l) => l.id === 
 const withItems = (id: string, items: Item[]) => sketch.value.layers.map((l) => (l.id === id ? { ...l, items } : l))
 
 // ---- Tools ----
-type Mode = Tool | 'eraser' | 'lasso' | 'dropper' | 'hand'
+type Mode = Tool | 'eraser' | 'lasso' | 'dropper' | 'hand' | 'fill'
 const mode = ref<Mode>('pen')
 const lastPen = ref<Tool>('pen')
 const RECENT_KEY = 'orbit_sketch_recent'
@@ -214,6 +216,7 @@ function down(e: PointerEvent) {
       lasso.value = [[x, y]]
     }
   } else if (mode.value === 'dropper') void dropAt(x, y)
+  else if (mode.value === 'fill') void fillAt(x, y)
 }
 
 function move(e: PointerEvent) {
@@ -394,6 +397,64 @@ function setColor(c: string) {
   color.value = c
 }
 
+// The bucket: what's around the click that the lines close off (of what's
+// on screen), painted in the colour as a picture under the lines.
+async function fillAt(x: number, y: number) {
+  const r = svg.value?.getBoundingClientRect()
+  if (!r) return
+  const z = view.value.z
+  const box = { x: -view.value.x / z, y: -view.value.y / z, w: r.width / z, h: r.height / z }
+  let scale = Math.min(2, window.devicePixelRatio || 1) * z
+  if (box.w * box.h * scale * scale > 2_500_000) scale = Math.sqrt(2_500_000 / (box.w * box.h))
+  const W = Math.max(1, Math.round(box.w * scale))
+  const H = Math.max(1, Math.round(box.h * scale))
+  try {
+    const img = new Image()
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(regionSvg(sketch.value, box, scale))}`
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = W
+    c.height = H
+    const g = c.getContext('2d', { willReadFrequently: true })!
+    g.drawImage(img, 0, 0, W, H)
+    const px = g.getImageData(0, 0, W, H).data
+    const alpha = new Uint8Array(W * H)
+    for (let i = 0; i < alpha.length; i++) alpha[i] = px[i * 4 + 3]
+    const got = floodFill(alpha, W, H, Math.floor((x - box.x) * scale), Math.floor((y - box.y) * scale), Math.max(1, Math.round(scale)))
+    if (!got) return
+    const { x0, y0, x1, y1 } = got.box
+    const cw = x1 - x0 + 1
+    const ch = y1 - y0 + 1
+    const out = document.createElement('canvas')
+    out.width = cw
+    out.height = ch
+    const o = out.getContext('2d')!
+    const paint = o.createImageData(cw, ch)
+    const [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(color.value.slice(i, i + 2), 16))
+    const a = Math.round(opacity.value * 255)
+    for (let yy = 0; yy < ch; yy++) {
+      for (let xx = 0; xx < cw; xx++) {
+        if (!got.mask[(y0 + yy) * W + x0 + xx]) continue
+        const j = (yy * cw + xx) * 4
+        paint.data[j] = cr
+        paint.data[j + 1] = cg
+        paint.data[j + 2] = cb
+        paint.data[j + 3] = a
+      }
+    }
+    o.putImageData(paint, 0, 0)
+    const pic: Picture = { id: newId(), kind: 'image', src: out.toDataURL('image/png'), x: box.x + x0 / scale, y: box.y + y0 / scale, w: cw / scale, h: ch / scale, fill: true }
+    // Over earlier fills, under the lines.
+    const items = layerOf().items
+    let at = 0
+    while (at < items.length && items[at].kind === 'image' && (items[at] as Picture).fill) at++
+    commit(withItems(layerOf().id, [...items.slice(0, at), pic, ...items.slice(at)]))
+    used(color.value)
+  } catch {
+    toast.error(t('sketch.fillFailed'))
+  }
+}
+
 // ---- What's chosen ----
 function recolor() {
   commit(withItems(selLayer.value, layerOf(selLayer.value).items.map((i) => (selected.value.has(i.id) && i.kind === 'stroke' ? { ...i, color: color.value, opacity: opacity.value } : i))))
@@ -563,7 +624,7 @@ function onKey(e: KeyboardEvent) {
     spaceDown.value = true
     e.preventDefault()
   } else if (!mod && !e.altKey) {
-    const keys: Record<string, Mode> = { p: 'pen', n: 'pencil', m: 'marker', h: 'highlighter', b: 'brush', e: 'eraser', l: 'lasso', i: 'dropper' }
+    const keys: Record<string, Mode> = { p: 'pen', n: 'pencil', m: 'marker', h: 'highlighter', b: 'brush', e: 'eraser', l: 'lasso', i: 'dropper', g: 'fill' }
     const m = keys[e.key.toLowerCase()]
     if (m) pick(m)
     else if (e.key === '[') size.value = Math.max(1, size.value - 1)
@@ -730,6 +791,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
       </button>
       <span class="sep" />
       <button type="button" class="tb" :class="{ on: mode === 'eraser' }" :title="t('sketch.tool.eraser')" :aria-label="t('sketch.tool.eraser')" :aria-pressed="mode === 'eraser'" data-testid="sketch-eraser" @click="pick('eraser')"><Eraser class="h-[18px] w-[18px]" /></button>
+      <button type="button" class="tb" :class="{ on: mode === 'fill' }" :title="t('sketch.tool.fill')" :aria-label="t('sketch.tool.fill')" :aria-pressed="mode === 'fill'" data-testid="sketch-fill" @click="pick('fill')"><PaintBucket class="h-[18px] w-[18px]" /></button>
       <button type="button" class="tb" :class="{ on: mode === 'lasso' }" :title="t('sketch.tool.lasso')" :aria-label="t('sketch.tool.lasso')" :aria-pressed="mode === 'lasso'" data-testid="sketch-lasso" @click="pick('lasso')"><Lasso class="h-[18px] w-[18px]" /></button>
       <button type="button" class="tb" :class="{ on: mode === 'hand' }" :title="t('sketch.tool.hand')" :aria-label="t('sketch.tool.hand')" :aria-pressed="mode === 'hand'" @click="pick('hand')"><Hand class="h-[18px] w-[18px]" /></button>
       <span class="sep" />

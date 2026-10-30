@@ -32,6 +32,7 @@ export interface Picture {
   y: number
   w: number
   h: number
+  fill?: boolean // a bucket fill (not a wall for the next one)
 }
 export type Item = Stroke | Picture
 export interface Layer {
@@ -426,4 +427,96 @@ export function toSvg(s: Sketch, maxImages = 600_000): string {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(vb.x)} ${f(vb.y)} ${f(vb.w)} ${f(vb.h)}" width="${Math.round(vb.w)}" height="${Math.round(vb.h)}">` +
     `<defs>${GRAIN_FILTER}</defs><rect x="${f(vb.x)}" y="${f(vb.y)}" width="${f(vb.w)}" height="${f(vb.h)}" fill="${esc(s.paperColor)}"/>${layers}</svg>`
   )
+}
+
+// ---- The bucket: fill what's enclosed ----
+
+// regionSvg draws the visible layers' items (no paper, no earlier fills) of
+// the world box at `scale` pixels a unit — what a fill is bounded by.
+export function regionSvg(s: Sketch, box: { x: number; y: number; w: number; h: number }, scale: number): string {
+  const body = s.layers
+    .filter((l) => l.visible)
+    .map((l) =>
+      l.items
+        .map((it) => {
+          if (it.kind === 'image') return it.fill ? '' : `<image href="${esc(it.src)}" x="${it.x}" y="${it.y}" width="${it.w}" height="${it.h}" preserveAspectRatio="none"/>`
+          const d = outline(it)
+          return d ? `<path d="${d}" fill="#000"/>` : ''
+        })
+        .join(''),
+    )
+    .join('')
+  const W = Math.max(1, Math.round(box.w * scale))
+  const H = Math.max(1, Math.round(box.h * scale))
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(box.x)} ${f(box.y)} ${f(box.w)} ${f(box.h)}" width="${W}" height="${H}">${body}</svg>`
+}
+
+// floodFill finds the area around (sx, sy) that nothing drawn closes off:
+// pixels whose alpha is under `edge` are open. Gaps up to `gap` pixels in
+// the lines still close it (the lines are thickened by that much first),
+// and the area then grows back under the lines (no light seam along them).
+// The answer: 1 for filled pixels, and their box (null: the start is on a line).
+export function floodFill(
+  alpha: Uint8ClampedArray | Uint8Array,
+  w: number,
+  h: number,
+  sx: number,
+  sy: number,
+  gap = 2,
+  edge = 60,
+): { mask: Uint8Array; box: { x0: number; y0: number; x1: number; y1: number } } | null {
+  const n = w * h
+  // Walls: the lines, thickened by `gap`.
+  let wall = new Uint8Array(n)
+  for (let i = 0; i < n; i++) wall[i] = alpha[i] >= edge ? 1 : 0
+  for (let k = 0; k < gap; k++) wall = grow(wall, w)
+  const start = sy * w + sx
+  if (sx < 0 || sy < 0 || sx >= w || sy >= h || wall[start]) return null
+  let mask = new Uint8Array(n)
+  const stack = [start]
+  mask[start] = 1
+  const open = (j: number) => {
+    if (mask[j] || wall[j]) return
+    mask[j] = 1
+    stack.push(j)
+  }
+  while (stack.length) {
+    const i = stack.pop()!
+    const x = i % w
+    const y = (i - x) / w
+    if (x > 0) open(i - 1)
+    if (x < w - 1) open(i + 1)
+    if (y > 0) open(i - w)
+    if (y < h - 1) open(i + w)
+  }
+  // Back under the lines: as far as they were thickened, and a pixel more.
+  for (let k = 0; k <= gap; k++) mask = grow(mask, w)
+  let x0 = w
+  let y0 = h
+  let x1 = -1
+  let y1 = -1
+  for (let i = 0; i < n; i++) {
+    if (!mask[i]) continue
+    const x = i % w
+    const y = (i - x) / w
+    if (x < x0) x0 = x
+    if (x > x1) x1 = x
+    if (y < y0) y0 = y
+    if (y > y1) y1 = y
+  }
+  return x1 < 0 ? null : { mask, box: { x0, y0, x1, y1 } }
+}
+
+// grow sets each pixel next to a set one (4 ways).
+function grow(m: Uint8Array, w: number): Uint8Array {
+  const out = m.slice()
+  for (let i = 0; i < m.length; i++) {
+    if (!m[i]) continue
+    const x = i % w
+    if (x > 0) out[i - 1] = 1
+    if (x < w - 1) out[i + 1] = 1
+    if (i >= w) out[i - w] = 1
+    if (i + w < m.length) out[i + w] = 1
+  }
+  return out
 }

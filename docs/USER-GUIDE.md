@@ -434,10 +434,13 @@ style (`-` bullets, `**bold**`, one blank line between blocks).
 Add an **icon** (emoji) and a **cover** (gradient or colour) from the header.
 
 **As files.** A page's `⋯` → **Download as Markdown** (a `.md` with the title
-as its first heading), **Copy as Markdown**, or **Export as PDF…**: the page
-on white with its title, the workspace and the date, its pictures included,
-in the print dialog — choose *Save as PDF* there (the text stays text, the
-links work). On the Pages screen, **Export as Markdown (.zip)** downloads
+as its first heading), **Copy as Markdown**, or **Download as PDF**: the
+page on white with its title, the workspace and the date, as a `.pdf` file
+(the text stays text, the links work). Its pictures are in it, and so are
+the sheets, diagrams and whiteboards shown in the page: a diagram or a
+whiteboard as its picture, a sheet as a compact table (its column letters
+and row numbers, only the rows and columns that hold something, at most 60
+by 12). Each keeps its title with it on one page. On the Pages screen, **Export as Markdown (.zip)** downloads
 every page as `.md` files in folders that follow the page tree — ready to
 keep in git.
 
@@ -486,10 +489,11 @@ trash, a move or a rename goes back, a page from the trash comes out. If
 the page changed since (someone wrote in it, it moved again), it asks
 first.
 
-**Side panel.** On every screen, on the right (as Folio's): the graph of
-what's open — a page, a sheet, a diagram, a whiteboard, a task list, a
-folder — 1, 2 or 3 links deep, ⤢ for the whole graph (in a workspace with
-nothing open, the workspace's graph); on a page also its **outline** (its
+**Side panel.** Wherever something is open, on the right (as Folio's): the
+graph of what's open — a page, a sheet, a diagram, a whiteboard, a task
+list, a folder — 1, 2 or 3 links deep, ⤢ for the whole graph (screens with
+nothing open, such as Today or a workspace's home, have no panel); on a
+page also its **outline** (its
 headings, click one to go there) and its **notes** (its callouts and
 checklist items; tick a box right there when you can change the page).
 Each part folds. It opens by itself on a wide window (1440 px or more);
@@ -534,8 +538,8 @@ Markdown links to them; **Export** puts them in the zip next to the pages.
 At most 25 MB a file (the owner can change it).
 
 **Sheets, diagrams and whiteboards in a page.** Type **/** → **Sheet**,
-**Mermaid diagram**, **draw.io diagram** or **Whiteboard** (the kinds the
-workspace has turned on) and a new one, named after the page, goes in at
+**Mermaid diagram**, **draw.io diagram**, **Sketch** (a quick drawing with
+Quick Draw's pens) or **Whiteboard** (the kinds the workspace has turned on) and a new one, named after the page, goes in at
 that line and opens at once in a big editor over the page; **Done** puts it
 back, shown in place. **/** → **Existing sheet, diagram or whiteboard**
 picks one there is. Double-click one in a page (or its ⤢ button) to open
@@ -664,6 +668,11 @@ Draw (in a workspace's file browser: **Move to another workspace…**).
 - **Lasso**: draw round strokes or pictures to choose them; drag them to
   move them, or **This colour** (recolours them to the current colour),
   **Duplicate**, **Delete** (or the Delete key).
+- **Bucket**: click inside a shape and what its lines close off fills with
+  the current colour (and see-through setting), under the lines. Small gaps
+  in a line still count as closed; it fills what's on screen, so zoom out
+  first for a big shape. Fill a filled area again to change its colour (on
+  top; ⌘Z takes it back).
 - **Paper**: plain, lined, squared or dotted, in white, cream or night.
 - **Layers**: you draw on the highlighted one; show, hide, rename (double
   click), reorder, make see-through, delete. **Put a picture or a PDF page
@@ -676,7 +685,7 @@ Draw (in a workspace's file browser: **Move to another workspace…**).
   three to redo.
 
 Keys: P pen, N pencil, M marker, H highlighter, B brush, E eraser, L lasso,
-I eyedropper, ⌘Z / ⌘⇧Z undo and redo.
+G bucket, I eyedropper, ⌘Z / ⌘⇧Z undo and redo.
 
 ## 7. Tasks
 

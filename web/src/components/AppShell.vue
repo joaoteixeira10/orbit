@@ -8,7 +8,7 @@ import {
   PanelRight,
 } from 'lucide-vue-next'
 import SideRail from '@/components/SideRail.vue'
-import { rail, setRailOpen } from '@/lib/rail'
+import { rail, railFocus, setRailOpen } from '@/lib/rail'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
@@ -234,6 +234,8 @@ const phone = ref(phoneMq.matches)
 const railMq = window.matchMedia('(min-width: 1280px)')
 const railWide = ref(railMq.matches)
 railMq.addEventListener('change', (e) => (railWide.value = e.matches))
+// Only where something's open (a page, a sheet, a diagram, a list…).
+const railHere = computed(() => !!railFocus(route))
 const drawerOpen = ref(false)
 // Desktop: the sidebar can be hidden (⌘\ or the toolbar button), like macOS.
 const sideHidden = ref(localStorage.getItem('orbit_side_hidden') === '1')
@@ -319,7 +321,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 </script>
 
 <template>
-  <div class="app" :class="{ 'side-hidden': sideHidden && !narrow, 'rail-on': rail.open && railWide }">
+  <div class="app" :class="{ 'side-hidden': sideHidden && !narrow, 'rail-on': rail.open && railWide && railHere }">
     <div v-if="drawerOpen" class="side-backdrop" aria-hidden="true" @click="drawerOpen = false" />
     <aside id="sidebar" class="side material" :class="{ open: drawerOpen }" :inert="(narrow && !drawerOpen) || undefined">
       <div class="side-top">
@@ -539,12 +541,12 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
     </main>
 
     <!-- The side panel (as Folio's): a column, or a drawer on narrow windows. -->
-    <aside v-if="rail.open && railWide" class="rail-col" :aria-label="t('outline.title')"><SideRail /></aside>
-    <template v-else-if="rail.open">
+    <aside v-if="railHere && rail.open && railWide" class="rail-col" :aria-label="t('outline.title')"><SideRail /></aside>
+    <template v-else-if="railHere && rail.open">
       <div class="rail-scrim" @click="setRailOpen(false)" />
       <aside class="rail-drawer material" :aria-label="t('outline.title')"><SideRail /></aside>
     </template>
-    <button v-if="!rail.open && !phone" type="button" class="rail-tab" :title="t('outline.title')" :aria-label="t('outline.title')" data-testid="rail-open" @click="setRailOpen(true)"><PanelRight class="h-4 w-4" /></button>
+    <button v-if="railHere && !rail.open && !phone" type="button" class="rail-tab" :title="t('outline.title')" :aria-label="t('outline.title')" data-testid="rail-open" @click="setRailOpen(true)"><PanelRight class="h-4 w-4" /></button>
 
     <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
     <QuickNoteSheet :open="quickNoteOpen" @close="quickNoteOpen = false" />

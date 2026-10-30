@@ -53,7 +53,7 @@ let pickAt = 0
 const docs = (): SlashDocs | undefined => {
   const kinds = docKinds()
   if (!props.ws || !kinds.length) return undefined
-  const news: EmbedNew[] = kinds.flatMap((k): EmbedNew[] => (k === 'diagram' ? ['mermaid', 'drawio'] : [k]))
+  const news: EmbedNew[] = kinds.flatMap((k): EmbedNew[] => (k === 'diagram' ? ['mermaid', 'drawio'] : k === 'board' ? ['sketch', 'board'] : [k]))
   return { kinds: news, make: makeEmbed, pick: (ed) => ((pickInto = ed), (pickAt = ed.state.selection.from), (picking.value = true)) }
 }
 async function makeEmbed(what: EmbedNew, ed: Editor) {
@@ -61,7 +61,7 @@ async function makeEmbed(what: EmbedNew, ed: Editor) {
   const at = ed.state.selection.from
   try {
     const title = (pagesStore.byWs[props.ws!] ?? []).find((p) => p.id === props.pageId)?.title ?? ''
-    const ref = await createEmbed(what, props.ws!, title)
+    const ref = await createEmbed(what, props.ws!, title, t('sketch.layerN', { n: 1 }))
     ed.chain().insertEmbed({ ...ref, title: title || t(`editor.block.${what}.title`) }, at).run()
     openEmbed(ref)
   } catch (e: any) {

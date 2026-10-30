@@ -6,7 +6,7 @@ import type { PdfSources } from './pdf'
 const src: PdfSources = {
   origin: 'https://orbit.example',
   subpages: () => ['Night shift'],
-  sheet: async () => ({ title: 'Fees', tabs: [{ name: 'Sheet 1', rows: [['Yearly', '40']] }] }),
+  sheet: async () => ({ title: 'Fees', tabs: [{ name: 'Sheet 1', cols: ['B', 'E'], rows: [{ n: 3, cells: [{ text: 'Yearly' }, { text: '40', align: 'right' }] }], more: false }] }),
   picture: async (r) => ({ title: `Flow ${r.id}`, png: 'data:image/png;base64,AAAA', width: 900, height: 300 }),
   image: async () => null,
 }
@@ -27,11 +27,14 @@ describe('pdf', () => {
     const flat = JSON.stringify(out)
     expect(out[0].style).toBe('h1')
     expect(flat).toContain('"Yearly"')
+    expect(flat).toContain('"E"') // its own column letters…
+    expect(flat).toContain('"3"') // …and row numbers
     expect(flat).toContain('data:image/png;base64,AAAA')
-    expect(out.find((c: any) => c.image)?.width).toBe(515) // fitted to the page
+    const kept = (c: any) => (c.unbreakable ? c.stack : [c])
+    expect(out.flatMap(kept).find((c: any) => c.image)?.width).toBe(515) // fitted to the page, its title kept with it
     expect(flat).toContain('Night shift')
     expect(flat).toContain('[x] ')
     expect(flat).toContain('"Tip"')
-    expect(out.some((c: any) => c.table?.headerRows === 1)).toBe(true)
+    expect(out.flatMap(kept).some((c: any) => c.table?.headerRows === 1)).toBe(true)
   })
 })

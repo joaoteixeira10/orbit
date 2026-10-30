@@ -3,6 +3,7 @@
 // its text (for the outline and notes), where it's shown (to jump to), and
 // how to tick a box.
 import { reactive } from 'vue'
+import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 const saved = (() => {
   try {
@@ -28,4 +29,17 @@ export function setRailOpen(on: boolean) {
   } catch {
     /* private mode */
   }
+}
+
+// railFocus is what the panel is about on this screen — a page, a sheet, a
+// diagram, a whiteboard, a task list or a folder ("": nothing; then there's
+// no panel).
+export function railFocus(route: RouteLocationNormalizedLoaded): string {
+  const p = route.params
+  if (typeof p.ws !== 'string') return ''
+  if (typeof p.page === 'string') return p.page
+  if (['ws-sheet', 'ws-diagram', 'ws-whiteboard', 'ws-form'].includes(String(route.name)) && typeof p.id === 'string') return p.id
+  if ((route.name === 'ws-tasks' || route.name === 'ws-board') && typeof p.list === 'string' && p.list !== 'all') return p.list
+  if (route.name !== 'ws-graph' && typeof route.query.folder === 'string' && route.query.folder) return route.query.folder
+  return ''
 }

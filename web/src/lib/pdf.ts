@@ -8,11 +8,24 @@ import { embedOf, type EmbedRef } from './embeds'
 
 // What a page shows in place, read for the PDF (null: can't).
 export interface PdfSources {
-  sheet: (id: string) => Promise<{ title: string; tabs: { name: string; rows: string[][] }[] } | null>
+  sheet: (id: string) => Promise<PdfSheet | null>
   picture: (ref: EmbedRef) => Promise<{ title: string; png: string; width: number; height: number } | null>
   image: (src: string) => Promise<{ png: string; width: number; height: number } | null>
   subpages: () => string[]
   origin: string
+}
+
+// A sheet as the PDF shows it: per tab, the columns and rows that hold
+// something (named as in the sheet: B, D…; 3, 7…), each cell as it reads.
+export interface PdfCell {
+  text: string
+  bold?: boolean
+  italics?: boolean
+  align?: 'left' | 'right' | 'center'
+}
+export interface PdfSheet {
+  title: string
+  tabs: { name: string; cols: string[]; rows: { n: number; cells: PdfCell[] }[]; more: boolean }[]
 }
 
 const PAGE_WIDTH = 515 // A4 less the margins, in points
@@ -181,24 +194,52 @@ const thinLines = {
   paddingBottom: () => 3,
 }
 
+const sheetLines = {
+  ...thinLines,
+  hLineColor: () => '#e0e0e5',
+  vLineColor: () => '#e0e0e5',
+  paddingLeft: () => 6,
+  paddingRight: () => 6,
+}
+
 async function embed(ref: EmbedRef, src: PdfSources): Promise<Content[]> {
   if (ref.kind === 'sheet') {
     const s = await src.sheet(ref.id).catch(() => null)
     if (!s) return []
-    const out: Content[] = [{ text: noEmoji(s.title), bold: true, margin: [0, 4, 0, 4] }]
+    const out: Content[] = [{ text: noEmoji(s.title), bold: true, margin: [0, 6, 0, 4] }]
     for (const tab of s.tabs) {
       if (!tab.rows.length) continue
-      if (s.tabs.length > 1) out.push({ text: tab.name, color: '#6e6e73', fontSize: 9, margin: [0, 2, 0, 2] })
-      const cols = Math.max(...tab.rows.map((r) => r.length))
-      out.push({ table: { body: tab.rows.map((r) => Array.from({ length: cols }, (_, i) => ({ text: r[i] ?? '' }))) }, layout: thinLines, fontSize: 9, margin: [0, 0, 0, 10] })
+      if (s.tabs.length > 1) out.push({ text: tab.name, color: '#6e6e73', fontSize: 9, margin: [0, 2, 0, 3] })
+      // As a sheet reads: a gray band of column letters, row numbers down
+      // the side, the cells in thin lines.
+      const head = [{ text: '', fillColor: '#f2f2f4' }, ...tab.cols.map((c) => ({ text: c, alignment: 'center', color: '#8e8e93', fontSize: 8, fillColor: '#f2f2f4' }))]
+      const body = tab.rows.map((r) => [
+        { text: String(r.n), alignment: 'center', color: '#8e8e93', fontSize: 8, fillColor: '#f2f2f4' },
+        ...r.cells.map((c) => ({ text: noEmoji(c.text), bold: c.bold, italics: c.italics, alignment: c.align ?? 'left' })),
+      ])
+      out.push({
+        table: { headerRows: 1, widths: [18, ...tab.cols.map(() => 'auto')], body: [head, ...body] },
+        layout: sheetLines,
+        fontSize: 9,
+        margin: [0, 0, 0, tab.more ? 2 : 12],
+      })
+      if (tab.more) out.push({ text: '…', color: '#8e8e93', fontSize: 9, margin: [0, 0, 0, 12] })
     }
-    return out
+    // A short one isn't split over two pages (nor its title left behind).
+    const rows = s.tabs.reduce((n, tab) => n + tab.rows.length, 0)
+    return rows <= 30 ? [{ stack: out, unbreakable: true }] : out
   }
   const pic = await src.picture(ref).catch(() => null)
   if (!pic) return []
+  // Its title kept with it, on the page it fits.
   return [
-    { text: noEmoji(pic.title), bold: true, margin: [0, 4, 0, 4] },
-    { image: pic.png, ...fit(pic.width, pic.height), alignment: 'center', margin: [0, 0, 0, 10] },
+    {
+      stack: [
+        { text: noEmoji(pic.title), bold: true, margin: [0, 4, 0, 4] },
+        { image: pic.png, ...fit(pic.width, pic.height), alignment: 'center', margin: [0, 0, 0, 10] },
+      ],
+      unbreakable: true,
+    },
   ]
 }
 

@@ -1,50 +1,23 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ListTree, Maximize2, X } from 'lucide-vue-next'
+import { useRoute } from 'vue-router'
+import { ChevronDown, ListTree, X } from 'lucide-vue-next'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
-import GraphCanvas from '@/components/graph/GraphCanvas.vue'
-import { loadGraph, routeOf, type Graph, type GraphNode } from '@/lib/graph'
 import { outlineOf } from '@/lib/outline'
 import { ALERTS } from '@/components/editor/alerts'
-import { rail, setRailOpen } from '@/lib/rail'
+import { rail, railFocus, setRailOpen } from '@/lib/rail'
 
-// The side panel, on every screen (as Folio's): the graph of what's open — a
-// page, a sheet, a diagram, a whiteboard, a task list, a folder — 1–3 links
-// deep; inside a workspace with nothing open, the workspace's whole graph.
-// On a page also its outline (headings to jump to) and its notes (its
+// The side panel (as Folio's), where something is open — a page, a sheet,
+// a diagram, a whiteboard, a task list, a folder: its graph, 1–3 links
+// deep; on a page also its outline (headings to jump to) and its notes (its
 // callouts and to-dos; a box ticks from here). Each part folds (remembered).
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 
 const ws = computed(() => (typeof route.params.ws === 'string' ? route.params.ws : ''))
-const onGraph = computed(() => route.name === 'ws-graph')
 // What's open: its id, for its own graph.
-const focus = computed(() => {
-  const p = route.params
-  if (typeof p.page === 'string') return p.page
-  if (['ws-sheet', 'ws-diagram', 'ws-whiteboard', 'ws-form'].includes(String(route.name)) && typeof p.id === 'string') return p.id
-  if (route.name === 'ws-tasks' || route.name === 'ws-board') return typeof p.list === 'string' && p.list !== 'all' ? p.list : ''
-  if (typeof route.query.folder === 'string') return route.query.folder
-  return ''
-})
-
-// The workspace's whole graph (nothing open).
-const whole = ref<Graph | null>(null)
-watch(
-  () => ws.value && !focus.value && !onGraph.value && rail.open && ws.value,
-  async (w) => {
-    whole.value = null
-    if (w) whole.value = await loadGraph(w).catch(() => null)
-  },
-  { immediate: true },
-)
-function openNode(n: GraphNode) {
-  const to = routeOf(ws.value, n)
-  if (to) void router.push(to)
-}
+const focus = computed(() => railFocus(route))
 
 // ---- The page's outline and notes ----
 const outline = computed(() => (rail.page ? outlineOf(rail.page.content) : null))
@@ -94,21 +67,8 @@ function fold(p: Part) {
       <button type="button" class="icon-btn h-7 w-7" :aria-label="t('common.close')" data-testid="rail-close" @click="setRailOpen(false)"><X class="h-4 w-4" /></button>
     </div>
 
-    <!-- Not on the Graph page itself (it's there already). -->
-    <template v-if="!onGraph">
-    <button type="button" class="ol-part" :aria-expanded="!folded.has('graph')" @click="fold('graph')"><ChevronDown class="chev" :class="{ shut: folded.has('graph') }" />{{ focus ? t('graph.local') : t('graph.title') }}</button>
-    <template v-if="!folded.has('graph')">
-      <LocalGraph v-if="ws && focus" :key="focus" rail :ws="ws" :id="focus" />
-      <div v-else-if="ws" data-testid="rail-whole">
-        <div class="flex items-center justify-end pb-1.5">
-          <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="icon-btn h-6 w-6" :title="t('graph.openAll')" :aria-label="t('graph.openAll')"><Maximize2 class="h-3.5 w-3.5" /></RouterLink>
-        </div>
-        <div v-if="whole?.nodes.length" class="rail-canvas"><GraphCanvas :graph="whole" compact @open="openNode" /></div>
-        <p v-else-if="whole" class="px-1 text-[12px] text-text-3">{{ t('graph.empty') }}</p>
-      </div>
-      <p v-else class="px-1 text-[12px] text-text-3">{{ t('outline.openSomething') }}</p>
-    </template>
-    </template>
+    <button type="button" class="ol-part" :aria-expanded="!folded.has('graph')" @click="fold('graph')"><ChevronDown class="chev" :class="{ shut: folded.has('graph') }" />{{ t('graph.local') }}</button>
+    <LocalGraph v-if="!folded.has('graph') && ws && focus" :key="focus" rail :ws="ws" :id="focus" />
 
     <template v-if="outline">
       <button type="button" class="ol-part" :aria-expanded="!folded.has('outline')" @click="fold('outline')"><ChevronDown class="chev" :class="{ shut: folded.has('outline') }" /><ListTree class="h-3.5 w-3.5" />{{ t('outline.headings') }}</button>
@@ -148,12 +108,6 @@ function fold(p: Part) {
 <style scoped>
 .rail-body {
   padding: 12px;
-}
-.rail-canvas {
-  height: 220px;
-  overflow: hidden;
-  border-radius: 10px;
-  background: var(--fill-2);
 }
 .ol-part {
   display: flex;

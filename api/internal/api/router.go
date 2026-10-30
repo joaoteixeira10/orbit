@@ -323,6 +323,7 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/me/blocks", h.planBlocks)
 			authed.DELETE("/me/blocks/:id", h.deleteBlock)
 			authed.GET("/workspaces/:ws/folders", h.listFolders)
+			authed.GET("/workspaces/:ws/graph", h.workspaceGraph)
 			authed.POST("/workspaces/:ws/folders", h.createFolder)
 			authed.PUT("/folders/:id", h.updateFolder)
 			authed.DELETE("/folders/:id", h.deleteFolder)

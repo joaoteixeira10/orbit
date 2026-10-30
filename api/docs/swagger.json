@@ -7915,6 +7915,39 @@
                 }
             }
         },
+        "/workspaces/{ws}/graph": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "How a workspace's things connect",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.graphResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/habits": {
             "get": {
                 "security": [
@@ -10835,6 +10868,61 @@
                     "type": "number",
                     "maximum": 1000,
                     "minimum": 0
+                }
+            }
+        },
+        "api.graphEdge": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "link | embed | mention | parent | folder | list",
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.graphNode": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "a list's or a folder's",
+                    "type": "string"
+                },
+                "icon": {
+                    "description": "a page's emoji",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "page | sheet | diagram | board | list | folder | person",
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.graphResponse": {
+            "type": "object",
+            "properties": {
+                "edges": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.graphEdge"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.graphNode"
+                    }
                 }
             }
         },

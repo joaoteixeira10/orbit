@@ -21,6 +21,7 @@ import WsIcon from '@/components/ui/WsIcon.vue'
 import PageEditor from '@/components/editor/PageEditor.vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
+import LocalGraph from '@/components/graph/LocalGraph.vue'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
@@ -832,6 +833,8 @@ onUnmounted(() => {
               <span>{{ t('pages.addSub') }}</span>
             </button>
           </section>
+
+          <LocalGraph :ws="wsId" :id="page.id" />
         </div>
       </div>
     </template>

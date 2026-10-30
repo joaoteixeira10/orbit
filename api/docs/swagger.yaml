@@ -1142,6 +1142,43 @@ definitions:
         minimum: 0
         type: number
     type: object
+  api.graphEdge:
+    properties:
+      from:
+        type: string
+      kind:
+        description: link | embed | mention | parent | folder | list
+        type: string
+      to:
+        type: string
+    type: object
+  api.graphNode:
+    properties:
+      color:
+        description: a list's or a folder's
+        type: string
+      icon:
+        description: a page's emoji
+        type: string
+      id:
+        type: string
+      kind:
+        description: page | sheet | diagram | board | list | folder | person
+        type: string
+      title:
+        type: string
+    type: object
+  api.graphResponse:
+    properties:
+      edges:
+        items:
+          $ref: '#/definitions/api.graphEdge'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/api.graphNode'
+        type: array
+    type: object
   api.habitCheckRequest:
     properties:
       done:
@@ -8406,6 +8443,26 @@ paths:
       summary: Your grades in a workspace
       tags:
       - school
+  /workspaces/{ws}/graph:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.graphResponse'
+      security:
+      - BearerAuth: []
+      summary: How a workspace's things connect
+      tags:
+      - pages
   /workspaces/{ws}/habits:
     get:
       parameters:

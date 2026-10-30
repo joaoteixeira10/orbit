@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download } from 'lucide-vue-next'
+import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download, Waypoints } from 'lucide-vue-next'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
@@ -73,6 +73,7 @@ async function create() {
         <h1 class="large-title">{{ t('modules.pages') }}</h1>
         <p class="subhead mt-0.5">{{ workspace?.name }} · {{ (pages.byWs[ws] ?? []).length }}</p>
       </div>
+      <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="btn btn-ghost" data-testid="open-graph"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink>
       <button v-if="editable" class="btn-primary" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</button>
     </header>
 

@@ -479,6 +479,18 @@ too.
 
 **Pages inside** a page are listed under it, with **Add a page inside**.
 
+**Graph.** Under a page, a small graph shows what it links to and what links
+to it — 1, 2 or 3 links deep (your choice is remembered); a click on a dot
+opens that one, **Whole graph** opens the workspace's. **Graph** (in Pages,
+in Files, or ⌘K) shows everything in the workspace and how it connects:
+pages, sheets, diagrams, whiteboards, task lists, folders and the people
+pages @-mention, joined by links (thicker when shown in the page), mentions
+(dotted), sub-pages and what's in which folder (dashed). A task's links
+count as its list's. Point at a dot to light it and its neighbours; drag to
+move around, the wheel or the buttons to zoom; the kinds at the top show or
+hide each kind; **Find by name** dims the rest. Files' details show the
+small graph of a file or a folder too.
+
 **Pages screen** (Pages in the sidebar): every page as a grid or a list,
 sorted by **Recently edited** or **Title**, with a filter. **Trash** keeps
 deleted pages (and the pages inside them) for **30 days**: **Restore**, or

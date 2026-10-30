@@ -13,6 +13,11 @@ merge, not at release time.
 
 ### Added
 
+- **Graph** — a workspace's things and how they connect (pages, sheets,
+  diagrams, whiteboards, lists, folders, mentioned people; links, embeds,
+  mentions, sub-pages, folders), with kinds to hide, find, pan and zoom
+  (`GET /workspaces/{ws}/graph`); a small graph 1–3 links deep under each
+  page and in Files' details.
 - **Projects: a folder and a task list** — a folder joins one task list
   (a list is in one folder at most); inside the folder the list shows with
   its progress, and the list shows its folder. Pages can be filed in

@@ -7,6 +7,7 @@ import {
   MoreHorizontal, Pencil, Plus, Sheet, SquareKanban, Trash2, Workflow, X,
 } from 'lucide-vue-next'
 import { tasksApi, type TaskList } from '@/api/planner'
+import LocalGraph from '@/components/graph/LocalGraph.vue'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import Overlay from '@/components/ui/Overlay.vue'
@@ -604,6 +605,7 @@ defineExpose({ here, reload: load })
           <button type="button" class="btn-primary btn-sm" @click="open(infoFile)"><ExternalLink class="h-3.5 w-3.5" />{{ t('drive.open') }}</button>
           <button type="button" class="btn btn-sm" @click="downloadOf(infoFile)"><Download class="h-3.5 w-3.5" />{{ t('drive.download') }}</button>
         </div>
+        <LocalGraph v-if="infoFile || infoFolder" :key="infoFile?.id ?? infoFolder?.id" :ws="ws" :id="(infoFile?.id ?? infoFolder?.id)!" />
       </div>
     </component>
 

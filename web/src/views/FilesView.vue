@@ -2,7 +2,7 @@
 import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Brush, ChevronDown, FileText, GitFork, Plus, Sheet, Upload, Workflow } from 'lucide-vue-next'
+import { Brush, ChevronDown, FileText, GitFork, Plus, Sheet, Upload, Waypoints, Workflow } from 'lucide-vue-next'
 import { pagesApi } from '@/api/planner'
 import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
@@ -99,6 +99,7 @@ async function upload(e: Event) {
         <h1 class="large-title">{{ t('modules.files') }}</h1>
         <p class="subhead mt-0.5">{{ workspace?.name }}</p>
       </div>
+      <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="btn btn-ghost"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink>
       <template v-if="editable && kinds.length">
         <input ref="fileEl" type="file" class="hidden" multiple :accept="accept" data-testid="files-upload-input" @change="upload" />
         <button class="btn btn-ghost" :disabled="busy" :title="t('drive.uploadHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.upload') }}</button>

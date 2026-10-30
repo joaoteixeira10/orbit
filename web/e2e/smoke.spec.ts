@@ -2339,3 +2339,35 @@ test('projects: a folder joined to a task list shows its progress; the list show
   const pages = (await (await request.get(`${base}/pages`, { headers: H })).json()) as { id: string; folder_id?: string }[]
   expect(pages.find((p) => p.id === made)?.folder_id).toBe(folder.id)
 })
+
+test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Mapped', kind: 'work', starter: false, modules: ['home', 'tasks', 'pages', 'sheets', 'files'] } })).json()
+  const base = `/api/v1/workspaces/${ws.id}`
+  const sheet = await (await request.post(`${base}/sheets`, { headers: H, data: { title: 'Budget', data: { tabs: [] } } })).json()
+  const goals = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Goals' } })).json()
+  const plan = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Plan', content: `Costs:\n\n[Budget](/w/${ws.id}/s/${sheet.id})\n\nFor the [goals](/w/${ws.id}/p/${goals.id}).` } })).json()
+  await request.post(`${base}/pages`, { headers: H, data: { title: 'Alone' } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  // Beside the page: what it links to.
+  await page.goto(`/w/${ws.id}/p/${plan.id}`)
+  const local = page.getByTestId('local-graph')
+  await expect(local.getByTestId('graph-node')).toHaveCount(3)
+  await local.locator(`[data-testid="graph-node"][data-id="${goals.id}"]`).click()
+  await expect(page).toHaveURL(new RegExp(`/p/${goals.id}`))
+  await expect(page.getByTestId('local-graph').getByTestId('graph-node')).toHaveCount(2)
+  // The whole graph, from it: near Goals, then everything.
+  await page.getByTestId('local-graph-open').click()
+  await expect(page).toHaveURL(/\/graph\?focus=/)
+  await expect(page.getByTestId('graph-node')).toHaveCount(2)
+  await page.getByTestId('graph-all').click()
+  await expect(page.getByTestId('graph-node')).toHaveCount(4) // three pages and the sheet
+  await page.getByTestId('graph-kind-sheet').click()
+  await expect(page.getByTestId('graph-node')).toHaveCount(3)
+  await page.getByTestId('graph-kind-sheet').click()
+  await page.locator(`[data-testid="graph-node"][data-id="${sheet.id}"]`).click()
+  await expect(page).toHaveURL(new RegExp(`/s/${sheet.id}`))
+})

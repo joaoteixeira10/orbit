@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush, Bookmark, Sheet, Workflow } from 'lucide-vue-next'
+import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush, Bookmark, Sheet, Workflow, Waypoints } from 'lucide-vue-next'
 import WsIcon from './ui/WsIcon.vue'
 import { plannerApi, pagesApi, type SearchHit } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -82,6 +82,7 @@ const actions = computed<Item[]>(() => {
     out.push({ key: 'a-task', label: t('cmd.newTask'), icon: Plus, run: () => emit('newTask', currentWs.value) })
     if (wss.byId(currentWs.value)?.modules.includes('notes'))
       out.push({ key: 'a-note', label: t('cmd.newNote'), icon: Plus, run: () => router.push({ name: 'ws-notes', params: { ws: currentWs.value }, query: { new: '1' } }) })
+    out.push({ key: 'a-graph', label: t('graph.title'), sub: wss.byId(currentWs.value)?.name, icon: Waypoints, run: () => router.push({ name: 'ws-graph', params: { ws: currentWs.value } }) })
   }
   out.push({ key: 'a-quick', label: t('notes.mine.action'), sub: '⌥N', icon: NotebookPen, run: () => emit('quickNote') })
   out.push({ key: 'a-draw', label: t('draw.newSketch'), sub: t('draw.quick'), icon: Brush, run: () => void newSketch() })

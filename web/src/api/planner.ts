@@ -84,6 +84,19 @@ export interface Page extends PageSummary {
   can_edit: boolean
 }
 
+// A page as it was after a save (one person's saves close together are one).
+export interface PageVersion {
+  id: string
+  version: number
+  title: string
+  content?: string
+  user_id: string
+  restored?: number // the version it put back
+  created_at: string
+  updated_at: string
+  chars?: number
+}
+
 export interface TaskList {
   id: string
   workspace_id: string
@@ -435,6 +448,10 @@ export const pagesApi = {
   destroy: (id: string) => api<void>(`/pages/${id}?permanent=1`, { method: 'DELETE' }),
   restore: (id: string) => api<PageSummary>(`/pages/${id}/restore`, { method: 'POST' }),
   duplicate: (id: string) => api<Page>(`/pages/${id}/duplicate`, { method: 'POST' }),
+  // History: its versions (newest first, no text), one with its text, one put back.
+  versions: (id: string) => api<PageVersion[]>(`/pages/${id}/versions`),
+  version: (vid: string) => api<PageVersion>(`/page-versions/${vid}`),
+  restoreVersion: (vid: string) => api<Page>(`/page-versions/${vid}/restore`, { method: 'POST' }).then(withContent),
   favorite: (id: string, on: boolean) => api<void>(`/pages/${id}/favorite`, { method: on ? 'POST' : 'DELETE' }),
   favorites: () => api<PageSummary[]>('/me/favorites'),
 }

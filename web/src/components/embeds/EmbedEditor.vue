@@ -33,7 +33,7 @@ onUnmounted(() => (document.body.style.overflow = ''))
 .embed-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 50; /* as dialogs: one opened from here comes later, on top */
   display: flex;
   padding: clamp(0px, 2.5vw, 28px);
   background: var(--backdrop);

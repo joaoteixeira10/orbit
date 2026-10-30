@@ -13,6 +13,11 @@ merge, not at release time.
 
 ### Added
 
+- **Page history** — every save kept with who made it (one person's saves
+  close together are one version); read one with its changes marked,
+  restore it, or compare up to five versions or pages side by side
+  (`GET /pages/{id}/versions`, `GET /page-versions/{id}`,
+  `POST /page-versions/{id}/restore`).
 - **Graph** — a workspace's things and how they connect (pages, sheets,
   diagrams, whiteboards, lists, folders, mentioned people; links, embeds,
   mentions, sub-pages, folders), with kinds to hide, find, pan and zoom

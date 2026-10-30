@@ -1843,6 +1843,26 @@ definitions:
       workspace_id:
         type: string
     type: object
+  api.pageVersionSummary:
+    properties:
+      chars:
+        description: its text's length
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      restored:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      version:
+        type: integer
+    type: object
   api.personalKindsRequest:
     properties:
       kinds:
@@ -3212,6 +3232,30 @@ definitions:
         type: string
       updated_at:
         type: string
+      workspace_id:
+        type: string
+    type: object
+  models.PageVersion:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      page_id:
+        type: string
+      restored:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      version:
+        description: the page's version it is
+        type: integer
       workspace_id:
         type: string
     type: object
@@ -6531,6 +6575,46 @@ paths:
       summary: Transfer instance ownership
       tags:
       - owner
+  /page-versions/{id}:
+    get:
+      parameters:
+      - description: Version id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PageVersion'
+      security:
+      - BearerAuth: []
+      summary: A version of a page
+      tags:
+      - pages
+  /page-versions/{id}/restore:
+    post:
+      parameters:
+      - description: Version id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageResponse'
+      security:
+      - BearerAuth: []
+      summary: Put a version back
+      tags:
+      - pages
   /pages/{id}:
     delete:
       parameters:
@@ -6704,6 +6788,28 @@ paths:
       security:
       - BearerAuth: []
       summary: Restore a page
+      tags:
+      - pages
+  /pages/{id}/versions:
+    get:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.pageVersionSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A page's history
       tags:
       - pages
   /privileges:

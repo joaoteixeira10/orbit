@@ -22,6 +22,7 @@ import PageEditor from '@/components/editor/PageEditor.vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
+import PageHistory from '@/components/pages/PageHistory.vue'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
@@ -529,6 +530,31 @@ const status = computed(() => {
   return t('editor.editedBy', { when, name: memberName(by) })
 })
 
+// ---- History (?history=1) ----
+const historyOpen = computed(() => route.query.history === '1')
+const openHistory = () => router.replace({ query: { ...route.query, history: '1' } })
+const closeHistory = () => router.replace({ query: { ...route.query, history: undefined } })
+// restoreVersion saves what's waiting, then puts the version back and shows it.
+async function restoreVersion(vid: string) {
+  try {
+    await flush()
+    const p = await pagesApi.restoreVersion(vid)
+    editorRef.value?.setContent(p.content)
+    draft.value = p.content
+    version.value = p.version
+    savedGen = editGen
+    dirty.value = false
+    failed.value = false
+    if (!titleDirty) title.value = p.title
+    if (page.value) page.value = { ...page.value, title: p.title, content: p.content, version: p.version, updated_at: p.updated_at, updated_by: p.updated_by }
+    pages.patch({ id: p.id, title: p.title })
+    void closeHistory()
+    toast.success(t('history.restored'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 // Names for "Edited by" in shared workspaces.
 watch(
   ws,
@@ -659,7 +685,7 @@ onUnmounted(() => {
         </template>
       </nav>
       <div v-if="page && ready" class="flex shrink-0 items-center gap-0.5">
-        <span class="status" :class="{ 'text-warn-text': failed }" aria-live="polite">{{ status }}</span>
+        <button type="button" class="status hover:underline" :class="{ 'text-warn-text': failed }" aria-live="polite" :title="t('history.open')" data-testid="page-status" @click="openHistory">{{ status }}</button>
         <span v-if="viewOnly" class="pill ml-1.5"><Users class="h-3 w-3" />{{ t('editor.viewOnly') }}</span>
         <template v-if="editable">
           <template v-if="editing">
@@ -840,6 +866,7 @@ onUnmounted(() => {
     </template>
 
     <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
+    <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
     <EmojiPicker v-if="iconOpen" :anchor="iconAnchor" :removable="!!page?.icon" @pick="setIcon" @close="iconOpen = false" />
     <CoverPicker v-if="coverOpen" :anchor="coverAnchor" :current="page?.cover ?? ''" @pick="setCover" @close="coverOpen = false" />
   </div>

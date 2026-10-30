@@ -454,9 +454,19 @@ It says how many pages and files came in, and names any file it couldn't
 read.
 
 **Saving** is automatic; the header says *Saving…* / *Saved* / *Edited … by
-…*. ⌘S saves at once. If someone else saved the page while you were editing,
+…* — click it (or `⋯` → **Page history**) for the page's history. ⌘S saves at once. If someone else saved the page while you were editing,
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
+
+**Page history.** Every save of a page is kept, with who saved it (one
+person's saves within a few minutes count as one version). The history
+lists them by day; pick one to read it as it was, with what changed since
+the version before marked — added in green, removed in red (**Show
+changes**). **Restore this version** puts it back (what the page was stays
+in the history). Tick up to five versions — or add other pages as they are
+now (**Compare with another page**) — and **Compare** shows them side by
+side, each marked against the first. Deleting a page for good deletes its
+history.
 
 **Images and files.** Paste or drop an image or a file into a page (in
 either editor), or type **/** → **Image or file**. An image shows in the page;

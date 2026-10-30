@@ -4779,6 +4779,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/page-versions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "A version of a page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Version id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PageVersion"
+                        }
+                    }
+                }
+            }
+        },
+        "/page-versions/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "Put a version back",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Version id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pageResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pages/{id}": {
             "get": {
                 "security": [
@@ -5059,6 +5125,42 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.pageSummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/pages/{id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "A page's history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.pageVersionSummary"
+                            }
                         }
                     }
                 }
@@ -11903,6 +12005,36 @@ const docTemplate = `{
                 }
             }
         },
+        "api.pageVersionSummary": {
+            "type": "object",
+            "properties": {
+                "chars": {
+                    "description": "its text's length",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "restored": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.personalKindsRequest": {
             "type": "object",
             "properties": {
@@ -13855,6 +13987,42 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PageVersion": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "page_id": {
+                    "type": "string"
+                },
+                "restored": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "description": "the page's version it is",
+                    "type": "integer"
                 },
                 "workspace_id": {
                     "type": "string"

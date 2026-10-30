@@ -519,6 +519,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskList{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.GitLink{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Page{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.PageVersion{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Note{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Drawing{}).Error },
 		func() error { return deleteHabits(tx, "workspace_id = ?", wsID) },

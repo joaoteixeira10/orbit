@@ -335,6 +335,7 @@ func AllModels() []any {
 		&Workspace{},
 		&WorkspaceMember{},
 		&Page{},
+		&PageVersion{},
 		&PageFavorite{},
 		&TaskList{},
 		&Task{},

@@ -263,6 +263,9 @@ func (h *Handlers) createPage(c *gin.Context) {
 		h.internalError(c, err, "could not create the page")
 		return
 	}
+	if p.Content != "" {
+		recordVersion(h.db, p, auth.UserID(c), nil, 0)
+	}
 	h.publishWS(c, ws.ID, "pages")
 	h.notifyPageMentions(c, p, "")
 	// A page made with a title (a copy, a note turned into a page) is news
@@ -342,6 +345,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	}
 	wasUntitled := p.Title == ""
 	before := p.Content
+	prev := p
 	up := map[string]any{"updated_by": auth.UserID(c)}
 	if req.Title != nil {
 		up["title"] = strings.TrimSpace(*req.Title)
@@ -397,6 +401,9 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
+	if req.Content != nil || req.Title != nil {
+		recordVersion(h.db, p, auth.UserID(c), &prev, 0)
+	}
 	if req.Content != nil {
 		h.notifyPageMentions(c, p, before)
 	}
@@ -492,6 +499,7 @@ func (h *Handlers) trashPage(c *gin.Context) {
 			return
 		}
 		h.db.Where("page_id IN ?", ids).Delete(&models.PageFavorite{})
+		h.db.Where("page_id IN ?", ids).Delete(&models.PageVersion{})
 		_ = uploads.DeleteFor(h.db, uploads.Page, ids)
 		h.db.Where("id IN ?", ids).Delete(&models.Page{})
 	} else {

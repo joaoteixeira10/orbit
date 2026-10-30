@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2, Folder as FolderIcon, FolderX, Check } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2, Folder as FolderIcon, FolderX, Check, History } from 'lucide-vue-next'
 import { filesApi, tree, type Folder } from '@/lib/filesApi'
 import Popover from './ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
@@ -128,6 +128,11 @@ const moveTo = (parent: string | null) =>
     if (parent) pages.toggle(parent, true)
     await pages.load(props.ws)
   })
+// History opens over the page (?history=1).
+function history() {
+  emit('close')
+  void router.push({ name: 'ws-page', params: { ws: props.ws, page: props.pageId }, query: { history: '1' } })
+}
 const trash = () =>
   run(async () => {
     await pagesApi.trashPage(props.pageId)
@@ -162,6 +167,7 @@ const trash = () =>
       <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
       <button class="menu-item" data-testid="page-pdf" @click="asPdf"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
+      <button class="menu-item" data-testid="page-history-open" @click="history"><History class="h-4 w-4 text-text-2" />{{ t('history.title') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
       <button v-if="canFile" class="menu-item" data-testid="page-file-in" @click="startFiling"><FolderIcon class="h-4 w-4 text-text-2" />{{ t('project.fileIn') }}</button>
       <button class="menu-item" data-testid="page-db-toggle" @click="toggleDatabase">

@@ -83,6 +83,21 @@ type Page struct {
 	Props string `gorm:"type:text" json:"props,omitempty"`
 }
 
+// PageVersion is a page as it was after a save: its title and Markdown, and
+// who saved it. One person's saves close together make one version (a
+// session of editing), not one per pause. Restored: the version this one
+// put back (0: an edit).
+type PageVersion struct {
+	Base
+	PageID      string `gorm:"size:36;not null;index" json:"page_id"`
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	Version     int    `gorm:"not null" json:"version"` // the page's version it is
+	Title       string `gorm:"size:300" json:"title"`
+	Content     string `gorm:"type:text" json:"content,omitempty"`
+	UserID      string `gorm:"size:36" json:"user_id"`
+	Restored    int    `gorm:"not null;default:0" json:"restored,omitempty"`
+}
+
 // PageFavorite pins a page to one user's Favorites.
 type PageFavorite struct {
 	Base

@@ -77,6 +77,8 @@ func (s *Scheduler) emptyTrash() {
 	}
 	s.db.Where("page_id IN ?", ids).Delete(&models.PageFavorite{})
 	s.db.Where("page_id IN ?", ids).Delete(&models.PageVersion{})
+	s.db.Where("page_id IN ?", ids).Delete(&models.ShareLink{})
+	s.db.Where("page_id IN ?", ids).Delete(&models.Form{})
 	_ = uploads.DeleteFor(s.db, uploads.Page, ids)
 	res := s.db.Where("id IN ?", ids).Delete(&models.Page{})
 	s.log.Info("emptied old trash", zap.Int64("pages", res.RowsAffected))

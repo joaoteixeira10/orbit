@@ -13,6 +13,13 @@ merge, not at release time.
 
 ### Added
 
+- **Guest links** — a page (and, if chosen, the pages inside it) opens to
+  anyone with its link, without an account, to read or to edit (versioned,
+  in its history); with what it shows (sheets, diagrams, whiteboards,
+  files); expiring or until taken back; an owner switch (`guest_links`).
+- **Forms** — a database's questions, each answer a new row; answered in
+  Orbit or, made public, by anyone with the link (required fields, checked
+  values, a honeypot; owner switch `public_forms`).
 - **MCP server for assistants** — Claude, ChatGPT, Cursor and others use
   Orbit as the person at `/mcp` (about 30 tools: pages, tasks, comments,
   calendar, notes, files, Mermaid diagrams, history, graph, search), signed

@@ -61,6 +61,7 @@ async function textOf(id: string, page = false): Promise<string> {
 }
 
 const who = (uid: string) => {
+  if (!uid) return t('history.guest') // a guest link's
   const m = (wss.members[props.ws] ?? []).find((x) => x.user_id === uid)
   return m ? m.display_name || m.username : t('editor.someone')
 }

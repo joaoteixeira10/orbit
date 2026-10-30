@@ -4,14 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ExternalLink, Sheet } from 'lucide-vue-next'
 import { sheetsApi, type SheetDoc } from '@/lib/sheetsApi'
+import { guestApi } from '@/lib/shareApi'
 import { Book, addr, colName, parseAddr, readData, show, type SheetData } from '@/lib/sheet'
 import { dayOf } from '@/lib/formula'
 import { locale, todayStr } from '@/lib/dates'
 
 // A sheet shown in a page (a link to it alone on its line): its cells as
 // they read, a tab at a time, the used part (up to 50 rows and 15
-// columns), and a way to open it.
-const props = defineProps<{ ws: string; id: string }>()
+// columns), and a way to open it. guest: a guest link's secret (loaded
+// through it; no way to open).
+const props = defineProps<{ ws: string; id: string; guest?: string }>()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -23,7 +25,7 @@ watch(
   () => props.id,
   async (id) => {
     try {
-      doc.value = await sheetsApi.get(id)
+      doc.value = props.guest ? await guestApi.embed<SheetDoc>(props.guest, 'sheet', id) : await sheetsApi.get(id)
       data.value = readData(doc.value.data, t('sheets.tabName', { n: 1 }))
       tabId.value = data.value.tabs[0].id
     } catch {
@@ -60,7 +62,7 @@ const open = () => router.push({ name: 'ws-sheet', params: { ws: props.ws, id: p
     <div class="se-head">
       <Sheet class="h-4 w-4 text-[#34c759]" />
       <span class="min-w-0 flex-1 truncate font-semibold">{{ failed ? t('sheets.notFound') : doc?.title || t('sheets.untitled') }}</span>
-      <button v-if="doc" type="button" class="se-open" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('sheets.open') }}</button>
+      <button v-if="doc && !guest" type="button" class="se-open" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('sheets.open') }}</button>
     </div>
     <div v-if="tab && book && size.rows" class="se-scroll">
       <table>

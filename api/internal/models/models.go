@@ -346,6 +346,8 @@ func AllModels() []any {
 		&OAuthClient{},
 		&Page{},
 		&PageVersion{},
+		&ShareLink{},
+		&Form{},
 		&PageFavorite{},
 		&TaskList{},
 		&Task{},

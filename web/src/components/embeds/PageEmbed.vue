@@ -9,17 +9,18 @@ import { embedEdits, openEmbed, type EmbedKind } from '@/lib/embeds'
 
 // A sheet, a diagram or a whiteboard in a page, as it reads; a double click
 // (or the button in its corner) opens it in the big editor over the page,
-// and it's drawn again when that closes.
-const props = defineProps<{ kind: EmbedKind; ws: string; id: string }>()
+// and it's drawn again when that closes. guest: a guest link's secret (it
+// shows, and that's all).
+const props = defineProps<{ kind: EmbedKind; ws: string; id: string; guest?: string }>()
 const { t } = useI18n()
 const view = computed(() => (props.kind === 'sheet' ? SheetEmbed : props.kind === 'diagram' ? DiagramEmbed : WhiteboardEmbed))
-const open = () => openEmbed({ kind: props.kind, ws: props.ws, id: props.id })
+const open = () => !props.guest && openEmbed({ kind: props.kind, ws: props.ws, id: props.id })
 </script>
 
 <template>
-  <div class="page-embed" :data-embed="kind" :title="t('embed.dblclick')" @dblclick.stop.prevent="open">
-    <component :is="view" :key="embedEdits[id] ?? 0" :ws="ws" :id="id" />
-    <button type="button" class="pe-expand" :aria-label="t('embed.expand')" :title="t('embed.expand')" data-testid="embed-expand" @click.stop="open"><Maximize2 class="h-3.5 w-3.5" /></button>
+  <div class="page-embed" :data-embed="kind" :title="guest ? undefined : t('embed.dblclick')" @dblclick.stop.prevent="open">
+    <component :is="view" :key="embedEdits[id] ?? 0" :ws="ws" :id="id" :guest="guest" />
+    <button v-if="!guest" type="button" class="pe-expand" :aria-label="t('embed.expand')" :title="t('embed.expand')" data-testid="embed-expand" @click.stop="open"><Maximize2 class="h-3.5 w-3.5" /></button>
   </div>
 </template>
 

@@ -23,6 +23,7 @@ import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
 import PageHistory from '@/components/pages/PageHistory.vue'
+import ShareSheet from '@/components/pages/ShareSheet.vue'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
@@ -530,6 +531,10 @@ const status = computed(() => {
   return t('editor.editedBy', { when, name: memberName(by) })
 })
 
+// ---- Guest links (?share=1) ----
+const shareOpen = computed(() => route.query.share === '1')
+const closeShare = () => router.replace({ query: { ...route.query, share: undefined } })
+
 // ---- History (?history=1) ----
 const historyOpen = computed(() => route.query.history === '1')
 const openHistory = () => router.replace({ query: { ...route.query, history: '1' } })
@@ -866,6 +871,7 @@ onUnmounted(() => {
     </template>
 
     <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
+    <ShareSheet v-if="page" :open="shareOpen" :page-id="page.id" :editable="editable" @close="closeShare" />
     <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
     <EmojiPicker v-if="iconOpen" :anchor="iconAnchor" :removable="!!page?.icon" @pick="setIcon" @close="iconOpen = false" />
     <CoverPicker v-if="coverOpen" :anchor="coverAnchor" :current="page?.cover ?? ''" @pick="setCover" @close="coverOpen = false" />

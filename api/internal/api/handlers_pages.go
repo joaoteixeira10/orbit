@@ -500,6 +500,8 @@ func (h *Handlers) trashPage(c *gin.Context) {
 		}
 		h.db.Where("page_id IN ?", ids).Delete(&models.PageFavorite{})
 		h.db.Where("page_id IN ?", ids).Delete(&models.PageVersion{})
+		h.db.Where("page_id IN ?", ids).Delete(&models.ShareLink{})
+		h.db.Where("page_id IN ?", ids).Delete(&models.Form{})
 		_ = uploads.DeleteFor(h.db, uploads.Page, ids)
 		h.db.Where("id IN ?", ids).Delete(&models.Page{})
 	} else {

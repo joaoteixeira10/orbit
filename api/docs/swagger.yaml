@@ -1,5 +1,16 @@
 basePath: /api/v1
 definitions:
+  api.FormField:
+    properties:
+      help:
+        type: string
+      label:
+        type: string
+      prop:
+        type: string
+      required:
+        type: boolean
+    type: object
   api.SmartFilter:
     properties:
       assignee:
@@ -86,6 +97,12 @@ definitions:
     required:
     - role
     - user
+    type: object
+  api.answerRequest:
+    properties:
+      values:
+        additionalProperties: {}
+        type: object
     type: object
   api.backlinkTask:
     properties:
@@ -789,6 +806,49 @@ definitions:
           type: string
         type: array
     type: object
+  api.fillField:
+    properties:
+      help:
+        type: string
+      label:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/api.fillOption'
+        type: array
+      prop:
+        type: string
+      required:
+        type: boolean
+      type:
+        description: title | text | number | select | multi_select | date | checkbox
+          | person | url
+        type: string
+    type: object
+  api.fillForm:
+    properties:
+      fields:
+        items:
+          $ref: '#/definitions/api.fillField'
+        type: array
+      intro:
+        type: string
+      open:
+        type: boolean
+      thanks:
+        type: string
+      title:
+        type: string
+    type: object
+  api.fillOption:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   api.focusSessionView:
     properties:
       created_at:
@@ -890,6 +950,62 @@ definitions:
       parent_id:
         type: string
       updated_at:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.formRequest:
+    properties:
+      fields:
+        items:
+          $ref: '#/definitions/api.FormField'
+        maxItems: 60
+        type: array
+      intro:
+        maxLength: 5000
+        type: string
+      open:
+        type: boolean
+      public:
+        type: boolean
+      thanks:
+        maxLength: 500
+        type: string
+      title:
+        maxLength: 300
+        type: string
+    type: object
+  api.formResponse:
+    properties:
+      answers:
+        type: integer
+      created_at:
+        type: string
+      created_by:
+        type: string
+      fields:
+        items:
+          $ref: '#/definitions/api.FormField'
+        type: array
+      id:
+        type: string
+      intro:
+        type: string
+      open:
+        description: taking answers
+        type: boolean
+      page_id:
+        type: string
+      public:
+        type: boolean
+      thanks:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      url:
+        description: a public one's link
         type: string
       workspace_id:
         type: string
@@ -1178,6 +1294,35 @@ definitions:
         items:
           $ref: '#/definitions/api.graphNode'
         type: array
+    type: object
+  api.guestEditRequest:
+    properties:
+      content:
+        type: string
+      title:
+        maxLength: 300
+        type: string
+      version:
+        type: integer
+    type: object
+  api.guestPage:
+    properties:
+      content:
+        type: string
+      cover:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      parent_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
     type: object
   api.habitCheckRequest:
     properties:
@@ -2155,6 +2300,47 @@ definitions:
         type: boolean
       passwordless_enabled:
         type: boolean
+    type: object
+  api.shareLinkRequest:
+    properties:
+      expires_in_days:
+        description: '0: never'
+        maximum: 3650
+        minimum: 0
+        type: integer
+      mode:
+        enum:
+        - read
+        - edit
+        type: string
+      subpages:
+        type: boolean
+    type: object
+  api.shareLinkResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      mode:
+        description: read | edit
+        type: string
+      page_id:
+        type: string
+      subpages:
+        type: boolean
+      updated_at:
+        type: string
+      url:
+        type: string
+      workspace_id:
+        type: string
     type: object
   api.sheetOut:
     properties:
@@ -4685,6 +4871,50 @@ paths:
       summary: Update an event
       tags:
       - calendar
+  /f/{token}:
+    get:
+      parameters:
+      - description: The form's link
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.fillForm'
+      summary: A public form
+      tags:
+      - forms
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The form's link
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: The answers, by property
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.answerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Answer a public form
+      tags:
+      - forms
   /features:
     get:
       produces:
@@ -4770,6 +5000,97 @@ paths:
       summary: Change a folder
       tags:
       - folders
+  /forms/{id}:
+    delete:
+      parameters:
+      - description: Form id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a form
+      tags:
+      - forms
+    get:
+      parameters:
+      - description: Form id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.fillForm'
+      security:
+      - BearerAuth: []
+      summary: A form, to answer
+      tags:
+      - forms
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.formRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.formResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a form
+      tags:
+      - forms
+  /forms/{id}/answers:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The answers, by property
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.answerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Answer a form
+      tags:
+      - forms
   /git/hook/{link}:
     post:
       consumes:
@@ -5177,6 +5498,49 @@ paths:
       summary: Create an account through an invite link
       tags:
       - workspaces
+  /links/{id}:
+    delete:
+      parameters:
+      - description: Link id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a guest link
+      tags:
+      - sharing
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Link id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.shareLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.shareLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a guest link
+      tags:
+      - sharing
   /lists/{id}:
     delete:
       parameters:
@@ -6865,6 +7229,104 @@ paths:
       summary: Favourite a page
       tags:
       - pages
+  /pages/{id}/forms:
+    get:
+      parameters:
+      - description: Database page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.formResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A database's forms
+      tags:
+      - forms
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Database page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Its questions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.formRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.formResponse'
+      security:
+      - BearerAuth: []
+      summary: New form
+      tags:
+      - forms
+  /pages/{id}/links:
+    get:
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.shareLinkResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A page's guest links
+      tags:
+      - sharing
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What it opens
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.shareLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.shareLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: New guest link
+      tags:
+      - sharing
   /pages/{id}/move:
     post:
       consumes:
@@ -7187,6 +7649,126 @@ paths:
       summary: Update settings/branding
       tags:
       - settings
+  /shared/{token}:
+    get:
+      parameters:
+      - description: The link's secret
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: A guest link (no account)
+      tags:
+      - sharing
+  /shared/{token}/embed/{kind}/{id}:
+    get:
+      parameters:
+      - description: The link's secret
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: sheet, diagram or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: What a shared page shows (guest link)
+      tags:
+      - sharing
+  /shared/{token}/pages/{id}:
+    get:
+      parameters:
+      - description: The link's secret
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.guestPage'
+      summary: A page through a guest link
+      tags:
+      - sharing
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: The link's secret
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.guestEditRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.guestPage'
+      summary: Edit a page through a guest link
+      tags:
+      - sharing
+  /shared/{token}/uploads/{id}/{name}:
+    get:
+      parameters:
+      - description: The link's secret
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Upload id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: A shared page's file (guest link)
+      tags:
+      - sharing
   /sheets/{id}:
     delete:
       parameters:

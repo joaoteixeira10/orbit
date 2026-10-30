@@ -5,10 +5,13 @@ import { useRouter } from 'vue-router'
 import { ExternalLink, Workflow } from 'lucide-vue-next'
 import { diagramsApi, type DiagramDoc } from '@/lib/diagramsApi'
 import { svgUrl } from '@/lib/drawio'
+import { guestApi } from '@/lib/shareApi'
+import { renderMermaid } from '@/lib/mermaid'
 
 // A diagram shown in a page (a link to it alone on its line): its picture,
-// and a way to open it.
-const props = defineProps<{ ws: string; id: string }>()
+// and a way to open it. A Mermaid one without a picture yet (written by an
+// assistant, say) is drawn here. guest: a guest link's secret.
+const props = defineProps<{ ws: string; id: string; guest?: string }>()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -18,7 +21,9 @@ watch(
   () => props.id,
   async (id) => {
     try {
-      doc.value = await diagramsApi.get(id)
+      const d = props.guest ? await guestApi.embed<DiagramDoc>(props.guest, 'diagram', id) : await diagramsApi.get(id)
+      if (!d.preview && d.kind === 'mermaid' && d.data) d.preview = (await renderMermaid(d.data)).svg
+      doc.value = d
     } catch {
       failed.value = true
     }
@@ -33,9 +38,9 @@ const open = () => router.push({ name: 'ws-diagram', params: { ws: props.ws, id:
     <div class="de-head">
       <Workflow class="h-4 w-4 shrink-0 text-text-3" />
       <span class="min-w-0 flex-1 truncate font-medium">{{ failed ? t('diagrams.notFound') : doc?.title || t('diagrams.untitled') }}</span>
-      <button v-if="!failed" type="button" class="btn-plain !py-0.5 text-[12.5px]" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('diagrams.open') }}</button>
+      <button v-if="!failed && !guest" type="button" class="btn-plain !py-0.5 text-[12.5px]" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('diagrams.open') }}</button>
     </div>
-    <button v-if="doc" type="button" class="de-pic" :aria-label="t('diagrams.open')" @click="open">
+    <button v-if="doc" type="button" class="de-pic" :aria-label="t('diagrams.open')" :disabled="!!guest" @click="open">
       <img v-if="doc.preview" :src="svgUrl(doc.preview)" :alt="doc.title" />
       <span v-else class="text-[13px] text-[#8e8e93]">{{ t('diagrams.noPicture') }}</span>
     </button>

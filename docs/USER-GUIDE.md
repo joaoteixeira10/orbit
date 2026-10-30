@@ -283,6 +283,13 @@ reading list, a set of projects, recipes. On an empty page pick **Database**
 (next to the templates), or `⋯` → **Turn into a database** on any page (its
 pages inside become the rows). Each row is a page of its own — open it to
 write in it; its values show under its title.
+- **Forms** (the clipboard button over the table): a form asks for some of
+  the database's properties — and the row's name — in your words, with help
+  under a question and some required; each answer is a new row. Your
+  workspace's people answer it in Orbit (**Open the form**; viewers too).
+  **Public** gives it a link anyone can answer, without an account (the
+  owner can turn public forms off). **Taking answers** off closes it; the
+  rows it made stay when it's deleted.
 - **Properties** are the columns: **+** at the end of the header adds one;
   click a column's name to rename it, change its type, edit a select's
   options (click a colour to change it), hide it in this view or delete it.
@@ -457,6 +464,16 @@ read.
 …* — click it (or `⋯` → **Page history**) for the page's history. ⌘S saves at once. If someone else saved the page while you were editing,
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
+
+**Share with a link.** A page's `⋯` → **Share with a link…** → **New link**
+makes a link that opens the page to anyone who has it — no account. **Can
+read** or **Can edit** (a guest edits the page's Markdown and saves; if
+someone saved meanwhile, theirs is kept and the guest is told); **Pages
+inside too** opens the pages under it as well (listed beside it); and how
+long it works (until taken back, or a day, a week, a month). Guests see the
+sheets, diagrams, whiteboards, pictures and files shown in those pages —
+nothing else of the workspace. Take a link back (🗑) and it stops at once.
+The owner can turn guest links off for the whole Orbit (Owner → Features).
 
 **Page history.** Every save of a page is kept, with who saved it (one
 person's saves within a few minutes count as one version). The history

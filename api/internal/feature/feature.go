@@ -41,6 +41,12 @@ const (
 	// CalDAVSync lets workspace owners keep the workspace's calendar in step
 	// with a calendar on a CalDAV server (iCloud, Nextcloud…), both ways.
 	CalDAVSync = "caldav_sync"
+	// GuestLinks lets editors open a page (and what's under it) to anyone
+	// with its link, without an account. On by default.
+	GuestLinks = "guest_links"
+	// PublicForms lets editors give a database's form a public link: anyone
+	// with it can add a row. On by default.
+	PublicForms = "public_forms"
 )
 
 const settingKey = "features"
@@ -59,6 +65,8 @@ var Defaults = map[string]bool{
 	WorkspaceInvites:      true,
 	PersonalChannels:      true,
 	CalDAVSync:            true,
+	GuestLinks:            true,
+	PublicForms:           true,
 }
 
 // All returns every known flag with its effective value (stored value, else

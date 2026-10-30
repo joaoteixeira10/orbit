@@ -4,10 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Brush, ExternalLink } from 'lucide-vue-next'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
+import { guestApi } from '@/lib/shareApi'
 
 // A whiteboard shown in a page (a link to it alone on its line): its
-// picture, and a way to open it.
-const props = defineProps<{ ws: string; id: string }>()
+// picture, and a way to open it. guest: a guest link's secret.
+const props = defineProps<{ ws: string; id: string; guest?: string }>()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -17,7 +18,7 @@ watch(
   () => props.id,
   async (id) => {
     try {
-      doc.value = await drawingsApi.get(id)
+      doc.value = props.guest ? await guestApi.embed<Drawing>(props.guest, 'board', id) : await drawingsApi.get(id)
     } catch {
       failed.value = true
     }
@@ -32,7 +33,7 @@ const open = () => router.push({ name: 'ws-whiteboard', params: { ws: props.ws, 
     <div class="be-head">
       <Brush class="h-4 w-4 shrink-0 text-[#af52de]" />
       <span class="min-w-0 flex-1 truncate font-medium">{{ failed ? t('embed.boardNotFound') : doc?.title || t('draw.untitled') }}</span>
-      <button v-if="!failed" type="button" class="btn-plain !py-0.5 text-[12.5px]" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('diagrams.open') }}</button>
+      <button v-if="!failed && !guest" type="button" class="btn-plain !py-0.5 text-[12.5px]" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('diagrams.open') }}</button>
     </div>
     <div v-if="doc" class="be-pic">
       <img v-if="doc.preview" :src="previewSrc(doc.preview)" :alt="doc.title" />

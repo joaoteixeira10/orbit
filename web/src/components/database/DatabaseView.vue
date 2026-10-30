@@ -2,7 +2,8 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Columns3, Download, FileSpreadsheet, FileText, Link, LoaderCircle, MoreHorizontal, Plus, Table2, Trash2, Upload } from 'lucide-vue-next'
+import { Columns3, Download, FileSpreadsheet, FileText, Link, LoaderCircle, MoreHorizontal, Plus, Table2, Trash2, Upload, ClipboardList } from 'lucide-vue-next'
+import FormsSheet from '@/components/forms/FormsSheet.vue'
 import Popover from '@/components/ui/Popover.vue'
 import DbCell from './DbCell.vue'
 import PropMenu from './PropMenu.vue'
@@ -33,6 +34,7 @@ const toast = useToastStore()
 
 const page = computed(() => pages.find(props.pageId))
 const db = computed<Database>(() => page.value?.db ?? { props: [], views: [] })
+const formsOpen = ref(false)
 const members = computed(() => wss.members[props.ws] ?? [])
 const names = computed(() => new Map(members.value.map((m) => [m.user_id, m.display_name || m.username])))
 // The rows, their formulas worked out (so filters and sorts see them).
@@ -336,6 +338,7 @@ function drop(col: string) {
         <button v-if="editable && view.id !== '_'" type="button" class="icon-btn h-7 w-7" :aria-label="t('db.viewOptions')" @click="openViewMenu(view.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
         <span v-if="progress" class="flex items-center gap-1 text-[12px] text-text-3" data-testid="db-importing"><LoaderCircle class="h-3.5 w-3.5 animate-spin" />{{ progress.total ? t('db.sheet.progress', { done: progress.done, total: progress.total }) : t('db.sheet.reading') }}</span>
         <button ref="fileAnchor" type="button" class="icon-btn h-7 w-7" :title="t('db.sheet.menu')" :aria-label="t('db.sheet.menu')" data-testid="db-sheet-menu" @click="fileMenu = !fileMenu"><FileSpreadsheet class="h-4 w-4" /></button>
+        <button type="button" class="icon-btn h-7 w-7" :title="t('forms.title')" :aria-label="t('forms.title')" data-testid="db-forms" @click="formsOpen = true"><ClipboardList class="h-4 w-4" /></button>
         <ViewTools :db="db" :view="view" :editable="editable" :members="members" @update="saveView" />
         <button v-if="editable" type="button" class="btn-primary btn-sm" data-testid="db-new-row" @click="startAdd(view.type === 'board' ? board[0]?.key ?? '' : 'table')"><Plus class="h-3.5 w-3.5" />{{ t('db.new') }}</button>
       </div>
@@ -479,6 +482,7 @@ function drop(col: string) {
       @remove="removeProp(propMenu.prop.id)"
       @close="propMenu = null"
     />
+      <FormsSheet :open="formsOpen" :ws="ws" :page-id="pageId" :db="db" :editable="editable" @close="formsOpen = false" />
   </section>
 </template>
 

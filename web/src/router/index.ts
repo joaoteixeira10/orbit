@@ -18,6 +18,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/JoinView.vue'),
     meta: { public: true },
   },
+  // A page opened to anyone with its link, and a public form: no account.
+  { path: '/shared/:token', name: 'guest', component: () => import('@/views/GuestView.vue'), meta: { public: true } },
+  { path: '/form/:token', name: 'public-form', component: () => import('@/views/FormView.vue'), meta: { public: true } },
   // An app (an assistant, through MCP) asking to use Orbit as you.
   { path: '/oauth/authorize', name: 'oauth', component: () => import('@/views/OAuthView.vue') },
   {
@@ -53,6 +56,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'w/:ws/diagrams', name: 'ws-diagrams', component: () => import('@/views/DiagramsView.vue') },
       { path: 'w/:ws/files', name: 'ws-files', component: () => import('@/views/FilesView.vue') },
       { path: 'w/:ws/graph', name: 'ws-graph', component: () => import('@/views/GraphView.vue') },
+      { path: 'w/:ws/forms/:id', name: 'ws-form', component: () => import('@/views/FormView.vue') },
       { path: 'w/:ws/d/:id', name: 'ws-diagram', component: () => import('@/views/DiagramView.vue') },
       { path: 'w/:ws/pages', name: 'ws-pages', component: () => import('@/views/PagesView.vue') },
       { path: 'w/:ws/p/:page', name: 'ws-page', component: () => import('@/views/PageView.vue') },

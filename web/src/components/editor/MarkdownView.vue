@@ -8,12 +8,15 @@ import { renderMarkdown } from '@/lib/markdown'
 import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
 import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
 import { evaluate } from '@/lib/mathnotes'
+import { guestApi } from '@/lib/shareApi'
 
 // A page as it reads: its Markdown rendered like a README on GitHub, with
 // the app's type. Task boxes can be ticked without editing (when allowed);
 // a double click asks to edit. Code blocks get a copy button, as on GitHub.
-const props = defineProps<{ content: string; editable: boolean; math?: boolean }>()
-const emit = defineEmits<{ toggle: [index: number]; edit: [] }>()
+// guest: a guest link's secret — pictures, files and what's shown in place
+// load through it, and a link to a page asks the guest view (page) to go.
+const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string }>()
+const emit = defineEmits<{ toggle: [index: number]; edit: []; page: [id: string] }>()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -69,6 +72,10 @@ function loadUploads() {
   for (const img of root.value?.querySelectorAll<HTMLImageElement>('img[data-upload]') ?? []) {
     const src = img.dataset.upload ?? ''
     img.removeAttribute('data-upload')
+    if (props.guest) {
+      img.src = guestApi.uploadUrl(props.guest, src)
+      continue
+    }
     uploadBlobUrl(src).then((url) => (img.src = url)).catch(() => img.classList.add('broken'))
   }
 }
@@ -114,7 +121,7 @@ function addSheets() {
     if (!ref) continue
     const box = document.createElement('div')
     p.replaceWith(box)
-    const vnode = h(PageEmbed, { ...ref })
+    const vnode = h(PageEmbed, { ...ref, guest: props.guest })
     vnode.appContext = app
     render(vnode, box)
     embeds.push(box)
@@ -162,11 +169,18 @@ function onClick(e: MouseEvent) {
   const file = target.closest('a[data-upload]') as HTMLAnchorElement | null
   if (file) {
     e.preventDefault()
-    void downloadUpload(file.dataset.upload ?? '', file.dataset.name || 'file')
+    if (props.guest) window.open(guestApi.uploadUrl(props.guest, file.dataset.upload ?? ''), '_blank', 'noopener')
+    else void downloadUpload(file.dataset.upload ?? '', file.dataset.name || 'file')
     return
   }
   // A link within Orbit (a page, a date) opens here, not in a new tab.
   const inner = target.closest('a.md-internal') as HTMLAnchorElement | null
+  if (inner && props.guest) {
+    e.preventDefault()
+    const m = /^\/w\/[^/]+\/p\/([^/?#]+)/.exec(inner.getAttribute('href') ?? '')
+    if (m) emit('page', m[1])
+    return
+  }
   if (inner && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
     e.preventDefault()
     void router.push(inner.getAttribute('href') ?? '/')

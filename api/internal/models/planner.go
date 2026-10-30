@@ -98,6 +98,44 @@ type PageVersion struct {
 	Restored    int    `gorm:"not null;default:0" json:"restored,omitempty"`
 }
 
+// ShareLink opens a page — and, with Subpages, the pages under it — to
+// anyone with its link, without an account: to read, or also to edit
+// (Mode). The link's secret is kept hashed (to find the link) and sealed
+// (to show it again to the workspace's people).
+type ShareLink struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	PageID      string     `gorm:"size:36;not null;index" json:"page_id"`
+	Mode        string     `gorm:"size:8;not null;default:'read'" json:"mode"` // read | edit
+	Subpages    bool       `gorm:"not null;default:true" json:"subpages"`
+	TokenHash   string     `gorm:"size:64;uniqueIndex" json:"-"`
+	TokenSealed string     `gorm:"type:text" json:"-"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
+	CreatedBy   string     `gorm:"size:36" json:"created_by"`
+}
+
+// Form asks anyone with its link — or the workspace's people — for a row of
+// a database (PageID): its fields are some of the database's properties
+// (Fields, JSON []FormField; "title" is the row's name). Each answer is a
+// new row. A public one is reached by its secret link (hashed and sealed,
+// as share links).
+type Form struct {
+	Base
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	PageID      string `gorm:"size:36;not null;index" json:"page_id"`
+	Title       string `gorm:"size:300" json:"title"`
+	Intro       string `gorm:"type:text" json:"intro"`
+	Fields      string `gorm:"type:text" json:"-"`
+	Thanks      string `gorm:"size:500" json:"thanks"`
+	Public      bool   `gorm:"not null;default:false" json:"public"`
+	Open        bool   `gorm:"not null;default:true" json:"open"` // taking answers
+	TokenHash   string `gorm:"size:64;index" json:"-"`
+	TokenSealed string `gorm:"type:text" json:"-"`
+	Answers     int    `gorm:"not null;default:0" json:"answers"`
+	CreatedBy   string `gorm:"size:36" json:"created_by"`
+}
+
 // PageFavorite pins a page to one user's Favorites.
 type PageFavorite struct {
 	Base

@@ -754,6 +754,8 @@ const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() 
   { key: 'calendar_feeds', label: t('adm.owner.feature.calFeeds'), hint: t('adm.owner.feature.calFeedsHint') },
   { key: 'git_integration', label: t('adm.owner.feature.git'), hint: t('adm.owner.feature.gitHint') },
   { key: 'workspace_invites', label: t('adm.owner.feature.invites'), hint: t('adm.owner.feature.invitesHint') },
+  { key: 'guest_links', label: t('share.feature'), hint: t('share.featureHint') },
+  { key: 'public_forms', label: t('forms.feature'), hint: t('forms.featureHint') },
   { key: 'personal_channels', label: t('adm.owner.feature.ownChannels'), hint: t('adm.owner.feature.ownChannelsHint') },
   { key: 'step_up_auth', label: t('adm.owner.feature.stepUp'), hint: t('adm.owner.feature.stepUpHint') },
 ])

@@ -58,9 +58,10 @@ export async function svgPng(svg: string) {
   return pngOfUrl(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(sizedSvg(svg))}`, w, h)
 }
 
-export function pageSources(opts: { subpages: () => string[]; tabName: string }): PdfSources {
+export function pageSources(opts: { subpages: () => string[]; tabName: string; links?: boolean }): PdfSources {
   return {
     origin: location.origin,
+    links: opts.links,
     subpages: opts.subpages,
     async sheet(id) {
       const s = await sheetsApi.get(id)

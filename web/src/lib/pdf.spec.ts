@@ -35,6 +35,18 @@ describe('pdf', () => {
     expect(flat).toContain('Night shift')
     expect(flat).toContain('[x] ')
     expect(flat).toContain('"Tip"')
-    expect(out.flatMap(kept).some((c: any) => c.table?.headerRows === 1)).toBe(true)
+    // The sheet in the middle of the page.
+    const sheet = out.flatMap(kept).find((c: any) => c.columns?.[1]?.table)
+    expect(sheet.columns[1].table.headerRows).toBe(1)
+    expect(sheet.columns.map((c: any) => c.width)).toEqual(['*', 'auto', '*'])
+  })
+
+  it('or puts their links in instead, when asked', async () => {
+    const out = await blocks(lex('[Fees](/w/a/s/s1)\n\n[Flow](/w/a/d/d1)'), { ...src, links: true })
+    const flat = JSON.stringify(out)
+    expect(flat).not.toContain('"Yearly"')
+    expect(flat).not.toContain('data:image/png')
+    expect(flat).toContain('https://orbit.example/w/a/s/s1')
+    expect(flat).toContain('https://orbit.example/w/a/d/d1')
   })
 })

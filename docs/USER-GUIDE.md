@@ -436,11 +436,13 @@ Add an **icon** (emoji) and a **cover** (gradient or colour) from the header.
 **As files.** A page's `⋯` → **Download as Markdown** (a `.md` with the title
 as its first heading), **Copy as Markdown**, or **Download as PDF**: the
 page on white with its title, the workspace and the date, as a `.pdf` file
-(the text stays text, the links work). Its pictures are in it, and so are
-the sheets, diagrams and whiteboards shown in the page: a diagram or a
+(the text stays text, the links work). Its pictures are in it; for the
+sheets, diagrams and whiteboards shown in the page you choose (and the
+choice is remembered): **Sheets and diagrams drawn in** — a diagram or a
 whiteboard as its picture, a sheet as a compact table (its column letters
 and row numbers, only the rows and columns that hold something, at most 60
-by 12). Each keeps its title with it on one page. On the Pages screen, **Export as Markdown (.zip)** downloads
+by 12), each in the middle of the page with its title kept with it — or
+**Sheets and diagrams as links**, just their names, linked. On the Pages screen, **Export as Markdown (.zip)** downloads
 every page as `.md` files in folders that follow the page tree — ready to
 keep in git.
 

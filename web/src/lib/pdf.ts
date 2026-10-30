@@ -13,6 +13,7 @@ export interface PdfSources {
   image: (src: string) => Promise<{ png: string; width: number; height: number } | null>
   subpages: () => string[]
   origin: string
+  links?: boolean // sheets, diagrams and whiteboards as their links, not drawn in
 }
 
 // A sheet as the PDF shows it: per tab, the columns and rows that hold
@@ -96,8 +97,9 @@ export async function blocks(tokens: Token[], src: PdfSources): Promise<Content[
         break
       case 'paragraph': {
         const only = tk.tokens?.length === 1 ? tk.tokens[0] : null
-        // A link to a sheet, a diagram or a whiteboard alone: the thing itself.
-        const ref = only?.type === 'link' ? embedOf(only.href.replace(src.origin, '')) : null
+        // A link to a sheet, a diagram or a whiteboard alone: the thing itself
+        // (unless links were asked for).
+        const ref = only?.type === 'link' && !src.links ? embedOf(only.href.replace(src.origin, '')) : null
         if (ref) {
           out.push(...(await embed(ref, src)))
           break
@@ -217,13 +219,18 @@ async function embed(ref: EmbedRef, src: PdfSources): Promise<Content[]> {
         { text: String(r.n), alignment: 'center', color: '#8e8e93', fontSize: 8, fillColor: '#f2f2f4' },
         ...r.cells.map((c) => ({ text: noEmoji(c.text), bold: c.bold, italics: c.italics, alignment: c.align ?? 'left' })),
       ])
+      // In the middle of the page, as a diagram's picture is.
       out.push({
-        table: { headerRows: 1, widths: [18, ...tab.cols.map(() => 'auto')], body: [head, ...body] },
-        layout: sheetLines,
+        columns: [
+          { width: '*', text: '' },
+          { width: 'auto', table: { headerRows: 1, widths: [18, ...tab.cols.map(() => 'auto')], body: [head, ...body] }, layout: sheetLines },
+          { width: '*', text: '' },
+        ],
+        columnGap: 0,
         fontSize: 9,
         margin: [0, 0, 0, tab.more ? 2 : 12],
       })
-      if (tab.more) out.push({ text: '…', color: '#8e8e93', fontSize: 9, margin: [0, 0, 0, 12] })
+      if (tab.more) out.push({ text: '…', color: '#8e8e93', fontSize: 9, alignment: 'center', margin: [0, 0, 0, 12] })
     }
     // A short one isn't split over two pages (nor its title left behind).
     const rows = s.tabs.reduce((n, tab) => n + tab.rows.length, 0)

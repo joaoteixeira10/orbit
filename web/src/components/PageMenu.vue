@@ -25,6 +25,7 @@ const { t } = useI18n()
 
 const page = computed(() => pages.find(props.pageId))
 const picking = ref(false)
+const pdfing = ref(false)
 
 // Filing: the workspace's folders, as a tree.
 const filing = ref(false)
@@ -102,16 +103,32 @@ const copyMd = () => run(async () => {
   toast.success(t('editor.copied'))
 })
 // As a PDF file, downloaded: the page with what it shows in place drawn in
-// (sheets' cells, diagrams' and whiteboards' pictures).
-const asPdf = () =>
+// (sheets' cells, diagrams' and whiteboards' pictures), or as their links
+// (the choice remembered).
+const PDF_KEY = 'orbit_pdf_links'
+const pdfLinks = ref(readPdfLinks())
+function readPdfLinks() {
+  try {
+    return localStorage.getItem(PDF_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const asPdf = (links: boolean) =>
   run(async () => {
+    pdfLinks.value = links
+    try {
+      localStorage.setItem(PDF_KEY, links ? '1' : '0')
+    } catch {
+      /* private window */
+    }
     toast.info(t('editor.pdfMaking'))
     const p = await pagesApi.get(props.pageId)
     const title = p.title || t('pages.untitled')
     const meta = [wss.byId(props.ws)?.name, new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(new Date(p.updated_at))].filter(Boolean).join(' · ')
     const [{ docOf, downloadPdf }, { pageSources }] = await Promise.all([import('@/lib/pdf'), import('@/lib/pdfSources')])
     const subpages = () => (pages.byWs[props.ws] ?? []).filter((x) => x.parent_id === props.pageId).map((x) => x.title || t('pages.untitled'))
-    const doc = await docOf(title, meta, p.content, pageSources({ subpages, tabName: t('sheets.tabName', { n: 1 }) }))
+    const doc = await docOf(title, meta, p.content, pageSources({ subpages, tabName: t('sheets.tabName', { n: 1 }), links }))
     await downloadPdf(fileName(title), doc)
   })
 // A database of the pages inside it (or no longer: they stay as pages).
@@ -182,6 +199,16 @@ const trash = () =>
         </button>
       </div>
     </template>
+    <template v-else-if="pdfing">
+      <button class="menu-item text-text-2" @click="pdfing = false"><ChevronLeft class="h-4 w-4" />{{ t('editor.pdf') }}</button>
+      <div class="menu-sep" />
+      <button class="menu-item" data-testid="pdf-drawn" @click="asPdf(false)">
+        <Printer class="h-4 w-4 shrink-0 text-text-2" /><span class="flex-1">{{ t('editor.pdfDrawn') }}</span><Check v-if="!pdfLinks" class="h-4 w-4 shrink-0 text-accent" />
+      </button>
+      <button class="menu-item" data-testid="pdf-links" @click="asPdf(true)">
+        <Link class="h-4 w-4 shrink-0 text-text-2" /><span class="flex-1">{{ t('editor.pdfLinks') }}</span><Check v-if="pdfLinks" class="h-4 w-4 shrink-0 text-accent" />
+      </button>
+    </template>
     <template v-else-if="!picking">
       <button class="menu-item" @click="favorite">
         <component :is="page?.favorite ? StarOff : Star" class="h-4 w-4 text-text-2" />
@@ -191,7 +218,7 @@ const trash = () =>
       <button class="menu-item" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('pages.copyLink') }}</button>
       <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
-      <button class="menu-item" data-testid="page-pdf" @click="asPdf"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
+      <button class="menu-item" data-testid="page-pdf" @click="pdfing = true"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
       <button class="menu-item" data-testid="page-access" @click="access"><Lock class="h-4 w-4 text-text-2" />{{ t('access.menu') }}</button>
       <button v-if="auth.features.guest_links !== false" class="menu-item" data-testid="page-share" @click="share"><Share2 class="h-4 w-4 text-text-2" />{{ t('share.menu') }}</button>
       <button class="menu-item" data-testid="page-history-open" @click="history"><History class="h-4 w-4 text-text-2" />{{ t('history.title') }}</button>

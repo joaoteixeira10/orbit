@@ -18,8 +18,9 @@ merge, not at release time.
   sets how many each page keeps (Owner → Page history, 5–1000, default 50).
 - **Download as PDF** makes the file itself (no print dialog), with the
   diagrams' and whiteboards' pictures drawn in and sheets as compact tables
-  (column letters, row numbers, only the cells used, numbers right-aligned);
-  a title stays on the page with what it names.
+  (column letters, row numbers, only the cells used, numbers right-aligned,
+  in the middle of the page); a title stays on the page with what it names.
+  Or, chosen when downloading (remembered), with them as links.
 - **A side panel where something is open, as Folio's**: the graph of
   what's open (a page, sheet, diagram, whiteboard, task list or folder),
   depth 1–3, small dots; on pages also the outline and the notes; each part

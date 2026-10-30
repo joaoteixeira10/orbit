@@ -1670,7 +1670,8 @@ test('import from Notion and Apple Notes; a page out as PDF', async ({ page, req
   await page.goto(`/w/${ws.id}/p/${by.Garden.id}`)
   await expect(page.locator('.md-view img')).toBeVisible()
   await page.getByRole('button', { name: 'Page options' }).click()
-  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('page-pdf').click()])
+  await page.getByTestId('page-pdf').click()
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('pdf-drawn').click()])
   expect(pdf.suggestedFilename()).toBe('Garden.pdf')
   const bytes = await (await import('node:fs/promises')).readFile(await pdf.path())
   expect(bytes.subarray(0, 5).toString()).toBe('%PDF-')
@@ -2343,11 +2344,25 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
 
   // As a PDF: the diagrams' and the whiteboard's pictures drawn in.
   await page.getByRole('button', { name: 'Page options' }).click()
-  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('page-pdf').click()])
+  await page.getByTestId('page-pdf').click()
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByTestId('pdf-drawn').click()])
   await pdf.saveAs('test-results/page.pdf')
-  const bytes = (await (await import('node:fs/promises')).readFile(await pdf.path())).toString('latin1')
+  const fs = await import('node:fs/promises')
+  const bytes = (await fs.readFile(await pdf.path())).toString('latin1')
   expect(bytes.startsWith('%PDF-')).toBe(true)
   expect((bytes.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3)
+  // Or with their links instead (the choice remembered).
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-pdf').click()
+  const [linked] = await Promise.all([page.waitForEvent('download'), page.getByTestId('pdf-links').click()])
+  await linked.saveAs('test-results/page-links.pdf')
+  const plain = (await fs.readFile(await linked.path())).toString('latin1')
+  expect((plain.match(/\/Subtype \/Image/g) ?? []).length).toBe(0)
+  expect(plain).toContain(`/w/${ws.id}/s/${costs.id}`)
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-pdf').click()
+  await expect(page.getByTestId('pdf-links').locator('svg').last()).toHaveClass(/text-accent/)
+  await page.keyboard.press('Escape')
 })
 
 test('projects: a folder joined to a task list shows its progress; the list shows its folder; pages are filed in folders', async ({ page, request }) => {

@@ -278,6 +278,7 @@ func (h *Handlers) createPage(c *gin.Context) {
 	if p.Content != "" {
 		recordVersion(h.db, p, auth.UserID(c), nil, 0)
 	}
+	h.recordChange(auth.UserID(c), p, "create", pageState{}, pageState{Title: p.Title, Version: p.Version})
 	h.publishWS(c, ws.ID, "pages")
 	h.notifyPageMentions(c, p, "")
 	// A page made with a title (a copy, a note turned into a page) is news
@@ -416,6 +417,9 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	if req.Content != nil || req.Title != nil {
 		recordVersion(h.db, p, auth.UserID(c), &prev, 0)
 	}
+	if req.Title != nil && p.Title != prev.Title {
+		h.recordChange(auth.UserID(c), p, "rename", pageState{Title: prev.Title}, pageState{Title: p.Title})
+	}
 	if req.Content != nil {
 		h.notifyPageMentions(c, p, before)
 	}
@@ -470,8 +474,10 @@ func (h *Handlers) movePage(c *gin.Context) {
 		cur = up.ParentID
 	}
 	rank := h.siblingRank(h.db, p.WorkspaceID, req.ParentID, req.AfterID, p.ID)
+	before := pageState{ParentID: p.ParentID, Rank: p.Rank}
 	h.db.Model(&models.Page{}).Where("id = ?", p.ID).Updates(map[string]any{"parent_id": req.ParentID, "rank": rank})
 	p = reloadPage(h, p.ID)
+	h.recordChange(auth.UserID(c), p, "move", before, pageState{ParentID: p.ParentID, Rank: p.Rank})
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.JSON(http.StatusOK, summarize(p, nil))
 }
@@ -519,6 +525,9 @@ func (h *Handlers) trashPage(c *gin.Context) {
 	} else {
 		now := time.Now()
 		h.db.Model(&models.Page{}).Where("id IN ? AND trashed_at IS NULL", ids).Update("trashed_at", &now)
+		if p.TrashedAt == nil {
+			h.recordChange(auth.UserID(c), p, "trash", pageState{}, pageState{Title: p.Title})
+		}
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.Status(http.StatusNoContent)
@@ -543,16 +552,7 @@ func (h *Handlers) restorePage(c *gin.Context) {
 		c.JSON(http.StatusOK, summarize(p, nil))
 		return
 	}
-	ids := descendants(h.db, p.ID)
-	h.db.Model(&models.Page{}).Where("id IN ? AND trashed_at = ?", ids, p.TrashedAt).Update("trashed_at", nil)
-	up := map[string]any{"trashed_at": nil}
-	if p.ParentID != nil {
-		var parent models.Page
-		if h.db.Select("id", "trashed_at").First(&parent, "id = ?", *p.ParentID).Error != nil || parent.TrashedAt != nil {
-			up["parent_id"] = nil
-		}
-	}
-	h.db.Model(&models.Page{}).Where("id = ?", p.ID).Updates(up)
+	h.untrash(p)
 	p = reloadPage(h, p.ID)
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.JSON(http.StatusOK, summarize(p, nil))
@@ -583,6 +583,7 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 		h.internalError(c, err, "could not duplicate the page")
 		return
 	}
+	h.recordChange(uid, cp, "copy", pageState{}, pageState{Title: cp.Title, Version: cp.Version})
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.JSON(http.StatusCreated, pageOut(cp, false, true))
 }

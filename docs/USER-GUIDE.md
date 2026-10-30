@@ -465,6 +465,13 @@ read.
 a banner says **Someone else changed this page**: **Load theirs** (drops your
 unsaved edits) or **Keep mine** (saves yours over theirs).
 
+**Recent changes (undo).** In Pages, **Recent changes** lists what you did
+to pages in the last two weeks — made, moved, renamed, copied, put in the
+trash — and **Undo** puts each back: a page made or copied goes to the
+trash, a move or a rename goes back, a page from the trash comes out. If
+the page changed since (someone wrote in it, it moved again), it asks
+first.
+
 **Outline.** The list button at the top right of a page opens its outline
 beside it: its headings — click one to go there — and, under them, its
 callouts and checklist items gathered in one list (click to go to one;

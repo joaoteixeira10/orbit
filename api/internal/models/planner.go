@@ -140,6 +140,20 @@ type Form struct {
 	CreatedBy   string `gorm:"size:36" json:"created_by"`
 }
 
+// PageChange is one of a person's changes to a page's place in the tree —
+// made, moved, renamed, copied, put in the trash — with what it was before
+// and after (JSON), so they can undo it (api/page_changes.go).
+type PageChange struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;index" json:"workspace_id"`
+	UserID      string     `gorm:"size:36;not null;index" json:"user_id"`
+	PageID      string     `gorm:"size:36;not null;index" json:"page_id"`
+	Kind        string     `gorm:"size:8;not null" json:"kind"` // create | move | rename | copy | trash
+	Before      string     `gorm:"type:text" json:"-"`
+	After       string     `gorm:"type:text" json:"-"`
+	UndoneAt    *time.Time `json:"undone_at,omitempty"`
+}
+
 // PageFavorite pins a page to one user's Favorites.
 type PageFavorite struct {
 	Base

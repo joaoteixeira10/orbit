@@ -1952,6 +1952,42 @@ definitions:
         maxItems: 500
         type: array
     type: object
+  api.pageChangeResponse:
+    properties:
+      at:
+        type: string
+      changed:
+        description: 'changed since: undoing asks first'
+        type: boolean
+      from_parent:
+        type: string
+      from_title:
+        description: a rename's old title
+        type: string
+      gone:
+        description: the page is deleted for good
+        type: boolean
+      icon:
+        type: string
+      id:
+        type: string
+      kind:
+        description: create | move | rename | copy | trash
+        type: string
+      page_id:
+        type: string
+      title:
+        type: string
+      to_parent:
+        type: string
+      to_title:
+        description: a move's new parent's title
+        type: string
+      undone:
+        type: boolean
+      workspace_id:
+        type: string
+    type: object
   api.pageResponse:
     properties:
       allowed_users:
@@ -6433,6 +6469,27 @@ paths:
       summary: Verify and enable TOTP
       tags:
       - auth
+  /me/page-changes:
+    get:
+      parameters:
+      - description: Only this workspace
+        in: query
+        name: ws
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.pageChangeResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My recent changes to pages
+      tags:
+      - pages
   /me/password:
     put:
       consumes:
@@ -7085,6 +7142,30 @@ paths:
       summary: Transfer instance ownership
       tags:
       - owner
+  /page-changes/{id}/undo:
+    post:
+      parameters:
+      - description: Change id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Even if it changed since
+        in: query
+        name: force
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pageChangeResponse'
+      security:
+      - BearerAuth: []
+      summary: Undo a change to a page
+      tags:
+      - pages
   /page-versions/{id}:
     get:
       parameters:

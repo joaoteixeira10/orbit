@@ -13,6 +13,10 @@ merge, not at release time.
 
 ### Added
 
+- **Undo for page structure** — "Recent changes" in Pages: your own pages
+  made, moved, renamed, copied or trashed in the last two weeks, each undone
+  (asking first when the page changed since; `GET /me/page-changes`,
+  `POST /page-changes/{id}/undo`).
 - **Outline beside a page** — its headings to jump to, its callouts and
   checklist items in one list (tick from there); remembered open.
 - **Page restrictions** — a page (and what's under it) open to only some of

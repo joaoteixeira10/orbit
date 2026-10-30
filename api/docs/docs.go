@@ -4131,6 +4131,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/page-changes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "My recent changes to pages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Only this workspace",
+                        "name": "ws",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.pageChangeResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/me/password": {
             "put": {
                 "security": [
@@ -5198,6 +5233,45 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/page-changes/{id}/undo": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "Undo a change to a page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Change id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Even if it changed since",
+                        "name": "force",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pageChangeResponse"
+                        }
                     }
                 }
             }
@@ -12977,6 +13051,58 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "api.pageChangeResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "changed": {
+                    "description": "changed since: undoing asks first",
+                    "type": "boolean"
+                },
+                "from_parent": {
+                    "type": "string"
+                },
+                "from_title": {
+                    "description": "a rename's old title",
+                    "type": "string"
+                },
+                "gone": {
+                    "description": "the page is deleted for good",
+                    "type": "boolean"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "create | move | rename | copy | trash",
+                    "type": "string"
+                },
+                "page_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "to_parent": {
+                    "type": "string"
+                },
+                "to_title": {
+                    "description": "a move's new parent's title",
+                    "type": "string"
+                },
+                "undone": {
+                    "type": "boolean"
+                },
+                "workspace_id": {
+                    "type": "string"
                 }
             }
         },

@@ -2,7 +2,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download, Waypoints } from 'lucide-vue-next'
+import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download, Waypoints, Undo2 } from 'lucide-vue-next'
+import RecentChanges from '@/components/pages/RecentChanges.vue'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
@@ -27,6 +28,7 @@ const { t } = useI18n()
 
 const ws = computed(() => String(route.params.ws))
 const workspace = computed(() => wss.byId(ws.value))
+const changesOpen = ref(false)
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
 watch(ws, () => pages.load(ws.value).catch(() => {}))
 onMounted(() => pages.load(ws.value).catch(() => {}))
@@ -73,6 +75,7 @@ async function create() {
         <h1 class="large-title">{{ t('modules.pages') }}</h1>
         <p class="subhead mt-0.5">{{ workspace?.name }} · {{ (pages.byWs[ws] ?? []).length }}</p>
       </div>
+      <button v-if="editable" type="button" class="btn btn-ghost" data-testid="open-changes" @click="changesOpen = true"><Undo2 class="h-4 w-4" />{{ t('changes.title') }}</button>
       <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="btn btn-ghost" data-testid="open-graph"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink>
       <button v-if="editable" class="btn-primary" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</button>
     </header>
@@ -130,6 +133,7 @@ async function create() {
       <button v-if="editable && !q" class="btn-primary mt-4" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</button>
     </div>
     <ImportSheet :open="importing" :ws="ws" @close="importing = false" />
+    <RecentChanges :open="changesOpen" :ws="ws" @close="changesOpen = false" />
   </div>
 </template>
 

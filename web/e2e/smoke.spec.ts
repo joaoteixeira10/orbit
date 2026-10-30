@@ -2585,3 +2585,28 @@ test('outline: a page\'s headings to jump to, its callouts and to-dos in one lis
   await expect(page.getByTestId('outline')).toBeVisible()
   await page.getByTestId('outline-toggle').click()
 })
+
+test('recent changes: moving and trashing pages undone from the list', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Oops', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+  const base = `/api/v1/workspaces/${ws.id}`
+  const a = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Projects' } })).json()
+  const b = await (await request.post(`${base}/pages`, { headers: H, data: { title: 'Ideas' } })).json()
+  await request.post(`/api/v1/pages/${b.id}/move`, { headers: H, data: { parent_id: a.id, after_id: '' } })
+  await request.delete(`/api/v1/pages/${a.id}`, { headers: H })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.goto(`/w/${ws.id}/pages`)
+  await page.getByTestId('open-changes').click()
+  const rows = page.getByTestId('change-row')
+  await expect(rows.first()).toContainText('Put “Projects” in the trash')
+  await expect(rows.nth(1)).toContainText('Moved “Ideas” into Projects')
+  await rows.first().getByTestId('change-undo').click()
+  await expect(rows.first()).toContainText('undone')
+  await rows.nth(1).getByTestId('change-undo').click()
+  await expect(rows.nth(1)).toContainText('undone')
+  const pages = (await (await request.get(`${base}/pages`, { headers: H })).json()) as { id: string; parent_id: string | null }[]
+  expect(pages.find((p) => p.id === a.id)).toBeTruthy()
+  expect(pages.find((p) => p.id === b.id)?.parent_id).toBeNull()
+})

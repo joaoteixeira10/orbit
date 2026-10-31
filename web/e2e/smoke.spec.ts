@@ -2574,7 +2574,7 @@ const RELS = (list: [string, string][]) => `<Relationships xmlns="http://schemas
 test('files shown in place: a Word document, slides, a spreadsheet, a PDF\'s pages; found by what they say', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
-  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Office', kind: 'custom', starter: false, modules: ['home', 'files'] } })).json()
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Office', kind: 'custom', starter: false, modules: ['home', 'tasks', 'files'] } })).json()
   const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
   const P = 'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
   const docx = officeZip({ 'word/document.xml': `<w:document ${W}><w:body><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Lease terms</w:t></w:r></w:p><w:p><w:r><w:t>The tenant pays quarterly.</w:t></w:r></w:p></w:body></w:document>` })
@@ -2629,6 +2629,22 @@ test('files shown in place: a Word document, slides, a spreadsheet, a PDF\'s pag
   await expect(viewer.getByTestId('viewer-name')).toHaveText('lease.docx')
   await page.keyboard.press('Escape')
   await expect.poll(async () => ((await (await request.get('/api/v1/search?q=4471', { headers: H })).json()) as { kind: string; title: string }[]).filter((h) => h.kind === 'file').map((h) => h.title)).toEqual(['invoice.pdf'])
+
+  // Opened from a task's sheet: over it; ✕ and Esc close the viewer only.
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Admin' } })).json()
+  const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Pay rent', list_id: list.id } })).json()
+  await request.post(`/api/v1/uploads?target=task&target_id=${task.id}`, { headers: H, multipart: { file: { name: 'receipt.pdf', mimeType: 'application/pdf', buffer: textPdf(['Paid']) } } })
+  await page.goto(`/w/${ws.id}/tasks/all?task=${task.id}`)
+  await page.getByText('receipt.pdf').click()
+  await expect(viewer.getByTestId('viewer-pdf').locator('canvas.drawn')).toHaveCount(1)
+  await viewer.getByTestId('viewer-close').click()
+  await expect(viewer).toBeHidden()
+  await expect(page.getByText('receipt.pdf')).toBeVisible() // the task is still open
+  await page.getByText('receipt.pdf').click()
+  await expect(viewer).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(viewer).toBeHidden()
+  await expect(page.getByText('receipt.pdf')).toBeVisible()
 })
 
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {

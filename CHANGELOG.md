@@ -10,6 +10,9 @@ merge, not at release time.
 
 - **Go 1.26.10** — the toolchain moves up for GO-2026-6809 (crypto/x509
   certificate checks, reached through passkey sign-in).
+- **vue-i18n 11.4.14** — moves up a major version for GHSA-8rc2-428q-7ww3 and
+  GHSA-83rm-6c8r-g728 (`escapeParameter`, `srcdoc`). Orbit used neither, so
+  it was not reachable; `npm audit --audit-level=high` is clean again.
 
 ### Changed
 

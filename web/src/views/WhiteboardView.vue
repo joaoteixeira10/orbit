@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import PresenceAvatars from '@/components/ui/PresenceAvatars.vue'
+import { usePresence } from '@/lib/presence'
+import { CLIENT_ID } from '@/lib/api'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -72,6 +75,14 @@ async function moveTo(target: string) {
 }
 const fill = ref<HTMLElement | null>(null)
 useFillHeight(props.embedded ? ref(null) : fill, 420)
+
+// Who else is here now (and whether I'm changing it).
+const here = usePresence('board', id, computed(() => !readonly.value))
+// Drawing together: the first one there drawing saves it for everyone.
+const leader = computed(() => {
+  const drawing = here.people.value.filter((p) => p.editing)
+  return !drawing.length || drawing[0].client === CLIENT_ID
+})
 </script>
 
 <template>
@@ -92,12 +103,13 @@ useFillHeight(props.embedded ? ref(null) : fill, 420)
         <button type="button" :class="{ on: mode === 'view' }" :aria-pressed="mode === 'view'" data-testid="whiteboard-view-mode" @click="mode = 'view'">{{ t('embed.view') }}</button>
         <button type="button" :class="{ on: mode === 'edit' }" :aria-pressed="mode === 'edit'" data-testid="whiteboard-edit-mode" @click="mode = 'edit'">{{ t('embed.edit') }}</button>
       </div>
+      <PresenceAvatars :people="here.others.value" class="shrink-0" />
       <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
       <button v-if="!embedded && !readonly" class="btn btn-sm shrink-0" :title="t('draw.moveTo')" data-testid="whiteboard-move" @click="moving = true"><FolderInput class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('draw.moveTo') }}</span></button>
     </header>
     <NotePlacePicker :open="moving" mode="move" drawing :current="personal ? 'me' : ws" @close="moving = false" @pick="moveTo" />
     <div ref="fill" class="board-frame">
-      <DrawingEditor ref="editor" :id="id" :readonly="readonly" @loaded="loaded" />
+      <DrawingEditor ref="editor" :id="id" :readonly="readonly" together :leader="leader" @loaded="loaded" />
     </div>
   </div>
 </template>

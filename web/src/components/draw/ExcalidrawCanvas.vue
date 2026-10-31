@@ -130,11 +130,17 @@ function replace(scene: string) {
   const d = parse(scene)
   lastVersion = -1
   if (d.files && Object.keys(d.files).length) api.addFiles(Object.values(d.files))
-  api.updateScene({ elements: d.elements })
+  // Not a step to undo here (someone else's drawing, or a saved one).
+  api.updateScene({ elements: d.elements, ...(lib.CaptureUpdateAction ? { captureUpdate: lib.CaptureUpdateAction.NEVER } : {}) })
   lastVersion = lib.getSceneVersion(api.getSceneElements())
 }
+// sceneNow is the drawing as it is, at once (drawing together sends it).
+function sceneNow(): string {
+  if (!api || !lib) return props.scene
+  return lib.serializeAsJSON(api.getSceneElements(), api.getAppState(), api.getFiles(), 'database')
+}
 
-defineExpose({ snapshot, replace })
+defineExpose({ snapshot, replace, sceneNow })
 </script>
 
 <template>

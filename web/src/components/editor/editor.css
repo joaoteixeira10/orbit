@@ -634,3 +634,33 @@ html.dark .bubble {
   color: var(--accent-text);
   font-weight: 500;
 }
+
+/* Editing together: another person's caret, with their name above it (the
+   colour is theirs, set on the element). */
+.collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+.collaboration-carets__label {
+  position: absolute;
+  top: -1.45em;
+  left: -1px;
+  padding: 1px 5px;
+  border-radius: 4px 4px 4px 0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
+  line-height: normal;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+.collaboration-carets__selection {
+  border-radius: 2px;
+}

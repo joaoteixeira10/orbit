@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PresenceAvatars from '@/components/ui/PresenceAvatars.vue'
+import { usePresence } from '@/lib/presence'
 import { computed, onBeforeUnmount, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
@@ -187,6 +189,9 @@ useFillHeight(props.embedded ? ref(null) : fill, 420)
 const status = computed(() =>
   state.value === 'waiting' || state.value === 'saving' ? t('common.saving') : state.value === 'saved' ? t('common.saved') : state.value === 'error' ? t('editor.saveFailed') : '',
 )
+
+// Who else is here now (and whether I'm changing it).
+const here = usePresence('sheet', id, editable)
 </script>
 
 <template>
@@ -208,6 +213,7 @@ const status = computed(() =>
         <Check v-else-if="state === 'saved'" class="h-3.5 w-3.5" />
         {{ status }}
       </span>
+      <PresenceAvatars :people="here.others.value" class="shrink-0" />
       <button ref="menuEl" type="button" class="icon-btn shrink-0" :aria-label="t('sheets.more')" data-testid="sheet-menu" @click="menu = !menu"><MoreHorizontal class="h-[18px] w-[18px]" /></button>
       <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
     </header>

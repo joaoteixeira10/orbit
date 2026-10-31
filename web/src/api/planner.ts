@@ -447,8 +447,9 @@ export const pagesApi = {
   get: (id: string) => api<Page>(`/pages/${id}`).then(withContent),
   // What links to a page: other pages, and tasks whose notes do.
   backlinks: (id: string) => api<{ pages: PageSummary[]; tasks: { id: string; title: string; list_id: string; done: boolean }[] }>(`/pages/${id}/backlinks`),
-  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; glossary?: boolean; db?: Database | null; props?: Record<string, PropValue | null> }) =>
-    api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b) }).then(withContent),
+  // together: saved by the tab that saves for everyone editing it at once.
+  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; glossary?: boolean; db?: Database | null; props?: Record<string, PropValue | null> }, together = false) =>
+    api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b), headers: together ? { 'X-Orbit-Collab': '1' } : undefined }).then(withContent),
   move: (id: string, parent_id: string | null, after_id: string) => api<PageSummary>(`/pages/${id}/move`, { method: 'POST', body: j({ parent_id, after_id }) }),
   trashPage: (id: string) => api<void>(`/pages/${id}`, { method: 'DELETE' }),
   destroy: (id: string) => api<void>(`/pages/${id}?permanent=1`, { method: 'DELETE' }),

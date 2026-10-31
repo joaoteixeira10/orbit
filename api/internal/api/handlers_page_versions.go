@@ -154,6 +154,7 @@ func (h *Handlers) restorePageVersion(c *gin.Context) {
 	}
 	p = reloadPage(h, p.ID)
 	recordVersion(h.db, p, uid, &prev, v.Version)
+	h.collabSaved(c, "page:"+p.ID, p.Version)
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.JSON(http.StatusOK, pageOut(p, false, true))
 }

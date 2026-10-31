@@ -2656,6 +2656,147 @@ test('files shown in place: a Word document, slides, a spreadsheet, a PDF\'s pag
   await expect(page.getByText('receipt.pdf')).toBeVisible()
 })
 
+// signInAs signs someone else in (a second browser), setting a new password
+// if asked to.
+async function signInAs(page: Page, username: string, password: string) {
+  await page.goto('/')
+  await page.locator('input[autocomplete="username webauthn"]').fill(username)
+  await page.locator('input[autocomplete="current-password"]').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+  if (await page.getByRole('heading', { name: 'Set a new password' }).isVisible().catch(() => false)) {
+    await page.getByPlaceholder('Current password').fill(password)
+    await page.getByPlaceholder('New password (min 8)').fill(password + '-2')
+    await page.getByPlaceholder('Confirm new password').fill(password + '-2')
+    await page.getByRole('button', { name: 'Update password' }).click()
+    await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeHidden()
+  }
+}
+
+test('presence: two people on a page see each other; one leaves, the other sees it', async ({ page, request, browser }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/users', { headers: H, data: { username: 'pia', display_name: 'Pia Costa', password: 'pia-e2e-password-42' } })
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Together', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+  await request.post(`/api/v1/workspaces/${ws.id}/members`, { headers: H, data: { user: 'pia', role: 'editor' } })
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Agenda', content: 'Items.' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await expect(page.getByTestId('presence')).toHaveCount(0) // alone
+
+  const ctx = await browser.newContext()
+  const pia = await ctx.newPage()
+  await pia.setViewportSize({ width: 1300, height: 860 })
+  await signInAs(pia, 'pia', 'pia-e2e-password-42')
+  await pia.goto(`/w/${ws.id}/p/${pg.id}`)
+  await expect(page.getByTestId('presence-person')).toHaveText(['PC'])
+  await expect(page.getByTestId('presence-person')).toHaveAttribute('title', /Pia Costa is/)
+  await expect(pia.getByTestId('presence-person')).toHaveCount(1) // and Pia sees me
+  // Pia goes elsewhere: gone from the page.
+  await pia.goto(`/w/${ws.id}`)
+  await expect(page.getByTestId('presence')).toHaveCount(0)
+  await ctx.close()
+})
+
+test('editing together: two people type in one page at once, see each other\'s text and cursor; one save for both; saved another way, they start over', async ({ page, request, browser }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/users', { headers: H, data: { username: 'rlopes', display_name: 'Rui Lopes', password: 'rlopes-e2e-password-42' } })
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Co-writing', kind: 'work', starter: false, modules: ['home', 'pages', 'whiteboards'] } })).json()
+  await request.post(`/api/v1/workspaces/${ws.id}/members`, { headers: H, data: { user: 'rlopes', role: 'editor' } })
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Minutes', content: 'Present: all.' } })).json()
+  const content = async () => (await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content as string
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.getByRole('tab', { name: 'Visual' }).click()
+  const mine = page.locator('.ProseMirror')
+  await expect(mine).toContainText('Present: all.')
+
+  const ctx = await browser.newContext()
+  const rui = await ctx.newPage()
+  await rui.setViewportSize({ width: 1300, height: 860 })
+  await signInAs(rui, 'rlopes', 'rlopes-e2e-password-42')
+  await rui.goto(`/w/${ws.id}/p/${pg.id}`)
+  await rui.getByRole('button', { name: 'Edit', exact: true }).click()
+  await rui.getByRole('tab', { name: 'Visual' }).click()
+  const his = rui.locator('.ProseMirror')
+  await expect(his).toContainText('Present: all.')
+  await expect(his.locator('p')).toHaveCount(1) // started once, not twice
+
+  // Each types; each sees the other's text, and his cursor with his name.
+  await mine.locator('p').first().click({ delay: 80 })
+  await page.keyboard.press('End')
+  await page.keyboard.type(' Budget approved.')
+  await expect(his).toContainText('Present: all. Budget approved.')
+  await his.locator('p').first().click({ delay: 80 }) // a person's click (an instant one can come before the editor takes focus)
+  await rui.keyboard.press('ControlOrMeta+End')
+  await rui.keyboard.press('Enter')
+  await rui.keyboard.type('Next meeting on Friday.')
+  await expect(mine).toContainText('Next meeting on Friday.')
+  await expect(page.locator('.collaboration-carets__label', { hasText: 'Rui Lopes' })).toBeVisible()
+  await page.screenshot({ path: 'test-results/together.png' })
+  await expect(page.getByTestId('presence-person')).toHaveText(['RL'])
+  // Saved once, for both: all of it.
+  await expect.poll(content, { timeout: 15000 }).toBe('Present: all. Budget approved.\n\nNext meeting on Friday.')
+
+  // Saved another way (the API): both start over from it.
+  const cur = await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()
+  await request.put(`/api/v1/pages/${pg.id}`, { headers: H, data: { content: 'Rewritten by the assistant.', version: cur.version } })
+  await expect(mine).toHaveText('Rewritten by the assistant.')
+  await expect(his).toHaveText('Rewritten by the assistant.')
+  await his.locator('p').first().click({ delay: 80 })
+  await rui.keyboard.press('End')
+  await rui.keyboard.type(' Agreed.') // and they go on together
+  await expect(mine).toContainText('Rewritten by the assistant. Agreed.')
+  await ctx.close()
+})
+
+test('drawing together: a stroke on one screen shows on the other; saved once', async ({ page, request, browser }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/users', { headers: H, data: { username: 'rlopes', display_name: 'Rui Lopes', password: 'rlopes-e2e-password-42' } })
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio together', kind: 'work', starter: false, modules: ['home', 'whiteboards'] } })).json()
+  await request.post(`/api/v1/workspaces/${ws.id}/members`, { headers: H, data: { user: 'rlopes', role: 'editor' } })
+  const scene = JSON.stringify({ type: 'orbit-sketch', version: 1, paper: 'plain', paperColor: '#ffffff', layers: [{ id: 'l1', name: 'Layer 1', visible: true, opacity: 1, items: [] }] })
+  const board = await (await request.post(`/api/v1/workspaces/${ws.id}/drawings`, { headers: H, data: { title: 'Plan', scene } })).json()
+  const items = async () => ((JSON.parse((await (await request.get(`/api/v1/drawings/${board.id}`, { headers: H })).json()).scene).layers ?? []) as { items: unknown[] }[]).flatMap((l) => l.items).length
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/whiteboards/${board.id}`)
+  await expect(page.getByTestId('sketch')).toBeVisible()
+  const ctx = await browser.newContext()
+  const rui = await ctx.newPage()
+  await rui.setViewportSize({ width: 1300, height: 860 })
+  await signInAs(rui, 'rlopes', 'rlopes-e2e-password-42')
+  await rui.goto(`/w/${ws.id}/whiteboards/${board.id}`)
+  await expect(rui.getByTestId('sketch')).toBeVisible()
+  await expect(page.getByTestId('presence-person')).toHaveText(['RL'])
+
+  const strokes = (p: Page) => p.locator('[data-testid="sketch-board"] path[fill]:not([fill="none"])')
+  const before = await strokes(rui).count()
+  const box = (await page.getByTestId('sketch-board').boundingBox())!
+  await page.mouse.move(box.x + 300, box.y + 300)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 500, box.y + 360, { steps: 12 })
+  await page.mouse.up()
+  await expect.poll(async () => strokes(rui).count()).toBe(before + 1)
+  // And his, on mine.
+  const rbox = (await rui.getByTestId('sketch-board').boundingBox())!
+  await rui.mouse.move(rbox.x + 300, rbox.y + 450)
+  await rui.mouse.down()
+  await rui.mouse.move(rbox.x + 520, rbox.y + 470, { steps: 12 })
+  await rui.mouse.up()
+  await expect.poll(async () => strokes(page).count()).toBe(before + 2)
+  await expect.poll(items, { timeout: 15000 }).toBe(2)
+  await ctx.close()
+})
+
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

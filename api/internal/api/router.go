@@ -13,6 +13,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/caldav"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/calsync"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/collab"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
@@ -75,12 +76,14 @@ type Handlers struct {
 	// googleTokens: Google access tokens while they last (by link, or by a
 	// sign-in waiting for its calendar).
 	googleTokens tokenCache
+	// room: who's on what now, and editing together's start locks (memory).
+	room *collab.Room
 }
 
 // New builds the configured *gin.Engine.
 func New(d Deps) *gin.Engine {
 	gin.SetMode(d.Cfg.GinMode)
-	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV, links: d.Links}
+	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV, links: d.Links, room: collab.New()}
 	if h.calsync == nil {
 		h.calsync = calsync.New(d.DB, d.Sealer, d.Log)
 	}
@@ -363,6 +366,12 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/files/:id/versions", h.fileVersions)
 			authed.POST("/files/:id/current", h.fileCurrent)
 			authed.POST("/files/:id/restore", h.fileUntrash)
+			authed.POST("/presence/:kind/:id", h.presence)
+			authed.GET("/collab/:kind/:id", h.collabSince)
+			authed.POST("/collab/:kind/:id", h.collabAdd)
+			authed.POST("/collab/:kind/:id/seed", h.collabSeed)
+			authed.POST("/collab/:kind/:id/awareness", h.collabAwareness)
+			authed.POST("/collab/:kind/:id/compact", h.collabCompactLog)
 			authed.GET("/me/folders", h.listMyFolders)
 			authed.POST("/me/folders", h.createMyFolder)
 			authed.POST("/me/files/move", h.moveMyFiles)

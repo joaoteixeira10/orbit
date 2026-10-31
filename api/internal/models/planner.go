@@ -728,6 +728,29 @@ type Blob struct {
 	Data   []byte `gorm:"not null"`
 }
 
+// CollabUpdate is one change to a document edited by several people at
+// once (a page, a whiteboard): opaque bytes (a Yjs update, or a whiteboard's
+// changed elements), numbered in order per document (DocKey "page:<id>").
+// The server relays and keeps them, in order, for whoever joins or missed
+// one; it doesn't read them. Seq 0 is never used; a compaction replaces
+// the first ones with their sum.
+type CollabUpdate struct {
+	ID        uint   `gorm:"primaryKey;autoIncrement"`
+	DocKey    string `gorm:"size:80;not null;uniqueIndex:idx_collab_seq"`
+	Seq       int    `gorm:"not null;uniqueIndex:idx_collab_seq"`
+	Data      []byte `gorm:"not null"`
+	Client    string `gorm:"size:40"`
+	CreatedAt time.Time
+}
+
+// CollabDoc is what a document's change log was made from: the page's (or
+// whiteboard's) version when its log was last in step with what's saved.
+// Saved another way since (a version that isn't this), the log starts over.
+type CollabDoc struct {
+	DocKey  string `gorm:"primaryKey;size:80"`
+	Version int    `gorm:"not null;default:0"`
+}
+
 // UploadText is what a file says, for search: read from it by the server
 // (Office documents, text) or the app (a PDF's, with pdf.js). ID = the
 // upload's (each version its own).

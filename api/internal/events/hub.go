@@ -66,7 +66,7 @@ func New() *Hub {
 // plus an unsubscribe func the caller MUST defer. The channel is buffered and
 // closed on unsubscribe.
 func (h *Hub) Subscribe(userID string) (<-chan string, func()) {
-	ch := make(chan string, 4)
+	ch := make(chan string, 64) // room for a burst (editing together); full, a message is dropped
 	h.mu.Lock()
 	if h.subs[userID] == nil {
 		h.subs[userID] = map[chan string]struct{}{}

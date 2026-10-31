@@ -664,7 +664,9 @@ function replace(scene: string) {
   clearSelection()
   if (!sketch.value.layers.some((l) => l.id === active.value)) active.value = sketch.value.layers[sketch.value.layers.length - 1].id
 }
-defineExpose({ snapshot, replace })
+// sceneNow is the drawing as it is, at once (drawing together sends it).
+const sceneNow = () => JSON.stringify(sketch.value)
+defineExpose({ snapshot, replace, sceneNow })
 
 // Paths are worked out once per stroke (strokes never change in place).
 const paths = new WeakMap<Stroke, string>()

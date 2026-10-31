@@ -119,9 +119,11 @@ export function minimalEscape(text: string): string {
 
 // pageExtensions are the page schema with Markdown; extra adds the editing
 // helpers (placeholder, slash menu) that only the editor needs.
-export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, unknown> = {}): AnyExtension[] {
+// together: editing with others (Yjs) — undo is the collaboration's own then.
+export function pageExtensions(extra: AnyExtension[] = [], link: Record<string, unknown> = {}, together = false): AnyExtension[] {
   return [
     StarterKit.configure({
+      ...(together ? { undoRedo: false } : {}),
       heading: { levels: [1, 2, 3] },
       dropcursor: { color: 'var(--ws)', width: 2 },
       underline: false,

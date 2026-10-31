@@ -81,6 +81,12 @@ func (s *Scheduler) emptyTrash() {
 	s.db.Where("page_id IN ?", ids).Delete(&models.ShareLink{})
 	s.db.Where("page_id IN ?", ids).Delete(&models.Form{})
 	_ = uploads.TrashFor(s.db, uploads.Page, ids) // their files: to the files' trash
+	keys := make([]string, 0, len(ids))
+	for _, id := range ids {
+		keys = append(keys, "page:"+id)
+	}
+	s.db.Where("doc_key IN ?", keys).Delete(&models.CollabUpdate{})
+	s.db.Where("doc_key IN ?", keys).Delete(&models.CollabDoc{})
 	res := s.db.Where("id IN ?", ids).Delete(&models.Page{})
 	s.log.Info("emptied old trash", zap.Int64("pages", res.RowsAffected))
 }

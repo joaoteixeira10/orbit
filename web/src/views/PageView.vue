@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import PresenceAvatars from '@/components/ui/PresenceAvatars.vue'
+import { usePresence } from '@/lib/presence'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, shallowRef } from 'vue'
+import { CollabLink } from '@/lib/collab'
+import { joinPage } from '@/components/editor/together'
+import { personColor } from '@/lib/presence'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2, Lock, ListTree } from 'lucide-vue-next'
@@ -205,6 +210,8 @@ function saveContent(over?: number): Promise<void> {
   if (editGen === savedGen || (conflict.value && over === undefined)) return Promise.resolve()
   const s = session
   const gen = editGen
+  // Editing together: one tab saves for everyone (the first one editing).
+  if (together.value && !leader.value) return Promise.resolve()
   const content = currentContent()
   // Nothing actually changed (an editor settling in, a box ticked twice):
   // no save, no new version.
@@ -216,7 +223,7 @@ function saveContent(over?: number): Promise<void> {
   saving.value = true
   const run = (async () => {
     try {
-      const saved = await pagesApi.update(p.id, { content, version: over ?? version.value })
+      const saved = await pagesApi.update(p.id, { content, version: over ?? version.value }, !!together.value)
       if (s !== session || !page.value) return
       version.value = saved.version
       savedGen = gen
@@ -228,7 +235,9 @@ function saveContent(over?: number): Promise<void> {
       savedTimer = setTimeout(() => (justSaved.value = false), 2500)
     } catch (e: any) {
       if (s !== session) return
-      if (e instanceof ApiError && e.status === 409 && e.body?.page) {
+      if (e instanceof ApiError && e.status === 409 && together.value) {
+        void rejoin() // saved another way meanwhile: start over from it
+      } else if (e instanceof ApiError && e.status === 409 && e.body?.page) {
         conflict.value = withContent(e.body.page as Page)
       } else if (e instanceof ApiError && e.status === 409) {
         // Moved to the trash meanwhile: the reload shows the banner.
@@ -346,7 +355,14 @@ async function refresh() {
   const editingTitle = titleDirty || document.activeElement === titleEl.value
   if (!editingTitle) title.value = p.title
   const next: Page = { ...page.value, title: editingTitle ? page.value.title : p.title, icon: p.icon, cover: p.cover, can_edit: p.can_edit, trashed_at: p.trashed_at, favorite: p.favorite }
-  if (p.version > version.value && editGen === savedGen && !inflight && !conflict.value) {
+  if (together.value) {
+    // Editing together: the shared document is the content; the saved
+    // version is the newest one (whoever saved it for everyone).
+    if (p.version > version.value) {
+      version.value = p.version
+      Object.assign(next, { content: p.content, version: p.version, updated_at: p.updated_at, updated_by: p.updated_by })
+    }
+  } else if (p.version > version.value && editGen === savedGen && !inflight && !conflict.value) {
     editorRef.value?.setContent(p.content)
     draft.value = p.content
     version.value = p.version
@@ -696,6 +712,81 @@ onUnmounted(() => {
   window.removeEventListener('resize', autosize)
   document.removeEventListener('visibilitychange', onVisibility)
 })
+
+// ---- Editing together ----
+// Editing visually, the page is a shared document (lib/collab): everyone
+// editing it sees the others' changes as they type, and their cursors. One
+// tab saves the Markdown for everyone: the first one there editing.
+const together = shallowRef<{ link: CollabLink; me: { name: string; color: string } } | null>(null)
+// Who else is on this page now (editing it with me, or reading).
+const here = usePresence('page', pageId, computed(() => !!together.value))
+const joining = ref(false)
+const joinFailed = ref(false)
+const togetherKey = ref(0)
+const togetherOn = computed(() => editing.value && mode.value === 'visual' && editable.value && ready.value)
+const leader = computed(() => {
+  const eds = here.people.value.filter((x) => x.editing)
+  return !eds.length || eds[0].client === CLIENT_ID
+})
+let joinGen = 0
+async function join() {
+  const p = page.value
+  if (!p || together.value || joining.value) return
+  const gen = ++joinGen
+  joining.value = true
+  const link = new CollabLink('page', p.id)
+  link.onReset = () => void rejoin()
+  try {
+    await joinPage(link, draft.value)
+  } catch {
+    await link.stop()
+    if (gen === joinGen) joinFailed.value = true // edit alone: saves as before
+    return
+  } finally {
+    if (gen === joinGen) joining.value = false
+  }
+  if (gen !== joinGen) return void link.stop()
+  const u = auth.user
+  together.value = { link, me: { name: u?.display_name || u?.username || '?', color: personColor(u?.id ?? '') } }
+  togetherKey.value++
+}
+async function leaveTogether() {
+  joinGen++
+  joining.value = false
+  const t = together.value
+  if (!t) return
+  syncDraft()
+  together.value = null
+  await t.link.stop()
+}
+// Saved another way (another editor, the API, a version put back): start
+// over from what's saved.
+async function rejoin() {
+  await leaveTogether()
+  const cur = page.value
+  if (!cur) return
+  try {
+    const p = await pagesApi.get(cur.id)
+    draft.value = p.content
+    version.value = p.version
+    page.value = { ...cur, content: p.content, version: p.version, updated_at: p.updated_at, updated_by: p.updated_by }
+    savedGen = editGen
+    dirty.value = false
+  } catch {
+    return
+  }
+  if (togetherOn.value) void join()
+}
+watch(togetherOn, (on) => (on ? void join() : void leaveTogether()), { immediate: true })
+watch(pageId, () => {
+  joinFailed.value = false
+  void leaveTogether()
+})
+// Became the one saving (the other left): save what's waiting.
+watch(leader, (on) => {
+  if (on && together.value && dirty.value) schedule(300)
+})
+onUnmounted(() => void leaveTogether())
 </script>
 
 <template>
@@ -754,6 +845,7 @@ onUnmounted(() => {
         >
           <Star class="h-[18px] w-[18px]" :fill="favorite ? 'currentColor' : 'none'" />
         </button>
+        <PresenceAvatars :people="here.others.value" class="mr-1" />
         <button v-if="canEditWs && !page.trashed_at" ref="menuBtn" class="icon-btn" :title="t('editor.options')" :aria-label="t('editor.options')" @click="menuOpen = !menuOpen">
           <MoreHorizontal class="h-[18px] w-[18px]" />
         </button>
@@ -860,15 +952,17 @@ onUnmounted(() => {
           <DatabaseView v-if="isDb" :ws="wsId" :page-id="page.id" :editable="editable" />
           <p v-if="isTemplate && editable" class="tpl-note"><LayoutTemplate class="h-3.5 w-3.5 shrink-0" />{{ t('pages.isTemplate', { fields: PLACEHOLDERS }) }}</p>
 
+          <p v-if="editing && togetherOn && !together && !joinFailed" class="py-6 text-center text-[13px] text-text-3" data-testid="together-joining">{{ t('presence.joining') }}</p>
           <component
             :is="mode === 'markdown' ? MarkdownEditor : PageEditor"
-            v-if="editing"
-            :key="page.id + mode"
+            v-else-if="editing"
+            :key="page.id + mode + (together ? `-t${togetherKey}` : '')"
             ref="editorRef"
             :content="draft"
             :editable="editable"
             :page-id="page.id"
             :ws="wsId"
+            :together="mode === 'markdown' ? undefined : (together ?? undefined)"
             @change="onEditorChange"
             @invalid="onInvalid"
           />

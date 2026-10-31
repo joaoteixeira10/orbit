@@ -367,6 +367,63 @@ definitions:
     - new_password
     - old_password
     type: object
+  api.collabCompact:
+    properties:
+      client:
+        maxLength: 40
+        type: string
+      data:
+        description: the sum of the changes up to Upto
+        items:
+          type: integer
+        type: array
+      upto:
+        minimum: 1
+        type: integer
+    required:
+    - client
+    type: object
+  api.collabLog:
+    properties:
+      fresh:
+        description: 'no log yet: start it from what''s saved'
+        type: boolean
+      seq:
+        description: 'the last change''s number (0: none yet)'
+        type: integer
+      updates:
+        items:
+          $ref: '#/definitions/api.collabUpdateOut'
+        type: array
+      version:
+        description: what's saved
+        type: integer
+    type: object
+  api.collabPost:
+    properties:
+      client:
+        maxLength: 40
+        type: string
+      data:
+        description: base64
+        items:
+          type: integer
+        type: array
+    required:
+    - client
+    type: object
+  api.collabUpdateOut:
+    properties:
+      client:
+        type: string
+      data:
+        description: base64
+        items:
+          type: integer
+        type: array
+      seq:
+        type: integer
+    type: object
   api.commentRequest:
     properties:
       body:
@@ -2356,6 +2413,18 @@ definitions:
       week_start:
         type: integer
     type: object
+  api.presenceRequest:
+    properties:
+      client:
+        maxLength: 40
+        type: string
+      editing:
+        type: boolean
+      leave:
+        type: boolean
+    required:
+    - client
+    type: object
   api.pushInfoResponse:
     properties:
       available:
@@ -3384,6 +3453,19 @@ definitions:
       name:
         type: string
       url:
+        type: string
+    type: object
+  collab.Person:
+    properties:
+      client:
+        type: string
+      editing:
+        type: boolean
+      name:
+        type: string
+      since:
+        type: string
+      user_id:
         type: string
     type: object
   gitsync.HookSetup:
@@ -4763,6 +4845,162 @@ paths:
       summary: Modules and workspace templates
       tags:
       - workspaces
+  /collab/{kind}/{id}:
+    get:
+      parameters:
+      - description: page or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The last change the tab has
+        in: query
+        name: since
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.collabLog'
+      security:
+      - BearerAuth: []
+      summary: A document's changes (editing together)
+      tags:
+      - collab
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: page or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The change (base64)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.collabPost'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: A change (editing together)
+      tags:
+      - collab
+  /collab/{kind}/{id}/awareness:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: page or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The awareness update (base64)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.collabPost'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: My cursor (editing together)
+      tags:
+      - collab
+  /collab/{kind}/{id}/compact:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: page or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Up to which change, and their sum
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.collabCompact'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Fold the log (editing together)
+      tags:
+      - collab
+  /collab/{kind}/{id}/seed:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: page or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: This tab
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.presenceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: May I start it? (editing together)
+      tags:
+      - collab
   /comments/{id}:
     delete:
       parameters:
@@ -7985,6 +8223,41 @@ paths:
       summary: A page's history
       tags:
       - pages
+  /presence/{kind}/{id}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: page, board, sheet or diagram
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: This tab
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.presenceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/collab.Person'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: I'm here (presence)
+      tags:
+      - collab
   /privileges:
     get:
       produces:

@@ -975,6 +975,252 @@ const docTemplate = `{
                 }
             }
         },
+        "/collab/{kind}/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collab"
+                ],
+                "summary": "A document's changes (editing together)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page or board",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "The last change the tab has",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.collabLog"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collab"
+                ],
+                "summary": "A change (editing together)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page or board",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The change (base64)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.collabPost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/collab/{kind}/{id}/awareness": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collab"
+                ],
+                "summary": "My cursor (editing together)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page or board",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The awareness update (base64)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.collabPost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/collab/{kind}/{id}/compact": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collab"
+                ],
+                "summary": "Fold the log (editing together)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page or board",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Up to which change, and their sum",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.collabCompact"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/collab/{kind}/{id}/seed": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collab"
+                ],
+                "summary": "May I start it? (editing together)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page or board",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "This tab",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.presenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/comments/{id}": {
             "put": {
                 "security": [
@@ -6237,6 +6483,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/presence/{kind}/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collab"
+                ],
+                "summary": "I'm here (presence)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page, board, sheet or diagram",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "This tab",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.presenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/collab.Person"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/privileges": {
             "get": {
                 "security": [
@@ -11252,6 +11553,89 @@ const docTemplate = `{
                 }
             }
         },
+        "api.collabCompact": {
+            "type": "object",
+            "required": [
+                "client"
+            ],
+            "properties": {
+                "client": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "data": {
+                    "description": "the sum of the changes up to Upto",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "upto": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "api.collabLog": {
+            "type": "object",
+            "properties": {
+                "fresh": {
+                    "description": "no log yet: start it from what's saved",
+                    "type": "boolean"
+                },
+                "seq": {
+                    "description": "the last change's number (0: none yet)",
+                    "type": "integer"
+                },
+                "updates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.collabUpdateOut"
+                    }
+                },
+                "version": {
+                    "description": "what's saved",
+                    "type": "integer"
+                }
+            }
+        },
+        "api.collabPost": {
+            "type": "object",
+            "required": [
+                "client"
+            ],
+            "properties": {
+                "client": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "data": {
+                    "description": "base64",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "api.collabUpdateOut": {
+            "type": "object",
+            "properties": {
+                "client": {
+                    "type": "string"
+                },
+                "data": {
+                    "description": "base64",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "seq": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.commentRequest": {
             "type": "object",
             "required": [
@@ -14104,6 +14488,24 @@ const docTemplate = `{
                 }
             }
         },
+        "api.presenceRequest": {
+            "type": "object",
+            "required": [
+                "client"
+            ],
+            "properties": {
+                "client": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "editing": {
+                    "type": "boolean"
+                },
+                "leave": {
+                    "type": "boolean"
+                }
+            }
+        },
         "api.pushInfoResponse": {
             "type": "object",
             "properties": {
@@ -15533,6 +15935,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "collab.Person": {
+            "type": "object",
+            "properties": {
+                "client": {
+                    "type": "string"
+                },
+                "editing": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "since": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

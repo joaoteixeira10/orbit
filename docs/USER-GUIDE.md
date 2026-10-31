@@ -468,9 +468,23 @@ It says how many pages and files came in, and names any file it couldn't
 read.
 
 **Saving** is automatic; the header says *Saving…* / *Saved* / *Edited … by
-…* — click it (or `⋯` → **Page history**) for the page's history. ⌘S saves at once. If someone else saved the page while you were editing,
-a banner says **Someone else changed this page**: **Load theirs** (drops your
-unsaved edits) or **Keep mine** (saves yours over theirs).
+…* — click it (or `⋯` → **Page history**) for the page's history. ⌘S saves at once.
+
+**Who's here.** At the top of a page (and of a sheet, a diagram, a
+whiteboard), a dot with the initials of each other person who has it open
+now — ringed when they're editing; hover for their name.
+
+**Editing together.** Editing in the **Visual** editor, everyone editing the
+same page edits it at once: each one's typing shows on the others' screens
+as it happens, with their cursor and name in their colour. Nobody overwrites
+anybody; the page saves once for everyone (by the first one there editing),
+and its history keeps those saves. Saved another way meanwhile — in the
+**Markdown** editor, by an assistant through the API, a version put back —
+the people editing start again from that, with what they typed before it
+kept in the history. (The Markdown editor still edits on its own: if
+someone else saved the page while you were editing there, a banner says
+**Someone else changed this page**: **Load theirs** — drops your unsaved
+edits — or **Keep mine**, saving yours over theirs.)
 
 **More blocks.** Type **/** for: **Toggle section** (a title that folds
 what's under it when reading), **2 columns** / **3 columns** (side by side;
@@ -1136,8 +1150,10 @@ floor plans, diagrams, mind maps. They use **Excalidraw**.
   L, P, T, E); the panel on the left sets colours, line width, style and
   roughness. Scroll or pinch to zoom; hold Space and drag to move around.
 - It **saves itself** a moment after each change (*Saving… / Saved* at the
-  bottom). If someone else saved it meanwhile, theirs wins and you're told;
-  what others save shows by itself when you aren't drawing.
+  bottom). **Drawing together:** with others on the same whiteboard (or
+  sketch), each stroke, shape or picture shows on everyone's screen as it's
+  made, and nothing anyone drew is lost; it saves once for everyone. Their
+  initials show at the top.
 - The list shows each one's picture; `⋯` → **Rename** or **Delete**. ☰ →
   **Export image** saves it as PNG or SVG.
 - Search (⌘K) finds a whiteboard by its name and the words written on it.

@@ -247,6 +247,9 @@ func (h *Handlers) updateDrawing(c *gin.Context) {
 		return
 	}
 	h.db.First(&d, "id = ?", d.ID)
+	if req.Scene != nil {
+		h.collabSaved(c, "board:"+d.ID, d.Version) // drawing together: in step, or starts over
+	}
 	h.publishDrawing(c, d)
 	c.JSON(http.StatusOK, d)
 }

@@ -361,6 +361,8 @@ func AllModels() []any {
 		&UploadBlob{},
 		&Blob{},
 		&UploadText{},
+		&CollabUpdate{},
+		&CollabDoc{},
 		&WorkspaceInvite{},
 		&Course{},
 		&CourseSlot{},

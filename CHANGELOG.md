@@ -33,6 +33,17 @@ merge, not at release time.
 
 ### Added
 
+- **Presence** — the initials of everyone else on a page, sheet, diagram or
+  whiteboard right now, ringed when editing (`POST /presence/{kind}/{id}`,
+  a heartbeat per tab).
+- **Editing together** — pages in the Visual editor edited by several
+  people at once (Yjs: each one's typing and cursor shows on the others'
+  screens as it happens), and whiteboards drawn together (sketches and
+  Excalidraw: each stroke, shape or picture shows at once). The server keeps
+  each document's changes in order and relays them
+  (`/collab/{kind}/{id}`, `…/seed`, `…/awareness`, `…/compact`); the
+  Markdown / scene saves once for everyone (`X-Orbit-Collab`); saved another
+  way, the people there start again from it.
 - **Download a page as Word (.docx)** — Word's own styles (Title, Headings,
   lists), tables, pictures, links, callouts; sheets and diagrams drawn in or
   as links, as for the PDF.

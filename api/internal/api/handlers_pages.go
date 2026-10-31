@@ -420,6 +420,9 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
+	if req.Content != nil {
+		h.collabSaved(c, "page:"+p.ID, p.Version) // editing together: in step, or starts over
+	}
 	if req.Content != nil || req.Title != nil {
 		recordVersion(h.db, p, auth.UserID(c), &prev, 0)
 	}
@@ -527,6 +530,8 @@ func (h *Handlers) trashPage(c *gin.Context) {
 		h.db.Where("page_id IN ?", ids).Delete(&models.ShareLink{})
 		h.db.Where("page_id IN ?", ids).Delete(&models.Form{})
 		_ = uploads.TrashFor(h.db, uploads.Page, ids)
+		h.db.Where("doc_key IN ?", collabKeys("page", ids)).Delete(&models.CollabUpdate{})
+		h.db.Where("doc_key IN ?", collabKeys("page", ids)).Delete(&models.CollabDoc{})
 		h.db.Where("id IN ?", ids).Delete(&models.Page{})
 	} else {
 		now := time.Now()

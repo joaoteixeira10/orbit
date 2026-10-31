@@ -7,6 +7,10 @@ import { TextSelection } from '@tiptap/pm/state'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { Placeholder } from '@tiptap/extensions'
 import { pageExtensions } from './extensions'
+import Collaboration from '@tiptap/extension-collaboration'
+import CollaborationCaret from '@tiptap/extension-collaboration-caret'
+import type { CollabLink } from '@/lib/collab'
+import { FIELD } from './together'
 import { normalizeMarkdown } from '@/lib/markdown'
 import { SlashCommand, slashItems, filterItems, type SlashDocs, type SlashState } from './slash'
 import EmbedPicker from '@/components/embeds/EmbedPicker.vue'
@@ -29,8 +33,10 @@ import { usePagesStore } from '@/stores/pages'
 // The page body, edited visually: a TipTap editor that reads and writes the
 // page's Markdown (extensions.ts). The parent owns saving; this reports
 // changes and hands out the Markdown on request ("" = empty page).
-// ws: the workspace, for @-mentions of its people and pages.
-const props = defineProps<{ content: string; editable: boolean; pageId?: string; ws?: string }>()
+// ws: the workspace, for @-mentions of its people and pages. together: the
+// page's shared document when editing it with others (it is the content
+// then; each person's caret shows with their name and colour).
+const props = defineProps<{ content: string; editable: boolean; pageId?: string; ws?: string; together?: { link: CollabLink; me: { name: string; color: string } } }>()
 const toast = useToastStore()
 const emit = defineEmits<{ change: []; invalid: [] }>()
 const { t } = useI18n()
@@ -108,8 +114,9 @@ function placeholder({ editor, node, pos }: { editor: Editor; node: PMNode; pos:
   return t('editor.placeholder')
 }
 
+const together = props.together
 const editor = useEditor({
-  content: props.content,
+  ...(together ? {} : { content: props.content }),
   contentType: 'markdown',
   editable: props.editable,
   extensions: pageExtensions(
@@ -122,9 +129,16 @@ const editor = useEditor({
         upload: props.pageId ? (f: File) => (toast.info(t('editor.uploading', { name: f.name })), uploadFile('page', props.pageId!, f)) : null,
         onError: (e: any) => toast.error(e?.message ?? String(e)),
       }),
+      ...(together
+        ? [
+            Collaboration.configure({ document: together.link.doc, field: FIELD }),
+            CollaborationCaret.configure({ provider: { awareness: together.link.awareness }, user: together.me }),
+          ]
+        : []),
     ],
     // ⌘/Ctrl-click opens a link (handleClick below); a plain click edits.
     { HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } },
+    !!together,
   ),
   editorProps: {
     attributes: { class: 'orbit-prose', spellcheck: 'true' },

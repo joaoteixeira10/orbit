@@ -442,7 +442,9 @@ choice is remembered): **Sheets and diagrams drawn in** — a diagram or a
 whiteboard as its picture, a sheet as a compact table (its column letters
 and row numbers, only the rows and columns that hold something, at most 60
 by 12), each in the middle of the page with its title kept with it — or
-**Sheets and diagrams as links**, just their names, linked. On the Pages screen, **Export as Markdown (.zip)** downloads
+**Sheets and diagrams as links**, just their names, linked. **Download as
+Word (.docx)** makes the same as a Word document (Word's own Title, Heading
+and List styles, tables, pictures, links), with the same choice. On the Pages screen, **Export as Markdown (.zip)** downloads
 every page as `.md` files in folders that follow the page tree — ready to
 keep in git.
 
@@ -519,6 +521,11 @@ inside too** opens the pages under it as well (listed beside it); and how
 long it works (until taken back, or a day, a week, a month). Guests see the
 sheets, diagrams, whiteboards, pictures and files shown in those pages —
 nothing else of the workspace. Take a link back (🗑) and it stops at once.
+Each link also has a **For AI agents** address: the same page as clean
+Markdown (`…/api/v1/shared/<link>/markdown`; with the pages inside, all of
+them in one document) — a sheet as a Markdown table, a Mermaid diagram as
+its code, links to the shared pages leading to their Markdown — for an
+assistant or a script to read without an account.
 The owner can turn guest links off for the whole Orbit (Owner → Features).
 
 **Page history.** Every save of a page is kept, with who saved it — the

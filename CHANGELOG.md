@@ -33,6 +33,13 @@ merge, not at release time.
 
 ### Added
 
+- **Download a page as Word (.docx)** — Word's own styles (Title, Headings,
+  lists), tables, pictures, links, callouts; sheets and diagrams drawn in or
+  as links, as for the PDF.
+- **A page as clean Markdown for agents** — each guest link has a Markdown
+  address (`GET /shared/{token}/markdown`, `?all=1` with its pages inside):
+  sheets as Markdown tables, Mermaid diagrams as code, links between the
+  shared pages leading to their Markdown.
 - **Files shown in place** — a PDF's pages, a Word document as a page, an
   Excel file's tabs or a CSV as a table, a PowerPoint deck's slides,
   pictures, video, audio, Markdown and text open over what you're doing (from

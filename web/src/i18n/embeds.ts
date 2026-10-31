@@ -133,6 +133,8 @@ export const embedsEn = {
   },
   share: {
     menu: 'Share with a link…',
+    agents: 'For AI agents',
+    agentsHint: 'The same page as clean Markdown (text, tables, diagrams’ code) — for an assistant or a script to read. Taking the link back stops this too.',
     title: 'Share with a link',
     lead: 'Anyone with a link opens this page — and the pages inside it, if you choose — without an account: to read, or also to edit. Take a link back and it stops at once.',
     none: 'No links yet.',
@@ -392,6 +394,8 @@ export const embedsPt: typeof embedsEn = {
   },
   share: {
     menu: 'Partilhar com uma ligação…',
+    agents: 'Para agentes de IA',
+    agentsHint: 'A mesma página em Markdown limpo (texto, tabelas, o código dos diagramas) — para um assistente ou um script ler. Retirar a ligação também acaba com esta.',
     title: 'Partilhar com uma ligação',
     lead: 'Quem tiver uma ligação abre esta página — e as páginas dentro dela, se escolher — sem conta: para ler, ou também para editar. Retire uma ligação e ela deixa de funcionar logo.',
     none: 'Ainda sem ligações.',

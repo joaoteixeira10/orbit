@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, FileType, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { filesApi, tree, type Folder } from '@/lib/filesApi'
 import Popover from './ui/Popover.vue'
@@ -25,7 +25,8 @@ const { t } = useI18n()
 
 const page = computed(() => pages.find(props.pageId))
 const picking = ref(false)
-const pdfing = ref(false)
+// Downloading as a PDF or a Word file: the choice of how (drawn in, or links).
+const exporting = ref<'pdf' | 'docx' | null>(null)
 
 // Filing: the workspace's folders, as a tree.
 const filing = ref(false)
@@ -102,9 +103,9 @@ const copyMd = () => run(async () => {
   await navigator.clipboard.writeText((await asMarkdown()).text)
   toast.success(t('editor.copied'))
 })
-// As a PDF file, downloaded: the page with what it shows in place drawn in
-// (sheets' cells, diagrams' and whiteboards' pictures), or as their links
-// (the choice remembered).
+// As a PDF or a Word file, downloaded: the page with what it shows in place
+// drawn in (sheets' cells, diagrams' and whiteboards' pictures), or as their
+// links (the choice remembered).
 const PDF_KEY = 'orbit_pdf_links'
 const pdfLinks = ref(readPdfLinks())
 function readPdfLinks() {
@@ -114,22 +115,28 @@ function readPdfLinks() {
     return false
   }
 }
-const asPdf = (links: boolean) =>
+const asFile = (links: boolean) =>
   run(async () => {
+    const as = exporting.value ?? 'pdf'
     pdfLinks.value = links
     try {
       localStorage.setItem(PDF_KEY, links ? '1' : '0')
     } catch {
       /* private window */
     }
-    toast.info(t('editor.pdfMaking'))
+    toast.info(t(as === 'docx' ? 'editor.docxMaking' : 'editor.pdfMaking'))
     const p = await pagesApi.get(props.pageId)
     const title = p.title || t('pages.untitled')
     const meta = [wss.byId(props.ws)?.name, new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(new Date(p.updated_at))].filter(Boolean).join(' · ')
-    const [{ docOf, downloadPdf }, { pageSources }] = await Promise.all([import('@/lib/pdf'), import('@/lib/pdfSources')])
+    const { pageSources } = await import('@/lib/pdfSources')
     const subpages = () => (pages.byWs[props.ws] ?? []).filter((x) => x.parent_id === props.pageId).map((x) => x.title || t('pages.untitled'))
-    const doc = await docOf(title, meta, p.content, pageSources({ subpages, tabName: t('sheets.tabName', { n: 1 }), links }))
-    await downloadPdf(fileName(title), doc)
+    const src = pageSources({ subpages, tabName: t('sheets.tabName', { n: 1 }), links })
+    if (as === 'docx') {
+      await (await import('@/lib/docxExport')).downloadDocx(fileName(title), title, meta, p.content, src)
+      return
+    }
+    const { docOf, downloadPdf } = await import('@/lib/pdf')
+    await downloadPdf(fileName(title), await docOf(title, meta, p.content, src))
   })
 // A database of the pages inside it (or no longer: they stay as pages).
 const toggleDatabase = () =>
@@ -199,13 +206,13 @@ const trash = () =>
         </button>
       </div>
     </template>
-    <template v-else-if="pdfing">
-      <button class="menu-item text-text-2" @click="pdfing = false"><ChevronLeft class="h-4 w-4" />{{ t('editor.pdf') }}</button>
+    <template v-else-if="exporting">
+      <button class="menu-item text-text-2" @click="exporting = null"><ChevronLeft class="h-4 w-4" />{{ exporting === 'docx' ? t('editor.docx') : t('editor.pdf') }}</button>
       <div class="menu-sep" />
-      <button class="menu-item" data-testid="pdf-drawn" @click="asPdf(false)">
+      <button class="menu-item" data-testid="pdf-drawn" @click="asFile(false)">
         <Printer class="h-4 w-4 shrink-0 text-text-2" /><span class="flex-1">{{ t('editor.pdfDrawn') }}</span><Check v-if="!pdfLinks" class="h-4 w-4 shrink-0 text-accent" />
       </button>
-      <button class="menu-item" data-testid="pdf-links" @click="asPdf(true)">
+      <button class="menu-item" data-testid="pdf-links" @click="asFile(true)">
         <Link class="h-4 w-4 shrink-0 text-text-2" /><span class="flex-1">{{ t('editor.pdfLinks') }}</span><Check v-if="pdfLinks" class="h-4 w-4 shrink-0 text-accent" />
       </button>
     </template>
@@ -218,7 +225,8 @@ const trash = () =>
       <button class="menu-item" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('pages.copyLink') }}</button>
       <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
       <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
-      <button class="menu-item" data-testid="page-pdf" @click="pdfing = true"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
+      <button class="menu-item" data-testid="page-pdf" @click="exporting = 'pdf'"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
+      <button class="menu-item" data-testid="page-docx" @click="exporting = 'docx'"><FileType class="h-4 w-4 text-text-2" />{{ t('editor.docx') }}</button>
       <button class="menu-item" data-testid="page-access" @click="access"><Lock class="h-4 w-4 text-text-2" />{{ t('access.menu') }}</button>
       <button v-if="auth.features.guest_links !== false" class="menu-item" data-testid="page-share" @click="share"><Share2 class="h-4 w-4 text-text-2" />{{ t('share.menu') }}</button>
       <button class="menu-item" data-testid="page-history-open" @click="history"><History class="h-4 w-4 text-text-2" />{{ t('history.title') }}</button>

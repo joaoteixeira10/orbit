@@ -166,6 +166,7 @@ export function docxToHtml(bytes: Uint8Array): string {
         const id = attr(kid(num, 'numId'), 'val') ?? ''
         const tag = ordered.has(`${id}:${level}`) ? 'ol' : 'ul'
         if (stack.length > level + 1) closeTo(level + 1)
+        if (stack.length === level + 1 && stack[level].key !== id) closeTo(level) // another list, right after
         if (stack.length === level + 1) html += '</li><li>'
         while (stack.length < level + 1) {
           html += `<${tag}><li>`

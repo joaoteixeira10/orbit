@@ -6715,6 +6715,46 @@
                 }
             }
         },
+        "/shared/{token}/markdown": {
+            "get": {
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "sharing"
+                ],
+                "summary": "A shared page as Markdown (for agents)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The link's secret",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "One of the pages it opens (default: the first)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Every page it opens, one after another",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "text/markdown",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/shared/{token}/pages/{id}": {
             "get": {
                 "produces": [

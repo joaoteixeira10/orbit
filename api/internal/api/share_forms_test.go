@@ -167,3 +167,49 @@ func TestForms(t *testing.T) {
 	expect(t, do(r, "GET", "/api/v1/f/"+tok, ""), http.StatusNotFound, "public forms off")
 	expect(t, authdo(r, "PUT", "/api/v1/forms/"+form.ID, `{"public":true}`, alice), http.StatusForbidden, "can't make public while off")
 }
+
+// TestGuestMarkdown: a guest link's page as clean Markdown (for agents): its
+// links to the pages it opens lead to their Markdown, a sheet it shows comes
+// as a table, a Mermaid diagram as its code; ?all=1 every page in order; a
+// page it doesn't open, nothing.
+func TestGuestMarkdown(t *testing.T) {
+	r, _, _, alice, _ := plannerSetupDB(t)
+	ws := createWS(t, r, alice, `{"name":"Docs","kind":"work","starter":false,"modules":["home","pages","sheets","diagrams"]}`)
+	base := "/api/v1/workspaces/" + ws.ID
+	var sheet, diag, root, child, outside struct{ ID string }
+	decode(t, authdo(r, "POST", base+"/sheets", `{"title":"Budget","data":{"tabs":[{"id":"t","name":"Sheet 1","cells":{"A1":{"v":"Rent"},"B1":{"v":"650"},"B2":{"v":"=SUM(B1)"}}}]}}`, alice), &sheet)
+	decode(t, authdo(r, "POST", base+"/diagrams", `{"title":"Flow","kind":"mermaid","data":"flowchart TD\n  A --> B"}`, alice), &diag)
+	decode(t, authdo(r, "POST", base+"/pages", `{"title":"Salaries","content":"private"}`, alice), &outside)
+	decode(t, authdo(r, "POST", base+"/pages", `{"title":"Handbook","content":"Welcome."}`, alice), &root)
+	decode(t, authdo(r, "POST", base+"/pages", `{"title":"Holidays","parent_id":"`+root.ID+`","content":"25 days."}`, alice), &child)
+	content := "Welcome. See [holidays](/w/" + ws.ID + "/p/" + child.ID + ") and [pay](/w/" + ws.ID + "/p/" + outside.ID + ").\n\n[Budget](/w/" + ws.ID + "/s/" + sheet.ID + ")\n\n[Flow](/w/" + ws.ID + "/d/" + diag.ID + ")"
+	body, _ := json.Marshal(map[string]any{"content": content, "version": 1})
+	expect(t, authdo(r, "PUT", "/api/v1/pages/"+root.ID, string(body), alice), http.StatusOK, "content")
+	var link struct{ URL string }
+	decode(t, authdo(r, "POST", "/api/v1/pages/"+root.ID+"/links", `{"mode":"read","subpages":true}`, alice), &link)
+	g := "/api/v1/shared/" + link.URL[strings.LastIndex(link.URL, "/")+1:]
+
+	w := do(r, "GET", g+"/markdown", "")
+	expect(t, w, http.StatusOK, "markdown")
+	md := w.Body.String()
+	if !strings.HasPrefix(w.Header().Get("Content-Type"), "text/markdown") || !strings.HasPrefix(md, "# Handbook\n") {
+		t.Fatalf("markdown: %q (%s)", md, w.Header().Get("Content-Type"))
+	}
+	for _, want := range []string{
+		g + "/markdown?page=" + child.ID,    // a page it opens: its Markdown
+		"/w/" + ws.ID + "/p/" + outside.ID,  // one it doesn't: Orbit's own link
+		"| | A | B |", "| 1 | Rent | 650 |", // the sheet as a table
+		"| 2 |  | =SUM(B1) |",                      // a formula as written
+		"```mermaid\nflowchart TD\n  A --> B\n```", // the diagram as its code
+		"## Pages inside", "[Holidays]",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("missing %q in:\n%s", want, md)
+		}
+	}
+	all := do(r, "GET", g+"/markdown?all=1", "").Body.String()
+	if !strings.Contains(all, "# Handbook") || !strings.Contains(all, "# Holidays\n\n25 days.") || strings.Index(all, "# Holidays") < strings.Index(all, "# Handbook") {
+		t.Fatalf("all: %s", all)
+	}
+	expect(t, do(r, "GET", g+"/markdown?page="+outside.ID, ""), http.StatusNotFound, "a page it doesn't open")
+}

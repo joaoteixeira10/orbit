@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Link2, Plus, Trash2 } from 'lucide-vue-next'
+import { Bot, Link2, Plus, Trash2 } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import CopyButton from '@/components/ui/CopyButton.vue'
@@ -57,6 +57,9 @@ async function remove(l: ShareLink) {
     toast.error(e.message)
   }
 }
+// The same link as clean Markdown, for AI agents and scripts (all: every
+// page it opens, in one document).
+const markdownOf = (url: string, all: boolean) => `${location.origin}/api/v1/shared/${url.slice(url.lastIndexOf('/') + 1)}/markdown${all ? '?all=1' : ''}`
 const until = (iso?: string) => (iso ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(iso)) : '')
 </script>
 
@@ -88,6 +91,12 @@ const until = (iso?: string) => (iso ? new Intl.DateTimeFormat(undefined, { date
             <option v-if="l.expires_at" value="-1" selected disabled>{{ until(l.expires_at) }}</option>
           </select>
         </label>
+      </div>
+      <div class="mt-2 flex items-center gap-2 text-[12px]" :title="t('share.agentsHint')">
+        <Bot class="h-4 w-4 shrink-0 text-text-3" />
+        <span class="shrink-0 text-text-3">{{ t('share.agents') }}</span>
+        <input class="field min-w-0 flex-1 font-mono !py-1 !text-[11.5px]" :value="markdownOf(l.url, l.subpages)" readonly data-testid="share-markdown" @focus="($event.target as HTMLInputElement).select()" />
+        <CopyButton :value="markdownOf(l.url, l.subpages)" />
       </div>
     </div>
     <template #footer>

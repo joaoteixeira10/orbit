@@ -174,6 +174,7 @@ func New(d Deps) *gin.Engine {
 		v1.PUT("/shared/:token/pages/:id", feedLimit, h.guestEdit)
 		v1.GET("/shared/:token/embed/:kind/:id", feedLimit, h.guestEmbed)
 		v1.GET("/shared/:token/uploads/:id/*name", feedLimit, h.guestUpload)
+		v1.GET("/shared/:token/markdown", feedLimit, h.guestMarkdown)
 		v1.GET("/f/:token", feedLimit, h.publicFormOf)
 		v1.POST("/f/:token", authLimit, h.answerPublicForm)
 		// Passwordless / second-factor passkey assertion (pre-auth).

@@ -2364,6 +2364,15 @@ test('mermaid: text and drawing side by side, a node added and two joined; pages
   await page.getByTestId('page-pdf').click()
   await expect(page.getByTestId('pdf-links').locator('svg').last()).toHaveClass(/text-accent/)
   await page.keyboard.press('Escape')
+  // As a Word file, the same way.
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-docx').click()
+  const [word] = await Promise.all([page.waitForEvent('download'), page.getByTestId('pdf-drawn').click()])
+  expect(word.suggestedFilename()).toBe('Launch plan.docx')
+  await word.saveAs('test-results/page.docx')
+  const docx = await fs.readFile(await word.path())
+  expect(docx.subarray(0, 2).toString()).toBe('PK')
+  expect(docx.toString('latin1')).toContain('word/document.xml')
 })
 
 test('projects: a folder joined to a task list shows its progress; the list shows its folder; pages are filed in folders', async ({ page, request }) => {
@@ -2796,6 +2805,12 @@ test('guest links and forms: a page read and edited by its link, no account; a p
   await page.getByTestId('share-edit').click()
   const url = await page.getByTestId('share-url').inputValue()
   expect(url).toMatch(/\/shared\//)
+  // The same, as clean Markdown for agents (no account): the sheet as a table.
+  const mdUrl = await page.getByTestId('share-markdown').inputValue()
+  const md = await (await request.get(new URL(mdUrl).pathname + new URL(mdUrl).search)).text()
+  expect(md).toContain('# Handbook')
+  expect(md).toContain('| 1 | Yearly | 40 |')
+  expect(md).toContain('# Rules')
 
   // A guest: no account.
   const guestCtx = await browser.newContext()

@@ -43,7 +43,9 @@ async function add(list: FileList | File[] | null) {
   for (const f of [...(list ?? [])]) {
     busy.value++
     try {
-      files.value = [...files.value, await uploadFile(props.target, props.targetId, f)]
+      // One of the same name is its new version: it takes the old one's place.
+      const u = await uploadFile(props.target, props.targetId, f)
+      files.value = [...files.value.filter((x) => (x.lineage || x.id) !== u.lineage), u]
       emit('change', files.value)
       loadThumbs()
     } catch (e: any) {

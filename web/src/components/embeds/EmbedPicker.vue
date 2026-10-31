@@ -13,9 +13,9 @@ const emit = defineEmits<{ close: []; pick: [it: { kind: EmbedKind; id: string; 
 const { t } = useI18n()
 
 const FILE: Record<EmbedKind, FileKind> = { sheet: 'sheet', diagram: 'diagram', board: 'board' }
-const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText }
-const COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de', page: '#007aff' }
-const UNTITLED: Record<FileKind, string> = { sheet: 'sheets.untitled', diagram: 'diagrams.untitled', board: 'draw.untitled', page: 'drive.untitled.page' }
+const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText, file: FileText }
+const COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de', page: '#007aff', file: '#8e8e93' }
+const UNTITLED: Record<FileKind, string> = { sheet: 'sheets.untitled', diagram: 'diagrams.untitled', board: 'draw.untitled', page: 'drive.untitled.page', file: 'drive.untitled.file' }
 
 const items = ref<FileItem[]>([])
 const loading = ref(false)

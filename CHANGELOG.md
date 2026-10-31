@@ -33,6 +33,23 @@ merge, not at release time.
 
 ### Added
 
+- **My files** — your own drive (sidebar, under Quick Draw): your Quick Draw
+  sketches, files you upload, your Quick Notes' attachments, in folders of
+  your own, with versions and the trash; only you see it. API:
+  `GET/POST /me/folders`, `POST /me/files/move`, `GET /me/files`
+  (`?trash=1`), `GET /me/files/usage`, `POST /uploads?target=file&target_id=me`.
+- **Files of every kind, in folders** — **Upload** (or drop) any file into
+  a folder of Files; the attachments of tasks, pages and notes show there
+  too, where what they're on is (a task's in its list's folder), *On the
+  task "…"*. A file of the same name in the same place is its next
+  **version** (links show the current one; an older one can be made current
+  again). Deleting puts a file in a **Trash** for 30 days (restore, or delete
+  now); a task, note or page deleted for good sends its files there as files
+  of their own. **Unfiled** shows what's in no folder; Details shows the
+  space used. API: `GET /workspaces/{ws}/files` (`?trash=1`), `…/files/usage`,
+  `PUT /files/{id}`, `GET /files/{id}/versions`, `POST /files/{id}/current`,
+  `POST /files/{id}/restore`, `POST /uploads?target=file`,
+  `DELETE /uploads/{id}?forever=1`.
 - **Every list has its own folder** — made with it (by hand, from a template,
   from git), renamed with it, kept with its contents when the list goes;
   the list's sheet can pick another folder or none (`folder_id` when making

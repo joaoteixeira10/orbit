@@ -428,9 +428,10 @@ func (h *Handlers) deleteUser(c *gin.Context) {
 	h.db.Where("user_id = ?", user.ID).Delete(&models.CourseGoal{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.PersonalChannel{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.Notification{})
-	_ = uploads.Delete(h.db, "workspace_id = '' AND owner_id = ?", user.ID) // their Quick Notes' files
+	_ = uploads.Delete(h.db, "workspace_id = '' AND owner_id = ?", user.ID) // their own files (My files, Quick Notes')
 	h.db.Where("workspace_id = '' AND owner_id = ?", user.ID).Delete(&models.Note{})
 	h.db.Where("workspace_id = '' AND owner_id = ?", user.ID).Delete(&models.Drawing{})
+	h.db.Where("workspace_id = '' AND owner_id = ?", user.ID).Delete(&models.Folder{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.PushSubscription{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.GitAccount{})
 	h.recordCtx(c, "user.delete", "user", user.ID,

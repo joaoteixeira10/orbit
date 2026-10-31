@@ -430,7 +430,7 @@ func (h *Handlers) deleteNote(c *gin.Context) {
 	if !ok {
 		return
 	}
-	_ = uploads.DeleteFor(h.db, uploads.Note, []string{n.ID})
+	_ = uploads.TrashFor(h.db, uploads.Note, []string{n.ID})
 	h.db.Where("note_id = ?", n.ID).Delete(&models.Drawing{})
 	if err := h.db.Delete(&models.Note{}, "id = ?", n.ID).Error; err != nil {
 		h.internalError(c, err, "could not delete the note")

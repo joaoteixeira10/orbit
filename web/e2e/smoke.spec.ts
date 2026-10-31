@@ -2442,6 +2442,112 @@ test('projects: a folder joined to a task list shows its progress; the list show
   expect((await foldersNow()).find((f) => f.name === 'Ads')?.list_id).toBe(ads.id)
 })
 
+test('files: any file uploaded into a folder; a task\'s attachment shows in its list\'s folder; versions; the trash; unfiled', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Archive', kind: 'custom', starter: false, modules: ['home', 'tasks', 'files'] } })).json()
+  const base = `/api/v1/workspaces/${ws.id}`
+  const list = await (await request.post(`${base}/lists`, { headers: H, data: { name: 'Thesis', color: '#5856d6' } })).json()
+  const task = await (await request.post(`${base}/tasks`, { headers: H, data: { title: 'Chapter 1', list_id: list.id } })).json()
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  await request.post(`/api/v1/uploads?target=task&target_id=${task.id}`, { headers: H, multipart: { file: { name: 'figure.png', mimeType: 'image/png', buffer: png } } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/files`)
+  // The list's own folder, holding the task's picture.
+  const thesis = page.getByTestId('folder-tile').filter({ hasText: 'Thesis' })
+  await expect(thesis.getByTestId('folder-summary')).toHaveText('1 file · 1 list')
+  await thesis.click()
+  const fig = page.getByTestId('file-card').filter({ hasText: 'figure.png' })
+  await expect(fig.getByTestId('file-on')).toHaveText('On the task “Chapter 1”')
+  await expect(fig.locator('img.photo')).toBeVisible()
+
+  // A file from the computer, uploaded here; the same name again: v2.
+  await page.getByTestId('files-add-input').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('first') })
+  const notes = page.getByTestId('file-card').filter({ hasText: 'notes.txt' })
+  await expect(notes).toBeVisible()
+  await page.getByTestId('files-add-input').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('second draft') })
+  await expect(notes.locator('.vbadge')).toHaveText('v2')
+  await expect(page.getByTestId('file-card').filter({ hasText: 'notes.txt' })).toHaveCount(1)
+  // The first version made current again.
+  await notes.getByTestId('file-more').click()
+  await page.getByTestId('file-versions').click()
+  await expect(page.getByTestId('version-row')).toHaveCount(2)
+  await page.getByTestId('version-row').nth(1).getByTestId('version-current').click()
+  await expect(notes.locator('.vbadge')).toHaveText('v3')
+  const all = (await (await request.get(`${base}/files`, { headers: H })).json()) as { name: string; size: number; folder_id: string }[]
+  expect(all.find((f) => f.name === 'notes.txt')?.size).toBe(5)
+
+  // Dropped onto the page from the computer: here too.
+  const dt = await page.evaluateHandle(() => {
+    const d = new DataTransfer()
+    d.items.add(new File(['dropped'], 'dropped.txt', { type: 'text/plain' }))
+    return d
+  })
+  await page.locator('.fb-main').dispatchEvent('dragover', { dataTransfer: dt })
+  await page.locator('.fb-main').dispatchEvent('drop', { dataTransfer: dt })
+  await expect(page.getByTestId('file-card').filter({ hasText: 'dropped.txt' })).toBeVisible()
+  await page.screenshot({ path: 'test-results/files.png' })
+
+  // To the trash, and back.
+  await notes.getByTestId('file-more').click()
+  await page.getByTestId('file-delete').click()
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect(page.getByTestId('file-card').filter({ hasText: 'notes.txt' })).toHaveCount(0)
+  await page.getByTestId('files-trash').click()
+  await expect(page.getByTestId('trash-row')).toHaveCount(1)
+  await page.getByTestId('trash-restore').click()
+  await expect(page.getByTestId('trash-row')).toHaveCount(0)
+  await page.getByTestId('files-trash').click()
+  await expect(page.getByTestId('file-card').filter({ hasText: 'notes.txt' })).toBeVisible()
+
+  // The task deleted for good: its picture in the trash, saying where it was.
+  await request.delete(`/api/v1/tasks/${task.id}`, { headers: H })
+  await page.getByTestId('files-trash').click()
+  await expect(page.getByTestId('trash-row').filter({ hasText: 'figure.png' })).toContainText('Was on the task “Chapter 1”')
+  await page.screenshot({ path: 'test-results/files-trash.png' })
+  await page.getByTestId('files-trash').click()
+
+  // Unfiled: what's in no folder (a file uploaded at the top).
+  await page.getByTestId('crumb').first().click()
+  await request.post(`/api/v1/uploads?target=file&target_id=${ws.id}`, { headers: H, multipart: { file: { name: 'loose.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') } } })
+  await page.getByTestId('files-unfiled').click()
+  await expect(page.getByTestId('folder-tile')).toHaveCount(0)
+  await expect(page.getByTestId('file-card')).toHaveText([/loose\.pdf/])
+})
+
+test('my files: my own drive — a folder, a file uploaded, a sketch started there, a Quick Note\'s picture at the top', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const note = await (await request.post('/api/v1/me/notes', { headers: H, data: { title: 'Shopping', body: 'milk' } })).json()
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  await request.post(`/api/v1/uploads?target=note&target_id=${note.id}`, { headers: H, multipart: { file: { name: 'receipt.png', mimeType: 'image/png', buffer: png } } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.getByTestId('my-files').click()
+  await expect(page).toHaveURL(/\/files$/)
+  // A Quick Note's picture, at the top.
+  await expect(page.getByTestId('file-card').filter({ hasText: 'receipt.png' }).getByTestId('file-on')).toHaveText('On the note “Shopping”')
+  // A folder of my own; a file into it; a sketch started there.
+  await page.getByTestId('new-folder').click()
+  await page.getByTestId('folder-name').fill('Taxes')
+  await page.getByTestId('folder-name').press('Enter')
+  await page.getByTestId('folder-tile').filter({ hasText: 'Taxes' }).click()
+  await page.getByTestId('files-add-input').setInputFiles({ name: '2026.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 taxes') })
+  await expect(page.getByTestId('file-card').filter({ hasText: '2026.pdf' })).toBeVisible()
+  await page.getByTestId('my-files-sketch').click()
+  await expect(page).toHaveURL(/\/draw\/[^/]+$/)
+  const sketch = page.url().split('/').pop()
+  const mine = (await (await request.get('/api/v1/me/drawings', { headers: H })).json()) as { id: string; folder_id?: string }[]
+  const folders = (await (await request.get('/api/v1/me/folders', { headers: H })).json()) as { id: string; name: string }[]
+  expect(mine.find((d) => d.id === sketch)?.folder_id).toBe(folders.find((f) => f.name === 'Taxes')?.id)
+  await page.goBack()
+  await expect(page.getByTestId('folder-tile').or(page.getByTestId('whiteboard-card')).first()).toBeVisible()
+  await expect(page.getByTestId('whiteboard-card')).toHaveCount(1)
+})
+
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

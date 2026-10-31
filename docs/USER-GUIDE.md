@@ -1246,11 +1246,12 @@ handed to the editor inside your browser and saved only in Orbit.
 
 ## 17. Files and folders
 
-Sheets, diagrams, whiteboards and pages live in **folders**, and folders go
-inside folders. A workspace has one set of folders for all of them:
-**Sheets** shows its sheets in them, **Diagrams** its diagrams,
+Files, sheets, diagrams, whiteboards and pages live in **folders**, and
+folders go inside folders. A workspace has one set of folders for all of
+them: **Sheets** shows its sheets in them, **Diagrams** its diagrams,
 **Whiteboards** its whiteboards, and **Files** (a module of its own) shows
-them all together. A folder's tile says what it holds of every kind
+them all together — with every file: those uploaded there, and the
+attachments of pages, tasks and notes. A folder's tile says what it holds of every kind
 ("1 page · 2 sheets · 1 list"), whichever of them shows it; its `⋯` →
 **Open in Files** shows everything in it.
 
@@ -1291,6 +1292,39 @@ them all together. A folder's tile says what it holds of every kind
 - In **Files**, **New** makes a sheet, diagram or whiteboard, and
   **Import** brings in Excel or CSV files (as sheets), draw.io files (as
   diagrams) and Excalidraw files (as whiteboards), several at once.
+
+**Files of every kind.** In **Files**, **Upload** adds any file (a PDF, a
+photo, a Word document…) to the folder shown, as it is — or drop files from
+the computer onto the page, or onto a folder. A picture shows as its
+thumbnail; a click opens a picture, and downloads anything else.
+
+- **Attachments are where what they're on is**: a file on a task shows in
+  its list's folder, one on a page in the page's folder, a note's at the
+  top — each saying *On the task "…"*; its `⋯` → **Open the task** (or page,
+  note). It moves when its task moves to another list, or its page to
+  another folder; to file it apart, move what it's on.
+- **Versions.** A file of the same name added to the same place (the same
+  folder, task or page) is its **next version**, not a second file: its
+  tile shows *v2*, *v3*… `⋯` → **Versions** lists them (when, who, size), to
+  download one or **Make current** again. Links to the file — a picture in
+  a page too — always show the current version.
+- **The trash.** Deleting a file (anywhere: in Files, on a task or a page)
+  puts it, every version, in the **Trash** for 30 days: **Trash** at the
+  top of Files lists them (where each was, when it goes), to **Restore** or
+  **Delete now**. When a task, note or page goes for good, its files go to
+  the trash too — as files of their own, saying what they were on — and
+  restore into the folder they showed in.
+- **Unfiled** at the top of Files shows everything that's in no folder.
+- **Space used** — Details (ⓘ) at the top of Files says how much this
+  workspace's files take, and the whole Orbit's (of its limit). The same
+  file kept in several places counts once.
+
+**My files** (under Quick Draw in the sidebar) is your own drive, in no
+workspace, that only you see: your Quick Draw sketches, files you upload
+there, and your Quick Notes' attachments (at the top) — in folders of your
+own, with the same versions, trash, Unfiled and moving as a workspace's
+Files. **New sketch** starts one in the folder shown. A sketch moved into a
+workspace leaves its folder; a Quick Note moved there takes its files.
 
 ## 18. Habits
 

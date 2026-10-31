@@ -2,7 +2,7 @@
 import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Brush, ChevronDown, FileText, GitFork, Plus, Sheet, Upload, Waypoints, Workflow } from 'lucide-vue-next'
+import { Brush, ChevronDown, FileInput, FileText, GitFork, Plus, Sheet, Upload, Waypoints, Workflow } from 'lucide-vue-next'
 import { pagesApi } from '@/api/planner'
 import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
@@ -17,10 +17,12 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
-// Files: a workspace's sheets, diagrams and whiteboards together, in its
-// folders — the ones whose modules are on. New ones go in the folder
-// shown; files from the computer (.xlsx, .csv, .drawio, draw.io's .svg,
-// .excalidraw) come in as the matching kind.
+// Files: a workspace's folders with everything in them — its files (from
+// the computer, and the attachments of its pages, tasks and notes), and its
+// sheets, diagrams and whiteboards (those whose modules are on). New ones,
+// and files uploaded, go in the folder shown; Import turns files from the
+// computer (.xlsx, .csv, .drawio, draw.io's .svg, .excalidraw) into the
+// matching kind.
 const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
@@ -32,7 +34,7 @@ const ws = computed(() => String(route.params.ws))
 const workspace = computed(() => wss.byId(ws.value))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
 const kinds = computed<FileKind[]>(() => FILE_KINDS.filter((k) => workspace.value?.modules.includes(KIND_MODULE[k])))
-const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText }
+const ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText, file: FileText }
 
 const browser = ref<InstanceType<typeof FileBrowser> | null>(null)
 const folder = () => browser.value?.here ?? ''
@@ -40,7 +42,15 @@ const folder = () => browser.value?.here ?? ''
 const newOpen = ref(false)
 const newEl = ref<HTMLElement | null>(null)
 // What "New" makes: a diagram is draw.io's or Mermaid's.
-const news = computed(() => kinds.value.flatMap((k): (FileKind | 'mermaid')[] => (k === 'diagram' ? ['diagram', 'mermaid'] : [k])))
+const news = computed(() => kinds.value.flatMap((k): (FileKind | 'mermaid')[] => (k === 'diagram' ? ['diagram', 'mermaid'] : k === 'file' ? [] : [k])))
+const importable = computed(() => kinds.value.some((k) => k === 'sheet' || k === 'diagram' || k === 'board'))
+// Any file, as it is, into the folder shown.
+const rawEl = ref<HTMLInputElement | null>(null)
+function uploadRaw(e: Event) {
+  const list = [...((e.target as HTMLInputElement).files ?? [])]
+  ;(e.target as HTMLInputElement).value = ''
+  void browser.value?.addFiles(list)
+}
 async function create(what: FileKind | 'mermaid') {
   newOpen.value = false
   const kind: FileKind = what === 'mermaid' ? 'diagram' : what
@@ -101,9 +111,15 @@ async function upload(e: Event) {
       </div>
       <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="btn btn-ghost"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink>
       <template v-if="editable && kinds.length">
-        <input ref="fileEl" type="file" class="hidden" multiple :accept="accept" data-testid="files-upload-input" @change="upload" />
-        <button class="btn btn-ghost" :disabled="busy" :title="t('drive.uploadHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.upload') }}</button>
-        <button ref="newEl" class="btn-primary" data-testid="files-new" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('drive.new') }}<ChevronDown class="h-3.5 w-3.5" /></button>
+        <template v-if="importable">
+          <input ref="fileEl" type="file" class="hidden" multiple :accept="accept" data-testid="files-upload-input" @change="upload" />
+          <button class="btn btn-ghost" :disabled="busy" :title="t('drive.uploadHint')" @click="fileEl?.click()"><FileInput class="h-4 w-4" />{{ t('drive.upload') }}</button>
+        </template>
+        <template v-if="kinds.includes('file')">
+          <input ref="rawEl" type="file" class="hidden" multiple data-testid="files-add-input" @change="uploadRaw" />
+          <button class="btn" :title="t('drive.addFilesHint')" data-testid="files-add" @click="rawEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.addFiles') }}</button>
+        </template>
+        <button v-if="news.length" ref="newEl" class="btn-primary" data-testid="files-new" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('drive.new') }}<ChevronDown class="h-3.5 w-3.5" /></button>
       </template>
     </header>
     <p v-if="workspace && !kinds.length" class="mb-6 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('drive.noKinds') }}</p>

@@ -6,6 +6,7 @@ import (
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -52,6 +53,7 @@ type folderCounts struct {
 	Diagrams int64 `json:"diagrams"`
 	Boards   int64 `json:"boards"`
 	Pages    int64 `json:"pages"`
+	Files    int64 `json:"files"` // files of its own and attachments shown here
 	Folders  int64 `json:"folders"`
 }
 
@@ -99,9 +101,13 @@ func (h *Handlers) listFolders(c *gin.Context) {
 	boards := count(&models.Drawing{}, "folder_id", "note_id = ''")
 	pages := count(&models.Page{}, "folder_id", "trashed_at IS NULL")
 	subs := count(&models.Folder{}, "parent_id", "")
+	files := map[string]int64{}
+	for _, x := range h.filesOf(c, ws.ID, false) {
+		files[x.FolderID]++
+	}
 	out := make([]folderResponse, 0, len(folders))
 	for _, f := range folders {
-		out = append(out, folderResponse{Folder: f, Counts: folderCounts{Sheets: sheets[f.ID], Diagrams: diagrams[f.ID], Boards: boards[f.ID], Pages: pages[f.ID], Folders: subs[f.ID]}})
+		out = append(out, folderResponse{Folder: f, Counts: folderCounts{Sheets: sheets[f.ID], Diagrams: diagrams[f.ID], Boards: boards[f.ID], Pages: pages[f.ID], Files: files[f.ID], Folders: subs[f.ID]}})
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -173,7 +179,7 @@ func (h *Handlers) applyFolder(f *models.Folder, req folderRequest) (int, string
 	}
 	if req.ParentID != nil {
 		p := *req.ParentID
-		if !h.folderIn(f.WorkspaceID, p) {
+		if (f.WorkspaceID == "" && !h.myFolderIn(f.OwnerID, p)) || (f.WorkspaceID != "" && !h.folderIn(f.WorkspaceID, p)) {
 			return http.StatusBadRequest, "no such folder here"
 		}
 		if f.ID != "" && h.loops(f.WorkspaceID, f.ID, p) {
@@ -183,6 +189,9 @@ func (h *Handlers) applyFolder(f *models.Folder, req folderRequest) (int, string
 	}
 	if req.ListID != nil {
 		l := *req.ListID
+		if l != "" && f.WorkspaceID == "" {
+			return http.StatusBadRequest, "a personal folder has no task list"
+		}
 		if l != "" {
 			var n int64
 			h.db.Model(&models.TaskList{}).Where("id = ? AND workspace_id = ?", l, f.WorkspaceID).Count(&n)
@@ -210,8 +219,38 @@ func (h *Handlers) folderAccess(c *gin.Context, need string) (models.Folder, boo
 		c.JSON(http.StatusNotFound, gin.H{"error": "folder not found"})
 		return f, false
 	}
+	if f.WorkspaceID == "" { // a personal folder (My files): its owner's alone
+		if f.OwnerID != auth.UserID(c) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "folder not found"})
+			return f, false
+		}
+		if need != models.WSViewer && auth.Effective(c).ReadOnly {
+			c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+			return f, false
+		}
+		return f, true
+	}
 	_, _, ok := h.wsAccess(c, f.WorkspaceID, need)
 	return f, ok
+}
+
+// myFolderIn reports whether id is one of uid's personal folders ("" is the top).
+func (h *Handlers) myFolderIn(uid, id string) bool {
+	if id == "" {
+		return true
+	}
+	var n int64
+	h.db.Model(&models.Folder{}).Where("id = ? AND workspace_id = '' AND owner_id = ?", id, uid).Count(&n)
+	return n == 1
+}
+
+// publishFolders tells whoever shows a workspace's (or someone's own) folders.
+func (h *Handlers) publishFolders(c *gin.Context, f models.Folder) {
+	if f.WorkspaceID == "" {
+		h.events.Publish(f.OwnerID, `{"type":"ws","ws":"me","what":"files"}`)
+		return
+	}
+	h.publishWS(c, f.WorkspaceID, "files")
 }
 
 // updateFolder renames, recolours or moves a folder (editors).
@@ -248,7 +287,7 @@ func (h *Handlers) updateFolder(c *gin.Context) {
 		h.internalError(c, err, "could not save the folder")
 		return
 	}
-	h.publishWS(c, f.WorkspaceID, "files")
+	h.publishFolders(c, f)
 	c.JSON(http.StatusOK, f)
 }
 
@@ -266,8 +305,16 @@ func (h *Handlers) deleteFolder(c *gin.Context) {
 		return
 	}
 	err := h.db.Transaction(func(tx *gorm.DB) error {
-		for _, m := range []any{&models.Sheet{}, &models.Diagram{}, &models.Drawing{}, &models.Page{}} {
-			if err := tx.Model(m).Where("workspace_id = ? AND folder_id = ?", f.WorkspaceID, f.ID).UpdateColumn("folder_id", f.ParentID).Error; err != nil {
+		// What it held moves up: the workspace's things, or (a personal
+		// folder) its owner's sketches and files.
+		kinds := []any{&models.Sheet{}, &models.Diagram{}, &models.Drawing{}, &models.Page{}, &models.Upload{}}
+		where, args := "workspace_id = ? AND folder_id = ?", []any{f.WorkspaceID, f.ID}
+		if f.WorkspaceID == "" {
+			kinds = []any{&models.Drawing{}, &models.Upload{}}
+			where, args = "workspace_id = '' AND owner_id = ? AND folder_id = ?", []any{f.OwnerID, f.ID}
+		}
+		for _, m := range kinds {
+			if err := tx.Model(m).Where(where, args...).UpdateColumn("folder_id", f.ParentID).Error; err != nil {
 				return err
 			}
 		}
@@ -280,7 +327,7 @@ func (h *Handlers) deleteFolder(c *gin.Context) {
 		h.internalError(c, err, "could not delete the folder")
 		return
 	}
-	h.publishWS(c, f.WorkspaceID, "files")
+	h.publishFolders(c, f)
 	c.Status(http.StatusNoContent)
 }
 
@@ -288,8 +335,9 @@ type moveRequest struct {
 	FolderID string   `json:"folder_id"` // where to ("" the top)
 	Sheets   []string `json:"sheets" binding:"max=500"`
 	Diagrams []string `json:"diagrams" binding:"max=500"`
-	Drawings []string `json:"drawings" binding:"max=500"`
+	Drawings []string `json:"drawings" binding:"max=500"` // whiteboards (or, in My files, sketches)
 	Pages    []string `json:"pages" binding:"max=500"`
+	Files    []string `json:"files" binding:"max=500"` // files of their own (an attachment goes with what it's on)
 	Folders  []string `json:"folders" binding:"max=500"`
 }
 
@@ -337,6 +385,13 @@ func (h *Handlers) moveFiles(c *gin.Context) {
 			{&models.Page{}, req.Pages, "folder_id", ""},
 			{&models.Folder{}, req.Folders, "parent_id", ""},
 		}
+		if len(req.Files) > 0 {
+			var lineages []string
+			tx.Model(&models.Upload{}).Where("workspace_id = ? AND id IN ? AND target = ?", ws.ID, req.Files, uploads.File).Pluck("lineage", &lineages)
+			if err := tx.Model(&models.Upload{}).Where("workspace_id = ? AND lineage IN ?", ws.ID, append(lineages, "-")).UpdateColumn("folder_id", req.FolderID).Error; err != nil {
+				return err
+			}
+		}
 		for _, mv := range moves {
 			if len(mv.ids) == 0 {
 				continue
@@ -356,6 +411,9 @@ func (h *Handlers) moveFiles(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, ws.ID, "files")
+	if len(req.Pages) > 0 || len(req.Files) > 0 {
+		h.publishWS(c, ws.ID, "uploads")
+	}
 	if len(req.Pages) > 0 {
 		h.publishWS(c, ws.ID, "pages")
 	}

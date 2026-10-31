@@ -45,6 +45,7 @@ func (s *Scheduler) startPlanner() {
 		{"* * * * *", s.notifications, "snoozed and held notifications"},
 		{"* * * * *", s.digests, "daily summaries"},
 		{"@daily", s.emptyTrash, "trash"},
+		{"@daily", s.emptyFileTrash, "files' trash"},
 		{"@daily", s.inbox.Cleanup, "old notifications"},
 		{"@daily", s.oldActivity, "old workspace activity"},
 		{"@every 3m", s.syncGit, "git-linked lists"},
@@ -79,9 +80,16 @@ func (s *Scheduler) emptyTrash() {
 	s.db.Where("page_id IN ?", ids).Delete(&models.PageVersion{})
 	s.db.Where("page_id IN ?", ids).Delete(&models.ShareLink{})
 	s.db.Where("page_id IN ?", ids).Delete(&models.Form{})
-	_ = uploads.DeleteFor(s.db, uploads.Page, ids)
+	_ = uploads.TrashFor(s.db, uploads.Page, ids) // their files: to the files' trash
 	res := s.db.Where("id IN ?", ids).Delete(&models.Page{})
 	s.log.Info("emptied old trash", zap.Int64("pages", res.RowsAffected))
+}
+
+// emptyFileTrash deletes files in the trash for uploads.TrashDays.
+func (s *Scheduler) emptyFileTrash() {
+	if err := uploads.EmptyTrash(s.db, time.Now().AddDate(0, 0, -uploads.TrashDays)); err != nil {
+		s.log.Warn("emptying the files' trash failed", zap.Error(err))
+	}
 }
 
 // userZone is where a user's floating due times are read: their chosen zone,

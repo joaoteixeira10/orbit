@@ -33,6 +33,8 @@ const routes: RouteRecordRaw[] = [
       // Quick Draw: one's own sketches (Excalidraw), like Quick Notes.
       { path: 'draw', name: 'my-drawings', component: () => import('@/views/WhiteboardsView.vue') },
       { path: 'draw/:id', name: 'my-drawing', component: () => import('@/views/WhiteboardView.vue') },
+      // My files: one's own drive (sketches, files, Quick Notes' attachments).
+      { path: 'files', name: 'my-files', component: () => import('@/views/MyFilesView.vue') },
       // Shared from another app (the share sheet): saved as a Quick Note.
       { path: 'share', name: 'share', component: () => import('@/views/ShareView.vue') },
       { path: 'w/:ws', name: 'ws', component: () => import('@/views/HomeView.vue') },

@@ -3,8 +3,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component 
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  Brush, Check, ChevronRight, Copy, Download, ExternalLink, FileText, Folder as FolderIcon, FolderInput, FolderOpen, FolderPlus, Info, LayoutGrid, Link, List, ListChecks,
-  MoreHorizontal, Pencil, Plus, Sheet, SquareKanban, Trash2, Workflow, X,
+  Brush, Check, ChevronRight, Copy, Download, ExternalLink, File as FileIcon, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, Folder as FolderIcon, FolderInput, FolderOpen, FolderPlus,
+  History, Inbox, Info, LayoutGrid, Link, List, ListChecks, MoreHorizontal, Pencil, Plus, RotateCcw, Sheet, SquareKanban, Trash2, Workflow, X,
 } from 'lucide-vue-next'
 import { tasksApi, type TaskList } from '@/api/planner'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
@@ -13,8 +13,9 @@ import Confirm from '@/components/ui/Confirm.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
 import { drawingsApi } from '@/components/draw/drawing'
-import { countParts, filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type Folder } from '@/lib/filesApi'
-import { download, duplicate, linkOf, remove, rename, routeOf } from '@/lib/fileOps'
+import { countParts, filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type FileUsage, type FileVersion, type Folder } from '@/lib/filesApi'
+import { download, duplicate, linkOf, onRoute, remove, rename, routeOf } from '@/lib/fileOps'
+import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
 import { svgUrl } from '@/lib/drawio'
 import { ago } from '@/components/notes/noteModel'
 import { locale } from '@/lib/dates'
@@ -25,13 +26,18 @@ import { useToastStore } from '@/stores/toast'
 
 // A workspace's files in folders, as in a file manager: the folders here
 // and the files here (of the kinds asked for: a module shows its own; Files
-// shows them all), as tiles or a list; a path back up; folders inside
-// folders. Each has a menu (also on a right click): open, rename, copy,
-// move, download, its link, its details, delete. Drag one onto a folder or
-// onto the path to move it. Where you are is in the address (?folder=).
-// A folder tile says what it holds of every kind; a folder joined to a task
-// list (a project) shows the list's progress inside it.
+// shows them all — files from the computer too, and the attachments of
+// pages, tasks and notes where those are), as tiles or a list; a path back
+// up; folders inside folders. Each has a menu (also on a right click):
+// open, rename, copy, move, download, its link, versions, its details,
+// delete. Drag one onto a folder or onto the path to move it; drop files
+// from the computer to add them. Where you are is in the address
+// (?folder=). A folder tile says what it holds of every kind; a folder
+// joined to a task list (a project) shows the list's progress inside it.
+// "Unfiled" shows what's in no folder; the trash, what was deleted (30 days).
+// ws "me": someone's own drive (My files) — their sketches and files.
 const props = defineProps<{ ws: string; kinds: FileKind[]; editable: boolean; rootName: string }>()
+const personal = computed(() => props.ws === 'me')
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -48,7 +54,7 @@ async function load() {
     const [fs, xs, ls] = await Promise.all([
       filesApi.folders(props.ws),
       filesApi.files(props.ws, props.kinds),
-      tasksApi.lists(props.ws).catch(() => [] as TaskList[]),
+      personal.value ? Promise.resolve([] as TaskList[]) : tasksApi.lists(props.ws).catch(() => [] as TaskList[]),
     ])
     folders.value = fs
     files.value = xs
@@ -64,15 +70,18 @@ watch(
   () => {
     loaded.value = false
     void load()
-    if (!wss.members[props.ws]) void wss.loadMembers(props.ws).catch(() => undefined)
+    if (!personal.value && !wss.members[props.ws]) void wss.loadMembers(props.ws).catch(() => undefined)
   },
   { immediate: true },
 )
 let reloadTimer: ReturnType<typeof setTimeout> | undefined
 const off = onLiveEvent('ws', (e) => {
-  if (String(e.ws) !== props.ws || !['files', 'sheets', 'diagrams', 'drawings', 'pages', 'lists', 'tasks'].includes(String(e.what))) return
+  if (String(e.ws) !== props.ws || !['files', 'uploads', 'sheets', 'diagrams', 'drawings', 'pages', 'lists', 'tasks', 'notes'].includes(String(e.what))) return
   clearTimeout(reloadTimer)
-  reloadTimer = setTimeout(() => void load(), 150)
+  reloadTimer = setTimeout(() => {
+    void load()
+    if (mode.value === 'trash') void loadTrash()
+  }, 150)
 })
 onUnmounted(() => {
   off()
@@ -92,15 +101,170 @@ const folderOf = (f: { folder_id: string }) => (known.value.has(f.folder_id) ? f
 const subfolders = computed(() => folders.value.filter((f) => (known.value.has(f.parent_id) ? f.parent_id : '') === here.value).sort((a, b) => a.name.localeCompare(b.name)))
 const sort = ref<'modified' | 'name'>((localStorage.getItem('orbit_files_sort') as 'name') === 'name' ? 'name' : 'modified')
 watch(sort, (v) => localStorage.setItem('orbit_files_sort', v))
+// What's shown: here, or everything in no folder (Unfiled), or the trash.
+const mode = ref<'here' | 'unfiled' | 'trash'>('here')
+const withFiles = computed(() => props.kinds.includes('file'))
 const items = computed(() =>
-  files.value
-    .filter((f) => folderOf(f) === here.value)
+  (mode.value === 'trash' ? trashed.value : files.value)
+    .filter((f) => mode.value === 'trash' || folderOf(f) === (mode.value === 'unfiled' ? '' : here.value))
     .sort((a, b) => (sort.value === 'name' ? (a.title || '').localeCompare(b.title || '') : b.updated_at.localeCompare(a.updated_at))),
 )
 const countIn = (id: string) => {
   const c = folders.value.find((f) => f.id === id)?.counts
-  return c ? c.sheets + c.diagrams + c.boards + c.pages + c.folders : folders.value.filter((f) => f.parent_id === id).length + files.value.filter((f) => f.folder_id === id).length
+  return c ? c.sheets + c.diagrams + c.boards + c.pages + (c.files ?? 0) + c.folders : folders.value.filter((f) => f.parent_id === id).length + files.value.filter((f) => f.folder_id === id).length
 }
+const shownFolders = computed(() => (mode.value === 'here' ? subfolders.value : []))
+// Unfiled and the trash are at the top; leaving them goes back to where you were.
+let back = ''
+function setMode(m: 'here' | 'unfiled' | 'trash') {
+  const was = mode.value
+  mode.value = was === m ? 'here' : m
+  if (was === 'here' && mode.value !== 'here') {
+    back = here.value
+    if (back) void go('')
+  } else if (mode.value === 'here' && back) {
+    void go(back)
+    back = ''
+  }
+  if (mode.value === 'trash') void loadTrash()
+}
+
+// ---- The trash ----
+const trashed = ref<FileItem[]>([])
+async function loadTrash() {
+  try {
+    trashed.value = await filesApi.uploads(props.ws, true)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function restoreFile(f: FileItem) {
+  try {
+    await filesApi.restore(f.id)
+    toast.success(t('drive.restored', { name: nameOf(f) }))
+    await Promise.all([load(), loadTrash()])
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const purging = ref<FileItem | null>(null)
+async function doPurge() {
+  const f = purging.value
+  purging.value = null
+  if (!f) return
+  try {
+    await filesApi.removeFile(f.id, true)
+    await loadTrash()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+const goesWhen = (f: FileItem) => (f.upload?.empties_at ? ago(f.upload.empties_at, loc) : '')
+
+// ---- Files from the computer ----
+const canAdd = computed(() => props.editable && withFiles.value)
+const adding = ref(0)
+async function addFiles(list: File[], folderId = here.value) {
+  if (!canAdd.value || !list.length) return
+  let n = 0
+  for (const f of list) {
+    adding.value++
+    try {
+      await filesApi.upload(props.ws, folderId, f)
+      n++
+    } catch (e: any) {
+      toast.error(`${f.name}: ${e?.message ?? e}`)
+    } finally {
+      adding.value--
+    }
+  }
+  if (n) {
+    toast.success(t('drive.added', { n }, n))
+    await load()
+  }
+}
+const dropping = ref(false)
+const hasFiles = (e: DragEvent) => !dragged.value && !!e.dataTransfer?.types.includes('Files')
+function fileDragOver(e: DragEvent) {
+  if (!canAdd.value || !hasFiles(e) || mode.value === 'trash') return
+  e.preventDefault()
+  dropping.value = true
+}
+function fileDrop(e: DragEvent, folderId = here.value) {
+  dropping.value = false
+  if (!canAdd.value || !hasFiles(e) || mode.value === 'trash') return
+  e.preventDefault()
+  void addFiles([...(e.dataTransfer?.files ?? [])], folderId)
+}
+
+// ---- A file's look: a picture's thumbnail, else its type's icon ----
+const thumbs = ref<Record<string, string>>({})
+watch(
+  () => items.value.filter((f) => f.upload?.image && !thumbs.value[f.id]),
+  (need) => {
+    for (const f of need) void uploadBlobUrl(f.upload!.url).then((u) => (thumbs.value = { ...thumbs.value, [f.id]: u })).catch(() => undefined)
+  },
+  { immediate: true },
+)
+function typeIcon(f: FileItem): Component {
+  if (f.kind !== 'file') return KIND_ICON[f.kind]
+  const ty = f.upload?.type ?? ''
+  if (ty.startsWith('image/')) return FileImage
+  if (ty.startsWith('video/')) return FileVideo
+  if (ty.startsWith('audio/')) return FileAudio
+  if (ty === 'application/pdf' || ty.startsWith('text/')) return FileText
+  if (/zip|compressed|x-tar|gzip/.test(ty)) return FileArchive
+  if (/\.(xlsx?|ods|csv|numbers)$/i.test(f.title)) return FileSpreadsheet
+  return FileIcon
+}
+const isAttachment = (f: FileItem) => f.kind === 'file' && !!f.upload && f.upload.target !== 'file'
+// "On the task “Logo”" — or, in the trash, what it was on.
+function onText(f: FileItem): string {
+  const u = f.upload
+  if (!u) return ''
+  if (u.on_kind && u.on_title !== undefined) return t(`drive.on.${u.on_kind}`, { title: u.on_title || t('pages.untitled') })
+  if (u.was_kind) return t(`drive.was.${u.was_kind}`, { title: u.was_title || t('pages.untitled') })
+  return ''
+}
+function openOn(f: FileItem) {
+  const u = f.upload
+  menu.value = null
+  if (u?.on_kind && u.on_id) void router.push(onRoute(props.ws, u.on_kind, u.on_id))
+}
+
+// ---- Versions ----
+const versionsOf = ref<FileItem | null>(null)
+const versions = ref<FileVersion[]>([])
+async function showVersions(f: FileItem) {
+  menu.value = null
+  versionsOf.value = f
+  versions.value = []
+  try {
+    versions.value = await filesApi.versions(f.id)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function makeCurrent(v: FileVersion) {
+  try {
+    await filesApi.makeCurrent(v.id)
+    toast.success(t('drive.madeCurrent'))
+    versionsOf.value = null
+    await load()
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
+// ---- Space used ----
+const usage = ref<FileUsage | null>(null)
+watch(
+  () => [props.ws, withFiles.value, files.value.length] as const,
+  async ([ws, on]) => {
+    usage.value = on ? await filesApi.usage(ws).catch(() => null) : null
+  },
+  { immediate: true },
+)
 // summaryOf says what a folder holds, of every kind ("2 sheets · 1 list"),
 // whichever module shows it.
 function summaryOf(f: Folder): string {
@@ -115,15 +279,25 @@ const view = ref<'grid' | 'list'>(localStorage.getItem('orbit_files_view') === '
 watch(view, (v) => localStorage.setItem('orbit_files_view', v))
 
 // ---- Kinds ----
-const KIND_ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText }
-const KIND_COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de', page: '#007aff' }
-const TESTID: Record<FileKind, string> = { sheet: 'sheet-row', diagram: 'diagram-card', board: 'whiteboard-card', page: 'page-card' }
+const KIND_ICON: Record<FileKind, Component> = { sheet: Sheet, diagram: Workflow, board: Brush, page: FileText, file: FileIcon }
+const KIND_COLOR: Record<FileKind, string> = { sheet: '#34c759', diagram: '#ff9500', board: '#af52de', page: '#007aff', file: '#8e8e93' }
+const TESTID: Record<FileKind, string> = { sheet: 'sheet-row', diagram: 'diagram-card', board: 'whiteboard-card', page: 'page-card', file: 'file-card' }
 const kindName = (k: FileKind) => t(`drive.kind.${k}`)
 const untitled = (k: FileKind) => t(`drive.untitled.${k}`)
 const nameOf = (f: FileItem) => f.title || untitled(f.kind)
 const folderColor = (f: Folder) => f.color || '#5ac8fa'
 const people = computed(() => new Map((wss.members[props.ws] ?? []).map((m) => [m.user_id, m.display_name || m.username])))
-const open = (f: FileItem) => router.push(routeOf(props.ws, f))
+// A file opens: a picture in a new tab, anything else downloads.
+async function open(f: FileItem) {
+  if (f.kind !== 'file') return void router.push(routeOf(props.ws, f))
+  menu.value = null
+  try {
+    if (f.upload?.image) window.open(thumbs.value[f.id] ?? (await uploadBlobUrl(f.upload.url)), '_blank', 'noopener')
+    else await downloadUpload(f.upload!.url, f.title)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 
 // ---- Menus ----
 type Target = { file: FileItem } | { folder: Folder }
@@ -304,15 +478,25 @@ function dragStart(t: Target, e: DragEvent) {
 }
 function dragOver(id: string, e: DragEvent) {
   const d = dragged.value
-  if (!d || ('folder' in d && inside(folders.value, d.folder.id).has(id))) return
+  if (!d) {
+    // Files from the computer, onto a folder.
+    if (canAdd.value && e.dataTransfer?.types.includes('Files')) {
+      e.preventDefault()
+      over.value = id
+    }
+    return
+  }
+  if ('folder' in d && inside(folders.value, d.folder.id).has(id)) return
   e.preventDefault()
   over.value = id
 }
-async function drop(id: string) {
+async function drop(id: string, e?: DragEvent) {
   const d = dragged.value
   dragged.value = null
   over.value = null
+  dropping.value = false
   if (d) await moveInto(d, id)
+  else if (e) fileDrop(e, id)
 }
 
 // ---- Deleting ----
@@ -325,7 +509,7 @@ const removeTitle = computed(() => {
 const removeBody = computed(() => {
   const r = removing.value
   if (!r) return ''
-  if ('file' in r) return t(`drive.deleteBody.${r.file.kind}`)
+  if ('file' in r) return t(isAttachment(r.file) ? 'drive.deleteBody.attachment' : `drive.deleteBody.${r.file.kind}`)
   const up = folders.value.find((f) => f.id === r.folder.parent_id)?.name ?? props.rootName
   return t('drive.deleteFolderBody', { where: up })
 })
@@ -334,8 +518,10 @@ async function doRemove() {
   removing.value = null
   if (!r) return
   try {
-    if ('file' in r) await remove(r.file)
-    else {
+    if ('file' in r) {
+      await remove(r.file)
+      if (r.file.kind === 'file') toast.success(t('drive.trashed', { name: nameOf(r.file) }))
+    } else {
       await filesApi.removeFolder(r.folder.id)
       if (inside(folders.value, r.folder.id).has(here.value)) void go(r.folder.parent_id)
     }
@@ -380,12 +566,13 @@ const when = (iso: string) => (iso ? new Intl.DateTimeFormat(locale(), { day: 'n
 const where = (folderId: string) => [props.rootName, ...pathTo(folders.value, folderId).map((f) => f.name)].join(' › ')
 const loc = locale()
 
-defineExpose({ here, reload: load })
+defineExpose({ here, reload: load, addFiles })
 </script>
 
 <template>
   <div class="fb" :class="{ 'with-info': infoOpen && wide }">
-    <div class="fb-main">
+    <div class="fb-main" :class="{ dropping }" @dragover="fileDragOver" @dragleave.self="dropping = false" @drop="fileDrop($event)">
+      <div v-if="adding" class="mb-3 text-[12.5px] text-text-3" data-testid="files-adding">{{ t('drive.adding', { n: adding }, adding) }}</div>
       <!-- The path, and the tools -->
       <div class="fb-bar">
         <nav class="crumbs" :aria-label="t('drive.path')">
@@ -397,17 +584,21 @@ defineExpose({ here, reload: load })
             @click="go('')"
             @dragover="dragOver('', $event)"
             @dragleave="over = null"
-            @drop.prevent="drop('')"
+            @drop.prevent.stop="drop('', $event)"
           >
             {{ rootName }}
           </button>
           <template v-for="f in path" :key="f.id">
             <ChevronRight class="h-3.5 w-3.5 shrink-0 text-text-3" />
-            <button type="button" class="crumb" :class="{ over: over === f.id }" data-testid="crumb" @click="go(f.id)" @dragover="dragOver(f.id, $event)" @dragleave="over = null" @drop.prevent="drop(f.id)">
+            <button type="button" class="crumb" :class="{ over: over === f.id }" data-testid="crumb" @click="go(f.id)" @dragover="dragOver(f.id, $event)" @dragleave="over = null" @drop.prevent.stop="drop(f.id, $event)">
               {{ f.name }}
             </button>
           </template>
         </nav>
+        <div v-if="withFiles" class="seg" role="group" :aria-label="t('drive.show')">
+          <button type="button" :class="{ on: mode === 'unfiled' }" :aria-pressed="mode === 'unfiled'" :title="t('drive.unfiledHint')" data-testid="files-unfiled" @click="setMode('unfiled')"><Inbox class="h-4 w-4" /><span class="ml-1.5 hidden sm:inline">{{ t('drive.unfiled') }}</span></button>
+          <button v-if="editable" type="button" :class="{ on: mode === 'trash' }" :aria-pressed="mode === 'trash'" :title="t('drive.trashHint')" data-testid="files-trash" @click="setMode('trash')"><Trash2 class="h-4 w-4" /><span class="ml-1.5 hidden sm:inline">{{ t('drive.trash') }}</span></button>
+        </div>
         <div class="flex items-center gap-1">
           <button v-if="editable" ref="newEl" type="button" class="btn btn-sm" data-testid="new-folder" @click="startFolder"><FolderPlus class="h-3.5 w-3.5" />{{ t('drive.newFolder') }}</button>
           <select v-model="sort" class="input !w-auto !py-1 text-[12.5px]" :aria-label="t('drive.sortBy')">
@@ -423,7 +614,7 @@ defineExpose({ here, reload: load })
       </div>
 
       <!-- A project: the folder's task list -->
-      <div v-if="project" class="project" data-testid="project-card">
+      <div v-if="project && mode === 'here'" class="project" data-testid="project-card">
         <span class="tile h-9 w-9" :style="{ '--tile': project.list.color || 'var(--ws)' }"><ListChecks class="h-5 w-5" /></span>
         <div class="min-w-0 flex-1">
           <div class="truncate text-[14px] font-semibold">{{ project.list.name }}</div>
@@ -436,17 +627,34 @@ defineExpose({ here, reload: load })
         <RouterLink v-if="hasModule('board')" :to="{ name: 'ws-board', params: { ws, list: project.list.id } }" class="btn btn-sm"><SquareKanban class="h-3.5 w-3.5" />{{ t('project.board') }}</RouterLink>
       </div>
 
-      <p v-if="loaded && !subfolders.length && !items.length" class="py-14 text-center text-[13.5px] text-text-3" data-testid="files-empty">
-        <slot name="empty">{{ t('drive.empty') }}</slot>
+      <p v-if="loaded && !shownFolders.length && !items.length" class="py-14 text-center text-[13.5px] text-text-3" data-testid="files-empty">
+        <template v-if="mode === 'trash'">{{ t('drive.trashEmpty') }}</template>
+        <template v-else-if="mode === 'unfiled'">{{ t('drive.unfiledEmpty') }}</template>
+        <slot v-else name="empty">{{ t('drive.empty') }}</slot>
       </p>
+      <p v-if="mode === 'trash' && items.length" class="mb-3 text-[12.5px] text-text-3">{{ t('drive.trashHint') }}</p>
+
+      <!-- The trash -->
+      <div v-if="mode === 'trash'" class="trash-list">
+        <div v-for="f in items" :key="f.id" class="trash-row" data-testid="trash-row">
+          <component :is="typeIcon(f)" class="h-5 w-5 shrink-0 text-text-3" />
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-[14px] font-medium">{{ nameOf(f) }}</div>
+            <div class="truncate text-[12px] text-text-3">{{ [onText(f), where(f.folder_id), sizeText(f.size, loc)].filter(Boolean).join(' · ') }}</div>
+          </div>
+          <span class="hide-sm shrink-0 text-[12px] text-text-3">{{ t('drive.goes', { when: goesWhen(f) }) }}</span>
+          <button type="button" class="btn btn-sm" data-testid="trash-restore" @click="restoreFile(f)"><RotateCcw class="h-3.5 w-3.5" />{{ t('drive.restore') }}</button>
+          <button type="button" class="icon-btn h-8 w-8 !text-danger" :title="t('drive.deleteNow')" :aria-label="t('drive.deleteNow')" data-testid="trash-purge" @click="purging = f"><Trash2 class="h-4 w-4" /></button>
+        </div>
+      </div>
 
       <!-- Tiles -->
-      <template v-if="view === 'grid'">
-        <section v-if="subfolders.length" class="mb-6">
+      <template v-else-if="view === 'grid'">
+        <section v-if="shownFolders.length" class="mb-6">
           <h2 class="cap mb-2">{{ t('drive.folders') }}</h2>
           <div class="folders">
             <div
-              v-for="f in subfolders"
+              v-for="f in shownFolders"
               :key="f.id"
               class="folder"
               :class="{ over: over === f.id }"
@@ -460,7 +668,7 @@ defineExpose({ here, reload: load })
               @dragstart="dragStart({ folder: f }, $event)"
               @dragover="dragOver(f.id, $event)"
               @dragleave="over = null"
-              @drop.prevent="drop(f.id)"
+              @drop.prevent.stop="drop(f.id, $event)"
             >
               <FolderIcon class="h-9 w-9 shrink-0" :style="{ color: folderColor(f), fill: `color-mix(in srgb, ${folderColor(f)} 30%, transparent)` }" :stroke-width="1.6" />
               <div class="min-w-0 flex-1">
@@ -475,7 +683,7 @@ defineExpose({ here, reload: load })
           </div>
         </section>
         <section v-if="items.length">
-          <h2 v-if="subfolders.length" class="cap mb-2">{{ t('drive.files') }}</h2>
+          <h2 v-if="shownFolders.length" class="cap mb-2">{{ t('drive.files') }}</h2>
           <div class="cards">
             <div
               v-for="f in items"
@@ -483,7 +691,7 @@ defineExpose({ here, reload: load })
               class="card-f"
               role="link"
               tabindex="0"
-              :draggable="editable"
+              :draggable="editable && !isAttachment(f)"
               :data-testid="TESTID[f.kind]"
               @click="open(f)"
               @keydown.enter="open(f)"
@@ -492,14 +700,17 @@ defineExpose({ here, reload: load })
             >
               <div class="pic">
                 <img v-if="f.preview" :src="svgUrl(f.preview)" alt="" draggable="false" loading="lazy" />
+                <img v-else-if="thumbs[f.id]" :src="thumbs[f.id]" alt="" draggable="false" class="photo" />
                 <span v-else-if="f.icon" class="text-[40px] leading-none">{{ f.icon }}</span>
-                <span v-else class="tile h-12 w-12" :style="{ '--tile': KIND_COLOR[f.kind] }"><component :is="KIND_ICON[f.kind]" class="h-6 w-6" /></span>
+                <span v-else class="tile h-12 w-12" :style="{ '--tile': KIND_COLOR[f.kind] }"><component :is="typeIcon(f)" class="h-6 w-6" /></span>
+                <span v-if="(f.upload?.versions ?? 1) > 1" class="vbadge" :title="t('drive.versionsN', { n: f.upload!.versions })">v{{ f.upload!.versions }}</span>
               </div>
               <div class="flex items-center gap-2 px-3 py-2.5">
-                <component :is="KIND_ICON[f.kind]" class="h-4 w-4 shrink-0" :style="{ color: KIND_COLOR[f.kind] }" />
+                <component :is="typeIcon(f)" class="h-4 w-4 shrink-0" :style="{ color: KIND_COLOR[f.kind] }" />
                 <div class="min-w-0 flex-1">
                   <div class="truncate text-[14px] font-medium">{{ nameOf(f) }}</div>
-                  <div class="text-[12px] text-text-3">{{ t('drive.edited', { when: ago(f.updated_at, loc) }) }}</div>
+                  <div v-if="onText(f)" class="truncate text-[12px] text-text-3" data-testid="file-on">{{ onText(f) }}</div>
+                  <div v-else class="text-[12px] text-text-3">{{ f.kind === 'file' ? `${sizeText(f.size, loc)} · ${ago(f.updated_at, loc)}` : t('drive.edited', { when: ago(f.updated_at, loc) }) }}</div>
                 </div>
                 <button type="button" class="icon-btn h-7 w-7 shrink-0" :aria-label="t('drive.more')" data-testid="file-more" @click.stop="openMenu({ file: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button>
               </div>
@@ -509,7 +720,7 @@ defineExpose({ here, reload: load })
       </template>
 
       <!-- A list -->
-      <table v-else-if="subfolders.length || items.length" class="fb-list">
+      <table v-else-if="shownFolders.length || items.length" class="fb-list">
         <thead>
           <tr>
             <th>{{ t('drive.name') }}</th>
@@ -521,7 +732,7 @@ defineExpose({ here, reload: load })
         </thead>
         <tbody>
           <tr
-            v-for="f in subfolders"
+            v-for="f in shownFolders"
             :key="f.id"
             :class="{ over: over === f.id }"
             :draggable="editable"
@@ -531,7 +742,7 @@ defineExpose({ here, reload: load })
             @dragstart="dragStart({ folder: f }, $event)"
             @dragover="dragOver(f.id, $event)"
             @dragleave="over = null"
-            @drop.prevent="drop(f.id)"
+            @drop.prevent.stop="drop(f.id, $event)"
           >
             <td>
               <span class="flex items-center gap-2.5"><FolderIcon class="h-5 w-5 shrink-0" :style="{ color: folderColor(f), fill: `color-mix(in srgb, ${folderColor(f)} 30%, transparent)` }" /><span class="truncate font-medium">{{ f.name }}</span></span>
@@ -544,14 +755,14 @@ defineExpose({ here, reload: load })
           <tr
             v-for="f in items"
             :key="f.kind + f.id"
-            :draggable="editable"
+            :draggable="editable && !isAttachment(f)"
             :data-testid="TESTID[f.kind]"
             @click="open(f)"
             @contextmenu.prevent="openMenu({ file: f }, $event)"
             @dragstart="dragStart({ file: f }, $event)"
           >
             <td>
-              <span class="flex items-center gap-2.5"><component :is="KIND_ICON[f.kind]" class="h-5 w-5 shrink-0" :style="{ color: KIND_COLOR[f.kind] }" /><span class="truncate font-medium">{{ nameOf(f) }}</span></span>
+              <span class="flex items-center gap-2.5"><component :is="typeIcon(f)" class="h-5 w-5 shrink-0" :style="{ color: KIND_COLOR[f.kind] }" /><span class="min-w-0"><span class="block truncate font-medium">{{ nameOf(f) }}</span><span v-if="onText(f)" class="block truncate text-[12px] text-text-3">{{ onText(f) }}</span></span></span>
             </td>
             <td class="hide-sm text-text-3">{{ kindName(f.kind) }}</td>
             <td class="hide-sm text-text-3">{{ ago(f.updated_at, loc) }}</td>
@@ -570,7 +781,8 @@ defineExpose({ here, reload: load })
             <template v-if="infoFile">
               <div class="pic info-pic">
                 <img v-if="infoFile.preview" :src="svgUrl(infoFile.preview)" alt="" />
-                <span v-else class="tile h-14 w-14" :style="{ '--tile': KIND_COLOR[infoFile.kind] }"><component :is="KIND_ICON[infoFile.kind]" class="h-7 w-7" /></span>
+                <img v-else-if="thumbs[infoFile.id]" :src="thumbs[infoFile.id]" alt="" class="photo" />
+                <span v-else class="tile h-14 w-14" :style="{ '--tile': KIND_COLOR[infoFile.kind] }"><component :is="typeIcon(infoFile)" class="h-7 w-7" /></span>
               </div>
               <div class="mt-3 break-words text-[15px] font-semibold">{{ nameOf(infoFile) }}</div>
             </template>
@@ -583,9 +795,11 @@ defineExpose({ here, reload: load })
         </div>
         <dl class="info-rows">
           <template v-if="infoFile">
-            <dt>{{ t('drive.kindCol') }}</dt><dd>{{ kindName(infoFile.kind) }}</dd>
+            <dt>{{ t('drive.kindCol') }}</dt><dd>{{ infoFile.kind === 'file' ? infoFile.upload?.type || kindName('file') : kindName(infoFile.kind) }}</dd>
             <dt>{{ t('drive.size') }}</dt><dd>{{ sizeText(infoFile.size, loc) }}</dd>
             <dt>{{ t('drive.where') }}</dt><dd>{{ where(folderOf(infoFile)) }}</dd>
+            <template v-if="onText(infoFile)"><dt>{{ t('drive.onCol') }}</dt><dd>{{ onText(infoFile) }}</dd></template>
+            <template v-if="infoFile.kind === 'file'"><dt>{{ t('drive.versions') }}</dt><dd>{{ infoFile.upload?.versions ?? 1 }}</dd></template>
             <dt>{{ t('drive.created') }}</dt><dd>{{ when(infoFile.created_at) }}<template v-if="people.get(infoFile.created_by)"> · {{ people.get(infoFile.created_by) }}</template></dd>
             <dt>{{ t('drive.modified') }}</dt><dd>{{ when(infoFile.updated_at) }}<template v-if="people.get(infoFile.updated_by)"> · {{ people.get(infoFile.updated_by) }}</template></dd>
           </template>
@@ -599,13 +813,14 @@ defineExpose({ here, reload: load })
           <template v-else>
             <dt>{{ t('drive.holds') }}</dt><dd>{{ t('drive.holdsText', { folders: topTotals.folders, files: topTotals.files }) }}</dd>
             <dt>{{ t('drive.size') }}</dt><dd>{{ sizeText(topTotals.size, loc) }}</dd>
+            <template v-if="usage"><dt>{{ t('drive.space') }}</dt><dd data-testid="files-usage">{{ usage.quota ? t('drive.spaceOf', { used: sizeText(usage.used, loc), all: sizeText(usage.all, loc), quota: sizeText(usage.quota, loc) }) : t('drive.spaceAll', { used: sizeText(usage.used, loc), all: sizeText(usage.all, loc) }) }}</dd></template>
           </template>
         </dl>
         <div v-if="infoFile" class="mt-4 flex flex-wrap gap-2">
           <button type="button" class="btn-primary btn-sm" @click="open(infoFile)"><ExternalLink class="h-3.5 w-3.5" />{{ t('drive.open') }}</button>
           <button type="button" class="btn btn-sm" @click="downloadOf(infoFile)"><Download class="h-3.5 w-3.5" />{{ t('drive.download') }}</button>
         </div>
-        <LocalGraph v-if="infoFile || infoFolder" :key="infoFile?.id ?? infoFolder?.id" :ws="ws" :id="(infoFile?.id ?? infoFolder?.id)!" />
+        <LocalGraph v-if="!personal && (infoFile || infoFolder)" :key="infoFile?.id ?? infoFolder?.id" :ws="ws" :id="(infoFile?.id ?? infoFolder?.id)!" />
       </div>
     </component>
 
@@ -616,14 +831,16 @@ defineExpose({ here, reload: load })
       </form>
       <div v-else-if="'file' in menu.target" class="p-1.5" data-testid="file-menu">
         <button type="button" class="menu-item w-full" @click="open(menu.target.file)"><ExternalLink class="h-4 w-4 text-text-2" />{{ t('drive.open') }}</button>
+        <button v-if="menu.target.file.upload?.on_id" type="button" class="menu-item w-full" data-testid="file-open-on" @click="openOn(menu.target.file)"><ExternalLink class="h-4 w-4 text-text-2" />{{ t(`drive.openOn.${menu.target.file.upload.on_kind}`) }}</button>
         <template v-if="editable">
           <button type="button" class="menu-item w-full" data-testid="file-rename" @click="startRename"><Pencil class="h-4 w-4 text-text-2" />{{ t('drive.rename') }}</button>
-          <button type="button" class="menu-item w-full" data-testid="file-duplicate" @click="copyOf(menu.target.file)"><Copy class="h-4 w-4 text-text-2" />{{ t('drive.duplicate') }}</button>
-          <button type="button" class="menu-item w-full" data-testid="file-move" @click="startMove(menu.target)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('drive.move') }}</button>
+          <button v-if="menu.target.file.kind !== 'file'" type="button" class="menu-item w-full" data-testid="file-duplicate" @click="copyOf(menu.target.file)"><Copy class="h-4 w-4 text-text-2" />{{ t('drive.duplicate') }}</button>
+          <button v-if="!isAttachment(menu.target.file)" type="button" class="menu-item w-full" data-testid="file-move" @click="startMove(menu.target)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('drive.move') }}</button>
           <button v-if="menu.target.file.kind === 'board'" type="button" class="menu-item w-full" data-testid="file-elsewhere" @click="(elsewhere = menu.target.file), (menu = null)"><FolderInput class="h-4 w-4 text-text-2" />{{ t('drive.elsewhere') }}</button>
         </template>
         <button type="button" class="menu-item w-full" data-testid="file-download" @click="downloadOf(menu.target.file)"><Download class="h-4 w-4 text-text-2" />{{ t(`drive.downloadAs.${menu.target.file.kind}`) }}</button>
-        <button type="button" class="menu-item w-full" @click="linkTo(menu.target.file)"><Link class="h-4 w-4 text-text-2" />{{ t('drive.copyLink') }}</button>
+        <button v-if="menu.target.file.kind === 'file'" type="button" class="menu-item w-full" data-testid="file-versions" @click="showVersions(menu.target.file)"><History class="h-4 w-4 text-text-2" />{{ t('drive.versions') }}</button>
+        <button v-else type="button" class="menu-item w-full" @click="linkTo(menu.target.file)"><Link class="h-4 w-4 text-text-2" />{{ t('drive.copyLink') }}</button>
         <button type="button" class="menu-item w-full" data-testid="file-info" @click="showInfo(menu.target)"><Info class="h-4 w-4 text-text-2" />{{ t('drive.details') }}</button>
         <template v-if="editable">
           <div class="menu-sep" />
@@ -710,10 +927,65 @@ defineExpose({ here, reload: load })
     </Overlay>
     <NotePlacePicker :open="!!elsewhere" mode="move" drawing :current="ws" @close="elsewhere = null" @pick="sendTo" />
     <Confirm :open="!!removing" :title="removeTitle" :message="removeBody" :confirm-label="t('drive.delete')" danger @confirm="doRemove" @close="removing = null" />
+    <Confirm :open="!!purging" :title="t('drive.purgeTitle', { name: purging ? nameOf(purging) : '' })" :message="t('drive.purgeBody')" :confirm-label="t('drive.deleteNow')" danger @confirm="doPurge" @close="purging = null" />
+
+    <Overlay :open="!!versionsOf" :title="versionsOf ? t('drive.versionsTitle', { name: nameOf(versionsOf) }) : ''" size="sm" @close="versionsOf = null">
+      <p class="mb-3 text-[12.5px] leading-snug text-text-3">{{ t('drive.versionsHint') }}</p>
+      <div class="move-list" data-testid="versions">
+        <div v-for="(v, i) in versions" :key="v.id" class="move-row !cursor-default" data-testid="version-row">
+          <span class="w-7 shrink-0 text-[12px] tabular-nums text-text-3">v{{ versions.length - i }}</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-[13.5px]">{{ when(v.created_at) }}<template v-if="people.get(v.owner_id)"> · {{ people.get(v.owner_id) }}</template></span>
+            <span class="block text-[12px] text-text-3">{{ sizeText(v.size, loc) }}<template v-if="v.current"> · {{ t('drive.current') }}</template></span>
+          </span>
+          <button type="button" class="icon-btn h-7 w-7" :title="t('drive.download')" :aria-label="t('drive.download')" @click="downloadUpload(v.url, v.name)"><Download class="h-4 w-4" /></button>
+          <button v-if="!v.current && editable" type="button" class="btn btn-sm" data-testid="version-current" @click="makeCurrent(v)">{{ t('drive.makeCurrent') }}</button>
+        </div>
+      </div>
+    </Overlay>
   </div>
 </template>
 
 <style scoped>
+.fb-main.dropping {
+  border-radius: 14px;
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+}
+.pic:has(img.photo) {
+  padding: 0;
+}
+.pic img.photo {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+.vbadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: 0 0 0 0.5px var(--border);
+}
+.trash-list {
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border);
+}
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+.trash-row + .trash-row {
+  border-top: 0.5px solid var(--border);
+}
 .project {
   display: flex;
   align-items: center;
@@ -833,6 +1105,7 @@ defineExpose({ here, reload: load })
 }
 /* Pictures are drawn on white (as their apps show them); they fill the box, scaled to fit. */
 .pic {
+  position: relative;
   display: flex;
   height: 140px;
   align-items: center;

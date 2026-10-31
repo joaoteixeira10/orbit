@@ -268,7 +268,7 @@ func (h *Handlers) deleteList(c *gin.Context) {
 	if err := h.db.Transaction(func(tx *gorm.DB) error {
 		var taskIDs []string
 		tx.Model(&models.Task{}).Where("list_id = ?", l.ID).Pluck("id", &taskIDs)
-		if err := uploads.DeleteFor(tx, uploads.Task, taskIDs); err != nil {
+		if err := uploads.TrashFor(tx, uploads.Task, taskIDs); err != nil {
 			return err
 		}
 		if err := tx.Where("task_id IN ?", append(taskIDs, "")).Delete(&models.TaskComment{}).Error; err != nil {
@@ -933,7 +933,7 @@ func (h *Handlers) deleteTask(c *gin.Context) {
 	}
 	var ids []string
 	h.db.Model(&models.Task{}).Where("id = ? OR parent_id = ?", t.ID, t.ID).Pluck("id", &ids)
-	_ = uploads.DeleteFor(h.db, uploads.Task, ids) // its attachments go with it
+	_ = uploads.TrashFor(h.db, uploads.Task, ids) // its attachments go to the trash, as files of their own
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskComment{})
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskEvent{})
 	h.db.Where("task_id IN ?", append(ids, "")).Delete(&models.TaskBlock{})

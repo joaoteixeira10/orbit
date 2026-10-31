@@ -814,6 +814,95 @@ definitions:
           type: string
         type: array
     type: object
+  api.fileRequest:
+    properties:
+      folder_id:
+        description: a file of its own only ("" the top)
+        type: string
+      name:
+        maxLength: 255
+        type: string
+    type: object
+  api.fileResponse:
+    properties:
+      created_at:
+        type: string
+      empties_at:
+        description: 'in the trash: when it goes for good'
+        type: string
+      folder_id:
+        type: string
+      id:
+        type: string
+      image:
+        description: shown in the page (a raster image)
+        type: boolean
+      lineage:
+        description: |-
+          Lineage is the first version's id: the versions of one file (a file of
+          the same name added to the same place is its next version).
+        type: string
+      name:
+        type: string
+      on_id:
+        type: string
+      on_kind:
+        description: page | task | note
+        type: string
+      on_title:
+        type: string
+      owner_id:
+        description: who uploaded it
+        type: string
+      replaced_at:
+        description: an older version
+        type: string
+      size:
+        type: integer
+      target:
+        description: page | task | note, or file (one of its own, in Files)
+        type: string
+      target_id:
+        description: 'the page, task or note (a file: its workspace, "me" a personal
+          one)'
+        type: string
+      trashed_at:
+        description: in the trash (emptied after 30 days)
+        type: string
+      type:
+        description: sniffed, not the browser's word
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      versions:
+        description: 'how many it has (1: just this)'
+        type: integer
+      was_kind:
+        description: What it was on, when that went for good (it became a file of
+          its own).
+        type: string
+      was_title:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.fileUsage:
+    properties:
+      all:
+        description: what the instance's files take
+        type: integer
+      files:
+        description: how many (the newest versions, not in the trash)
+        type: integer
+      quota:
+        description: the instance's limit (0 none)
+        type: integer
+      used:
+        description: bytes this workspace's files take (each set of bytes once)
+        type: integer
+    type: object
   api.fillField:
     properties:
       help:
@@ -915,6 +1004,9 @@ definitions:
         type: integer
       diagrams:
         type: integer
+      files:
+        description: files of its own and attachments shown here
+        type: integer
       folders:
         type: integer
       pages:
@@ -954,6 +1046,9 @@ definitions:
           a list is in one folder at most'
         type: string
       name:
+        type: string
+      owner_id:
+        description: 'a personal folder''s (My files: no workspace)'
         type: string
       parent_id:
         type: string
@@ -1703,6 +1798,13 @@ definitions:
         maxItems: 500
         type: array
       drawings:
+        description: whiteboards (or, in My files, sketches)
+        items:
+          type: string
+        maxItems: 500
+        type: array
+      files:
+        description: files of their own (an attachment goes with what it's on)
         items:
           type: string
         maxItems: 500
@@ -2986,23 +3088,40 @@ definitions:
     properties:
       created_at:
         type: string
+      folder_id:
+        description: |-
+          FolderID: a file of its own's folder ("" the top); an attachment shows
+          where what it's on is (a task: its list's folder; a page: its own).
+        type: string
       id:
         type: string
       image:
         description: shown in the page (a raster image)
         type: boolean
+      lineage:
+        description: |-
+          Lineage is the first version's id: the versions of one file (a file of
+          the same name added to the same place is its next version).
+        type: string
       name:
         type: string
       owner_id:
         description: who uploaded it
         type: string
+      replaced_at:
+        description: an older version
+        type: string
       size:
         type: integer
       target:
-        description: page | task | note
+        description: page | task | note, or file (one of its own, in Files)
         type: string
       target_id:
-        description: the page, task or note
+        description: 'the page, task or note (a file: its workspace, "me" a personal
+          one)'
+        type: string
+      trashed_at:
+        description: in the trash (emptied after 30 days)
         type: string
       type:
         description: sniffed, not the browser's word
@@ -3010,6 +3129,69 @@ definitions:
       updated_at:
         type: string
       url:
+        type: string
+      was_kind:
+        description: What it was on, when that went for good (it became a file of
+          its own).
+        type: string
+      was_title:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  api.versionResponse:
+    properties:
+      created_at:
+        type: string
+      current:
+        type: boolean
+      folder_id:
+        description: |-
+          FolderID: a file of its own's folder ("" the top); an attachment shows
+          where what it's on is (a task: its list's folder; a page: its own).
+        type: string
+      id:
+        type: string
+      image:
+        description: shown in the page (a raster image)
+        type: boolean
+      lineage:
+        description: |-
+          Lineage is the first version's id: the versions of one file (a file of
+          the same name added to the same place is its next version).
+        type: string
+      name:
+        type: string
+      owner_id:
+        description: who uploaded it
+        type: string
+      replaced_at:
+        description: an older version
+        type: string
+      size:
+        type: integer
+      target:
+        description: page | task | note, or file (one of its own, in Files)
+        type: string
+      target_id:
+        description: 'the page, task or note (a file: its workspace, "me" a personal
+          one)'
+        type: string
+      trashed_at:
+        description: in the trash (emptied after 30 days)
+        type: string
+      type:
+        description: sniffed, not the browser's word
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      was_kind:
+        description: What it was on, when that went for good (it became a file of
+          its own).
+        type: string
+      was_title:
         type: string
       workspace_id:
         type: string
@@ -3495,6 +3677,9 @@ definitions:
           a list is in one folder at most'
         type: string
       name:
+        type: string
+      owner_id:
+        description: 'a personal folder''s (My files: no workspace)'
         type: string
       parent_id:
         type: string
@@ -5049,6 +5234,96 @@ paths:
       summary: Update feature flags
       tags:
       - owner
+  /files/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Name, folder
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.fileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.uploadResponse'
+      security:
+      - BearerAuth: []
+      summary: Rename or move a file
+      tags:
+      - files
+  /files/{id}/current:
+    post:
+      parameters:
+      - description: The version's id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.uploadResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a version
+      tags:
+      - files
+  /files/{id}/restore:
+    post:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.uploadResponse'
+      security:
+      - BearerAuth: []
+      summary: Take a file out of the trash
+      tags:
+      - files
+  /files/{id}/versions:
+    get:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.versionResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A file's versions
+      tags:
+      - files
   /folders/{id}:
     delete:
       parameters:
@@ -6098,6 +6373,60 @@ paths:
       summary: Revoke a calendar feed
       tags:
       - calendar
+  /me/files:
+    get:
+      parameters:
+      - description: The trash
+        in: query
+        name: trash
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.fileResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My files
+      tags:
+      - files
+  /me/files/move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: What (drawings, files, folders), where
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.moveRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Move into a folder of my own
+      tags:
+      - folders
+  /me/files/usage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.fileUsage'
+      security:
+      - BearerAuth: []
+      summary: My space used
+      tags:
+      - files
   /me/focus:
     get:
       parameters:
@@ -6153,6 +6482,44 @@ paths:
       summary: Stop focusing
       tags:
       - focus
+  /me/folders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.folderResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My folders
+      tags:
+      - folders
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Name, where
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.folderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Folder'
+      security:
+      - BearerAuth: []
+      summary: New folder of my own
+      tags:
+      - folders
   /me/git:
     get:
       produces:
@@ -8326,15 +8693,19 @@ paths:
       consumes:
       - multipart/form-data
       parameters:
-      - description: page, task or note
+      - description: page, task, note or file
         in: query
         name: target
         required: true
         type: string
-      - description: Its id
+      - description: 'Its id (a file: its workspace, or me)'
         in: query
         name: target_id
         required: true
+        type: string
+      - description: A file's folder (\
+        in: query
+        name: folder_id
         type: string
       - description: The file
         in: formData
@@ -8361,6 +8732,10 @@ paths:
         name: id
         required: true
         type: string
+      - description: Now, not to the trash
+        in: query
+        name: forever
+        type: boolean
       responses:
         "204":
           description: No Content
@@ -9165,6 +9540,32 @@ paths:
       summary: Create an event
       tags:
       - calendar
+  /workspaces/{ws}/files:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The trash
+        in: query
+        name: trash
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.fileResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's files
+      tags:
+      - files
   /workspaces/{ws}/files/move:
     post:
       consumes:
@@ -9189,6 +9590,26 @@ paths:
       summary: Move into a folder
       tags:
       - folders
+  /workspaces/{ws}/files/usage:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.fileUsage'
+      security:
+      - BearerAuth: []
+      summary: A workspace's space used
+      tags:
+      - files
   /workspaces/{ws}/folders:
     get:
       parameters:

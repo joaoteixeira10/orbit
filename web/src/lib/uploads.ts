@@ -5,7 +5,7 @@
 // through here too.
 import { api, downloadAuthed, fetchAuthedBlob } from './api'
 
-export type UploadTarget = 'page' | 'task' | 'note'
+export type UploadTarget = 'page' | 'task' | 'note' | 'file'
 
 export interface Upload {
   id: string
@@ -19,6 +19,12 @@ export interface Upload {
   url: string // /api/v1/uploads/<id>/<name>
   image: boolean // shown in the page (a raster image)
   created_at: string
+  lineage: string // the first version's id: one file's versions share it
+  folder_id?: string
+  trashed_at?: string
+  replaced_at?: string
+  was_kind?: 'page' | 'task' | 'note' // what it was on, gone for good
+  was_title?: string
 }
 
 export const uploadsApi = {

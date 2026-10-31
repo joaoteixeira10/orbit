@@ -309,11 +309,11 @@ func (h *Handlers) noteDrawingOf(c *gin.Context) {
 //	@Router		/me/drawings [get]
 func (h *Handlers) listMyDrawings(c *gin.Context) {
 	var ds []models.Drawing
-	h.db.Select("id", "title", "preview", "version", "updated_by", "updated_at").
+	h.db.Select("id", "folder_id", "title", "preview", "version", "updated_by", "updated_at", "created_by", "created_at", "length(scene) AS scene").
 		Where("workspace_id = '' AND note_id = '' AND owner_id = ?", auth.UserID(c)).Order("updated_at DESC").Find(&ds)
 	out := make([]drawingSummary, 0, len(ds))
 	for _, d := range ds {
-		out = append(out, drawingSummary{ID: d.ID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: d.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z")})
+		out = append(out, drawingSummary{ID: d.ID, FolderID: d.FolderID, Title: d.Title, Preview: d.Preview, Version: d.Version, UpdatedBy: d.UpdatedBy, UpdatedAt: stamp(d.UpdatedAt), CreatedBy: d.CreatedBy, CreatedAt: stamp(d.CreatedAt), Size: atoiSafe(d.Scene)})
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -338,7 +338,11 @@ func (h *Handlers) createMyDrawing(c *gin.Context) {
 		return
 	}
 	uid := auth.UserID(c)
-	d := models.Drawing{OwnerID: uid, CreatedBy: uid, UpdatedBy: uid, Version: 1}
+	if !h.myFolderIn(uid, req.FolderID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no such folder here"})
+		return
+	}
+	d := models.Drawing{OwnerID: uid, FolderID: req.FolderID, CreatedBy: uid, UpdatedBy: uid, Version: 1}
 	if err := req.apply(&d); err != nil {
 		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": err.Error()})
 		return

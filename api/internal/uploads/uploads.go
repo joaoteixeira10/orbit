@@ -105,7 +105,14 @@ func Create(db *gorm.DB, u *models.Upload, data []byte, quota int64) error {
 		if err := current.Put(tx, sum, data); err != nil {
 			return err
 		}
-		return tx.Create(u).Error
+		if err := tx.Create(u).Error; err != nil {
+			return err
+		}
+		if u.Lineage == "" { // its own first version
+			u.Lineage = u.ID
+			return tx.Model(&models.Upload{}).Where("id = ?", u.ID).Update("lineage", u.ID).Error
+		}
+		return nil
 	})
 }
 

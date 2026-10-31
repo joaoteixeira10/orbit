@@ -82,6 +82,10 @@ func Migrate(gdb *gorm.DB) error {
 	if err := migrateListFolders(gdb); err != nil {
 		return err
 	}
+	// Files from before versions: each its own first.
+	if err := gdb.Exec("UPDATE uploads SET lineage = id WHERE lineage IS NULL OR lineage = ''").Error; err != nil {
+		return fmt.Errorf("file versions: %w", err)
+	}
 	// The full-text index (SQLite FTS5); search falls back to plain matching
 	// without it.
 	if !search.Setup(gdb) {

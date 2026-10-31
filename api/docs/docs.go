@@ -1755,6 +1755,153 @@ const docTemplate = `{
                 }
             }
         },
+        "/files/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Rename or move a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Name, folder",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.fileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.uploadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{id}/current": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Restore a version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The version's id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.uploadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Take a file out of the trash",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.uploadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "A file's versions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.versionResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/folders/{id}": {
             "put": {
                 "security": [
@@ -3465,6 +3612,97 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/files": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "My files",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "The trash",
+                        "name": "trash",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.fileResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/me/files/move": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "Move into a folder of my own",
+                "parameters": [
+                    {
+                        "description": "What (drawings, files, folders), where",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.moveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/me/files/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "My space used",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.fileUsage"
+                        }
+                    }
+                }
+            }
+        },
         "/me/focus": {
             "get": {
                 "security": [
@@ -3552,6 +3790,69 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.focusState"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/folders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "My folders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.folderResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "New folder of my own",
+                "parameters": [
+                    {
+                        "description": "Name, where",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.folderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Folder"
                         }
                     }
                 }
@@ -7107,17 +7408,23 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "page, task or note",
+                        "description": "page, task, note or file",
                         "name": "target",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Its id",
+                        "description": "Its id (a file: its workspace, or me)",
                         "name": "target_id",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "A file's folder (\\",
+                        "name": "folder_id",
+                        "in": "query"
                     },
                     {
                         "type": "file",
@@ -7155,6 +7462,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Now, not to the trash",
+                        "name": "forever",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -8496,6 +8809,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/files": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "A workspace's files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "The trash",
+                        "name": "trash",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.fileResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/files/move": {
             "post": {
                 "security": [
@@ -8531,6 +8886,39 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/files/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "A workspace's space used",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.fileUsage"
+                        }
                     }
                 }
             }
@@ -11389,6 +11777,126 @@ const docTemplate = `{
                 }
             }
         },
+        "api.fileRequest": {
+            "type": "object",
+            "properties": {
+                "folder_id": {
+                    "description": "a file of its own only (\"\" the top)",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "api.fileResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "empties_at": {
+                    "description": "in the trash: when it goes for good",
+                    "type": "string"
+                },
+                "folder_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "description": "shown in the page (a raster image)",
+                    "type": "boolean"
+                },
+                "lineage": {
+                    "description": "Lineage is the first version's id: the versions of one file (a file of\nthe same name added to the same place is its next version).",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "on_id": {
+                    "type": "string"
+                },
+                "on_kind": {
+                    "description": "page | task | note",
+                    "type": "string"
+                },
+                "on_title": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "description": "who uploaded it",
+                    "type": "string"
+                },
+                "replaced_at": {
+                    "description": "an older version",
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "target": {
+                    "description": "page | task | note, or file (one of its own, in Files)",
+                    "type": "string"
+                },
+                "target_id": {
+                    "description": "the page, task or note (a file: its workspace, \"me\" a personal one)",
+                    "type": "string"
+                },
+                "trashed_at": {
+                    "description": "in the trash (emptied after 30 days)",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "sniffed, not the browser's word",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "versions": {
+                    "description": "how many it has (1: just this)",
+                    "type": "integer"
+                },
+                "was_kind": {
+                    "description": "What it was on, when that went for good (it became a file of its own).",
+                    "type": "string"
+                },
+                "was_title": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.fileUsage": {
+            "type": "object",
+            "properties": {
+                "all": {
+                    "description": "what the instance's files take",
+                    "type": "integer"
+                },
+                "files": {
+                    "description": "how many (the newest versions, not in the trash)",
+                    "type": "integer"
+                },
+                "quota": {
+                    "description": "the instance's limit (0 none)",
+                    "type": "integer"
+                },
+                "used": {
+                    "description": "bytes this workspace's files take (each set of bytes once)",
+                    "type": "integer"
+                }
+            }
+        },
         "api.fillField": {
             "type": "object",
             "properties": {
@@ -11539,6 +12047,10 @@ const docTemplate = `{
                 "diagrams": {
                     "type": "integer"
                 },
+                "files": {
+                    "description": "files of its own and attachments shown here",
+                    "type": "integer"
+                },
                 "folders": {
                     "type": "integer"
                 },
@@ -11592,6 +12104,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "description": "a personal folder's (My files: no workspace)",
                     "type": "string"
                 },
                 "parent_id": {
@@ -12678,6 +13194,15 @@ const docTemplate = `{
                     }
                 },
                 "drawings": {
+                    "description": "whiteboards (or, in My files, sketches)",
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "files": {
+                    "description": "files of their own (an attachment goes with what it's on)",
                     "type": "array",
                     "maxItems": 500,
                     "items": {
@@ -14498,12 +15023,20 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "folder_id": {
+                    "description": "FolderID: a file of its own's folder (\"\" the top); an attachment shows\nwhere what it's on is (a task: its list's folder; a page: its own).",
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "image": {
                     "description": "shown in the page (a raster image)",
                     "type": "boolean"
+                },
+                "lineage": {
+                    "description": "Lineage is the first version's id: the versions of one file (a file of\nthe same name added to the same place is its next version).",
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"
@@ -14512,15 +15045,23 @@ const docTemplate = `{
                     "description": "who uploaded it",
                     "type": "string"
                 },
+                "replaced_at": {
+                    "description": "an older version",
+                    "type": "string"
+                },
                 "size": {
                     "type": "integer"
                 },
                 "target": {
-                    "description": "page | task | note",
+                    "description": "page | task | note, or file (one of its own, in Files)",
                     "type": "string"
                 },
                 "target_id": {
-                    "description": "the page, task or note",
+                    "description": "the page, task or note (a file: its workspace, \"me\" a personal one)",
+                    "type": "string"
+                },
+                "trashed_at": {
+                    "description": "in the trash (emptied after 30 days)",
                     "type": "string"
                 },
                 "type": {
@@ -14531,6 +15072,85 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                },
+                "was_kind": {
+                    "description": "What it was on, when that went for good (it became a file of its own).",
+                    "type": "string"
+                },
+                "was_title": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.versionResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "boolean"
+                },
+                "folder_id": {
+                    "description": "FolderID: a file of its own's folder (\"\" the top); an attachment shows\nwhere what it's on is (a task: its list's folder; a page: its own).",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "description": "shown in the page (a raster image)",
+                    "type": "boolean"
+                },
+                "lineage": {
+                    "description": "Lineage is the first version's id: the versions of one file (a file of\nthe same name added to the same place is its next version).",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "description": "who uploaded it",
+                    "type": "string"
+                },
+                "replaced_at": {
+                    "description": "an older version",
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "target": {
+                    "description": "page | task | note, or file (one of its own, in Files)",
+                    "type": "string"
+                },
+                "target_id": {
+                    "description": "the page, task or note (a file: its workspace, \"me\" a personal one)",
+                    "type": "string"
+                },
+                "trashed_at": {
+                    "description": "in the trash (emptied after 30 days)",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "sniffed, not the browser's word",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "was_kind": {
+                    "description": "What it was on, when that went for good (it became a file of its own).",
+                    "type": "string"
+                },
+                "was_title": {
                     "type": "string"
                 },
                 "workspace_id": {
@@ -15236,6 +15856,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "description": "a personal folder's (My files: no workspace)",
                     "type": "string"
                 },
                 "parent_id": {

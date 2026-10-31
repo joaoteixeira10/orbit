@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
@@ -21,12 +22,17 @@ import (
 var tinyPNG = []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x35\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82")
 
 func upload(r *gin.Engine, token, target, id, name string, data []byte) *httptest.ResponseRecorder {
+	return uploadTo(r, token, "/api/v1/uploads?target="+target+"&target_id="+id, name, data)
+}
+
+// uploadTo posts a file (form field "file") to url.
+func uploadTo(r http.Handler, token, url, name string, data []byte) *httptest.ResponseRecorder {
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", name)
 	_, _ = fw.Write(data)
 	_ = mw.Close()
-	req, _ := http.NewRequest("POST", "/api/v1/uploads?target="+target+"&target_id="+id, &body)
+	req, _ := http.NewRequest("POST", url, &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
@@ -208,6 +214,13 @@ func TestUploadsShareBytes(t *testing.T) {
 				t.Fatalf("the other file lost its bytes: %d", w.Code)
 			}
 			expect(t, authdo(r, "DELETE", "/api/v1/tasks/"+b.ID, "", alice), http.StatusNoContent, "delete two")
+			if kept() != 1 {
+				t.Fatalf("files in the trash lost their bytes: %d", kept())
+			}
+			// The trash emptied: bytes no file uses go.
+			if err := uploads.EmptyTrash(db, time.Now().Add(time.Minute)); err != nil {
+				t.Fatal(err)
+			}
 			if kept() != 0 {
 				t.Fatalf("bytes no file uses are kept: %d", kept())
 			}

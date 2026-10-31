@@ -221,7 +221,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time, hide
 		courseIDs = append(courseIDs, c.ID)
 	}
 	db.Where("course_id IN ? AND user_id = ?", courseIDs, uid).Find(&a.Goals)
-	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Files)
+	db.Where("workspace_id = ? AND replaced_at IS NULL AND trashed_at IS NULL", wsID).Order("created_at").Find(&a.Files) // the newest versions
 	if hide != nil {
 		kept := a.Files[:0]
 		for _, f := range a.Files {
@@ -791,9 +791,12 @@ func importFiles(tx *gorm.DB, a *Archive, z *zip.Reader, o Options, wsID string,
 		byName[f.Name] = f
 	}
 	for _, x := range a.Files {
-		target := ref(x.TargetID)
+		target, folder := ref(x.TargetID), ""
+		if x.Target == uploads.File { // one of its own: in its folder
+			target, folder = wsID, ref(x.FolderID)
+		}
 		f := byName[filesDir+x.ID]
-		if target == "" || f == nil || (x.Target != uploads.Page && x.Target != uploads.Task && x.Target != uploads.Note) {
+		if target == "" || f == nil || (x.Target != uploads.Page && x.Target != uploads.Task && x.Target != uploads.Note && x.Target != uploads.File) {
 			continue
 		}
 		if o.MaxFile > 0 && f.UncompressedSize64 > uint64(o.MaxFile) {
@@ -815,7 +818,7 @@ func importFiles(tx *gorm.DB, a *Archive, z *zip.Reader, o Options, wsID string,
 			rep.Skipped = append(rep.Skipped, x.Name)
 			continue
 		}
-		u := models.Upload{WorkspaceID: wsID, OwnerID: who(x.OwnerID), Target: x.Target, TargetID: target, Name: x.Name}
+		u := models.Upload{WorkspaceID: wsID, OwnerID: who(x.OwnerID), Target: x.Target, TargetID: target, Name: x.Name, FolderID: folder}
 		u.ID, u.CreatedAt = ref(x.ID), x.CreatedAt
 		if err := uploads.Create(tx, &u, data, o.Quota); err != nil {
 			if errors.Is(err, uploads.ErrQuota) {

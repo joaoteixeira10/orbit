@@ -461,6 +461,7 @@ type Folder struct {
 	Color       string `gorm:"size:9" json:"color,omitempty"`
 	ListID      string `gorm:"size:36;not null;default:'';index" json:"list_id"` // its task list ("" none): a folder and a list make a project; a list is in one folder at most
 	CreatedBy   string `gorm:"size:36" json:"created_by"`
+	OwnerID     string `gorm:"size:36;not null;default:'';index" json:"owner_id,omitempty"` // a personal folder's (My files: no workspace)
 }
 
 // ---- Diagrams ---------------------------------------------------------------
@@ -701,12 +702,23 @@ type Upload struct {
 	Base
 	WorkspaceID string `gorm:"size:36;index" json:"workspace_id"`
 	OwnerID     string `gorm:"size:36;not null" json:"owner_id"`        // who uploaded it
-	Target      string `gorm:"size:8;not null" json:"target"`           // page | task | note
-	TargetID    string `gorm:"size:36;not null;index" json:"target_id"` // the page, task or note
+	Target      string `gorm:"size:8;not null" json:"target"`           // page | task | note, or file (one of its own, in Files)
+	TargetID    string `gorm:"size:36;not null;index" json:"target_id"` // the page, task or note (a file: its workspace, "me" a personal one)
 	Name        string `gorm:"size:255;not null" json:"name"`
 	Type        string `gorm:"size:100;not null" json:"type"` // sniffed, not the browser's word
 	Size        int64  `gorm:"not null" json:"size"`
 	SHA256      string `gorm:"size:64;index" json:"-"`
+	// FolderID: a file of its own's folder ("" the top); an attachment shows
+	// where what it's on is (a task: its list's folder; a page: its own).
+	FolderID string `gorm:"size:36;not null;default:'';index" json:"folder_id"`
+	// Lineage is the first version's id: the versions of one file (a file of
+	// the same name added to the same place is its next version).
+	Lineage    string     `gorm:"size:36;index" json:"lineage"`
+	ReplacedAt *time.Time `gorm:"index" json:"replaced_at,omitempty"` // an older version
+	TrashedAt  *time.Time `gorm:"index" json:"trashed_at,omitempty"`  // in the trash (emptied after 30 days)
+	// What it was on, when that went for good (it became a file of its own).
+	WasKind  string `gorm:"size:8" json:"was_kind,omitempty"`
+	WasTitle string `gorm:"size:300" json:"was_title,omitempty"`
 }
 
 // Blob holds a file's bytes when they're kept in the database, by their

@@ -10,9 +10,18 @@ import { fileOf, labelsOf, lightPicture } from './drawio'
 import { kindOf as mermaidKind, labelsOf as mermaidLabels } from './mermaid'
 import { textOf } from './sheet'
 import { pagesApi } from '@/api/planner'
-import type { FileItem, FileKind } from './filesApi'
+import { filesApi, type FileItem, type FileKind } from './filesApi'
+import { downloadUpload } from './uploads'
+
+// onRoute: where an attachment's page, task or note opens.
+export function onRoute(ws: string, kind: string, id: string): RouteLocationRaw {
+  if (kind === 'page') return { name: 'ws-page', params: { ws, page: id } }
+  if (kind === 'task') return { name: 'ws-tasks', params: { ws, list: 'all' }, query: { task: id } }
+  return ws ? { name: 'ws-notes', params: { ws }, query: { note: id } } : { name: 'my-notes', query: { note: id } }
+}
 
 export function routeOf(ws: string, f: { kind: FileKind; id: string }): RouteLocationRaw {
+  if (ws === 'me') return { name: 'my-drawing', params: { id: f.id } } // My files: a Quick Draw sketch
   if (f.kind === 'sheet') return { name: 'ws-sheet', params: { ws, id: f.id } }
   if (f.kind === 'diagram') return { name: 'ws-diagram', params: { ws, id: f.id } }
   if (f.kind === 'page') return { name: 'ws-page', params: { ws, page: f.id } }
@@ -20,20 +29,24 @@ export function routeOf(ws: string, f: { kind: FileKind; id: string }): RouteLoc
 }
 
 // linkOf: its address (on its own line in a page, it shows there).
-export function linkOf(ws: string, f: { kind: FileKind; id: string }): string {
+export function linkOf(ws: string, f: { kind: FileKind; id: string; upload?: { url: string } }): string {
+  if (f.kind === 'file') return `${location.origin}${f.upload?.url ?? ''}`
+  if (ws === 'me') return `${location.origin}/draw/${f.id}`
   const path = f.kind === 'sheet' ? `s/${f.id}` : f.kind === 'diagram' ? `d/${f.id}` : f.kind === 'page' ? `p/${f.id}` : `whiteboards/${f.id}`
   return `${location.origin}/w/${ws}/${path}`
 }
 
 export async function rename(f: FileItem, title: string): Promise<void> {
-  if (f.kind === 'sheet') await sheetsApi.save(f.id, { title, version: 0 })
+  if (f.kind === 'file') await filesApi.updateFile(f.id, { name: title })
+  else if (f.kind === 'sheet') await sheetsApi.save(f.id, { title, version: 0 })
   else if (f.kind === 'diagram') await diagramsApi.save(f.id, { title })
   else if (f.kind === 'page') await pagesApi.update(f.id, { title })
   else await drawingsApi.save(f.id, { title, version: 0 })
 }
 
 export async function remove(f: FileItem): Promise<void> {
-  if (f.kind === 'sheet') await sheetsApi.remove(f.id)
+  if (f.kind === 'file') await filesApi.removeFile(f.id) // to the trash, every version
+  else if (f.kind === 'sheet') await sheetsApi.remove(f.id)
   else if (f.kind === 'diagram') await diagramsApi.remove(f.id)
   else if (f.kind === 'page') await pagesApi.trashPage(f.id) // to the trash, with the pages inside it
   else await drawingsApi.remove(f.id)
@@ -54,6 +67,7 @@ export async function duplicate(ws: string, f: FileItem, copyWord: string): Prom
     const c = await diagramsApi.create(ws, { title, kind: d.kind, data: d.data, preview: d.preview, text, folder_id: f.folder_id })
     return { kind: 'diagram', id: c.id }
   }
+  if (f.kind === 'file') throw new Error('a file is copied by downloading it')
   const d = await drawingsApi.get(f.id)
   const c = await drawingsApi.make(ws, { title, scene: d.scene, preview: d.preview, folder_id: f.folder_id })
   return { kind: 'board', id: c.id }
@@ -71,6 +85,7 @@ function save(blob: Blob, name: string) {
 // download saves it as a file the matching app opens: Excel (.xlsx),
 // draw.io (.drawio) or Mermaid (.mmd), Excalidraw (.excalidraw), Markdown (.md).
 export async function download(f: FileItem, untitled: string): Promise<void> {
+  if (f.kind === 'file') return downloadUpload(f.upload!.url, f.title || untitled)
   const name = fileName(f.title || untitled)
   if (f.kind === 'page') {
     const p = await pagesApi.get(f.id)

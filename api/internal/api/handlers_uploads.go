@@ -14,9 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Uploads: images and files on pages, tasks and notes. A file belongs to the
-// workspace of what it's on, and whoever can see that can see the file (a
-// personal Quick Note's: only its owner). See internal/uploads.
+// Uploads: images and files on pages, tasks and notes, and files of their
+// own in Files' folders. A file belongs to the workspace of what it's on,
+// and whoever can see that can see the file (a personal one: only its
+// owner). A file of the same name added to the same place is its next
+// version; deleting puts it in the trash. See internal/uploads.
 
 type uploadResponse struct {
 	models.Upload
@@ -50,6 +52,15 @@ func (h *Handlers) uploadTarget(c *gin.Context, target, id, need string) (string
 			return notFound()
 		}
 		wsID = t.WorkspaceID
+	case uploads.File:
+		if id == uploads.Me {
+			if need != models.WSViewer && auth.Effective(c).ReadOnly {
+				c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+				return "", false
+			}
+			return "", true
+		}
+		wsID = id
 	case uploads.Note:
 		var n models.Note
 		if h.db.Select("id", "workspace_id", "owner_id").First(&n, "id = ?", id).Error != nil {
@@ -67,7 +78,7 @@ func (h *Handlers) uploadTarget(c *gin.Context, target, id, need string) (string
 		}
 		wsID = n.WorkspaceID
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "target must be page, task or note"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "target must be page, task, note or file"})
 		return "", false
 	}
 	if _, _, ok := h.wsAccess(c, wsID, need); !ok {
@@ -76,16 +87,20 @@ func (h *Handlers) uploadTarget(c *gin.Context, target, id, need string) (string
 	return wsID, true
 }
 
-// uploadFile adds a file (multipart field "file") to a page, task or note
-// (editors; a personal note's owner).
+// uploadFile adds a file (multipart field "file") to a page, task or note,
+// or as a file of its own to a folder of Files (target file, target_id the
+// workspace — "me" a personal one — and folder_id) (editors; a personal
+// one's owner). One of the same name in the same place becomes its next
+// version.
 //
 //	@Summary	Upload a file
 //	@Tags		uploads
 //	@Accept		mpfd
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		target		query		string	true	"page, task or note"
-//	@Param		target_id	query		string	true	"Its id"
+//	@Param		target		query		string	true	"page, task, note or file"
+//	@Param		target_id	query		string	true	"Its id (a file: its workspace, or me)"
+//	@Param		folder_id	query		string	false	"A file's folder (\"\" the top)"
 //	@Param		file		formData	file	true	"The file"
 //	@Success	201			{object}	uploadResponse
 //	@Router		/uploads [post]
@@ -94,6 +109,14 @@ func (h *Handlers) uploadFile(c *gin.Context) {
 	wsID, ok := h.uploadTarget(c, target, targetID, models.WSEditor)
 	if !ok {
 		return
+	}
+	folder := ""
+	if target == uploads.File {
+		folder = c.Query("folder_id")
+		if !h.fileFolderOK(c, wsID, folder) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no such folder here"})
+			return
+		}
 	}
 	max := h.cfg.UploadMaxBytes
 	if max <= 0 {
@@ -129,8 +152,8 @@ func (h *Handlers) uploadFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "the file is empty"})
 		return
 	}
-	u := models.Upload{WorkspaceID: wsID, OwnerID: auth.UserID(c), Target: target, TargetID: targetID, Name: fh.Filename}
-	if err := uploads.Create(h.db, &u, data, h.cfg.UploadQuotaBytes); err != nil {
+	u := models.Upload{WorkspaceID: wsID, OwnerID: auth.UserID(c), Target: target, TargetID: targetID, Name: fh.Filename, FolderID: folder}
+	if err := uploads.Add(h.db, &u, data, h.cfg.UploadQuotaBytes); err != nil {
 		if errors.Is(err, uploads.ErrQuota) {
 			c.JSON(http.StatusInsufficientStorage, gin.H{"error": err.Error()})
 			return
@@ -160,7 +183,11 @@ func (h *Handlers) listUploads(c *gin.Context) {
 		return
 	}
 	var rows []models.Upload
-	h.db.Where("target = ? AND target_id = ?", target, targetID).Order("created_at").Find(&rows)
+	q := h.db.Where("target = ? AND target_id = ? AND "+uploads.Shown, target, targetID)
+	if target == uploads.File && targetID == uploads.Me {
+		q = q.Where("workspace_id = '' AND owner_id = ?", auth.UserID(c))
+	}
+	q.Order("created_at").Find(&rows)
 	out := make([]uploadResponse, 0, len(rows))
 	for _, u := range rows {
 		out = append(out, toUploadResponse(u))
@@ -175,19 +202,37 @@ func (h *Handlers) uploadAccess(c *gin.Context, need string) (models.Upload, boo
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return u, false
 	}
-	if need == models.WSEditor {
-		_, ok := h.uploadTarget(c, u.Target, u.TargetID, need)
-		return u, ok
-	}
-	if u.WorkspaceID == "" {
+	if u.WorkspaceID == "" { // a personal one: its owner's alone
 		if u.OwnerID != auth.UserID(c) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 			return u, false
 		}
+		if need != models.WSViewer && auth.Effective(c).ReadOnly {
+			c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
+			return u, false
+		}
 		return u, true
 	}
-	_, _, ok := h.wsAccess(c, u.WorkspaceID, models.WSViewer)
+	if need == models.WSEditor && u.Target != uploads.File {
+		_, ok := h.uploadTarget(c, u.Target, u.TargetID, need)
+		return u, ok
+	}
+	_, _, ok := h.wsAccess(c, u.WorkspaceID, need)
 	return u, ok
+}
+
+// fileFolderOK: a file of its own's folder is one of its workspace's ("" the
+// top; a personal file's are its owner's).
+func (h *Handlers) fileFolderOK(c *gin.Context, wsID, folder string) bool {
+	if folder == "" {
+		return true
+	}
+	if wsID == "" {
+		var n int64
+		h.db.Model(&models.Folder{}).Where("id = ? AND workspace_id = '' AND owner_id = ?", folder, auth.UserID(c)).Count(&n)
+		return n == 1
+	}
+	return h.folderIn(wsID, folder)
 }
 
 // serveUpload sends a file: raster images inline, everything else as a
@@ -202,9 +247,25 @@ func (h *Handlers) uploadAccess(c *gin.Context, need string) (models.Upload, boo
 //	@Success	200
 //	@Router		/uploads/{id}/{name} [get]
 func (h *Handlers) serveUpload(c *gin.Context) {
-	u, ok := h.uploadAccess(c, models.WSViewer)
+	exact := c.Query("exact") == "1"
+	need := models.WSViewer
+	var peek models.Upload
+	if h.db.Select("id", "trashed_at").First(&peek, "id = ?", c.Param("id")).Error == nil && peek.TrashedAt != nil {
+		if !exact {
+			c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+			return
+		}
+		need = models.WSEditor // looked at in the trash
+	}
+	u, ok := h.uploadAccess(c, need)
 	if !ok {
 		return
+	}
+	// A link to a file shows its newest version (?exact=1: this one).
+	if !exact && u.ReplacedAt != nil {
+		if cur, found := uploads.Newest(h.db, u); found && cur.TrashedAt == nil {
+			u = cur
+		}
 	}
 	data, err := uploads.Read(h.db, u)
 	if err != nil {
@@ -224,12 +285,14 @@ func (h *Handlers) serveUpload(c *gin.Context) {
 	c.Data(http.StatusOK, typ, data)
 }
 
-// deleteUpload removes a file (whoever may change what it's on).
+// deleteUpload puts a file (all its versions) in the trash, for 30 days
+// (whoever may change what it's on); ?forever=1 deletes it now.
 //
 //	@Summary	Delete a file
 //	@Tags		uploads
 //	@Security	BearerAuth
-//	@Param		id	path	string	true	"Upload id"
+//	@Param		id		path	string	true	"Upload id"
+//	@Param		forever	query	bool	false	"Now, not to the trash"
 //	@Success	204
 //	@Router		/uploads/{id} [delete]
 func (h *Handlers) deleteUpload(c *gin.Context) {
@@ -237,7 +300,13 @@ func (h *Handlers) deleteUpload(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := uploads.Delete(h.db, "id = ?", u.ID); err != nil {
+	var err error
+	if c.Query("forever") == "1" {
+		err = uploads.Delete(h.db, "lineage = ?", uploads.LineageOf(u))
+	} else {
+		err = uploads.Trash(h.db, u, uploads.Places(h.db, []models.Upload{u})[u.ID].FolderID)
+	}
+	if err != nil {
 		h.internalError(c, err, "could not delete the file")
 		return
 	}

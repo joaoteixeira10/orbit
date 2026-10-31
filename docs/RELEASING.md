@@ -56,14 +56,16 @@ All in `.gitea/workflows/`.
 | Build & Push | `build.yml` | **by hand only** | One multi-arch build, pushed to Harbor **and** the Gitea registry |
 | Release | `release.yml` | **by hand only** | Tags the commit and creates the Gitea release with notes from `CHANGELOG.md` |
 
-Secrets (repo → Settings → Actions → Secrets):
+Repo → Settings → Actions → **Variables** or **Secrets**. The Harbor host, image
+and username can be either (a variable wins when both are set); passwords and
+tokens are secrets only.
 
-| Secret | Used by | Required |
+| Name | Used by | Required |
 |---|---|---|
 | `HARBOR_REGISTRY_HOST` | Build & Push | yes — the Harbor host to log in to |
 | `HARBOR_IMAGE` | Build & Push | yes — the full image path on Harbor, host included, without a tag (`harbor.ubonito.org/orbit/orbit`; the same as `ORBIT_IMAGE` in `.env.example` and `REGISTRY` in the Makefile). Without the host the push goes to Docker Hub |
 | `HARBOR_USERNAME` | Build & Push | yes |
-| `HARBOR_PASSWORD` | Build & Push | yes |
+| `HARBOR_PASSWORD` | Build & Push | yes — a secret |
 | `PACKAGES_TOKEN` | Build & Push | no — a dedicated credential for the Gitea registry; without it the built-in Actions token is used (needs package write) |
 | `RELEASE_TOKEN` | Release | no — a token with `write:repository`, if the built-in Actions token lacks the scope |
 

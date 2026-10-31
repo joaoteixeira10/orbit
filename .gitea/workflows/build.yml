@@ -8,10 +8,11 @@
 # :v<version> and :latest to both. You type the BARE version (e.g. 1.3.0); the
 # image tag gets the "v", the build-arg/stamp stays bare (the SPA prepends "v").
 #
-# Harbor repo secrets: HARBOR_REGISTRY_HOST, HARBOR_IMAGE, HARBOR_USERNAME,
-# HARBOR_PASSWORD. The Gitea registry uses the built-in Actions token (needs
-# package write) — or set a PACKAGES_TOKEN secret to use a dedicated credential;
-# its image path is derived from the repo, nothing hard-coded.
+# Harbor: HARBOR_REGISTRY_HOST, HARBOR_IMAGE and HARBOR_USERNAME as repo
+# variables or secrets (a variable wins), HARBOR_PASSWORD as a secret. The
+# Gitea registry uses the built-in Actions token (needs package write) — or
+# set a PACKAGES_TOKEN secret to use a dedicated credential; its image path is
+# derived from the repo, nothing hard-coded.
 name: Build & Push
 
 on:
@@ -43,8 +44,8 @@ jobs:
       - name: Log in to Harbor
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.HARBOR_REGISTRY_HOST }}
-          username: ${{ secrets.HARBOR_USERNAME }}
+          registry: ${{ vars.HARBOR_REGISTRY_HOST || secrets.HARBOR_REGISTRY_HOST }}
+          username: ${{ vars.HARBOR_USERNAME || secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Log in to the Gitea registry
@@ -71,7 +72,7 @@ jobs:
             COMMIT=${{ env.SHORT_SHA }}
             BUILD_TIME=${{ env.BUILD_TIME }}
           tags: |
-            ${{ secrets.HARBOR_IMAGE }}:v${{ inputs.version }}
-            ${{ secrets.HARBOR_IMAGE }}:latest
+            ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}:v${{ inputs.version }}
+            ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}:latest
             ${{ env.GITEA_IMAGE }}:v${{ inputs.version }}
             ${{ env.GITEA_IMAGE }}:latest

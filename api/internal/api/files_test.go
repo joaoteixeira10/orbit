@@ -1,10 +1,14 @@
 package api
 
 import (
+	"archive/zip"
+	"bytes"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 )
 
@@ -219,4 +223,78 @@ func TestMyFiles(t *testing.T) {
 	if usage.Files != 2 || usage.Used != int64(len(tinyPNG)+8) {
 		t.Fatalf("usage: %+v", usage)
 	}
+}
+
+// docx is a tiny Word file saying text.
+func docx(t *testing.T, text string) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	z := zip.NewWriter(&b)
+	w, _ := z.Create("word/document.xml")
+	_, _ = w.Write([]byte(`<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>` + text + `</w:t></w:r></w:p></w:body></w:document>`))
+	_ = z.Close()
+	return b.Bytes()
+}
+
+// TestFileSearch: files are found by name and by what they say (a Word
+// file read here, a PDF's text sent by the app); not once in the trash,
+// nor someone else's own.
+func TestFileSearch(t *testing.T) {
+	r, db, _, alice, bob := plannerSetupDB(t)
+	if !search.Setup(db) {
+		t.Fatal("no search index")
+	}
+	t.Cleanup(func() { search.Setup(nil) })
+	ws := createWS(t, r, alice, `{"name":"Studio","kind":"custom","modules":["home","files"]}`)
+	type hit struct {
+		Kind, ID, Title, Snippet string
+		FolderID                 string `json:"folder_id"`
+	}
+	find := func(token, q string) []hit {
+		var hs []hit
+		decode(t, authdo(r, "GET", "/api/v1/search?q="+q, "", token), &hs)
+		out := []hit{}
+		for _, x := range hs {
+			if x.Kind == "file" {
+				out = append(out, x)
+			}
+		}
+		return out
+	}
+	w := fileUpload(t, r, alice, ws.ID, "", "contract.docx", docx(t, "The lessee pays quarterly"))
+	if hs := find(alice, "contract"); len(hs) != 1 || hs[0].ID != w.ID {
+		t.Fatalf("by name: %+v", hs)
+	}
+	if hs := find(alice, "quarterly"); len(hs) != 1 || !strings.Contains(hs[0].Snippet, "quarterly") {
+		t.Fatalf("by what it says: %+v", hs)
+	}
+	pdf := fileUpload(t, r, alice, ws.ID, "", "scan.pdf", []byte("%PDF-1.4\n%%EOF"))
+	expect(t, authdo(r, "PUT", "/api/v1/files/"+pdf.ID+"/text", `{"text":"invoice number 4471"}`, alice), http.StatusNoContent, "a PDF's text")
+	expect(t, authdo(r, "PUT", "/api/v1/files/"+w.ID+"/text", `{"text":"x"}`, alice), http.StatusBadRequest, "only a PDF's")
+	if hs := find(alice, "4471"); len(hs) != 1 || hs[0].ID != pdf.ID {
+		t.Fatalf("a PDF by its text: %+v", hs)
+	}
+	if hs := find(bob, "contract"); len(hs) != 0 {
+		t.Fatalf("bob found %+v", hs)
+	}
+	mine := fileUpload(t, r, bob, "me", "", "private-contract.txt", []byte("mine"))
+	if hs := find(alice, "private"); len(hs) != 0 {
+		t.Fatalf("someone else's own file: %+v", hs)
+	}
+	if hs := find(bob, "private"); len(hs) != 1 || hs[0].ID != mine.ID {
+		t.Fatalf("my own file: %+v", hs)
+	}
+	expect(t, authdo(r, "DELETE", "/api/v1/uploads/"+w.ID, "", alice), http.StatusNoContent, "trash")
+	if hs := find(alice, "quarterly"); len(hs) != 0 {
+		t.Fatalf("a file in the trash: %+v", hs)
+	}
+	var one struct {
+		Name     string
+		Versions int
+	}
+	decode(t, authdo(r, "GET", "/api/v1/files/"+pdf.ID, "", alice), &one)
+	if one.Name != "scan.pdf" || one.Versions != 1 {
+		t.Fatalf("one file: %+v", one)
+	}
+	expect(t, authdo(r, "GET", "/api/v1/files/"+pdf.ID, "", bob), http.StatusNotFound, "someone else's")
 }

@@ -728,6 +728,14 @@ type Blob struct {
 	Data   []byte `gorm:"not null"`
 }
 
+// UploadText is what a file says, for search: read from it by the server
+// (Office documents, text) or the app (a PDF's, with pdf.js). ID = the
+// upload's (each version its own).
+type UploadText struct {
+	ID   string `gorm:"primaryKey;size:36"`
+	Text string `gorm:"type:text"`
+}
+
 // UploadBlob held one upload's bytes (ID = the upload's) before they were
 // kept by their SHA-256; what's left is moved at start (uploads.Migrate).
 type UploadBlob struct {

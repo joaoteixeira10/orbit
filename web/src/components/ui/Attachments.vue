@@ -2,7 +2,8 @@
 import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Paperclip, X, FileText, LoaderCircle } from 'lucide-vue-next'
-import { downloadUpload, fileSize, uploadBlobUrl, uploadFile, uploadsApi, type Upload, type UploadTarget } from '@/lib/uploads'
+import { fileSize, uploadBlobUrl, uploadFile, uploadsApi, type Upload, type UploadTarget } from '@/lib/uploads'
+import { openFile } from '@/lib/fileView'
 import { useToastStore } from '@/stores/toast'
 
 // The files on a task or a note: images as thumbnails, other files as rows;
@@ -64,14 +65,9 @@ async function remove(f: Upload) {
     toast.error(e?.message ?? String(e))
   }
 }
-// Images open in a new tab (from their blob: URL); other files download.
-async function open(f: Upload) {
-  if (f.image) {
-    const url = thumbs.value[f.id] ?? (await uploadBlobUrl(f.url))
-    window.open(url, '_blank', 'noopener')
-  } else {
-    void downloadUpload(f.url, f.name).catch((e) => toast.error(e?.message ?? String(e)))
-  }
+// A file opens in the file viewer (Download is there).
+function open(f: Upload) {
+  openFile(f.id)
 }
 function onDrop(e: DragEvent) {
   over.value = false

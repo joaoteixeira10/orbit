@@ -12,7 +12,8 @@ import { SlashCommand, slashItems, filterItems, type SlashDocs, type SlashState 
 import EmbedPicker from '@/components/embeds/EmbedPicker.vue'
 import { EMBED_MODULE, createEmbed, openEmbed, type EmbedKind, type EmbedNew } from '@/lib/embeds'
 import { FileUpload } from './upload'
-import { downloadUpload, isUploadSrc, uploadFile } from '@/lib/uploads'
+import { isUploadSrc, uploadFile, uploadIdOf } from '@/lib/uploads'
+import { openFile } from '@/lib/fileView'
 import { cleanPastedHTML } from '@/lib/paste'
 import { useToastStore } from '@/stores/toast'
 import SlashMenu from './SlashMenu.vue'
@@ -133,7 +134,7 @@ const editor = useEditor({
       if (!(event.metaKey || event.ctrlKey)) return false
       const a = (event.target as HTMLElement | null)?.closest('a')
       if (!a?.href) return false
-      if (isUploadSrc(a.href)) void downloadUpload(a.href, a.textContent || 'file') // needs the sign-in token
+      if (isUploadSrc(a.href)) openFile(uploadIdOf(a.href)) // in the file viewer (it has the sign-in token)
       else window.open(a.href, '_blank', 'noopener,noreferrer')
       return true
     },

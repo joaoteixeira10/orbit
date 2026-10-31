@@ -257,6 +257,10 @@ func main() {
 		log.Fatal("moving files to the store", zap.Error(err))
 	}
 	log.Info("files kept", zap.String("store", store.Kind()))
+	// What files from before search read them say (once).
+	if err := uploads.FillTexts(gdb); err != nil {
+		log.Warn("reading the files' text failed", zap.Error(err))
+	}
 
 	// Keystore (seals secrets at rest: TOTP secrets, the OIDC client secret,
 	// calendar subscription addresses). The KEK is derived with Argon2id over a stored salt.

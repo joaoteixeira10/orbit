@@ -16,6 +16,7 @@ import { drawingsApi } from '@/components/draw/drawing'
 import { countParts, filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type FileUsage, type FileVersion, type Folder } from '@/lib/filesApi'
 import { download, duplicate, linkOf, onRoute, remove, rename, routeOf } from '@/lib/fileOps'
 import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
+import { openFile } from '@/lib/fileView'
 import { svgUrl } from '@/lib/drawio'
 import { ago } from '@/components/notes/noteModel'
 import { locale } from '@/lib/dates'
@@ -287,16 +288,11 @@ const untitled = (k: FileKind) => t(`drive.untitled.${k}`)
 const nameOf = (f: FileItem) => f.title || untitled(f.kind)
 const folderColor = (f: Folder) => f.color || '#5ac8fa'
 const people = computed(() => new Map((wss.members[props.ws] ?? []).map((m) => [m.user_id, m.display_name || m.username])))
-// A file opens: a picture in a new tab, anything else downloads.
-async function open(f: FileItem) {
+// A file opens in the file viewer (a PDF's pages, a document, slides…).
+function open(f: FileItem) {
   if (f.kind !== 'file') return void router.push(routeOf(props.ws, f))
   menu.value = null
-  try {
-    if (f.upload?.image) window.open(thumbs.value[f.id] ?? (await uploadBlobUrl(f.upload.url)), '_blank', 'noopener')
-    else await downloadUpload(f.upload!.url, f.title)
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+  if (mode.value !== 'trash') openFile(f.id)
 }
 
 // ---- Menus ----

@@ -1756,6 +1756,37 @@ const docTemplate = `{
             }
         },
         "/files/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "A file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.fileResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -1862,6 +1893,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/api.uploadResponse"
                         }
+                    }
+                }
+            }
+        },
+        "/files/{id}/text": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "A PDF's text",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Its text",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.fileTextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -11876,6 +11946,15 @@ const docTemplate = `{
                 }
             }
         },
+        "api.fileTextRequest": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "maxLength": 2000000
+                }
+            }
+        },
         "api.fileUsage": {
             "type": "object",
             "properties": {
@@ -14135,6 +14214,10 @@ const docTemplate = `{
                 "due": {
                     "type": "string"
                 },
+                "folder_id": {
+                    "description": "A file: the folder it shows in, and what it's on (an attachment).",
+                    "type": "string"
+                },
                 "icon": {
                     "type": "string"
                 },
@@ -14142,10 +14225,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "description": "page | task | event | note | drawing | bookmark | journal (ID: its date)",
+                    "description": "page | task | event | note | drawing | bookmark | journal (ID: its date) | sheet | diagram | file",
                     "type": "string"
                 },
                 "list_id": {
+                    "type": "string"
+                },
+                "on_id": {
+                    "type": "string"
+                },
+                "on_kind": {
                     "type": "string"
                 },
                 "snippet": {

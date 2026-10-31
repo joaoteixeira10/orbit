@@ -119,12 +119,17 @@ export const filesApi = {
   },
   // Files (uploads): of their own, and attachments where what they're on is.
   uploads: async (ws: string, trash = false) => (await api<FileUpload[]>(`${base(ws)}/files${trash ? '?trash=1' : ''}`)).map(fromUpload),
-  upload(ws: string, folderId: string, file: File): Promise<Upload> {
+  async upload(ws: string, folderId: string, file: File): Promise<Upload> {
     const form = new FormData()
     form.append('file', file, file.name || 'file')
-    return api<Upload>(`/uploads?target=file&target_id=${ws}&folder_id=${encodeURIComponent(folderId)}`, { method: 'POST', body: form })
+    const u = await api<Upload>(`/uploads?target=file&target_id=${ws}&folder_id=${encodeURIComponent(folderId)}`, { method: 'POST', body: form })
+    void import('./fileView').then((m) => m.sendPdfText(file, u.id)) // a PDF's text, for search
+    return u
   },
   updateFile: (id: string, b: { name?: string; folder_id?: string }) => api<Upload>(`/files/${id}`, { method: 'PUT', body: j(b) }),
+  file: (id: string) => api<FileUpload>(`/files/${id}`),
+  // A PDF's text, read here (pdf.js), for search.
+  setText: (id: string, text: string) => api<void>(`/files/${id}/text`, { method: 'PUT', body: j({ text }) }),
   versions: (id: string) => api<FileVersion[]>(`/files/${id}/versions`),
   makeCurrent: (id: string) => api<Upload>(`/files/${id}/current`, { method: 'POST' }),
   restore: (id: string) => api<Upload>(`/files/${id}/restore`, { method: 'POST' }),

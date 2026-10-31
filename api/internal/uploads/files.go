@@ -93,7 +93,14 @@ func MakeCurrent(db *gorm.DB, old models.Upload, by string) (models.Upload, erro
 		if err := tx.Model(&models.Upload{}).Where("lineage = ? AND replaced_at IS NULL", u.Lineage).Update("replaced_at", &now).Error; err != nil {
 			return err
 		}
-		return tx.Create(&u).Error
+		if err := tx.Create(&u).Error; err != nil {
+			return err
+		}
+		var text models.UploadText
+		if tx.Limit(1).Find(&text, "id = ?", old.ID).RowsAffected == 1 && text.Text != "" {
+			return SetText(tx, u.ID, text.Text)
+		}
+		return nil
 	})
 	return u, err
 }

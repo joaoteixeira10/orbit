@@ -8,6 +8,7 @@ import ForceOtpSetup from '@/components/ForceOtpSetup.vue'
 import StepUpModal from '@/components/ui/StepUpModal.vue'
 import KonamiEgg from '@/components/KonamiEgg.vue'
 import EmbedEditor from '@/components/embeds/EmbedEditor.vue'
+import FileViewerOverlay from '@/components/files/FileViewerOverlay.vue'
 
 const prefs = usePrefsStore()
 const auth = useAuthStore()
@@ -27,4 +28,5 @@ onMounted(() => {
   <StepUpModal />
   <KonamiEgg />
   <EmbedEditor v-if="auth.isAuthenticated" />
+  <FileViewerOverlay v-if="auth.isAuthenticated" />
 </template>

@@ -296,3 +296,67 @@ func (h *Handlers) publishFiles(c *gin.Context, u models.Upload) {
 	h.publishWS(c, u.WorkspaceID, "files")
 	h.publishWS(c, u.WorkspaceID, "uploads")
 }
+
+// getFile is one file as Files shows it: where it is, what it's on, how many
+// versions (for the file viewer).
+//
+//	@Summary	A file
+//	@Tags		files
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id	path		string	true	"File id"
+//	@Success	200	{object}	fileResponse
+//	@Router		/files/{id} [get]
+func (h *Handlers) getFile(c *gin.Context) {
+	u, ok := h.uploadAccess(c, models.WSViewer)
+	if !ok {
+		return
+	}
+	if u.Target == uploads.Page {
+		var p models.Page
+		if h.db.First(&p, "id = ?", u.TargetID).Error == nil && !h.pageVisible(c, p) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+			return
+		}
+	}
+	f := fileResponse{uploadResponse: toUploadResponse(u), Place: uploads.Places(h.db, []models.Upload{u})[u.ID], Versions: len(uploads.Versions(h.db, u))}
+	if u.TrashedAt != nil {
+		f.EmptiesAt = stamp(u.TrashedAt.Add(uploads.TrashDays * 24 * time.Hour))
+	}
+	c.JSON(http.StatusOK, f)
+}
+
+type fileTextRequest struct {
+	Text string `json:"text" binding:"max=2000000"`
+}
+
+// setFileText keeps what a PDF says, read by the app (pdf.js), for search
+// (editors). Other files' text the server reads itself.
+//
+//	@Summary	A PDF's text
+//	@Tags		files
+//	@Accept		json
+//	@Security	BearerAuth
+//	@Param		id		path	string			true	"File id"
+//	@Param		body	body	fileTextRequest	true	"Its text"
+//	@Success	204
+//	@Router		/files/{id}/text [put]
+func (h *Handlers) setFileText(c *gin.Context) {
+	u, ok := h.uploadAccess(c, models.WSEditor)
+	if !ok {
+		return
+	}
+	var req fileTextRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if u.Type != "application/pdf" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "only a PDF's text is sent; the rest is read here"})
+		return
+	}
+	if err := uploads.SetText(h.db, u.ID, req.Text); err != nil {
+		h.internalError(c, err, "could not keep the text")
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

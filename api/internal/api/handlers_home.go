@@ -9,6 +9,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -124,7 +125,7 @@ func (h *Handlers) home(c *gin.Context) {
 
 // searchHit is one search result.
 type searchHit struct {
-	Kind        string     `json:"kind"` // page | task | event | note | drawing | bookmark | journal (ID: its date)
+	Kind        string     `json:"kind"` // page | task | event | note | drawing | bookmark | journal (ID: its date) | sheet | diagram | file
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
 	Title       string     `json:"title"`
@@ -134,6 +135,10 @@ type searchHit struct {
 	Done        bool       `json:"done,omitempty"`
 	Start       *time.Time `json:"start,omitempty"`
 	ListID      string     `json:"list_id,omitempty"`
+	// A file: the folder it shows in, and what it's on (an attachment).
+	FolderID string `json:"folder_id,omitempty"`
+	OnKind   string `json:"on_kind,omitempty"`
+	OnID     string `json:"on_id,omitempty"`
 }
 
 // likeEscape escapes LIKE wildcards in user input (ESCAPE '\').
@@ -206,6 +211,17 @@ func (h *Handlers) search(c *gin.Context) {
 		Order("updated_at DESC").Limit(8).Find(&notes)
 	for _, n := range notes {
 		out = append(out, searchHit{Kind: "note", ID: n.ID, WorkspaceID: n.WorkspaceID, Title: n.Title, Snippet: planner.Snippet(n.PlainText, q, 100)})
+	}
+	var fs []models.Upload
+	h.db.Where("(workspace_id IN ? OR (workspace_id = '' AND owner_id = ?)) AND "+uploads.Shown+` AND LOWER(name) LIKE ? ESCAPE '\'`, wsIDs, auth.UserID(c), pat).
+		Order("created_at DESC").Limit(8).Find(&fs)
+	fplaces := uploads.Places(h.db, fs)
+	for _, u := range fs {
+		if u.Target == uploads.Page && !g.sees(u.TargetID) {
+			continue
+		}
+		pl := fplaces[u.ID]
+		out = append(out, searchHit{Kind: "file", ID: u.ID, WorkspaceID: u.WorkspaceID, Title: u.Name, FolderID: pl.FolderID, OnKind: pl.OnKind, OnID: pl.OnID})
 	}
 	var events []models.Event
 	h.db.Where(`workspace_id IN ? AND LOWER(title) LIKE ? ESCAPE '\'`, wsIDs, pat).Order("starts_at DESC").Limit(8).Find(&events)
@@ -318,7 +334,29 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 			diagrams[r.ID] = r
 		}
 	}
-	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8, "journal": 8, "bookmark": 8, "sheet": 8, "diagram": 8}
+	files := map[string]models.Upload{}
+	texts := map[string]string{}
+	var places map[string]uploads.Place
+	if l := ids["file"]; len(l) > 0 {
+		var rows []models.Upload
+		h.db.Where("id IN ? AND "+uploads.Shown, l).Find(&rows)
+		for _, r := range rows {
+			if r.WorkspaceID == "" && r.OwnerID != uid {
+				continue
+			}
+			if r.Target == uploads.Page && !gate.sees(r.TargetID) {
+				continue // on a page the caller can't see
+			}
+			files[r.ID] = r
+		}
+		places = uploads.Places(h.db, rows)
+		var ts []models.UploadText
+		h.db.Where("id IN ?", l).Find(&ts)
+		for _, t := range ts {
+			texts[t.ID] = t.Text
+		}
+	}
+	caps := map[string]int{"page": 12, "task": 12, "note": 8, "event": 8, "drawing": 8, "journal": 8, "bookmark": 8, "sheet": 8, "diagram": 8, "file": 8}
 	seen := map[string]bool{}
 	for _, x := range hits {
 		kind := x.Kind
@@ -391,6 +429,13 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 				continue
 			}
 			out = append(out, searchHit{Kind: "drawing", ID: d.ID, WorkspaceID: d.WorkspaceID, Title: d.Title, Snippet: planner.Snippet(d.Text, q, 100)})
+		case "file":
+			u, ok := files[x.Ref]
+			if !ok || (c.Query("ws") != "" && u.WorkspaceID != c.Query("ws")) {
+				continue
+			}
+			pl := places[u.ID]
+			out = append(out, searchHit{Kind: "file", ID: u.ID, WorkspaceID: u.WorkspaceID, Title: u.Name, Snippet: planner.Snippet(texts[u.ID], q, 100), FolderID: pl.FolderID, OnKind: pl.OnKind, OnID: pl.OnID})
 		}
 		seen[kind+x.Ref] = true
 		caps[kind]--

@@ -339,7 +339,7 @@ export interface Home {
   exams: Task[] // the next ones (60 days), soonest first
 }
 export interface SearchHit {
-  kind: 'page' | 'task' | 'event' | 'note' | 'drawing' | 'journal' | 'bookmark' | 'sheet' | 'diagram'
+  kind: 'page' | 'task' | 'event' | 'note' | 'drawing' | 'journal' | 'bookmark' | 'sheet' | 'diagram' | 'file'
   id: string
   workspace_id: string
   title: string
@@ -349,6 +349,9 @@ export interface SearchHit {
   done?: boolean
   start?: string
   list_id?: string
+  folder_id?: string // a file: the folder it shows in
+  on_kind?: 'page' | 'task' | 'note' // a file: what it's on
+  on_id?: string
 }
 
 const j = (body: unknown) => JSON.stringify(body)

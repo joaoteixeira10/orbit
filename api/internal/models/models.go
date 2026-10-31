@@ -360,6 +360,7 @@ func AllModels() []any {
 		&Upload{},
 		&UploadBlob{},
 		&Blob{},
+		&UploadText{},
 		&WorkspaceInvite{},
 		&Course{},
 		&CourseSlot{},

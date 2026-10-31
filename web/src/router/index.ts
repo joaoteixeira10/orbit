@@ -35,9 +35,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'draw/:id', name: 'my-drawing', component: () => import('@/views/WhiteboardView.vue') },
       // My files: one's own drive (sketches, files, Quick Notes' attachments).
       { path: 'files', name: 'my-files', component: () => import('@/views/MyFilesView.vue') },
+      { path: 'files/f/:id', name: 'my-file', component: () => import('@/views/FileView.vue') },
       // Shared from another app (the share sheet): saved as a Quick Note.
       { path: 'share', name: 'share', component: () => import('@/views/ShareView.vue') },
       { path: 'w/:ws', name: 'ws', component: () => import('@/views/HomeView.vue') },
+      { path: 'w/:ws/f/:id', name: 'ws-file', component: () => import('@/views/FileView.vue') },
       { path: 'w/:ws/tasks/:list?', name: 'ws-tasks', component: () => import('@/views/TasksView.vue') },
       { path: 'w/:ws/board/:list?', name: 'ws-board', component: () => import('@/views/BoardView.vue') },
       { path: 'w/:ws/notes', name: 'ws-notes', component: () => import('@/views/NotesView.vue') },

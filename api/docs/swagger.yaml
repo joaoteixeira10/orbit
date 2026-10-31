@@ -888,6 +888,12 @@ definitions:
       workspace_id:
         type: string
     type: object
+  api.fileTextRequest:
+    properties:
+      text:
+        maxLength: 2000000
+        type: string
+    type: object
   api.fileUsage:
     properties:
       all:
@@ -2454,15 +2460,22 @@ definitions:
         type: boolean
       due:
         type: string
+      folder_id:
+        description: 'A file: the folder it shows in, and what it''s on (an attachment).'
+        type: string
       icon:
         type: string
       id:
         type: string
       kind:
         description: 'page | task | event | note | drawing | bookmark | journal (ID:
-          its date)'
+          its date) | sheet | diagram | file'
         type: string
       list_id:
+        type: string
+      on_id:
+        type: string
+      on_kind:
         type: string
       snippet:
         type: string
@@ -5235,6 +5248,25 @@ paths:
       tags:
       - owner
   /files/{id}:
+    get:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.fileResponse'
+      security:
+      - BearerAuth: []
+      summary: A file
+      tags:
+      - files
     put:
       consumes:
       - application/json
@@ -5300,6 +5332,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Take a file out of the trash
+      tags:
+      - files
+  /files/{id}/text:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Its text
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.fileTextRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: A PDF's text
       tags:
       - files
   /files/{id}/versions:

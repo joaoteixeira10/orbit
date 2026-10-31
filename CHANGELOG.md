@@ -33,6 +33,16 @@ merge, not at release time.
 
 ### Added
 
+- **Files shown in place** — a PDF's pages, a Word document as a page, an
+  Excel file's tabs or a CSV as a table, a PowerPoint deck's slides,
+  pictures, video, audio, Markdown and text open over what you're doing (from
+  Files, attachments, links in pages, search), with their versions and
+  Download; `/w/{ws}/f/{id}` is a file's own address. Read in the browser
+  (pdf.js; Word and PowerPoint from their XML), no new dependencies.
+- **Files in search** — ⌘K finds files by name and by what they say: Word,
+  Excel, PowerPoint, OpenDocument and text files read by the server, PDFs by
+  the app (`PUT /files/{id}/text`); files from before are read at start.
+  `GET /files/{id}`.
 - **My files** — your own drive (sidebar, under Quick Draw): your Quick Draw
   sketches, files you upload, your Quick Notes' attachments, in folders of
   your own, with versions and the trash; only you see it. API:

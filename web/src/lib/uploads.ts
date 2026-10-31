@@ -32,11 +32,23 @@ export const uploadsApi = {
   remove: (id: string) => api<void>(`/uploads/${id}`, { method: 'DELETE' }),
 }
 
-// uploadFile sends one file to a page, task or note.
-export function uploadFile(target: UploadTarget, targetId: string, file: File): Promise<Upload> {
+// uploadFile sends one file to a page, task or note (a PDF's text follows,
+// read here, for search).
+export async function uploadFile(target: UploadTarget, targetId: string, file: File): Promise<Upload> {
   const form = new FormData()
   form.append('file', file, file.name || 'file')
-  return api<Upload>(`/uploads?target=${target}&target_id=${targetId}`, { method: 'POST', body: form })
+  const u = await api<Upload>(`/uploads?target=${target}&target_id=${targetId}`, { method: 'POST', body: form })
+  void import('./fileView').then((m) => m.sendPdfText(file, u.id))
+  return u
+}
+
+// uploadIdOf is the id in an upload's address (/api/v1/uploads/<id>/<name>).
+export function uploadIdOf(src: string): string {
+  try {
+    return new URL(src, location.origin).pathname.slice(PREFIX.length).split('/')[0] ?? ''
+  } catch {
+    return ''
+  }
 }
 
 const PREFIX = '/api/v1/uploads/'

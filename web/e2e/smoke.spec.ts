@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createHmac } from 'node:crypto'
+import { strToU8, zipSync } from 'fflate'
 
 // Runs against a fresh instance (see the e2e workflow): the bootstrap admin
 // signs in with ADMIN_PASSWORD and must choose a new password first. The tests
@@ -2546,6 +2547,88 @@ test('my files: my own drive — a folder, a file uploaded, a sketch started the
   await page.goBack()
   await expect(page.getByTestId('folder-tile').or(page.getByTestId('whiteboard-card')).first()).toBeVisible()
   await expect(page.getByTestId('whiteboard-card')).toHaveCount(1)
+})
+
+// textPdf: a PDF of one page per line, each line as real text (Helvetica).
+function textPdf(lines: string[]): Buffer {
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', `<< /Type /Pages /Kids [${lines.map((_, i) => `${4 + i * 2} 0 R`).join(' ')}] /Count ${lines.length} >>`, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
+  lines.forEach((line, i) => {
+    const st = `BT /F1 18 Tf 20 50 Td (${line}) Tj ET`
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 100] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`)
+    objs.push(`<< /Length ${st.length} >>\nstream\n${st}\nendstream`)
+  })
+  let out = '%PDF-1.4\n'
+  const offs: number[] = []
+  objs.forEach((o, i) => {
+    offs.push(out.length)
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`
+  })
+  const x = out.length
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((n) => `${String(n).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`
+  return Buffer.from(out)
+}
+
+const officeZip = (files: Record<string, string>) => Buffer.from(zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)]))))
+const RELS = (list: [string, string][]) => `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${list.map(([id, t]) => `<Relationship Id="${id}" Target="${t}" Type="x"/>`).join('')}</Relationships>`
+
+test('files shown in place: a Word document, slides, a spreadsheet, a PDF\'s pages; found by what they say', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Office', kind: 'custom', starter: false, modules: ['home', 'files'] } })).json()
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+  const P = 'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+  const docx = officeZip({ 'word/document.xml': `<w:document ${W}><w:body><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Lease terms</w:t></w:r></w:p><w:p><w:r><w:t>The tenant pays quarterly.</w:t></w:r></w:p></w:body></w:document>` })
+  const sp = (text: string, y: number) => `<p:sp><p:nvSpPr><p:cNvPr id="2" name="t"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="600000" y="${y}"/><a:ext cx="8000000" cy="900000"/></a:xfrm></p:spPr><p:txBody><a:p><a:r><a:rPr sz="3200"/><a:t>${text}</a:t></a:r></a:p></p:txBody></p:sp>`
+  const pptx = officeZip({
+    'ppt/presentation.xml': `<p:presentation ${P}><p:sldIdLst><p:sldId id="256" r:id="r1"/><p:sldId id="257" r:id="r2"/></p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/></p:presentation>`,
+    'ppt/_rels/presentation.xml.rels': RELS([['r1', 'slides/slide1.xml'], ['r2', 'slides/slide2.xml']]),
+    'ppt/slides/slide1.xml': `<p:sld ${P}><p:cSld><p:spTree>${sp('Roadmap 2027', 500000)}</p:spTree></p:cSld></p:sld>`,
+    'ppt/slides/slide2.xml': `<p:sld ${P}><p:cSld><p:spTree>${sp('Hiring plan', 500000)}</p:spTree></p:cSld></p:sld>`,
+  })
+  const up = (name: string, mimeType: string, buffer: Buffer) => request.post(`/api/v1/uploads?target=file&target_id=${ws.id}`, { headers: H, multipart: { file: { name, mimeType, buffer } } })
+  await up('lease.docx', 'application/octet-stream', docx)
+  await up('plan.pptx', 'application/octet-stream', pptx)
+  await up('budget.csv', 'text/csv', Buffer.from('Item,Cost\nRent,1200\nFood,450\n'))
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await page.goto(`/w/${ws.id}/files`)
+  // A PDF uploaded here: its pages drawn; its text read for search.
+  await page.getByTestId('files-add-input').setInputFiles({ name: 'invoice.pdf', mimeType: 'application/pdf', buffer: textPdf(['Invoice 4471', 'Thank you']) })
+  await page.getByTestId('file-card').filter({ hasText: 'invoice.pdf' }).click()
+  const viewer = page.getByTestId('file-viewer')
+  await expect(viewer.getByTestId('viewer-pdf').locator('canvas')).toHaveCount(2)
+  await expect(viewer.getByTestId('viewer-pdf').locator('canvas.drawn').first()).toBeVisible()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/viewer-pdf.png' })
+  await page.keyboard.press('Escape')
+  // The Word document, as a page.
+  await page.getByTestId('file-card').filter({ hasText: 'lease.docx' }).click()
+  await expect(viewer.getByTestId('viewer-doc').locator('h2')).toHaveText('Lease terms')
+  await expect(viewer.getByTestId('viewer-doc')).toContainText('The tenant pays quarterly.')
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/viewer-docx.png' })
+  await viewer.getByTestId('viewer-close').click()
+  // The slides.
+  await page.getByTestId('file-card').filter({ hasText: 'plan.pptx' }).click()
+  await expect(viewer.getByTestId('viewer-slide')).toHaveCount(2)
+  await expect(viewer.getByTestId('viewer-slide').nth(1)).toContainText('Hiring plan')
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/viewer-pptx.png' })
+  await page.keyboard.press('Escape')
+  // The spreadsheet.
+  await page.getByTestId('file-card').filter({ hasText: 'budget.csv' }).click()
+  await expect(viewer.getByTestId('viewer-sheet').locator('tbody tr')).toHaveCount(3)
+  await expect(viewer.getByTestId('viewer-sheet').locator('tbody tr').nth(1)).toContainText('1200')
+  await page.keyboard.press('Escape')
+
+  // ⌘K finds them by what they say: the Word file's words, the PDF's.
+  await page.getByRole('button', { name: /^Search/ }).first().click()
+  await page.getByPlaceholder('Search or jump to…').fill('quarterly')
+  await page.locator('.cmd-item', { hasText: 'lease.docx' }).click()
+  await expect(viewer.getByTestId('viewer-name')).toHaveText('lease.docx')
+  await page.keyboard.press('Escape')
+  await expect.poll(async () => ((await (await request.get('/api/v1/search?q=4471', { headers: H })).json()) as { kind: string; title: string }[]).filter((h) => h.kind === 'file').map((h) => h.title)).toEqual(['invoice.pdf'])
 })
 
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {

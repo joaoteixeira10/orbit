@@ -7,7 +7,8 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { renderMarkdown } from '@/lib/markdown'
 import { mediaPrefs, remoteHost, reveal, safeImageSrc, showsAtOnce } from '@/lib/media'
-import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
+import { downloadUpload, uploadBlobUrl, uploadIdOf } from '@/lib/uploads'
+import { openFile } from '@/lib/fileView'
 import { evaluate } from '@/lib/mathnotes'
 import { guestApi } from '@/lib/shareApi'
 import { markTerms, type Term } from '@/lib/glossary'
@@ -223,6 +224,7 @@ function onClick(e: MouseEvent) {
   if (file) {
     e.preventDefault()
     if (props.guest) window.open(guestApi.uploadUrl(props.guest, file.dataset.upload ?? ''), '_blank', 'noopener')
+    else if (uploadIdOf(file.dataset.upload ?? '')) openFile(uploadIdOf(file.dataset.upload ?? ''))
     else void downloadUpload(file.dataset.upload ?? '', file.dataset.name || 'file')
     return
   }

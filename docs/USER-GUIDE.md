@@ -1296,7 +1296,23 @@ attachments of pages, tasks and notes. A folder's tile says what it holds of eve
 **Files of every kind.** In **Files**, **Upload** adds any file (a PDF, a
 photo, a Word document…) to the folder shown, as it is — or drop files from
 the computer onto the page, or onto a folder. A picture shows as its
-thumbnail; a click opens a picture, and downloads anything else.
+thumbnail.
+
+**Shown in place.** A click on a file — in Files, on a task or a note, a
+file's link in a page, a search result — opens it over what you're doing
+(Esc closes it): a **PDF**'s pages; a **Word** document (.docx) as a page to
+read (headings, lists, tables, pictures, links); an **Excel** file's tabs or
+a CSV as a table; a **PowerPoint** presentation's slides (their text and
+pictures where they sit — charts and effects aren't drawn); pictures,
+videos and audio; Markdown and text. A file with versions has a menu to see
+an older one; **Download** gets the real file, and **Open the task** (or
+page, note) goes to what it's on. Each file also has an address of its own
+(`/w/<workspace>/f/<file>`).
+
+**Found by what they say.** ⌘K finds files by their name and by what's
+in them: the words of Word, Excel, PowerPoint and OpenDocument files, of
+text files, and of PDFs (read by the app when one is uploaded through it).
+A file in the trash, or on a page you can't see, isn't found.
 
 - **Attachments are where what they're on is**: a file on a task shows in
   its list's folder, one on a page in the page's folder, a note's at the

@@ -110,7 +110,12 @@ func Create(db *gorm.DB, u *models.Upload, data []byte, quota int64) error {
 		}
 		if u.Lineage == "" { // its own first version
 			u.Lineage = u.ID
-			return tx.Model(&models.Upload{}).Where("id = ?", u.ID).Update("lineage", u.ID).Error
+			if err := tx.Model(&models.Upload{}).Where("id = ?", u.ID).Update("lineage", u.ID).Error; err != nil {
+				return err
+			}
+		}
+		if t := TextOf(u.Name, u.Type, data); t != "" { // what it says, for search
+			return SetText(tx, u.ID, t)
 		}
 		return nil
 	})
@@ -136,6 +141,9 @@ func Delete(db *gorm.DB, where string, args ...any) error {
 		sums[u.SHA256] = true
 	}
 	if err := db.Where("id IN ?", ids).Delete(&models.Upload{}).Error; err != nil {
+		return err
+	}
+	if err := db.Where("id IN ?", ids).Delete(&models.UploadText{}).Error; err != nil {
 		return err
 	}
 	for sum := range sums {

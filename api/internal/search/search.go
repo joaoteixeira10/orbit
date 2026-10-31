@@ -1,5 +1,6 @@
 // Package search is Orbit's full-text index: pages, tasks, notes, events,
-// task comments and drawings in one SQLite FTS5 table, ranked (bm25), accent-insensitive
+// task comments, drawings, sheets, diagrams, bookmarks and files (by name
+// and what they say) in one SQLite FTS5 table, ranked (bm25), accent-insensitive
 // ("acao" finds "ação") and by word prefix ("rep" finds "report"). SQLite
 // triggers keep it in step with every write — the app's, the git and
 // calendar syncs', an import's — so nothing has to remember to index.
@@ -22,7 +23,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "6"
+const version = "7"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -43,6 +44,8 @@ var sources = []struct {
 	{"journal_entries", "journal", "@.id", "''", "@.owner_id", "@.date", "@.content_text"},
 	{"sheets", "sheet", "@.id", "@.workspace_id", "''", "@.title", "@.text"},
 	{"diagrams", "diagram", "@.id", "@.workspace_id", "''", "@.title", "@.text"},
+	// A file by its name and what it says (read from it: upload_texts).
+	{"uploads", "file", "@.id", "@.workspace_id", "@.owner_id", "@.name", "coalesce((SELECT t.text FROM upload_texts t WHERE t.id = @.id), '')"},
 	{"bookmarks", "bookmark", "@.id", "@.workspace_id", "''", "@.title", "coalesce(@.description,'') || ' ' || coalesce(@.site_name,'') || ' ' || coalesce(@.url,'') || ' ' || coalesce(@.notes,'')"},
 }
 

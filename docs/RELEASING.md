@@ -61,7 +61,7 @@ Secrets (repo → Settings → Actions → Secrets):
 | Secret | Used by | Required |
 |---|---|---|
 | `HARBOR_REGISTRY_HOST` | Build & Push | yes — the Harbor host to log in to |
-| `HARBOR_IMAGE` | Build & Push | yes — the full image path on Harbor, without a tag (e.g. `orbit/orbit`; match `ORBIT_IMAGE` in `.env.example` and `REGISTRY` in the Makefile, which are placeholders until you choose it) |
+| `HARBOR_IMAGE` | Build & Push | yes — the full image path on Harbor, host included, without a tag (`harbor.ubonito.org/orbit/orbit`; the same as `ORBIT_IMAGE` in `.env.example` and `REGISTRY` in the Makefile). Without the host the push goes to Docker Hub |
 | `HARBOR_USERNAME` | Build & Push | yes |
 | `HARBOR_PASSWORD` | Build & Push | yes |
 | `PACKAGES_TOKEN` | Build & Push | no — a dedicated credential for the Gitea registry; without it the built-in Actions token is used (needs package write) |

@@ -197,10 +197,11 @@ var mcpTools = []mcpTool{
 	},
 	{
 		Name: "update_page", Title: "Change a page",
-		Description: "Change a page's title, replace its text (content), or add text at its end (append). Its history keeps what it was.",
+		Description: "Change a page's title, replace its text (content), add text at its end (append), or set its tags. Its history keeps what it was.",
 		Props: map[string]mcpProp{
 			"page_id": pPage, "title": {Type: "string", Description: "A new title"}, "content": {Type: "string", Description: "Its whole new text, in Markdown"},
 			"append": {Type: "string", Description: "Markdown to add at the end"}, "icon": {Type: "string", Description: "An emoji (empty removes it)"},
+			"tags": {Type: "array", Description: "Its tags (the whole list)"},
 		},
 		Required: []string{"page_id"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
@@ -209,7 +210,7 @@ var mcpTools = []mcpTool{
 			if err := m.do("GET", "/pages/"+id, nil, nil, &cur); err != nil {
 				return nil, err
 			}
-			body := a.pick("title", "icon")
+			body := a.pick("title", "icon", "tags")
 			if a.has("content") || a.has("append") {
 				text, _ := cur["content"].(string)
 				if a.has("content") {
@@ -222,7 +223,7 @@ var mcpTools = []mcpTool{
 				body["version"] = cur["version"]
 			}
 			if len(body) == 0 {
-				return nil, errors.New("nothing to change: give title, content, append or icon")
+				return nil, errors.New("nothing to change: give title, content, append, icon or tags")
 			}
 			var p map[string]any
 			if err := m.do("PUT", "/pages/"+id, nil, body, &p); err != nil {

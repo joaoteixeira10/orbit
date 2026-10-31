@@ -335,6 +335,7 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/me/blocks", h.planBlocks)
 			authed.DELETE("/me/blocks/:id", h.deleteBlock)
 			authed.GET("/workspaces/:ws/folders", h.listFolders)
+			authed.GET("/workspaces/:ws/tags", h.listTags)
 			authed.GET("/workspaces/:ws/graph", h.workspaceGraph)
 			authed.GET("/oauth/clients/:id", h.oauthClientInfo)
 			authed.PUT("/pages/:id/access", h.setPageAccess)

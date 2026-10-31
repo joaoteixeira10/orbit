@@ -2192,6 +2192,11 @@ definitions:
         type: object
       favorite:
         type: boolean
+      fields:
+        description: 'its own properties: [{key, type, value}]'
+        items:
+          type: object
+        type: array
       folder_id:
         description: a folder it's filed in ("" none); its sub-pages go with it
         type: string
@@ -2215,6 +2220,10 @@ definitions:
           Restricted: only AllowedUsers (JSON []user id) see it and what's
           under it (api/page_access.go).
         type: boolean
+      tags:
+        items:
+          type: string
+        type: array
       template:
         description: |-
           Template: offered when a new page starts empty (its title and
@@ -2258,6 +2267,10 @@ definitions:
       restricted:
         description: only some people see it (and what's under it)
         type: boolean
+      tags:
+        items:
+          type: string
+        type: array
       template:
         type: boolean
       title:
@@ -2761,6 +2774,14 @@ definitions:
         maxLength: 2000
         type: string
     type: object
+  api.tagCount:
+    properties:
+      count:
+        description: pages with it (that the caller sees)
+        type: integer
+      tag:
+        type: string
+    type: object
   api.taskRequest:
     properties:
       after_id:
@@ -2982,6 +3003,10 @@ definitions:
           DB: the whole database (null: no longer one). Props: a patch of the
           row's values (a null value removes one).
         type: object
+      fields:
+        items:
+          type: object
+        type: array
       glossary:
         description: 'Glossary: its terms are explained where other pages use them.'
         type: boolean
@@ -2990,6 +3015,14 @@ definitions:
         type: string
       props:
         type: object
+      tags:
+        description: |-
+          Tags (all of them) and Fields (its own properties, all of them:
+          [{key, type: text|number|date|checkbox|url, value}]) — any page.
+        items:
+          type: string
+        maxItems: 60
+        type: array
       template:
         description: Template offers the page as a template for new pages.
         type: boolean
@@ -10918,6 +10951,28 @@ paths:
       summary: Subscribe to a calendar
       tags:
       - calendar
+  /workspaces/{ws}/tags:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.tagCount'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's tags
+      tags:
+      - pages
   /workspaces/{ws}/tasks:
     get:
       parameters:

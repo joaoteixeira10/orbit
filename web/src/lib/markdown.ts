@@ -213,18 +213,86 @@ export function toggleTask(md: string, index: number): string {
 // ---- Files ----------------------------------------------------------------
 
 // pageFile is a page as a .md file: its title as a heading, then its body.
-export function pageFile(title: string, content: string): string {
-  const head = `# ${title.trim() || 'Untitled'}`
+export function pageFile(title: string, content: string, meta: { tags?: string[]; fields?: PageField[] } = {}): string {
+  const head = `${frontmatter(meta.tags ?? [], meta.fields ?? [])}# ${title.trim() || 'Untitled'}`
   return content.trim() ? `${head}\n\n${content.trim()}\n` : `${head}\n`
 }
 
-// fromFile reads an imported .md: a first-line "# Heading" becomes the title
-// (else the file's name does), the rest the page.
-export function fromFile(text: string, filename: string): { title: string; content: string } {
-  const md = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
-  const m = /^\s*#\s+(.+?)\s*#*\s*(?:\n|$)/.exec(md)
-  if (m) return { title: m[1].trim().slice(0, 300), content: normalizeMarkdown(md.slice(m[0].length)) }
-  return { title: filename.replace(/\.(md|markdown|txt)$/i, '').slice(0, 300), content: normalizeMarkdown(md) }
+// A page's own property (any page): a name, a kind, a value of that kind.
+export interface PageField {
+  key: string
+  type: 'text' | 'number' | 'date' | 'checkbox' | 'url'
+  value: string | number | boolean | null
+}
+
+// frontmatter: tags and properties as a Markdown file's YAML header ("" for
+// none) — as Obsidian and the like keep them.
+export function frontmatter(tags: string[], fields: PageField[]): string {
+  if (!tags.length && !fields.length) return ''
+  const q = (v: unknown) => JSON.stringify(v) // JSON is YAML
+  const lines = ['---']
+  if (tags.length) lines.push(`tags: ${q(tags)}`)
+  for (const f of fields) {
+    const key = /[:#"'{}[\],&*?|<>=!%@`]/.test(f.key) || f.key.toLowerCase() === 'tags' ? q(f.key) : f.key
+    lines.push(f.value === null || f.value === '' ? `${key}:` : `${key}: ${q(f.value)}`)
+  }
+  return lines.join('\n') + '\n---\n'
+}
+
+// readFrontmatter takes a YAML header off a Markdown file: its tags and the
+// rest as properties (simple "key: value" lines; lists only for tags).
+export function readFrontmatter(md: string): { tags: string[]; fields: PageField[]; rest: string } {
+  const m = /^---\n([\s\S]*?)\n---[ \t]*(?:\n|$)/.exec(md)
+  if (!m) return { tags: [], fields: [], rest: md }
+  const tags: string[] = []
+  const fields: PageField[] = []
+  const lines = m[1].split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    // "a quoted: key": value, or key: value
+    const quoted = /^("(?:[^"\\]|\\.)*")\s*:\s*(.*)$/.exec(lines[i])
+    const plain = quoted ? null : /^([^:#\s][^:]*?)\s*:\s*(.*)$/.exec(lines[i])
+    if (!quoted && !plain) continue
+    let key: string
+    try {
+      key = quoted ? (JSON.parse(quoted[1]) as string) : plain![1].trim()
+    } catch {
+      continue
+    }
+    let raw = (quoted ? quoted[2] : plain![2]).trim()
+    if (key.toLowerCase() === 'tags') {
+      if (!raw) {
+        while (i + 1 < lines.length && /^\s*-\s+/.test(lines[i + 1])) tags.push(lines[++i].replace(/^\s*-\s+/, '').replace(/^["']|["']$/g, ''))
+      } else {
+        try {
+          const v = JSON.parse(raw.replace(/'/g, '"'))
+          if (Array.isArray(v)) tags.push(...v.map(String))
+          else tags.push(String(v))
+        } catch {
+          tags.push(...raw.replace(/^\[|\]$/g, '').split(',').map((x) => x.trim().replace(/^["'#]|["']$/g, '')).filter(Boolean))
+        }
+      }
+      continue
+    }
+    if (/^["'].*["']$/.test(raw)) raw = raw.slice(1, -1)
+    let field: PageField
+    if (raw === 'true' || raw === 'false') field = { key, type: 'checkbox', value: raw === 'true' }
+    else if (/^-?\d+(\.\d+)?$/.test(raw)) field = { key, type: 'number', value: Number(raw) }
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) field = { key, type: 'date', value: raw }
+    else if (/^(https?:|mailto:)/.test(raw)) field = { key, type: 'url', value: raw }
+    else field = { key, type: 'text', value: raw || null }
+    if (!fields.some((f) => f.key.toLowerCase() === key.toLowerCase())) fields.push(field)
+  }
+  return { tags: tags.map((x) => x.trim()).filter(Boolean), fields: fields.slice(0, 40), rest: md.slice(m[0].length) }
+}
+
+// fromFile reads an imported .md: its YAML header becomes its tags and
+// properties; a first-line "# Heading" becomes the title (else the file's
+// name does), the rest the page.
+export function fromFile(text: string, filename: string): { title: string; content: string; tags: string[]; fields: PageField[] } {
+  const { tags, fields, rest } = readFrontmatter(text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'))
+  const m = /^\s*#\s+(.+?)\s*#*\s*(?:\n|$)/.exec(rest)
+  if (m) return { title: m[1].trim().slice(0, 300), content: normalizeMarkdown(rest.slice(m[0].length)), tags, fields }
+  return { title: filename.replace(/\.(md|markdown|txt)$/i, '').slice(0, 300), content: normalizeMarkdown(rest), tags, fields }
 }
 
 // download saves text as a file.

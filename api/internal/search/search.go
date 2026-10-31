@@ -23,7 +23,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "7"
+const version = "8"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -31,7 +31,7 @@ const version = "7"
 var sources = []struct {
 	table, kind, ref, ws, owner, title, body string
 }{
-	{"pages", "page", "@.id", "@.workspace_id", "''", "@.title", "@.content_text"},
+	{"pages", "page", "@.id", "@.workspace_id", "''", "coalesce(@.title,'') || ' ' || coalesce(@.tags,'')", "coalesce(@.content_text,'') || ' ' || coalesce(@.fields_text,'')"},
 	{"tasks", "task", "@.id", "@.workspace_id", "''", "@.title", "@.notes"},
 	{"notes", "note", "@.id", "@.workspace_id", "@.owner_id", "@.title", "@.plain_text"},
 	{"events", "event", "@.id", "@.workspace_id", "''", "@.title", "coalesce(@.location,'') || ' ' || coalesce(@.notes,'')"},

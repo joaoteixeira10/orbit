@@ -39,10 +39,32 @@ const layout = ref<'grid' | 'list'>((localStorage.getItem('orbit_pages_layout') 
 watch(sort, (v) => localStorage.setItem('orbit_pages_sort', v))
 watch(layout, (v) => localStorage.setItem('orbit_pages_layout', v))
 
+// Tags: the workspace's (most used first), one chosen to show its pages
+// (?tag=, where a tag under a page's title leads). "#word" in the filter
+// looks for tags too.
+const tag = computed(() => (typeof route.query.tag === 'string' ? route.query.tag : ''))
+const tagCounts = computed(() => {
+  const by = new Map<string, { tag: string; n: number }>()
+  for (const p of pages.byWs[ws.value] ?? []) {
+    for (const x of p.tags ?? []) {
+      const k = x.toLowerCase()
+      const had = by.get(k)
+      by.set(k, { tag: had?.tag ?? x, n: (had?.n ?? 0) + 1 })
+    }
+  }
+  return [...by.values()].sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag))
+})
+const pickTag = (x: string) => router.replace({ query: { ...route.query, tag: x.toLowerCase() === tag.value.toLowerCase() ? undefined : x } })
+const hasTag = (p: PageSummary, x: string) => (p.tags ?? []).some((y) => y.toLowerCase() === x.toLowerCase())
+
 const list = computed<PageSummary[]>(() => {
-  const all = [...(pages.byWs[ws.value] ?? [])]
+  const all = [...(pages.byWs[ws.value] ?? [])].filter((p) => !tag.value || hasTag(p, tag.value))
   const ql = q.value.trim().toLowerCase()
-  const shown = ql ? all.filter((p) => (p.title || t('pages.untitled')).toLowerCase().includes(ql)) : all
+  const shown = !ql
+    ? all
+    : ql.startsWith('#')
+      ? all.filter((p) => (p.tags ?? []).some((y) => y.toLowerCase().includes(ql.slice(1))))
+      : all.filter((p) => (p.title || t('pages.untitled')).toLowerCase().includes(ql) || (p.tags ?? []).some((y) => y.toLowerCase().includes(ql)))
   return shown.sort((a, b) => (sort.value === 'title' ? (a.title || '').localeCompare(b.title || '') : b.updated_at.localeCompare(a.updated_at)))
 })
 const parentTitle = (p: PageSummary) => (p.parent_id ? pages.find(p.parent_id)?.title : '')
@@ -101,6 +123,12 @@ async function create() {
       <RouterLink :to="{ name: 'ws-trash', params: { ws } }" class="btn btn-ghost"><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink>
     </div>
 
+    <div v-if="tagCounts.length" class="tag-bar" data-testid="tag-bar">
+      <button v-for="x in tagCounts" :key="x.tag" type="button" class="tag-pill" :class="{ on: x.tag.toLowerCase() === tag.toLowerCase() }" :aria-pressed="x.tag.toLowerCase() === tag.toLowerCase()" data-testid="tag-pill" @click="pickTag(x.tag)">
+        #{{ x.tag }} <span class="n">{{ x.n }}</span>
+      </button>
+    </div>
+
     <div v-if="list.length && layout === 'grid'" class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
       <RouterLink v-for="p in list" :key="p.id" :to="{ name: 'ws-page', params: { ws, page: p.id } }" class="tile-card card">
         <div class="thumb">
@@ -113,6 +141,7 @@ async function create() {
             <Star v-if="p.favorite" class="h-3 w-3 shrink-0 text-warn" fill="currentColor" />
           </div>
           <div class="truncate text-[12px] text-text-3">{{ parentTitle(p) ? parentTitle(p) + ' · ' : '' }}{{ relDay(p.updated_at.slice(0, 10)) }}</div>
+          <div v-if="p.tags?.length" class="mt-1 truncate text-[11.5px] text-text-3">{{ p.tags.map((x) => '#' + x).join(' ') }}</div>
         </div>
       </RouterLink>
     </div>
@@ -138,6 +167,31 @@ async function create() {
 </template>
 
 <style scoped>
+.tag-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -6px 0 16px;
+}
+.tag-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.tag-pill .n {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.tag-pill.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.tag-pill.on .n {
+  color: inherit;
+  opacity: 0.8;
+}
 .pages-view {
   padding: 32px clamp(16px, 4vw, 48px) 64px;
 }

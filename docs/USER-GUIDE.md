@@ -433,6 +433,19 @@ style (`-` bullets, `**bold**`, one blank line between blocks).
 
 Add an **icon** (emoji) and a **cover** (gradient or colour) from the header.
 
+**Tags and properties.** Under a page's title: **+ Tag** adds a tag (type
+it, or pick one the workspace has; Enter adds, Backspace removes the last)
+and **+ Property** adds one of the page's own properties — a name and its
+kind: **Text**, **Number**, **Date**, **Checkbox** or **Link** — whose
+value you set right there. Any page has them (a database's rows have the
+database's columns too). A tag is a link: it opens **Pages** showing the
+pages with it; **Pages** has a bar of the workspace's tags (most used
+first) to pick from, and `#word` in its filter looks among tags. ⌘K finds
+pages by their tags and their properties' values. Downloaded as Markdown
+(and in the Markdown zip), a page's tags and properties are its file's YAML
+header — as Obsidian keeps them — and Markdown files brought in with one
+get them back.
+
 **As files.** A page's `⋯` → **Download as Markdown** (a `.md` with the title
 as its first heading), **Copy as Markdown**, or **Download as PDF**: the
 page on white with its title, the workspace and the date, as a `.pdf` file

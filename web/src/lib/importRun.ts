@@ -6,7 +6,7 @@ import { Editor } from '@tiptap/core'
 import { pageExtensions } from '@/components/editor/extensions'
 import { pagesApi } from '@/api/planner'
 import { uploadFile } from './uploads'
-import { normalizeMarkdown, textToMarkdown } from './markdown'
+import { normalizeMarkdown, readFrontmatter, textToMarkdown, type PageField } from './markdown'
 import { baseOf, cleanName, csvRows, dirOf, isImage, mimeOf, plan, resolve, rewriteLinks, splitTitle, type InFile, type Planned } from './importPages'
 import { guessType, importValue, newId, type Database, type Props } from './database'
 import { i18n } from '@/i18n'
@@ -174,7 +174,14 @@ export async function importPages(ws: string, files: InFile[], parent: string | 
         return upload(path).catch(() => null)
       }
       let md = ''
-      const text = p.file ? decoder.decode(p.file.data) : ''
+      let text = p.file ? decoder.decode(p.file.data) : ''
+      // A Markdown file's YAML header (Obsidian's and the like): its tags and properties.
+      let meta: { tags: string[]; fields: PageField[] } | null = null
+      if (p.kind === 'md') {
+        const fm = readFrontmatter(text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'))
+        if (fm.tags.length || fm.fields.length) meta = { tags: fm.tags, fields: fm.fields }
+        text = fm.rest
+      }
       const dir = p.file ? dirOf(p.file.path) : p.key
       const of = p.parent ? tables.get(p.parent) : undefined
       if (p.kind === 'md') md = await rewriteLinks(of ? dropPropLines(splitTitle(text).body, of.headers) : splitTitle(text).body, dir, to)
@@ -216,6 +223,7 @@ export async function importPages(ws: string, files: InFile[], parent: string | 
       }
       if (tail.length) md = `${md}${md ? '\n\n' : ''}${tail.join('\n\n')}`
       if (md.trim()) await pagesApi.update(id, { content: md, version: 1 })
+      if (meta) await pagesApi.update(id, meta)
     } catch {
       res.failed.push(p.file?.path ?? p.key)
     }

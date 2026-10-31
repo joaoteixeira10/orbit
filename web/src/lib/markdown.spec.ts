@@ -40,9 +40,15 @@ describe('changing a page', () => {
 
 describe('files', () => {
   it('reads a heading as the title, else the file name', () => {
-    expect(fromFile('# Trip\n\nPack bags\n', 'x.md')).toEqual({ title: 'Trip', content: 'Pack bags' })
-    expect(fromFile('Just text', 'Ideas.md')).toEqual({ title: 'Ideas', content: 'Just text' })
+    expect(fromFile('# Trip\n\nPack bags\n', 'x.md')).toEqual({ title: 'Trip', content: 'Pack bags', tags: [], fields: [] })
+    expect(fromFile('Just text', 'Ideas.md')).toEqual({ title: 'Ideas', content: 'Just text', tags: [], fields: [] })
     expect(pageFile('Trip', 'Pack bags')).toBe('# Trip\n\nPack bags\n')
+    // Tags and properties: a YAML header, and back.
+    const file = pageFile('Trip', 'Pack bags', { tags: ['travel', 'Q3 plans'], fields: [{ key: 'Due', type: 'date', value: '2026-11-04' }, { key: 'Budget', type: 'number', value: 1200 }, { key: 'Booked', type: 'checkbox', value: true }, { key: 'Note: first', type: 'text', value: 'window seat' }] })
+    expect(file).toBe('---\ntags: ["travel","Q3 plans"]\nDue: "2026-11-04"\nBudget: 1200\nBooked: true\n"Note: first": "window seat"\n---\n# Trip\n\nPack bags\n')
+    expect(fromFile(file, 'x.md')).toEqual({ title: 'Trip', content: 'Pack bags', tags: ['travel', 'Q3 plans'], fields: [{ key: 'Due', type: 'date', value: '2026-11-04' }, { key: 'Budget', type: 'number', value: 1200 }, { key: 'Booked', type: 'checkbox', value: true }, { key: 'Note: first', type: 'text', value: 'window seat' }] })
+    // Obsidian's list of tags.
+    expect(fromFile('---\ntags:\n  - books\n  - "to read"\nauthor: Le Guin\n---\nText', 'Dune.md')).toMatchObject({ title: 'Dune', tags: ['books', 'to read'], fields: [{ key: 'author', type: 'text', value: 'Le Guin' }] })
   })
   it('writes a note as Markdown that reads back as the same text', () => {
     const text = '- not a list\n2 * 3 = 6 and *stars*\n# not a heading\n<b>tag</b> and [x](y)'

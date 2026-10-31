@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -39,6 +40,7 @@ type pageSummary struct {
 	// A database's properties and views; a row's values (JSON objects).
 	DB    json.RawMessage `json:"db,omitempty" swaggertype:"object"`
 	Props json.RawMessage `json:"props,omitempty" swaggertype:"object"`
+	Tags  []string        `json:"tags,omitempty"`
 }
 
 // pageResponse is a full page plus what the caller may do with it.
@@ -49,6 +51,8 @@ type pageResponse struct {
 	CanEdit      bool            `json:"can_edit"`
 	DB           json.RawMessage `json:"db,omitempty" swaggertype:"object"`
 	Props        json.RawMessage `json:"props,omitempty" swaggertype:"object"`
+	Tags         []string        `json:"tags"`
+	Fields       json.RawMessage `json:"fields,omitempty" swaggertype:"array,object"` // its own properties: [{key, type, value}]
 }
 
 // rawJSON is s as JSON (nothing when empty).
@@ -60,7 +64,7 @@ func rawJSON(s string) json.RawMessage {
 }
 
 func pageOut(p models.Page, fav, canEdit bool) pageResponse {
-	return pageResponse{Page: p, AllowedUsers: decodeIDs(p.AllowedUsers), Favorite: fav, CanEdit: canEdit, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
+	return pageResponse{Page: p, AllowedUsers: decodeIDs(p.AllowedUsers), Favorite: fav, CanEdit: canEdit, DB: rawJSON(p.DB), Props: rawJSON(p.Props), Tags: decodeList(p.Tags), Fields: rawJSON(p.Fields)}
 }
 
 func (h *Handlers) favoriteSet(uid string) map[string]bool {
@@ -74,7 +78,15 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, Glossary: p.Glossary, DB: rawJSON(p.DB), Props: rawJSON(p.Props)}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, Glossary: p.Glossary, DB: rawJSON(p.DB), Props: rawJSON(p.Props), Tags: tagsOf(p.Tags)}
+}
+
+// tagsOf: a page's tags (nil: none, left out).
+func tagsOf(s string) []string {
+	if t := decodeList(s); len(t) > 0 {
+		return t
+	}
+	return nil
 }
 
 // pageAccess loads a page and checks the caller's role in its workspace.
@@ -107,7 +119,11 @@ func (h *Handlers) listPages(c *gin.Context) {
 		return
 	}
 	var pages []models.Page
-	h.db.Omit("content", "content_text").Where("workspace_id = ? AND trashed_at IS NULL", ws.ID).Order("rank").Find(&pages)
+	q := h.db.Omit("content", "content_text", "fields_text").Where("workspace_id = ? AND trashed_at IS NULL", ws.ID)
+	if tag := strings.TrimSpace(c.Query("tag")); tag != "" {
+		q = q.Where(`LOWER(tags) LIKE ? ESCAPE '\'`, "%"+strings.ToLower(likeEscape(`"`+tag+`"`))+"%")
+	}
+	q.Order("rank").Find(&pages)
 	fav := h.favoriteSet(auth.UserID(c))
 	g := h.gate(auth.UserID(c), ws.ID)
 	out := make([]pageSummary, 0, len(pages))
@@ -116,6 +132,55 @@ func (h *Handlers) listPages(c *gin.Context) {
 			out = append(out, summarize(p, fav))
 		}
 	}
+	c.JSON(http.StatusOK, out)
+}
+
+type tagCount struct {
+	Tag   string `json:"tag"`
+	Count int    `json:"count"` // pages with it (that the caller sees)
+}
+
+// listTags lists a workspace's page tags, most used first.
+//
+//	@Summary	A workspace's tags
+//	@Tags		pages
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		ws	path	string	true	"Workspace id"
+//	@Success	200	{array}	tagCount
+//	@Router		/workspaces/{ws}/tags [get]
+func (h *Handlers) listTags(c *gin.Context) {
+	ws, _, ok := h.wsAccess(c, c.Param("ws"), models.WSViewer)
+	if !ok {
+		return
+	}
+	var pages []models.Page
+	h.db.Select("id", "tags").Where("workspace_id = ? AND trashed_at IS NULL AND tags IS NOT NULL AND tags <> '' AND tags <> '[]'", ws.ID).Find(&pages)
+	g := h.gate(auth.UserID(c), ws.ID)
+	counts := map[string]int{}
+	shown := map[string]string{} // the first spelling met
+	for _, p := range pages {
+		if !g.sees(p.ID) {
+			continue
+		}
+		for _, t := range decodeList(p.Tags) {
+			k := strings.ToLower(t)
+			if _, ok := shown[k]; !ok {
+				shown[k] = t
+			}
+			counts[k]++
+		}
+	}
+	out := make([]tagCount, 0, len(counts))
+	for k, n := range counts {
+		out = append(out, tagCount{Tag: shown[k], Count: n})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		return strings.ToLower(out[i].Tag) < strings.ToLower(out[j].Tag)
+	})
 	c.JSON(http.StatusOK, out)
 }
 
@@ -328,6 +393,10 @@ type updatePageRequest struct {
 	// row's values (a null value removes one).
 	DB    json.RawMessage `json:"db" swaggertype:"object"`
 	Props json.RawMessage `json:"props" swaggertype:"object"`
+	// Tags (all of them) and Fields (its own properties, all of them:
+	// [{key, type: text|number|date|checkbox|url, value}]) — any page.
+	Tags   *[]string       `json:"tags" binding:"omitempty,max=60"`
+	Fields json.RawMessage `json:"fields" swaggertype:"array,object"`
 	// Version is the version the editor started from; required with content.
 	// A newer save by someone else makes this a 409 with the current page.
 	Version int `json:"version"`
@@ -385,6 +454,22 @@ func (h *Handlers) updatePage(c *gin.Context) {
 			return
 		}
 		up["db"] = d
+	}
+	if req.Tags != nil {
+		tags, err := planner.CleanTags(*req.Tags)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		up["tags"] = encodeList(tags)
+	}
+	if len(req.Fields) > 0 {
+		fields, err := planner.CleanFields(string(req.Fields))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		up["fields"], up["fields_text"] = fields, planner.FieldsText(fields)
 	}
 	if len(req.Props) > 0 && string(req.Props) != "null" {
 		merged, err := planner.MergeProps(p.Props, string(req.Props))
@@ -588,6 +673,7 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 		WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title + " (copy)", Icon: p.Icon, Cover: p.Cover,
 		Restricted: p.Restricted, AllowedUsers: p.AllowedUsers, // a copy is no wider
 		Content: p.Content, ContentText: p.ContentText, CreatedBy: uid, UpdatedBy: uid, DB: p.DB, Props: p.Props,
+		Tags: p.Tags, Fields: p.Fields, FieldsText: p.FieldsText,
 		Rank: h.siblingRank(h.db, p.WorkspaceID, p.ParentID, p.ID, ""),
 	}
 	if err := h.db.Create(&cp).Error; err != nil {
@@ -759,7 +845,7 @@ func (h *Handlers) exportPages(c *gin.Context) {
 			if title == "" {
 				title = "Untitled"
 			}
-			body := "# " + planner.Escape(title) + "\n"
+			body := planner.Frontmatter(p.Tags, p.Fields) + "# " + planner.Escape(title) + "\n"
 			if p.ParentID != nil {
 				if db := planner.ParseDatabase(byPage[*p.ParentID].DB); db != nil {
 					if lines := planner.PropLines(*db, p.Props, names); lines != "" {

@@ -93,7 +93,7 @@ const copyLink = () =>
 // As a .md file (or on the clipboard): the title as a heading, then the page.
 const asMarkdown = async () => {
   const p = await pagesApi.get(props.pageId)
-  return { name: fileName(p.title || t('pages.untitled')) + '.md', text: pageFile(p.title || t('pages.untitled'), p.content) }
+  return { name: fileName(p.title || t('pages.untitled')) + '.md', text: pageFile(p.title || t('pages.untitled'), p.content, { tags: p.tags, fields: p.fields }) }
 }
 const downloadMd = () => run(async () => {
   const f = await asMarkdown()

@@ -81,6 +81,11 @@ type Page struct {
 	// property id (JSON). The API answers both as JSON objects.
 	DB    string `gorm:"type:text" json:"db,omitempty"`
 	Props string `gorm:"type:text" json:"props,omitempty"`
+	// Tags (JSON []string) and Fields — its own properties, any page
+	// (JSON []planner.Field: key, type, value) — and their words for search.
+	Tags       string `gorm:"type:text" json:"tags,omitempty"`
+	Fields     string `gorm:"type:text" json:"fields,omitempty"`
+	FieldsText string `gorm:"type:text" json:"-"`
 	// Restricted: only AllowedUsers (JSON []user id) see it and what's
 	// under it (api/page_access.go).
 	Restricted bool `gorm:"not null;default:false;index" json:"restricted"`

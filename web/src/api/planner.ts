@@ -1,6 +1,7 @@
 // The planner's endpoints: workspaces and members, pages, task lists and
 // tasks, the calendar (events, subscriptions, feeds), Home and search.
 // Shapes mirror the Go handlers (api/internal/api/handlers_*.go).
+import type { PageField } from '@/lib/markdown'
 import { api } from '@/lib/api'
 import type { TaskFilter } from '@/lib/taskFilter'
 import type { Database, PropValue, Props } from '@/lib/database'
@@ -75,8 +76,10 @@ export interface PageSummary {
   template?: boolean // offered when a new page starts empty
   db?: Database // it's a database of the pages inside it
   props?: Props // its values, as a row of its parent's database
+  tags?: string[] // any page's tags
 }
 export interface Page extends PageSummary {
+  fields?: PageField[] // its own properties (any page)
   cover: string
   content: string
   version: number
@@ -448,8 +451,11 @@ export const pagesApi = {
   // What links to a page: other pages, and tasks whose notes do.
   backlinks: (id: string) => api<{ pages: PageSummary[]; tasks: { id: string; title: string; list_id: string; done: boolean }[] }>(`/pages/${id}/backlinks`),
   // together: saved by the tab that saves for everyone editing it at once.
-  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; glossary?: boolean; db?: Database | null; props?: Record<string, PropValue | null> }, together = false) =>
+  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; glossary?: boolean; db?: Database | null; props?: Record<string, PropValue | null>; tags?: string[]; fields?: PageField[] }, together = false) =>
     api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b), headers: together ? { 'X-Orbit-Collab': '1' } : undefined }).then(withContent),
+  // A workspace's tags (most used first), and its pages with one.
+  tags: (ws: string) => api<{ tag: string; count: number }[]>(`/workspaces/${ws}/tags`),
+  withTag: (ws: string, tag: string) => api<PageSummary[]>(`/workspaces/${ws}/pages?tag=${encodeURIComponent(tag)}`),
   move: (id: string, parent_id: string | null, after_id: string) => api<PageSummary>(`/pages/${id}/move`, { method: 'POST', body: j({ parent_id, after_id }) }),
   trashPage: (id: string) => api<void>(`/pages/${id}`, { method: 'DELETE' }),
   destroy: (id: string) => api<void>(`/pages/${id}?permanent=1`, { method: 'DELETE' }),

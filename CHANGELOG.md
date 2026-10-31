@@ -33,6 +33,12 @@ merge, not at release time.
 
 ### Added
 
+- **Tags and properties on any page** — tags (chips under the title, the
+  workspace's suggested; a tag opens Pages filtered by it; a tag bar in
+  Pages) and the page's own properties (text, number, date, checkbox, link);
+  found by ⌘K; a Markdown file's YAML header out and in (Obsidian's style),
+  and through the assistants' tool. API: `tags`, `fields` on a page,
+  `GET /workspaces/{ws}/tags`, `GET /workspaces/{ws}/pages?tag=`.
 - **Presence** — the initials of everyone else on a page, sheet, diagram or
   whiteboard right now, ringed when editing (`POST /presence/{kind}/{id}`,
   a heartbeat per tab).

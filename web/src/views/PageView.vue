@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import PresenceAvatars from '@/components/ui/PresenceAvatars.vue'
+import PageMeta from '@/components/pages/PageMeta.vue'
+import type { PageField } from '@/lib/markdown'
 import { usePresence } from '@/lib/presence'
 import { ref, computed, watch, nextTick, onMounted, onUnmounted, shallowRef } from 'vue'
 import { CollabLink } from '@/lib/collab'
@@ -787,6 +789,12 @@ watch(leader, (on) => {
   if (on && together.value && dirty.value) schedule(300)
 })
 onUnmounted(() => void leaveTogether())
+
+// Tags and properties saved (under the title): the page and the tree know.
+function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
+  if (page.value) page.value = { ...page.value, ...b }
+  if (b.tags && page.value) pages.patch({ id: page.value.id, tags: b.tags })
+}
 </script>
 
 <template>
@@ -948,6 +956,7 @@ onUnmounted(() => void leaveTogether())
               <span v-if="o.icon">{{ o.icon }}</span><LayoutTemplate v-else class="h-3.5 w-3.5" />{{ o.title || t('pages.untitled') }}
             </button>
           </div>
+          <PageMeta :ws="wsId" :page-id="page.id" :tags="page.tags ?? []" :fields="page.fields ?? []" :editable="editable" @saved="onMetaSaved" />
           <RowProps v-if="parentDb" :ws="wsId" :page-id="page.id" :db-id="parentDb" :editable="editable" />
           <DatabaseView v-if="isDb" :ws="wsId" :page-id="page.id" :editable="editable" />
           <p v-if="isTemplate && editable" class="tpl-note"><LayoutTemplate class="h-3.5 w-3.5 shrink-0" />{{ t('pages.isTemplate', { fields: PLACEHOLDERS }) }}</p>

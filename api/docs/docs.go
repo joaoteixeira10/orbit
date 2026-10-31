@@ -10867,6 +10867,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/tags": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "summary": "A workspace's tags",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.tagCount"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/tasks": {
             "get": {
                 "security": [
@@ -14179,6 +14215,13 @@ const docTemplate = `{
                 "favorite": {
                     "type": "boolean"
                 },
+                "fields": {
+                    "description": "its own properties: [{key, type, value}]",
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
                 "folder_id": {
                     "description": "a folder it's filed in (\"\" none); its sub-pages go with it",
                     "type": "string"
@@ -14205,6 +14248,12 @@ const docTemplate = `{
                 "restricted": {
                     "description": "Restricted: only AllowedUsers (JSON []user id) see it and what's\nunder it (api/page_access.go).",
                     "type": "boolean"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "template": {
                     "description": "Template: offered when a new page starts empty (its title and\ndocument, its placeholders — the date and the like — filled in).",
@@ -14265,6 +14314,12 @@ const docTemplate = `{
                 "restricted": {
                     "description": "only some people see it (and what's under it)",
                     "type": "boolean"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "template": {
                     "type": "boolean"
@@ -14995,6 +15050,18 @@ const docTemplate = `{
                 }
             }
         },
+        "api.tagCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "pages with it (that the caller sees)",
+                    "type": "integer"
+                },
+                "tag": {
+                    "type": "string"
+                }
+            }
+        },
         "api.taskRequest": {
             "type": "object",
             "properties": {
@@ -15288,6 +15355,12 @@ const docTemplate = `{
                     "description": "DB: the whole database (null: no longer one). Props: a patch of the\nrow's values (a null value removes one).",
                     "type": "object"
                 },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
                 "glossary": {
                     "description": "Glossary: its terms are explained where other pages use them.",
                     "type": "boolean"
@@ -15298,6 +15371,14 @@ const docTemplate = `{
                 },
                 "props": {
                     "type": "object"
+                },
+                "tags": {
+                    "description": "Tags (all of them) and Fields (its own properties, all of them:\n[{key, type: text|number|date|checkbox|url, value}]) — any page.",
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "template": {
                     "description": "Template offers the page as a template for new pages.",

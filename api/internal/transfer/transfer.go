@@ -617,6 +617,19 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			p.ID, p.WorkspaceID, p.ParentID, p.FolderID = ref(x.ID), ws.ID, refp(x.ParentID), ref(x.FolderID)
 			p.Content = rewrite(p.Content)
 			p.ContentText = planner.DocText(p.Content)
+			if f, err := planner.CleanFields(p.Fields); err == nil {
+				p.Fields, p.FieldsText = f, planner.FieldsText(f)
+			} else {
+				p.Fields, p.FieldsText = "", ""
+			}
+			var tags []string
+			_ = json.Unmarshal([]byte(p.Tags), &tags)
+			if tags, err := planner.CleanTags(tags); err == nil && len(tags) > 0 {
+				b, _ := json.Marshal(tags)
+				p.Tags = string(b)
+			} else {
+				p.Tags = ""
+			}
 			p.CreatedBy, p.UpdatedBy, p.TrashedAt = who(x.CreatedBy), who(x.UpdatedBy), nil
 			if err := tx.Create(&p).Error; err != nil {
 				return err

@@ -2797,6 +2797,43 @@ test('drawing together: a stroke on one screen shows on the other; saved once', 
   await ctx.close()
 })
 
+test('tags and properties on any page: added under its title, a tag leads to its pages, a property has its kind', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Travels', kind: 'personal', starter: false, modules: ['home', 'pages'] } })).json()
+  const lisbon = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Lisbon', content: 'Trams.' } })).json()
+  const porto = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Porto', content: 'Wine.' } })).json()
+  await request.put(`/api/v1/pages/${porto.id}`, { headers: H, data: { tags: ['portugal'] } })
+  const saved = async () => (await (await request.get(`/api/v1/pages/${lisbon.id}`, { headers: H })).json()) as { tags: string[]; fields?: { key: string; type: string; value: unknown }[] }
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/p/${lisbon.id}`)
+  // A tag: typed, or one the workspace has (suggested).
+  await page.getByTestId('add-tag').click()
+  await page.getByTestId('tag-input').fill('port')
+  await page.getByTestId('tag-suggestion').filter({ hasText: '#portugal' }).click()
+  await page.getByTestId('tag-input').fill('city break')
+  await page.getByTestId('tag-input').press('Enter')
+  await expect(page.getByTestId('page-tag')).toHaveText(['#portugal', '#city break'])
+  await expect.poll(async () => (await saved()).tags).toEqual(['portugal', 'city break'])
+  // A property, a date.
+  await page.getByTestId('add-field').click()
+  await page.getByTestId('field-name').fill('Leaving')
+  await page.getByTestId('field-kind-date').click()
+  await page.getByTestId('field-add').click()
+  await page.getByTestId('page-field').getByTestId('field-value').fill('2026-12-01')
+  await page.getByTestId('page-field').getByTestId('field-value').press('Enter')
+  await expect.poll(async () => (await saved()).fields).toEqual([{ key: 'Leaving', type: 'date', value: '2026-12-01' }])
+  // The tag leads to its pages.
+  await page.getByTestId('page-tag').filter({ hasText: '#portugal' }).locator('.tag-name').click()
+  await expect(page).toHaveURL(/\/pages\?tag=portugal/)
+  await expect(page.getByTestId('tag-pill').filter({ hasText: '#portugal' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.tile-card')).toHaveCount(2)
+  await page.getByTestId('tag-pill').filter({ hasText: '#city break' }).click()
+  await expect(page.locator('.tile-card')).toHaveText([/Lisbon/])
+})
+
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

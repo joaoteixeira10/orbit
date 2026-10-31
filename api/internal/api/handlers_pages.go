@@ -790,13 +790,13 @@ func (h *Handlers) exportPages(c *gin.Context) {
 		if err != nil {
 			break
 		}
-		var blob models.UploadBlob
-		if h.db.First(&blob, "id = ?", id).Error != nil {
+		data, rerr := uploads.Read(h.db, byID[id])
+		if rerr != nil {
 			continue
 		}
 		var f io.Writer
 		if f, err = zw.CreateHeader(&zip.FileHeader{Name: attachment(byID[id]), Method: zip.Store, Modified: byID[id].CreatedAt}); err == nil {
-			_, err = f.Write(blob.Data)
+			_, err = f.Write(data)
 		}
 	}
 	if err != nil || zw.Close() != nil {

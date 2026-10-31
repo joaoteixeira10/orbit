@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/backup"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/version"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,9 @@ type backupScheduleView struct {
 	// Supported: backups can be made here (SQLite); on PostgreSQL they're
 	// made with its own tools.
 	Supported bool `json:"supported"`
+	// FilesStore is where files' bytes are kept (db, dir or s3): only in
+	// the database are they in the archive.
+	FilesStore string `json:"files_store"`
 }
 
 // getBackupSchedule returns the automatic backup and how its last run went (owner).
@@ -66,7 +70,7 @@ type backupScheduleView struct {
 //	@Success	200	{object}	backupScheduleView
 //	@Router		/backup/schedule [get]
 func (h *Handlers) getBackupSchedule(c *gin.Context) {
-	c.JSON(http.StatusOK, backupScheduleView{backup.LoadSchedule(h.db), backup.LoadLastRun(h.db), backup.Supported(h.db)})
+	c.JSON(http.StatusOK, backupScheduleView{backup.LoadSchedule(h.db), backup.LoadLastRun(h.db), backup.Supported(h.db), uploads.Current().Kind()})
 }
 
 // updateBackupSchedule sets the automatic backup (owner).

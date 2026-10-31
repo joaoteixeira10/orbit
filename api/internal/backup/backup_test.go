@@ -11,6 +11,7 @@ import (
 	dbpkg "gitea.ubonito.org/jteixeira/orbit/api/internal/db"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -160,5 +161,41 @@ func TestScheduleDir(t *testing.T) {
 	}
 	if last := LoadLastRun(gdb); !last.OK || !strings.HasPrefix(last.Where, out) {
 		t.Errorf("last run: %+v", last)
+	}
+}
+
+// TestScheduleCopiesFiles: with files kept in a directory (so not in the
+// archive), each run copies the ones not copied yet beside the archives.
+func TestScheduleCopiesFiles(t *testing.T) {
+	dir := t.TempDir()
+	gdb, s := testDB(t, filepath.Join(dir, "live.db"))
+	uploads.Use(uploads.DirStore{Root: filepath.Join(dir, "files")})
+	t.Cleanup(func() { uploads.Use(uploads.DBStore{}) })
+	add := func(body string) {
+		u := models.Upload{OwnerID: "u", Target: "note", TargetID: "n", Name: body + ".txt"}
+		if err := uploads.Create(gdb, &u, []byte(body), 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add("one")
+	add("one") // the same bytes: one file
+	add("two")
+	out := filepath.Join(dir, "backups")
+	sch := Schedule{Enabled: true, IntervalHours: 1, Dest: "dir", Dir: out, Keep: 2}
+	now := time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC)
+	if r := RunNow(gdb, s, sch, "1", now); !r.OK || r.Files != 2 {
+		t.Fatalf("first run: %+v", r)
+	}
+	add("three")
+	if r := RunNow(gdb, s, sch, "1", now.Add(time.Hour)); !r.OK || r.Files != 1 {
+		t.Fatalf("second run copies only the new one: %+v", r)
+	}
+	copied, _ := filepath.Glob(filepath.Join(out, "files", "*", "*"))
+	if len(copied) != 3 {
+		t.Fatalf("copied: %v", copied)
+	}
+	b, err := os.ReadFile(filepath.Join(out, "files", uploads.Sum([]byte("two"))[:2], uploads.Sum([]byte("two"))))
+	if err != nil || string(b) != "two" {
+		t.Fatalf("a copy: %q %v", b, err)
 	}
 }

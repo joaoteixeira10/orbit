@@ -11,6 +11,7 @@ import (
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"gorm.io/gorm"
 )
@@ -44,6 +45,7 @@ type LastRun struct {
 	At    time.Time `json:"at"`
 	OK    bool      `json:"ok"`
 	Where string    `json:"where,omitempty"` // the file or s3:// location
+	Files int       `json:"files,omitempty"` // files copied beside it (a directory store)
 	Error string    `json:"error,omitempty"`
 }
 
@@ -141,12 +143,57 @@ func RunNow(db *gorm.DB, sealer *keystore.Sealer, s Schedule, appVersion string,
 			r.Where, err = writeDir(s, name, archive)
 		}
 	}
+	if err == nil {
+		r.Files, err = mirrorFiles(db, s)
+	}
 	r.OK = err == nil
 	if err != nil {
 		r.Error = err.Error()
 	}
 	saveLastRun(db, r)
 	return r
+}
+
+// mirrorFiles copies the files kept in a directory store (they aren't in
+// the database, so not in the archive) beside the archives, in files/ — only
+// those not there yet: a file never changes once written. Kept in the
+// database, the archive has them; in S3, the bucket keeps its own (turn its
+// versioning on).
+func mirrorFiles(db *gorm.DB, s Schedule) (int, error) {
+	if uploads.Current().Kind() != uploads.StoreDir {
+		return 0, nil
+	}
+	var to uploads.Store = uploads.DirStore{Root: filepath.Join(s.Dir, "files")}
+	if s.Dest == "s3" {
+		ak, sk, err := s3Keys()
+		if err != nil {
+			return 0, err
+		}
+		if to, err = uploads.NewS3(uploads.S3Config{Bucket: s.S3Bucket, Prefix: s3Key(s, "files"), Endpoint: s.S3Endpoint, Region: s.S3Region, AccessKey: ak, SecretKey: sk}); err != nil {
+			return 0, err
+		}
+	}
+	have := map[string]bool{}
+	if err := to.Each(db, func(sum string) error { have[sum] = true; return nil }); err != nil {
+		return 0, fmt.Errorf("files: %w", err)
+	}
+	var sums []string
+	db.Model(&models.Upload{}).Distinct("sha256").Where("sha256 <> ''").Pluck("sha256", &sums)
+	n := 0
+	for _, sum := range sums {
+		if have[sum] {
+			continue
+		}
+		data, err := uploads.Current().Get(db, sum)
+		if err != nil {
+			return n, fmt.Errorf("files: %s: %w", sum, err)
+		}
+		if err := to.Put(db, sum, data); err != nil {
+			return n, fmt.Errorf("files: %w", err)
+		}
+		n++
+	}
+	return n, nil
 }
 
 func writeDir(s Schedule, name string, archive []byte) (string, error) {

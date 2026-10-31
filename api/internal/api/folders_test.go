@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 )
 
@@ -100,4 +101,83 @@ func TestFolders(t *testing.T) {
 	if ds[0].FolderID != "" || ss[0].FolderID != logos.ID {
 		t.Errorf("contents after delete: %+v %+v", ds, ss)
 	}
+}
+
+// TestListFolders: every list gets its own folder (made with it: by hand,
+// from a template); a rename follows while the folder kept the list's name;
+// a folder of the same name with no list is joined instead of a second one;
+// deleting the list keeps the folder; templates turn Files on.
+func TestListFolders(t *testing.T) {
+	r, _, _, alice, _ := plannerSetupDB(t)
+	ws := createWS(t, r, alice, `{"name":"Studio","kind":"work"}`) // the template's Projects list
+	if !slices.Contains(ws.Modules, "files") {
+		t.Fatalf("a template without Files: %v", ws.Modules)
+	}
+	base := "/api/v1/workspaces/" + ws.ID
+	type folder struct {
+		ID, Name, Color string
+		ListID          string `json:"list_id"`
+	}
+	folders := func() map[string]folder {
+		var fs []folder
+		decode(t, authdo(r, "GET", base+"/folders", "", alice), &fs)
+		out := map[string]folder{}
+		for _, f := range fs {
+			out[f.Name] = f
+		}
+		return out
+	}
+	var lists []struct {
+		ID, Name string
+		FolderID string `json:"folder_id"`
+	}
+	decode(t, authdo(r, "GET", base+"/lists", "", alice), &lists)
+	if len(lists) != 1 || lists[0].FolderID == "" || folders()[lists[0].Name].ListID != lists[0].ID {
+		t.Fatalf("the template's list has no folder: %+v %+v", lists, folders())
+	}
+
+	// By hand: its own folder, coloured as it.
+	var l struct{ ID string }
+	decode(t, authdo(r, "POST", base+"/lists", `{"name":"Launch","color":"#ff9500"}`, alice), &l)
+	if f := folders()["Launch"]; f.ListID != l.ID || f.Color != "#ff9500" {
+		t.Fatalf("a new list's folder: %+v", f)
+	}
+	// Renamed: the folder follows; renamed apart, it no longer does.
+	expect(t, authdo(r, "PUT", "/api/v1/lists/"+l.ID, `{"name":"Launch 2027","color":"#34c759"}`, alice), http.StatusOK, "rename")
+	f := folders()["Launch 2027"]
+	if f.ListID != l.ID || f.Color != "#34c759" {
+		t.Fatalf("after the rename: %+v", folders())
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/folders/"+f.ID, `{"name":"Our launch"}`, alice), http.StatusOK, "folder renamed apart")
+	expect(t, authdo(r, "PUT", "/api/v1/lists/"+l.ID, `{"name":"Launch 2028"}`, alice), http.StatusOK, "rename again")
+	if _, ok := folders()["Our launch"]; !ok {
+		t.Fatalf("a folder named apart was renamed: %+v", folders())
+	}
+
+	// A folder of that name with no list is joined (no second one).
+	var ads folderResp
+	decode(t, authdo(r, "POST", base+"/folders", `{"name":"Ads"}`, alice), &ads)
+	var adsList struct{ ID string }
+	decode(t, authdo(r, "POST", base+"/lists", `{"name":"Ads"}`, alice), &adsList)
+	if fs := folders(); len(fs) != 3 || fs["Ads"].ID != ads.ID || fs["Ads"].ListID != adsList.ID {
+		t.Fatalf("joined the folder there was: %+v", fs)
+	}
+
+	// The list deleted: its folder stays, unjoined.
+	expect(t, authdo(r, "DELETE", "/api/v1/lists/"+adsList.ID, "", alice), http.StatusNoContent, "delete list")
+	if f, ok := folders()["Ads"]; !ok || f.ListID != "" {
+		t.Fatalf("after the list went: %+v", folders())
+	}
+
+	// Made with no folder, or into one chosen.
+	var bare, into struct {
+		ID       string
+		FolderID string `json:"folder_id"`
+	}
+	decode(t, authdo(r, "POST", base+"/lists", `{"name":"Loose","folder_id":"none"}`, alice), &bare)
+	decode(t, authdo(r, "POST", base+"/lists", `{"name":"Ads again","folder_id":"`+ads.ID+`"}`, alice), &into)
+	if _, made := folders()["Loose"]; made || bare.FolderID != "" || into.FolderID != ads.ID {
+		t.Fatalf("chosen folders: %+v %+v %+v", bare, into, folders())
+	}
+	expect(t, authdo(r, "POST", base+"/lists", `{"name":"X","folder_id":"nope"}`, alice), http.StatusBadRequest, "a folder elsewhere")
 }

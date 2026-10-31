@@ -101,7 +101,8 @@ watch(
       color.value = workspace.value?.color || '#007AFF'
       columns.value = [draft({ name: t('lists.todo') }), draft({ name: t('lists.doing') }), draft({ name: t('lists.finished'), done: true })]
     }
-    folderId.value = list.value?.folder_id ?? ''
+    // A new list gets a folder of its own unless another is chosen.
+    folderId.value = list.value ? (list.value.folder_id ?? '') : NEW_FOLDER
     if (hasFiles.value) {
       filesApi
         .folders(props.ws)
@@ -180,10 +181,13 @@ async function save() {
   }
   try {
     const before = list.value?.columns.map((c) => c.id) ?? []
-    const saved = props.listId ? await tasksApi.updateList(props.listId, body) : await tasksApi.createList(props.ws, body)
+    // Made: its folder comes with it (its own, another, or none).
+    const into = folderId.value === NEW_FOLDER ? undefined : folderId.value || 'none'
+    const saved = props.listId ? await tasksApi.updateList(props.listId, body) : await tasksApi.createList(props.ws, { ...body, folder_id: into })
     const was = list.value?.folder_id ?? ''
     let folder = folderId.value
-    if (hasFiles.value && folder !== was) {
+    if (!props.listId) folder = saved.folder_id ?? ''
+    else if (hasFiles.value && folder !== was) {
       if (folder === NEW_FOLDER) folder = (await filesApi.createFolder(props.ws, { name: saved.name, color: saved.color, list_id: saved.id })).id
       else if (folder) await filesApi.updateFolder(folder, { list_id: saved.id })
       else await filesApi.updateFolder(was, { list_id: '' })

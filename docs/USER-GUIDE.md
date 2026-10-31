@@ -1257,6 +1257,12 @@ them all together. A folder's tile says what it holds of every kind
 - **Pages in folders.** A page's `⋯` → **File in a folder…** puts it in one
   (its sub-pages stay under it in Pages); **New → New page** in Files makes
   one in the folder shown. Pages not filed anywhere are only in Pages.
+- **Every list has its own folder** (its project), made with it, named and
+  coloured as it (renamed with it while the folder keeps the list's name; a
+  folder of that name at the top with no list is used instead of a second
+  one). Deleting the list keeps the folder and what's in it. **Files** is on
+  by default in a workspace with tasks, pages, sheets, diagrams or
+  whiteboards (turn it off in the workspace's settings).
 - **A folder is a project** when it has a task list: its `⋯` → **Task
   list…** picks one (or **New list** named after the folder) — or, from the
   list's side, its edit sheet (the pencil in Tasks, **Edit list** on the
@@ -1629,6 +1635,11 @@ every workspace and its content, settings and the audit log.
 - **Restore**: stop Orbit and run `orbit restore-backup` (see
   [Configuration](CONFIGURATION.md#commands-in-the-binary)); the old database is
   kept as a copy.
+- **Files** (attachments, pictures) are in the archive when they're kept in
+  the database (the default). Kept in a directory (`UPLOAD_STORE=dir`), each
+  automatic backup copies the new ones into `files/` beside its archives;
+  kept in S3, back the bucket up there. The card says which applies (see
+  [Configuration → Uploads](CONFIGURATION.md#uploads)).
 
 **Security alerts.** Get a message when one of these happens:
 

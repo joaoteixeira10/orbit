@@ -2139,7 +2139,7 @@ test('diagrams: draw.io in a frame saves the file, a picture and its words; a fi
 test('files: sheets, diagrams and whiteboards in folders inside folders — moved, dragged, renamed, copied, a folder deleted keeps what it held', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
-  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio', kind: 'personal', modules: ['home', 'files', 'sheets', 'diagrams', 'whiteboards'] } })).json()
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio', kind: 'personal', starter: false, modules: ['home', 'files', 'sheets', 'diagrams', 'whiteboards'] } })).json()
   const base = `/api/v1/workspaces/${ws.id}`
   await request.post(`${base}/sheets`, { headers: H, data: { title: 'Budget', data: { tabs: [] } } })
   await request.post(`${base}/diagrams`, { headers: H, data: { title: 'Flow', data: '<mxfile><diagram name="A"><mxGraphModel><root/></mxGraphModel></diagram></mxfile>', preview: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#ff9500"/></svg>' } })
@@ -2370,7 +2370,8 @@ test('projects: a folder joined to a task list shows its progress; the list show
   const H = { Authorization: `Bearer ${login.access_token}` }
   const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio X', kind: 'work', modules: ['home', 'tasks', 'board', 'pages', 'sheets', 'diagrams', 'files'] } })).json()
   const base = `/api/v1/workspaces/${ws.id}`
-  const list = await (await request.post(`${base}/lists`, { headers: H, data: { name: 'Launch', color: '#ff9500' } })).json()
+  // (Made without its own folder, to join one from the folder's side.)
+  const list = await (await request.post(`${base}/lists`, { headers: H, data: { name: 'Launch', color: '#ff9500', folder_id: 'none' } })).json()
   const done = await (await request.post(`${base}/tasks`, { headers: H, data: { title: 'Logo', list_id: list.id } })).json()
   await request.post(`${base}/tasks`, { headers: H, data: { title: 'Website', list_id: list.id } })
   await request.put(`/api/v1/tasks/${done.id}`, { headers: H, data: { completed: true } })
@@ -2420,22 +2421,25 @@ test('projects: a folder joined to a task list shows its progress; the list show
   const pages = (await (await request.get(`${base}/pages`, { headers: H })).json()) as { id: string; folder_id?: string }[]
   expect(pages.find((p) => p.id === made)?.folder_id).toBe(folder.id)
 
-  // The other way round: a list given a folder from its own sheet — a new
-  // one named after it, then none.
+  // The other way round, from the list's own sheet: a list comes with its
+  // own folder; then none; then that folder again.
   const ads = await (await request.post(`${base}/lists`, { headers: H, data: { name: 'Ads', color: '#34c759' } })).json()
-  const foldersNow = async () => (await (await request.get(`${base}/folders`, { headers: H })).json()) as { name: string; list_id?: string }[]
+  const foldersNow = async () => (await (await request.get(`${base}/folders`, { headers: H })).json()) as { id: string; name: string; list_id?: string }[]
+  const adsFolder = (await foldersNow()).find((f) => f.name === 'Ads')!
+  expect(adsFolder.list_id).toBe(ads.id)
   await page.goto(`/w/${ws.id}/tasks/${ads.id}`)
-  await page.getByTitle('Edit list').click()
-  await page.getByTestId('list-folder-pick').selectOption({ label: 'New folder “Ads”' })
-  await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByTestId('list-folder')).toContainText('Ads')
-  expect((await foldersNow()).find((f) => f.name === 'Ads')?.list_id).toBe(ads.id)
   await page.getByTitle('Edit list').click()
-  await expect(page.getByTestId('list-folder-pick')).toHaveValue(((await foldersNow()) as { id?: string; name: string }[]).find((f) => f.name === 'Ads')!.id!)
+  await expect(page.getByTestId('list-folder-pick')).toHaveValue(adsFolder.id)
   await page.getByTestId('list-folder-pick').selectOption('')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByTestId('list-folder')).toHaveCount(0)
   expect((await foldersNow()).find((f) => f.name === 'Ads')?.list_id ?? '').toBe('')
+  await page.getByTitle('Edit list').click()
+  await page.getByTestId('list-folder-pick').selectOption({ label: 'Ads' })
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByTestId('list-folder')).toContainText('Ads')
+  expect((await foldersNow()).find((f) => f.name === 'Ads')?.list_id).toBe(ads.id)
 })
 
 test('graph: a workspace\'s things and their links; a small graph beside a page; kinds hidden; a click opens one', async ({ page, request }) => {

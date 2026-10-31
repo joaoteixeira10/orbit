@@ -33,6 +33,20 @@ merge, not at release time.
 
 ### Added
 
+- **Every list has its own folder** — made with it (by hand, from a template,
+  from git), renamed with it, kept with its contents when the list goes;
+  the list's sheet can pick another folder or none (`folder_id` when making
+  one). **Files** is on by default (every template, and existing workspaces
+  with tasks, pages, sheets, diagrams or whiteboards); existing lists got
+  their folders on upgrade.
+- **Where files are kept** — each file's bytes once, by SHA-256 (the same
+  file attached twice is stored once and counts once against the quota), in
+  the database (default), a directory (`UPLOAD_STORE=dir`, `UPLOAD_DIR`) or an
+  S3 bucket (`UPLOAD_STORE=s3`, `UPLOAD_S3_*`). `orbit move-files <store>
+  [--clean]` moves them, each checked against its sum; starting with another
+  store than the recorded one is refused. Automatic backups copy a
+  directory store's new files beside their archives. Files kept the old way
+  move by themselves on the first start.
 - **A list picks its folder** — the list's edit sheet has a **Folder**
   choice (one there is, a new one named after the list, or none), the other
   way round from the folder's **Task list…**.

@@ -543,7 +543,7 @@ export const smartListsApi = {
 
 export const tasksApi = {
   lists: (ws: string) => api<TaskList[]>(`/workspaces/${ws}/lists`),
-  createList: (ws: string, b: { name: string; color?: string; icon?: string; columns?: Column[] }) =>
+  createList: (ws: string, b: { name: string; color?: string; icon?: string; columns?: Column[]; folder_id?: string }) =>
     api<TaskList>(`/workspaces/${ws}/lists`, { method: 'POST', body: j(b) }),
   updateList: (id: string, b: Partial<{ name: string; color: string; icon: string; columns: Column[] }>) =>
     api<TaskList>(`/lists/${id}`, { method: 'PUT', body: j(b) }),

@@ -45,6 +45,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/tlsfiles"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/version"
 
 	"go.uber.org/zap"
@@ -131,6 +132,78 @@ func restoreBackup(path string, force bool) int {
 	return 0
 }
 
+// storeOf is the file store of a kind (db, dir or s3), from the configuration.
+func storeOf(cfg *config.Config, kind string) (uploads.Store, error) {
+	switch kind {
+	case uploads.StoreDB:
+		return uploads.DBStore{}, nil
+	case uploads.StoreDir:
+		return uploads.DirStore{Root: cfg.UploadDir}, nil
+	case uploads.StoreS3:
+		return uploads.NewS3(uploads.S3Config{
+			Bucket: cfg.UploadS3Bucket, Prefix: cfg.UploadS3Prefix, Endpoint: cfg.UploadS3Endpoint, Region: cfg.UploadS3Region,
+			AccessKey: cfg.UploadS3Access, SecretKey: cfg.UploadS3Secret, Insecure: cfg.UploadS3Insecure,
+		})
+	}
+	return nil, fmt.Errorf("unknown file store %q (db, dir or s3)", kind)
+}
+
+// moveFiles copies every file's bytes from where they're kept now to
+// another store (`orbit move-files <db|dir|s3> [--clean]`), with Orbit
+// stopped; --clean then removes the old copies.
+func moveFiles(to string, clean bool) int {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: configuration error:", err)
+		return 1
+	}
+	gdb, err := db.Open(cfg)
+	if err == nil {
+		err = db.Migrate(gdb)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: move-files: database:", err)
+		return 1
+	}
+	from := uploads.Recorded(gdb)
+	if from == "" {
+		from = uploads.StoreDB
+	}
+	if from == to {
+		fmt.Printf("orbit: the files are already kept in %q\n", to)
+		return 0
+	}
+	src, err := storeOf(cfg, from)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: move-files: from:", err)
+		return 1
+	}
+	dst, err := storeOf(cfg, to)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: move-files: to:", err)
+		return 1
+	}
+	// Bytes still kept the old way go to the old store first.
+	uploads.Use(src)
+	if err := uploads.Migrate(gdb, nil); err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: move-files:", err)
+		return 1
+	}
+	fmt.Printf("orbit: moving the files from %q to %q…\n", from, to)
+	if err := uploads.Move(gdb, src, dst, clean, func(n int) { fmt.Printf("orbit: %d files\n", n) }); err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: move-files:", err)
+		return 1
+	}
+	if clean && from == uploads.StoreDB && cfg.DBDriver == "sqlite" {
+		_ = gdb.Exec("VACUUM").Error // give the space back
+	}
+	fmt.Printf("orbit: done; set UPLOAD_STORE=%s and start Orbit\n", to)
+	if !clean {
+		fmt.Printf("orbit: the copies in %q are kept; run again with --clean to remove them\n", from)
+	}
+	return 0
+}
+
 func main() {
 	// `orbit healthcheck` is an in-container liveness probe used by the
 	// image HEALTHCHECK. The runtime image is distroless (no shell or curl), so
@@ -143,6 +216,11 @@ func main() {
 	// an encrypted backup to DB_URL, with Orbit stopped, then exits.
 	if len(os.Args) > 2 && os.Args[1] == "restore-backup" {
 		os.Exit(restoreBackup(os.Args[2], len(os.Args) > 3 && os.Args[3] == "--force"))
+	}
+	// `orbit move-files <db|dir|s3> [--clean]` moves the files' bytes to
+	// another store, with Orbit stopped, then exits.
+	if len(os.Args) > 2 && os.Args[1] == "move-files" {
+		os.Exit(moveFiles(os.Args[2], len(os.Args) > 3 && os.Args[3] == "--clean"))
 	}
 
 	cfg, err := config.Load()
@@ -164,6 +242,21 @@ func main() {
 		log.Fatal("migration failed", zap.Error(err))
 	}
 	log.Info("database ready", zap.String("driver", cfg.DBDriver))
+
+	// Where files' bytes are kept; the one recorded must be the one set, and
+	// bytes kept the old way (a row per file) move into it, once.
+	store, err := storeOf(cfg, cfg.UploadStore)
+	if err != nil {
+		log.Fatal("file store", zap.Error(err))
+	}
+	uploads.Use(store)
+	if err := uploads.Check(gdb); err != nil {
+		log.Fatal("file store", zap.Error(err))
+	}
+	if err := uploads.Migrate(gdb, func(n int) { log.Info("files moved to the store", zap.Int("files", n)) }); err != nil {
+		log.Fatal("moving files to the store", zap.Error(err))
+	}
+	log.Info("files kept", zap.String("store", store.Kind()))
 
 	// Keystore (seals secrets at rest: TOTP secrets, the OIDC client secret,
 	// calendar subscription addresses). The KEK is derived with Argon2id over a stored salt.

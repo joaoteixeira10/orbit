@@ -132,11 +132,39 @@ the audit log and the runtime settings below. Back up the file and
 | Variable | Req | Default | Notes |
 |---|---|---|---|
 | `UPLOAD_MAX_MB` | – | `25` | Largest file someone can add to a page, task or note. |
-| `UPLOAD_QUOTA_MB` | – | `2048` | All uploads together, for the instance; `0` = no limit. Past it, uploads answer `507`. |
+| `UPLOAD_QUOTA_MB` | – | `2048` | All uploads together, for the instance; `0` = no limit. The same file added twice counts once. Past it, uploads answer `507`. |
 | `IMPORT_MAX_MB` | – | `512` | Largest workspace export someone can import (its files included). Files past `UPLOAD_MAX_MB`, or past the quota, are left out and listed. |
+| `UPLOAD_STORE` | – | `db` | Where files' bytes are kept: `db` (the database), `dir` (a directory) or `s3` (an S3-compatible bucket). |
+| `UPLOAD_DIR` | for `dir` | `files` next to the SQLite database (`/data/files`) | The directory (mount a volume). |
+| `UPLOAD_S3_BUCKET`, `UPLOAD_S3_PREFIX` | for `s3` | – | The bucket, and a prefix inside it. |
+| `UPLOAD_S3_ENDPOINT`, `UPLOAD_S3_REGION` | – | AWS | `host[:port]` of another S3 (MinIO, Wasabi…), and its region. |
+| `UPLOAD_S3_ACCESS_KEY`, `UPLOAD_S3_SECRET_KEY` | for `s3` | – | Its keys, read through `SECRETS_BACKEND` (env, file or Vault). |
+| `UPLOAD_S3_INSECURE` | – | `false` | Plain HTTP to the endpoint (a MinIO in a lab only). |
 
-Uploads are kept **in the database** (a table of their own), so backups and
-restores carry them with everything else. Plan the disk accordingly.
+**How files are kept.** Each file's bytes are kept once, by their SHA-256:
+the same file attached in five places is stored once (and counts once
+against the quota), and its bytes go when the last file using them does.
+
+- **`db`** (the default): in a table of the database, so a backup or restore
+  carries them with everything else. Simplest; plan the database's disk.
+- **`dir`**: one file each, `UPLOAD_DIR/ab/abcd…` (named by the SHA-256,
+  never changed once written). The database stays small. Back the directory
+  up too — the owner's automatic backups copy the new files into `files/`
+  beside their archives, and any copy tool (rsync, restic) works, since files
+  never change. A backup downloaded by hand doesn't have them.
+- **`s3`**: one object each, `UPLOAD_S3_PREFIX/ab/abcd…`. Back the bucket up
+  in S3 itself (turn on versioning); the backups here don't have them.
+
+Orbit records where the files are; started with another `UPLOAD_STORE`, it
+refuses (instead of showing files as missing). To change, stop Orbit and
+move them: `orbit move-files dir` (or `db`, `s3`) copies every file to the
+new store — each checked against its SHA-256 — with both stores' settings
+set; then set `UPLOAD_STORE` and start Orbit. `--clean` also removes the old
+copies (moving out of `db` then shrinks the SQLite file). In Docker:
+`docker compose stop api`, `docker compose run --rm api move-files dir --clean`, set `UPLOAD_STORE=dir`, `docker compose up -d`.
+
+Files kept the old way (before 2026-10, one row per file) move into the
+store by themselves on the first start.
 
 ## Diagrams (draw.io)
 
@@ -245,6 +273,7 @@ For backups to a directory, mount a volume where the page says (e.g.
 | `orbit` | Starts the server. |
 | `orbit healthcheck` | Calls `http://127.0.0.1:<port of HTTP_ADDR>/api/v1/healthz` (`https://` when `TLS_CERT_FILE` and `TLS_KEY_FILE` are set; the loopback certificate isn't checked) and exits `0` on `200`, else `1`. The image's `HEALTHCHECK` uses it (distroless has no shell or curl). |
 | `orbit restore-backup <archive> [--force]` | Writes the database inside an encrypted backup to `DB_URL`, **with Orbit stopped**, then exits. A master-key archive opens with `ORBIT_MASTER_KEY`; a passphrase archive with `BACKUP_PASSPHRASE` (or `BACKUP_PASSPHRASE_FILE`). An existing database is refused unless `--force`, and is then kept as `<DB_URL>.before-restore-<time>`. With compose: `docker compose stop api`, `docker compose run --rm -v ./backup.json:/restore.json:ro api restore-backup /restore.json --force`, `docker compose start api`. |
+| `orbit move-files <db\|dir\|s3> [--clean]` | Copies every file's bytes from where they're kept now (as recorded) to another store, **with Orbit stopped**, checking each against its SHA-256, and records the new one; then set `UPLOAD_STORE` to it. `--clean` removes the old copies. See [Uploads](#uploads). |
 
 
 ## Settings on the page (not environment)

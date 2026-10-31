@@ -1,8 +1,8 @@
 // Package planner holds Orbit's planner rules that don't need HTTP: the
 // module catalog and workspace templates, board columns, ordering ranks,
 // recurrence (events and repeating tasks), ICS import and export, and the
-// plain-text extraction of page documents. The api package's handlers use it;
-// it imports only models.
+// plain-text extraction of page documents, and each list's own folder. The
+// api package's handlers use it; it imports only models (and gorm).
 package planner
 
 // Module keys. A workspace turns on any subset, in its own order.
@@ -23,7 +23,7 @@ const (
 	ModBookmarks = "bookmarks"   // links with a preview, tags, read later
 	ModSheets    = "sheets"      // spreadsheets (cells, Excel's formulas)
 	ModDiagrams  = "diagrams"    // draw.io diagrams
-	ModFiles     = "files"       // sheets, diagrams and whiteboards together, in folders
+	ModFiles     = "files"       // the workspace's folders: files, pages, sheets, diagrams, whiteboards (on by default)
 )
 
 // Module describes one entry of the catalog. Soon marks a module that is on
@@ -111,7 +111,7 @@ type TemplateList struct {
 var Templates = []Template{
 	{
 		Kind: "school", Icon: "graduation-cap", Color: "#007AFF",
-		Modules: []string{ModHome, ModCourses, ModCalendar, ModTasks, ModBoard, ModGrades, ModNotes, ModPages},
+		Modules: []string{ModHome, ModCourses, ModCalendar, ModTasks, ModBoard, ModGrades, ModNotes, ModPages, ModFiles},
 		Lists: []TemplateList{
 			{Name: "Assignments", Color: "#007AFF", Icon: "pencil", Columns: Columns("To do", "Doing", "Handed in")},
 			{Name: "Exams", Color: "#FF3B30", Icon: "file-check", Columns: Columns("Upcoming", "Studying", "Done")},
@@ -120,7 +120,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "work", Icon: "briefcase", Color: "#5856D6",
-		Modules: []string{ModHome, ModBoard, ModTasks, ModTimeline, ModCharts, ModCalendar, ModNotes, ModPages},
+		Modules: []string{ModHome, ModBoard, ModTasks, ModTimeline, ModCharts, ModCalendar, ModNotes, ModPages, ModFiles},
 		Lists: []TemplateList{
 			{Name: "Projects", Color: "#5856D6", Icon: "folder-kanban", Columns: Columns("Backlog", "In progress", "Review", "Done")},
 		},
@@ -128,7 +128,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "personal", Icon: "heart", Color: "#FF2D55",
-		Modules: []string{ModHome, ModTasks, ModCalendar, ModNotes, ModPages},
+		Modules: []string{ModHome, ModTasks, ModCalendar, ModNotes, ModPages, ModFiles},
 		Lists: []TemplateList{
 			{Name: "Reminders", Color: "#FF9500", Icon: "bell", Columns: Columns("To do", "Done")},
 		},
@@ -136,7 +136,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "shared", Icon: "users", Color: "#34C759",
-		Modules: []string{ModHome, ModTasks, ModBoard, ModCalendar, ModNotes, ModPages},
+		Modules: []string{ModHome, ModTasks, ModBoard, ModCalendar, ModNotes, ModPages, ModFiles},
 		Lists: []TemplateList{
 			{Name: "Shopping", Color: "#34C759", Icon: "shopping-cart", Columns: Columns("To buy", "Bought")},
 			{Name: "Chores", Color: "#FF9500", Icon: "sparkles", Columns: Columns("To do", "Doing", "Done")},
@@ -145,7 +145,7 @@ var Templates = []Template{
 	},
 	{
 		Kind: "custom", Icon: "sparkles", Color: "#AF52DE",
-		Modules: []string{ModHome, ModNotes, ModPages},
+		Modules: []string{ModHome, ModNotes, ModPages, ModFiles},
 	},
 }
 

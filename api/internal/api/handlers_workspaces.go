@@ -318,6 +318,9 @@ func seedWorkspace(tx *gorm.DB, ws models.Workspace, tpl planner.Template, uid, 
 		if err := tx.Create(&list).Error; err != nil {
 			return err
 		}
+		if err := planner.ListFolder(tx, list, uid); err != nil {
+			return err
+		}
 	}
 	pages := []models.Page{{
 		WorkspaceID: ws.ID, Title: planner.Localize("Welcome", locale), Icon: "👋",

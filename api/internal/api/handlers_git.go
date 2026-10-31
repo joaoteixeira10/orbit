@@ -424,6 +424,9 @@ func (h *Handlers) createGitList(c *gin.Context) {
 		if err := tx.Create(&l).Error; err != nil {
 			return err
 		}
+		if err := planner.ListFolder(tx, l, auth.UserID(c)); err != nil {
+			return err
+		}
 		link.ListID = l.ID
 		return tx.Create(&link).Error
 	}); err != nil {

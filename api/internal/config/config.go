@@ -8,6 +8,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -52,11 +53,21 @@ type Config struct {
 	// memory-exhaustion via oversized JSON/data-URL payloads.
 	MaxBodyBytes int64 // MAX_BODY_BYTES
 
-	// Uploads (images and files in pages, notes and tasks) are stored in the
-	// database. UploadMaxBytes caps one file, UploadQuotaBytes all of them
-	// (0 = no limit).
-	UploadMaxBytes   int64 // UPLOAD_MAX_MB
-	UploadQuotaBytes int64 // UPLOAD_QUOTA_MB
+	// Uploads (images and files in pages, notes and tasks): their bytes are
+	// kept once each, by SHA-256, in the database (the default), a directory
+	// or an S3 bucket. UploadMaxBytes caps one file, UploadQuotaBytes all of
+	// them (0 = no limit).
+	UploadMaxBytes   int64  // UPLOAD_MAX_MB
+	UploadQuotaBytes int64  // UPLOAD_QUOTA_MB
+	UploadStore      string // UPLOAD_STORE: db | dir | s3
+	UploadDir        string // UPLOAD_DIR (dir): default "files" next to the SQLite database, else /data/files
+	UploadS3Bucket   string // UPLOAD_S3_BUCKET
+	UploadS3Prefix   string // UPLOAD_S3_PREFIX
+	UploadS3Endpoint string // UPLOAD_S3_ENDPOINT (host[:port]; empty = AWS)
+	UploadS3Region   string // UPLOAD_S3_REGION
+	UploadS3Insecure bool   // UPLOAD_S3_INSECURE: plain HTTP (a lab MinIO)
+	UploadS3Access   string // UPLOAD_S3_ACCESS_KEY (secrets backend)
+	UploadS3Secret   string // UPLOAD_S3_SECRET_KEY (secrets backend)
 	// ImportMaxBytes caps a workspace export being imported (files included).
 	ImportMaxBytes int64 // IMPORT_MAX_MB
 
@@ -151,6 +162,14 @@ func Load() (*Config, error) {
 	if dbURL == "" {
 		dbURL = "orbit.db"
 	}
+	s3Access, err := prov.Get("UPLOAD_S3_ACCESS_KEY")
+	if err != nil {
+		return nil, err
+	}
+	s3Secret, err := prov.Get("UPLOAD_S3_SECRET_KEY")
+	if err != nil {
+		return nil, err
+	}
 	c := &Config{
 		HTTPAddr:         env("HTTP_ADDR", ":8080"),
 		GinMode:          env("GIN_MODE", "debug"),
@@ -168,6 +187,15 @@ func Load() (*Config, error) {
 		UploadMaxBytes:   int64(envInt("UPLOAD_MAX_MB", 25)) << 20,
 		UploadQuotaBytes: int64(envInt("UPLOAD_QUOTA_MB", 2048)) << 20,
 		ImportMaxBytes:   int64(envInt("IMPORT_MAX_MB", 512)) << 20,
+		UploadStore:      env("UPLOAD_STORE", "db"),
+		UploadDir:        env("UPLOAD_DIR", ""),
+		UploadS3Bucket:   env("UPLOAD_S3_BUCKET", ""),
+		UploadS3Prefix:   env("UPLOAD_S3_PREFIX", ""),
+		UploadS3Endpoint: env("UPLOAD_S3_ENDPOINT", ""),
+		UploadS3Region:   env("UPLOAD_S3_REGION", ""),
+		UploadS3Insecure: envBool("UPLOAD_S3_INSECURE", false),
+		UploadS3Access:   s3Access,
+		UploadS3Secret:   s3Secret,
 
 		WebAuthnRPID:          env("WEBAUTHN_RP_ID", ""),
 		WebAuthnRPOrigins:     splitNonEmpty(env("WEBAUTHN_RP_ORIGINS", "")),
@@ -197,6 +225,17 @@ func Load() (*Config, error) {
 	// tested (the API's tests also run on Postgres, ORBIT_TEST_POSTGRES).
 	if c.DBDriver != "sqlite" && c.DBDriver != "postgres" {
 		return nil, fmt.Errorf("unsupported DB_DRIVER %q (sqlite or postgres)", c.DBDriver)
+	}
+	switch c.UploadStore {
+	case "db", "dir", "s3":
+	default:
+		return nil, fmt.Errorf("unsupported UPLOAD_STORE %q (db, dir or s3)", c.UploadStore)
+	}
+	if c.UploadDir == "" {
+		c.UploadDir = "/data/files"
+		if c.DBDriver == "sqlite" {
+			c.UploadDir = filepath.Join(filepath.Dir(c.DBURL), "files")
+		}
 	}
 
 	// In release mode secrets must be supplied explicitly. In dev we fall back

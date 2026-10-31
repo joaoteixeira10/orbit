@@ -42,3 +42,44 @@ func TestMigrateAssignees(t *testing.T) {
 		t.Fatalf("came back: %q", t1.Assignees)
 	}
 }
+
+// TestMigrateListFolders: once, every list gets its folder and Files turns
+// on where things live in folders (not in a habits-only workspace); an
+// unjoined folder afterwards stays unjoined.
+func TestMigrateListFolders(t *testing.T) {
+	g, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sqlDB, err := g.DB(); err == nil {
+		sqlDB.SetMaxOpenConns(1)
+	}
+	if err := g.AutoMigrate(models.AllModels()...); err != nil {
+		t.Fatal(err)
+	}
+	g.Create(&models.Workspace{Base: models.Base{ID: "w1"}, Name: "Work", Modules: `["home","tasks"]`})
+	g.Create(&models.Workspace{Base: models.Base{ID: "w2"}, Name: "Habits", Modules: `["home","habits"]`})
+	g.Create(&models.TaskList{Base: models.Base{ID: "l1"}, WorkspaceID: "w1", Name: "Launch", Color: "#ff9500"})
+	if err := Migrate(g); err != nil {
+		t.Fatal(err)
+	}
+	var f models.Folder
+	if g.First(&f, "list_id = ?", "l1").Error != nil || f.Name != "Launch" || f.WorkspaceID != "w1" {
+		t.Fatalf("the list's folder: %+v", f)
+	}
+	var w1, w2 models.Workspace
+	g.First(&w1, "id = ?", "w1")
+	g.First(&w2, "id = ?", "w2")
+	if w1.Modules != `["home","tasks","files"]` || w2.Modules != `["home","habits"]` {
+		t.Fatalf("modules: %s / %s", w1.Modules, w2.Modules)
+	}
+	g.Model(&models.Folder{}).Where("id = ?", f.ID).Update("list_id", "")
+	if err := Migrate(g); err != nil {
+		t.Fatal(err)
+	}
+	var n int64
+	g.Model(&models.Folder{}).Where("list_id = ?", "l1").Count(&n)
+	if n != 0 {
+		t.Fatal("a second start joined the folder again")
+	}
+}

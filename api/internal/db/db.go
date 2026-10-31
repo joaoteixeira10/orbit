@@ -9,13 +9,16 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
 
 	"github.com/glebarez/sqlite"
@@ -76,12 +79,47 @@ func Migrate(gdb *gorm.DB) error {
 	if err := migrateAssignees(gdb); err != nil {
 		return err
 	}
+	if err := migrateListFolders(gdb); err != nil {
+		return err
+	}
 	// The full-text index (SQLite FTS5); search falls back to plain matching
 	// without it.
 	if !search.Setup(gdb) {
 		log.Println("full-text search index unavailable; using plain search")
 	}
 	return nil
+}
+
+// migrateListFolders, once: every list gets its folder, and Files is on in
+// every workspace with tasks, pages, sheets, diagrams or whiteboards (things
+// that live in folders) — as new ones are made since.
+func migrateListFolders(gdb *gorm.DB) error {
+	const done = "lists_have_folders"
+	var row models.Setting
+	if gdb.Where(&models.Setting{Key: done}).Limit(1).Find(&row).RowsAffected == 1 {
+		return nil
+	}
+	return gdb.Transaction(func(tx *gorm.DB) error {
+		var wss []models.Workspace
+		if err := tx.Find(&wss).Error; err != nil {
+			return err
+		}
+		for _, ws := range wss {
+			if err := planner.ListFolders(tx, ws.ID, ""); err != nil {
+				return fmt.Errorf("list folders: %w", err)
+			}
+			var mods []string
+			_ = json.Unmarshal([]byte(ws.Modules), &mods)
+			if slices.Contains(mods, planner.ModFiles) || !slices.ContainsFunc(mods, func(m string) bool { return slices.Contains(planner.FilesWith, m) }) {
+				continue
+			}
+			b, _ := json.Marshal(append(mods, planner.ModFiles))
+			if err := tx.Model(&models.Workspace{}).Where("id = ?", ws.ID).Update("modules", string(b)).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Create(&models.Setting{Key: done, Value: "true"}).Error
+	})
 }
 
 // migrateAssignees moves a task's single assignee (the old assignee_id

@@ -15,17 +15,26 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// s3Client builds an S3 client; the credentials come from the secrets backend
-// (BACKUP_S3_ACCESS_KEY, BACKUP_S3_SECRET_KEY). An empty endpoint is AWS.
-func s3Client(s Schedule) (*minio.Client, error) {
+// s3Keys are the backup bucket's credentials, from the secrets backend.
+func s3Keys() (string, string, error) {
 	prov, err := secrets.New(os.Getenv("SECRETS_BACKEND"))
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 	ak, _ := prov.Get("BACKUP_S3_ACCESS_KEY")
 	sk, _ := prov.Get("BACKUP_S3_SECRET_KEY")
 	if ak == "" || sk == "" {
-		return nil, fmt.Errorf("S3 backups need BACKUP_S3_ACCESS_KEY and BACKUP_S3_SECRET_KEY")
+		return "", "", fmt.Errorf("S3 backups need BACKUP_S3_ACCESS_KEY and BACKUP_S3_SECRET_KEY")
+	}
+	return ak, sk, nil
+}
+
+// s3Client builds an S3 client; the credentials come from the secrets backend
+// (BACKUP_S3_ACCESS_KEY, BACKUP_S3_SECRET_KEY). An empty endpoint is AWS.
+func s3Client(s Schedule) (*minio.Client, error) {
+	ak, sk, err := s3Keys()
+	if err != nil {
+		return nil, err
 	}
 	endpoint := s.S3Endpoint
 	if endpoint == "" {

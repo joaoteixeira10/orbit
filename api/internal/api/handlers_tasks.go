@@ -76,6 +76,10 @@ type listRequest struct {
 	Color   *string           `json:"color"`
 	Icon    *string           `json:"icon" binding:"omitempty,max=64"`
 	Columns *[]planner.Column `json:"columns"`
+	// FolderID (making one only): its folder — none given: a new one of its
+	// own (or the one at the top with its name); "none": no folder; a
+	// folder's id: that one (taken from the list it had, if any).
+	FolderID *string `json:"folder_id"`
 }
 
 // createList adds a task list (editors).
@@ -126,11 +130,31 @@ func (h *Handlers) createList(c *gin.Context) {
 	var last struct{ Max *float64 }
 	h.db.Model(&models.TaskList{}).Select("MAX(rank) AS max").Where("workspace_id = ?", ws.ID).Scan(&last)
 	l.Rank = planner.Rank(last.Max, nil)
-	if err := h.db.Create(&l).Error; err != nil {
+	var into *models.Folder
+	if req.FolderID != nil && *req.FolderID != "" && *req.FolderID != "none" {
+		into = &models.Folder{}
+		if h.db.First(into, "id = ? AND workspace_id = ?", *req.FolderID, ws.ID).Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "that folder isn't in this workspace"})
+			return
+		}
+	}
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&l).Error; err != nil {
+			return err
+		}
+		switch {
+		case into != nil:
+			return tx.Model(&models.Folder{}).Where("id = ?", into.ID).Update("list_id", l.ID).Error
+		case req.FolderID != nil && *req.FolderID == "none":
+			return nil
+		}
+		return planner.ListFolder(tx, l, auth.UserID(c))
+	}); err != nil {
 		h.internalError(c, err, "could not create the list")
 		return
 	}
 	h.publishWS(c, ws.ID, "lists")
+	h.publishWS(c, ws.ID, "files")
 	c.JSON(http.StatusCreated, h.toListResponse(c, l))
 }
 
@@ -209,13 +233,22 @@ func (h *Handlers) updateList(c *gin.Context) {
 		if len(up) == 0 {
 			return nil
 		}
-		return tx.Model(&l).Updates(up).Error
+		before := l // Updates writes into l
+		if err := tx.Model(&l).Updates(up).Error; err != nil {
+			return err
+		}
+		var after models.TaskList
+		tx.First(&after, "id = ?", l.ID)
+		return planner.RenameListFolder(tx, before, after)
 	})
 	if writeTxError(c, h, err, "could not update the list") {
 		return
 	}
 	l = reloadTaskList(h, l.ID)
 	h.publishWS(c, l.WorkspaceID, "lists")
+	if req.Name != nil || req.Color != nil {
+		h.publishWS(c, l.WorkspaceID, "files")
+	}
 	c.JSON(http.StatusOK, h.toListResponse(c, l))
 }
 

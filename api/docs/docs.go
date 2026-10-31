@@ -10440,6 +10440,10 @@ const docTemplate = `{
                 "enabled": {
                     "type": "boolean"
                 },
+                "files_store": {
+                    "description": "FilesStore is where files' bytes are kept (db, dir or s3): only in\nthe database are they in the archive.",
+                    "type": "string"
+                },
                 "interval_hours": {
                     "type": "integer"
                 },
@@ -10638,6 +10642,10 @@ const docTemplate = `{
                 "oidc_enabled": {
                     "description": "SPA shows the \"Sign in with SSO\" button",
                     "type": "boolean"
+                },
+                "page_versions_kept": {
+                    "description": "PageVersionsKept: how many versions each page's history keeps.",
+                    "type": "integer"
                 },
                 "passwordless_enabled": {
                     "description": "SPA shows the \"Sign in with a passkey\" button",
@@ -12505,6 +12513,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/planner.Column"
                     }
+                },
+                "folder_id": {
+                    "description": "FolderID (making one only): its folder — none given: a new one of its\nown (or the one at the top with its name); \"none\": no folder; a\nfolder's id: that one (taken from the list it had, if any).",
+                    "type": "string"
                 },
                 "icon": {
                     "type": "string",
@@ -14406,6 +14418,12 @@ const docTemplate = `{
                 "logo_data_url": {
                     "type": "string"
                 },
+                "page_versions_kept": {
+                    "description": "PageVersionsKept: how many versions each page keeps (5–1000).",
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 5
+                },
                 "show_app_name": {
                     "type": "boolean"
                 },
@@ -14706,6 +14724,10 @@ const docTemplate = `{
                 },
                 "error": {
                     "type": "string"
+                },
+                "files": {
+                    "description": "files copied beside it (a directory store)",
+                    "type": "integer"
                 },
                 "ok": {
                     "type": "boolean"

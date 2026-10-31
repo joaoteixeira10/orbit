@@ -22,18 +22,21 @@ interface Schedule {
   s3_prefix: string
   s3_endpoint: string
   s3_region: string
-  last?: { at: string; ok: boolean; where?: string; error?: string }
+  last?: { at: string; ok: boolean; where?: string; files?: number; error?: string }
   supported?: boolean // false on PostgreSQL (backed up with its own tools)
+  files_store?: 'db' | 'dir' | 's3' // where files' bytes are kept
 }
 const sched = reactive<Schedule>({ enabled: false, interval_hours: 24, dest: 'dir', dir: '/backups', keep: 14, s3_bucket: '', s3_prefix: 'orbit', s3_endpoint: '', s3_region: '' })
 const last = ref<Schedule['last'] | null>(null)
 const supported = ref(true)
+const filesStore = ref<'db' | 'dir' | 's3'>('db')
 async function load() {
   try {
     const s = await api<Schedule>('/backup/schedule')
     Object.assign(sched, { ...s, dest: s.dest || 'dir', interval_hours: s.interval_hours || 24, dir: s.dir || '/backups' })
     last.value = s.last && s.last.at && !s.last.at.startsWith('0001') ? s.last : null
     supported.value = s.supported !== false
+    filesStore.value = s.files_store ?? 'db'
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -42,7 +45,7 @@ onMounted(load)
 
 async function save() {
   try {
-    const { last: _l, supported: _s, ...body } = sched
+    const { last: _l, supported: _s, files_store: _f, ...body } = sched
     await api('/backup/schedule', { method: 'PUT', body: JSON.stringify(body) })
     toast.success(t('bk.saved'))
     await load()
@@ -93,6 +96,7 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
     <div class="flex flex-col gap-5 p-5">
       <p class="text-[12px] text-text-3">{{ t('bk.intro') }}</p>
       <p v-if="!supported" class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-postgres">{{ t('bk.postgres') }}</p>
+      <p v-if="filesStore !== 'db'" class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-files">{{ t(`bk.files.${filesStore}`) }}</p>
 
       <!-- Download now -->
       <div class="flex flex-col gap-3">
@@ -137,7 +141,7 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
           <p class="text-[11.5px] text-text-3 sm:col-span-2">{{ t('bk.s3Hint') }}</p>
         </div>
         <div v-if="last" class="rounded-xl border px-3 py-2 text-[12px]" :class="last.ok ? 'border-border bg-surface-2 text-text-2' : 'border-crit-border bg-crit-bg text-crit-text'">
-          {{ last.ok ? t('bk.lastOk', { at: fmt(last.at), where: last.where }) : t('bk.lastFailed', { at: fmt(last.at), error: last.error }) }}
+          {{ last.ok ? t('bk.lastOk', { at: fmt(last.at), where: last.where }) + (last.files ? ' ' + t('bk.filesCopied', { n: last.files }, last.files) : '') : t('bk.lastFailed', { at: fmt(last.at), error: last.error }) }}
         </div>
         <div class="flex justify-end gap-2">
           <button class="btn-ghost" :disabled="running" @click="runNow"><Play class="h-4 w-4" /> {{ t('bk.runNow') }}</button>

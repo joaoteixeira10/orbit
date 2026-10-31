@@ -476,8 +476,12 @@ func (h *Handlers) guestUpload(c *gin.Context) {
 		return
 	}
 	var u models.Upload
-	var blob models.UploadBlob
-	if h.db.First(&u, "id = ?", c.Param("id")).Error != nil || u.Target != uploads.Page || !g.pages[u.TargetID] || h.db.First(&blob, "id = ?", u.ID).Error != nil {
+	if h.db.First(&u, "id = ?", c.Param("id")).Error != nil || u.Target != uploads.Page || !g.pages[u.TargetID] {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+		return
+	}
+	data, err := uploads.Read(h.db, u)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
 	}
@@ -490,5 +494,5 @@ func (h *Handlers) guestUpload(c *gin.Context) {
 	head.Set("X-Content-Type-Options", "nosniff")
 	head.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	head.Set("Cache-Control", "private, max-age=3600")
-	c.Data(http.StatusOK, typ, blob.Data)
+	c.Data(http.StatusOK, typ, data)
 }

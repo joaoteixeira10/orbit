@@ -270,15 +270,15 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time, hide
 		return err
 	}
 	for _, u := range a.Files {
-		var blob models.UploadBlob
-		if db.First(&blob, "id = ?", u.ID).Error != nil {
+		data, err := uploads.Read(db, u)
+		if err != nil {
 			continue
 		}
 		f, err := z.CreateHeader(&zip.FileHeader{Name: filesDir + u.ID, Method: zip.Deflate, Modified: u.CreatedAt})
 		if err != nil {
 			return err
 		}
-		if _, err := f.Write(blob.Data); err != nil {
+		if _, err := f.Write(data); err != nil {
 			return err
 		}
 	}
@@ -763,6 +763,16 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 				continue
 			}
 			if err := tx.Create(&models.HabitCheck{HabitID: ref(x.HabitID), Date: x.Date}).Error; err != nil {
+				return err
+			}
+		}
+		// From before every list had its folder (none joined): give them theirs.
+		joined := false
+		for _, f := range a.Folders {
+			joined = joined || f.ListID != ""
+		}
+		if !joined {
+			if err := planner.ListFolders(tx, ws.ID, me.ID); err != nil {
 				return err
 			}
 		}

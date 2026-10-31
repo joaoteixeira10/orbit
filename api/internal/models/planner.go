@@ -694,8 +694,9 @@ type GitLink struct {
 
 // Upload is a file someone added to a page, a task or a note: an image in a
 // page, an attachment. It belongs to the workspace of what it's on ("" with
-// OwnerID: a personal Quick Note). Its bytes are in UploadBlob (apart, so
-// listings stay light), in the database, so backups carry them.
+// OwnerID: a personal Quick Note). Its bytes are kept apart, by their SHA-256
+// (once however many files share them), where the instance keeps files: the
+// database (Blob), a directory or an S3 bucket (package uploads).
 type Upload struct {
 	Base
 	WorkspaceID string `gorm:"size:36;index" json:"workspace_id"`
@@ -705,10 +706,18 @@ type Upload struct {
 	Name        string `gorm:"size:255;not null" json:"name"`
 	Type        string `gorm:"size:100;not null" json:"type"` // sniffed, not the browser's word
 	Size        int64  `gorm:"not null" json:"size"`
-	SHA256      string `gorm:"size:64" json:"-"`
+	SHA256      string `gorm:"size:64;index" json:"-"`
 }
 
-// UploadBlob holds an upload's bytes (ID = the upload's).
+// Blob holds a file's bytes when they're kept in the database, by their
+// SHA-256 (one row for every file with the same bytes).
+type Blob struct {
+	SHA256 string `gorm:"primaryKey;size:64"`
+	Data   []byte `gorm:"not null"`
+}
+
+// UploadBlob held one upload's bytes (ID = the upload's) before they were
+// kept by their SHA-256; what's left is moved at start (uploads.Migrate).
 type UploadBlob struct {
 	ID   string `gorm:"primaryKey;size:36"`
 	Data []byte `gorm:"not null"`

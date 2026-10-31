@@ -49,6 +49,11 @@ export const sysEn = {
     written: 'Backup written: {where}',
     runFailed: 'The backup failed',
     lastOk: 'Last automatic backup: {at} → {where}',
+    filesCopied: '(and {n} new file, in files/ beside it) | (and {n} new files, in files/ beside it)',
+    files: {
+      dir: 'Files (attachments, pictures) are kept in a directory (UPLOAD_DIR), not in the database: a backup downloaded here doesn’t have them. Each automatic backup copies the new ones into files/ beside the archives; or back the directory up with any copy tool (its files never change).',
+      s3: 'Files (attachments, pictures) are kept in an S3 bucket, not in the database: the backups here don’t have them. Back them up in the bucket itself (turn its versioning on).',
+    },
     lastFailed: 'Last automatic backup failed at {at}: {error} (retried every hour)',
     restoreHint: 'To restore, stop Orbit and run restore-backup (it keeps the old database as a copy). A passphrase archive reads BACKUP_PASSPHRASE.',
   },
@@ -127,6 +132,11 @@ export const sysPt: typeof sysEn = {
     written: 'Cópia escrita: {where}',
     runFailed: 'A cópia falhou',
     lastOk: 'Última cópia automática: {at} → {where}',
+    filesCopied: '(e {n} ficheiro novo, em files/ ao lado) | (e {n} ficheiros novos, em files/ ao lado)',
+    files: {
+      dir: 'Os ficheiros (anexos, imagens) estão numa pasta (UPLOAD_DIR), não na base de dados: uma cópia descarregada aqui não os tem. Cada cópia automática copia os novos para files/ ao lado dos arquivos; ou copie a pasta com qualquer ferramenta (os ficheiros nunca mudam).',
+      s3: 'Os ficheiros (anexos, imagens) estão num bucket S3, não na base de dados: as cópias daqui não os têm. Proteja-os no próprio bucket (ative o versionamento).',
+    },
     lastFailed: 'A última cópia automática falhou às {at}: {error} (repetida de hora a hora)',
     restoreHint: 'Para restaurar, pare o Orbit e execute restore-backup (guarda a base de dados antiga como cópia). Um arquivo com frase-passe lê BACKUP_PASSPHRASE.',
   },

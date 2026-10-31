@@ -359,6 +359,7 @@ func AllModels() []any {
 		&GitLink{},
 		&Upload{},
 		&UploadBlob{},
+		&Blob{},
 		&WorkspaceInvite{},
 		&Course{},
 		&CourseSlot{},

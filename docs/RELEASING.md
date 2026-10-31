@@ -5,9 +5,8 @@ the image, then tag and publish the release. Read it before your first
 release and every time you're unsure. Every step is **manual**: nothing builds,
 pushes, tags or publishes on a push or a merge.
 
-> **Status:** no release yet. The first one will be **v0.1.0**: the version
-> markers already say `0.1.0`, so the first run starts at step 2 once the
-> repository is on Gitea and the Harbor secrets are set.
+> **Status:** v0.1.0 is the first release (2026-10-31). The next one starts at
+> step 0 with the next version.
 
 ## TL;DR
 

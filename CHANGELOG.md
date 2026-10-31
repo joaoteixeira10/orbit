@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-31
+
 ### Security
 
 - **Go 1.26.10** — the toolchain moves up for GO-2026-6809 (crypto/x509

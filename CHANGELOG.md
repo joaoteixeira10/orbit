@@ -12,8 +12,6 @@ merge, not at release time.
   cloud) record: trust Cloudflare's ranges in `TRUSTED_PROXIES` too, or the
   audit log and sign-in limits see Cloudflare's addresses, not people's;
   plus SSL mode, timeouts, the upload limit and Rocket Loader.
-- **Build & Push** reads the Harbor host, image and user from repo (or user)
-  variables as well as secrets.
 
 ## [0.1.0] - 2026-10-31
 

@@ -51,18 +51,43 @@ often shows up as the Docker bridge gateway (for example `172.17.0.1` or
 with its container IP; use the network's CIDR. If every audit entry shows the
 same private address, that's your proxy: add it.
 
-**Behind Cloudflare as well** (browser → Cloudflare → your proxy → Orbit),
-each proxy adds an address to `X-Forwarded-For`. With only your own proxy
-trusted, Orbit records a Cloudflare edge address (`172.64.…`, `162.158.…`,
-`104.16.…`) instead of the person's. Trust Cloudflare's ranges too, from
-<https://www.cloudflare.com/ips/> (they change rarely). Here `192.168.1.10` stands for your own proxy:
+**Behind Cloudflare as well?** Whether Cloudflare sits in front depends on the
+host name's DNS record there:
+
+| Record | The path | `TRUSTED_PROXIES` |
+|---|---|---|
+| **DNS only** (grey cloud) | browser → your proxy → Orbit | your proxy |
+| **Proxied** (orange cloud) | browser → Cloudflare → your proxy → Orbit | your proxy **and** Cloudflare's ranges |
+
+Each proxy on the path adds the address it got the request from to
+`X-Forwarded-For`. Orbit reads that list from the right, skipping trusted
+addresses, and takes the first one that isn't: the person's. When the record
+is proxied but only your own proxy is trusted, Orbit stops at a Cloudflare edge
+address instead (`172.64.…`, `162.158.…`, `104.16.…`), and the audit log and
+the sign-in rate limit see Cloudflare, not people.
+
+So for a proxied record, trust Cloudflare's ranges too, from
+<https://www.cloudflare.com/ips/> (they change rarely; check them now and
+then). Here `192.168.1.10` stands for your own proxy:
 
 ```sh
 TRUSTED_PROXIES=192.168.1.10,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
 ```
 
-Orbit reads `X-Forwarded-For` from the right, skipping trusted addresses, so
-it lands on the first one that isn't a proxy: the person's.
+Orbit doesn't read Cloudflare's `CF-Connecting-IP` header on purpose: anyone
+who reaches your proxy without going through Cloudflare could send a fake one.
+`X-Forwarded-For` is only believed as far as the proxies you trust added to it.
+
+Both ways work. Proxied hides your public IP and puts Cloudflare's filtering in
+front; DNS only is one hop less. If proxied:
+
+- **SSL/TLS mode: Full (strict).** Cloudflare then talks HTTPS to your proxy and
+  checks its certificate. "Flexible" sends the last hop as plain HTTP.
+- **Live updates work as they are.** Cloudflare closes a connection that's
+  quiet for 100 s; Orbit's event stream sends a heartbeat every 25 s.
+- **Uploads:** Cloudflare's free and Pro plans refuse bodies over 100 MB, so an
+  `UPLOAD_MAX_MB` above 100 won't work through it (the default is 25).
+- **Leave Rocket Loader off.** It rewrites the page's scripts.
 
 > **Empty `TRUSTED_PROXIES` trusts no proxy.** That's the safe default, but then
 > every request seems to come from the proxy. All users share one sign-in rate
@@ -274,6 +299,10 @@ to Orbit, to encrypt the hop between them.
 - **The audit log shows the proxy's IP for everyone; users get "too many
   attempts; please slow down" together** → `TRUSTED_PROXIES` is empty or
   doesn't contain the address Orbit sees. See step 2.
+- **The audit log shows Cloudflare addresses** (`172.64.…`, `162.158.…`,
+  `104.16.…`) → The DNS record is proxied (orange cloud) and Cloudflare's
+  ranges aren't in `TRUSTED_PROXIES`. See "Behind Cloudflare as well?" in
+  step 2.
 - **Passkeys: the browser refuses to create or use one** →
   `WEBAUTHN_RP_ID` must be the public host name (no scheme, no port), and
   `WEBAUTHN_RP_ORIGINS` the exact `https://` origin in the address bar.

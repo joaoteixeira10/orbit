@@ -51,6 +51,19 @@ often shows up as the Docker bridge gateway (for example `172.17.0.1` or
 with its container IP; use the network's CIDR. If every audit entry shows the
 same private address, that's your proxy: add it.
 
+**Behind Cloudflare as well** (browser → Cloudflare → your proxy → Orbit),
+each proxy adds an address to `X-Forwarded-For`. With only your own proxy
+trusted, Orbit records a Cloudflare edge address (`172.64.…`, `162.158.…`,
+`104.16.…`) instead of the person's. Trust Cloudflare's ranges too, from
+<https://www.cloudflare.com/ips/> (they change rarely):
+
+```sh
+TRUSTED_PROXIES=192.168.10.84,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
+```
+
+Orbit reads `X-Forwarded-For` from the right, skipping trusted addresses, so
+it lands on the first one that isn't a proxy: the person's.
+
 > **Empty `TRUSTED_PROXIES` trusts no proxy.** That's the safe default, but then
 > every request seems to come from the proxy. All users share one sign-in rate
 > limit, and the audit log shows the proxy's IP. Don't set it wider than your

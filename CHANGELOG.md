@@ -26,6 +26,9 @@ merge, not at release time.
 ### Changed
 
 - **Task comments beside the details** (Planner's way) on a wide window.
+- **Quick Draw's eraser: Part or Whole line** — a clear choice in the toolbar
+  (remembered), and Shift held swaps it while erasing; whole-line erasing
+  shows a red ring. The toolbar no longer gets cut off when it's long.
 - **A note turned into a page reads as written** — its lists ("- ", "* ",
   "•", "1. "), tasks ("[ ] "), headings, quotes, links and code (``` blocks,
   `inline`) become those on the page, and line breaks stay (they came out as

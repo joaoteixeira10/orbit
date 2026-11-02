@@ -83,7 +83,27 @@ const color = ref('#1c1c1e')
 const opacity = ref(1)
 const sizes = ref<Record<Tool, number>>({ ...DEFAULT_SIZE })
 const eraserSize = ref(12)
-const eraseWhole = ref(false)
+// The eraser rubs out a part, or wipes whole lines (as Excalidraw's) — the
+// choice is remembered; holding Shift swaps it while erasing.
+const ERASE_KEY = 'orbit_sketch_erase_whole'
+function readEraseWhole(): boolean {
+  try {
+    return localStorage.getItem(ERASE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const eraseWhole = ref(readEraseWhole())
+function setEraseWhole(v: boolean) {
+  eraseWhole.value = v
+  try {
+    localStorage.setItem(ERASE_KEY, v ? '1' : '0')
+  } catch {
+    /* private mode: for this visit */
+  }
+}
+const shiftDown = ref(false)
+const wholeNow = computed(() => eraseWhole.value !== shiftDown.value)
 const recent = ref<string[]>(readRecent())
 function readRecent(): string[] {
   try {
@@ -205,6 +225,7 @@ function down(e: PointerEvent) {
     live.value = { id: newId(), kind: 'stroke', tool: lastPen.value, color: color.value, size: sizes.value[lastPen.value], opacity: opacity.value, points: [[r2(x), r2(y), pressureOf(e)]], pen: e.pointerType === 'pen' }
     armSnap()
   } else if (mode.value === 'eraser') {
+    shiftDown.value = e.shiftKey
     rubbing = { layer: layer.id, before: layer.items, items: layer.items, last: [x, y] }
     rubAt(x, y)
   } else if (mode.value === 'lasso') {
@@ -224,7 +245,10 @@ function move(e: PointerEvent) {
   if (p) {
     if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) p.moved = true
   }
-  if (mode.value === 'eraser' && e.pointerType !== 'touch') cursor.value = toWorld(e.clientX, e.clientY)
+  if (mode.value === 'eraser' && e.pointerType !== 'touch') {
+    cursor.value = toWorld(e.clientX, e.clientY)
+    shiftDown.value = e.shiftKey
+  }
   if (gesture?.kind === 'pinch') {
     const touches = [...pointers.entries()].filter(([, q]) => q.type === 'touch')
     if (p) Object.assign(p, { x: e.clientX, y: e.clientY })
@@ -353,7 +377,7 @@ const snapped = ref('')
 function rubAt(x: number, y: number) {
   if (!rubbing) return
   const r = eraserSize.value / 2 / view.value.z
-  const next = eraseWhole.value ? wipe(rubbing.items, x, y, r) : rub(rubbing.items, x, y, r)
+  const next = wholeNow.value ? wipe(rubbing.items, x, y, r) : rub(rubbing.items, x, y, r)
   if (next === rubbing.items) return
   rubbing.items = next
   sketch.value = { ...sketch.value, layers: withItems(rubbing.layer, next) }
@@ -607,6 +631,7 @@ function place(src: string, w: number, h: number, name: string) {
 // ---- Keys ----
 function onKey(e: KeyboardEvent) {
   const el = e.target as HTMLElement
+  if (e.key === 'Shift') shiftDown.value = true
   if (el.closest('input, textarea, [contenteditable="true"]') || props.readonly) return
   const mod = e.metaKey || e.ctrlKey
   if (mod && e.key.toLowerCase() === 'z') {
@@ -633,15 +658,19 @@ function onKey(e: KeyboardEvent) {
 }
 function onKeyUp(e: KeyboardEvent) {
   if (e.key === ' ') spaceDown.value = false
+  if (e.key === 'Shift') shiftDown.value = false
 }
+const shiftOff = () => (shiftDown.value = false) // the window lost focus with Shift down
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', shiftOff)
   void nextTick(fit)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('blur', shiftOff)
   clearTimeout(snapTimer)
 })
 
@@ -770,7 +799,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
           rx="4"
           data-testid="sketch-selection"
         />
-        <circle v-if="cursor && mode === 'eraser'" :cx="cursor[0]" :cy="cursor[1]" :r="eraserSize / 2 / view.z" fill="rgba(255,255,255,0.4)" stroke="#8e8e93" :stroke-width="1 / view.z" pointer-events="none" />
+        <circle v-if="cursor && mode === 'eraser'" :cx="cursor[0]" :cy="cursor[1]" :r="eraserSize / 2 / view.z" fill="rgba(255,255,255,0.4)" :stroke="wholeNow ? '#ff3b30' : '#8e8e93'" :stroke-width="(wholeNow ? 1.5 : 1) / view.z" :stroke-dasharray="wholeNow ? `${3 / view.z} ${2 / view.z}` : undefined" pointer-events="none" data-testid="sketch-eraser-ring" />
       </g>
     </svg>
 
@@ -804,7 +833,10 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
         <span class="sr-only">{{ sizeLabel }}</span>
         <input v-model.number="size" type="range" min="1" max="60" :aria-label="sizeLabel" data-testid="sketch-size" />
       </label>
-      <button v-if="mode === 'eraser'" type="button" class="chip" :aria-pressed="eraseWhole" data-testid="sketch-erase-whole" @click="eraseWhole = !eraseWhole">{{ eraseWhole ? t('sketch.eraseWhole') : t('sketch.erasePart') }}</button>
+      <div v-if="mode === 'eraser'" class="erase-seg" role="radiogroup" :aria-label="t('sketch.tool.eraser')" :title="t('sketch.eraseShift')">
+        <button type="button" role="radio" :aria-checked="!wholeNow" :class="{ on: !wholeNow }" data-testid="sketch-erase-part" @click="setEraseWhole(false)">{{ t('sketch.erasePart') }}</button>
+        <button type="button" role="radio" :aria-checked="wholeNow" :class="{ on: wholeNow }" data-testid="sketch-erase-whole" @click="setEraseWhole(true)">{{ t('sketch.eraseWhole') }}</button>
+      </div>
       <span class="sep" />
       <button type="button" class="tb" :disabled="!canUndo" :title="t('sketch.undo')" :aria-label="t('sketch.undo')" data-testid="sketch-undo" @click="undo"><Undo2 class="h-[18px] w-[18px]" /></button>
       <button type="button" class="tb" :disabled="!canRedo" :title="t('sketch.redo')" :aria-label="t('sketch.redo')" data-testid="sketch-redo" @click="redo"><Redo2 class="h-[18px] w-[18px]" /></button>
@@ -947,6 +979,9 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
 .tools {
   top: 12px;
   left: 50%;
+  /* As wide as its tools (from the middle it would get only half the room),
+     up to the canvas; past that it scrolls. */
+  width: max-content;
   max-width: calc(100% - 24px);
   overflow-x: auto;
   transform: translateX(-50%);
@@ -1038,6 +1073,28 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
 }
 .chip:hover {
   color: var(--text);
+}
+.erase-seg {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--fill-2);
+}
+.erase-seg button {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.erase-seg button:hover {
+  color: var(--text);
+}
+.erase-seg button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
 }
 .chip.danger {
   color: var(--crit-text);

@@ -709,8 +709,10 @@ Draw (in a workspace's file browser: **Move to another workspace…**).
 - **Hold to snap**: finish a line and hold still a moment — a wobbly line
   becomes straight, a round loop a circle or ellipse, three corners a
   triangle, four a rectangle.
-- **Eraser**: rubs out just what it touches (a line rubbed in the middle
-  becomes two); its button below switches to wiping whole strokes.
+- **Eraser**: **Part** rubs out just what it touches (a line rubbed in the
+  middle becomes two); **Whole line** wipes every line it touches, as
+  Excalidraw's eraser does — the ring turns red. Pick one in the toolbar
+  (remembered on this device), or **hold Shift** while erasing for the other.
 - **Lasso**: draw round strokes or pictures to choose them; drag them to
   move them, or **This colour** (recolours them to the current colour),
   **Duplicate**, **Delete** (or the Delete key).

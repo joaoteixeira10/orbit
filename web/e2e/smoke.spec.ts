@@ -1208,6 +1208,27 @@ test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours 
   await expect.poll(async () => (await items()).length).toBe(3)
   await page.keyboard.press('Control+z')
   await expect.poll(async () => (await items()).length).toBe(2)
+  // Shift held: the whole line goes (as Excalidraw's eraser).
+  await page.keyboard.down('Shift')
+  await page.mouse.move(cx, cy - 30)
+  await page.mouse.down()
+  await page.mouse.move(cx, cy + 70, { steps: 10 })
+  await page.mouse.up()
+  await page.keyboard.up('Shift')
+  await expect.poll(async () => (await items()).length).toBe(1)
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await items()).length).toBe(2)
+  // Or "Whole line" picked, and kept for next time.
+  await page.getByTestId('sketch-erase-whole').click()
+  await expect(page.getByTestId('sketch-erase-whole')).toHaveAttribute('aria-checked', 'true')
+  await page.mouse.move(cx, cy - 30)
+  await page.mouse.down()
+  await page.mouse.move(cx, cy + 70, { steps: 10 })
+  await page.mouse.up()
+  await expect.poll(async () => (await items()).length).toBe(1)
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await items()).length).toBe(2)
+  await page.getByTestId('sketch-erase-part').click()
 
   // A colour typed in, kept in my colours (with my settings).
   await page.getByTestId('sketch-color').click()

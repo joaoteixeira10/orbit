@@ -70,6 +70,18 @@ watch(
   },
   { immediate: true },
 )
+// Another person in the same tab (impersonating, or back): their workspaces.
+watch(
+  () => auth.user?.id,
+  async (id, was) => {
+    if (!ready.value || !id || !was || id === was) return
+    try {
+      await Promise.all([wss.load(), wss.loadFavorites(), wss.loadCatalog()])
+    } catch (e: any) {
+      toast.error(e.message)
+    }
+  },
+)
 
 // Which workspaces are open in the sidebar (remembered).
 const expanded = ref(new Set<string>(JSON.parse(localStorage.getItem('orbit_ws_open') || '[]') as string[]))

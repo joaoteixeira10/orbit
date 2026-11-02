@@ -19,6 +19,7 @@ import { useFillHeight } from '@/components/calendar/useFillHeight'
 import { blocksApi, calendarApi, tasksApi, type TimeBlock, type CalendarData, type EventInput, type Occurrence, type Subscription, type Task, type Workspace } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useTasksStore } from '@/stores/tasks'
+import { usePrefsStore } from '@/stores/prefs'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { onLiveEvent } from '@/lib/live'
@@ -37,6 +38,7 @@ const route = useRoute()
 const router = useRouter()
 const wss = useWorkspacesStore()
 const tasksStore = useTasksStore()
+const prefs = usePrefsStore()
 const auth = useAuthStore()
 const toast = useToastStore()
 const { t } = useI18n()
@@ -141,21 +143,55 @@ async function loadSubs() {
   }
 }
 watch(wsId, loadSubs, { immediate: true })
-const holidaySource = { id: 'holidays', name: '', color: '#8E8E93' }
+// ---- Colours: each calendar's own, or the one this person chose for it
+// (kept with their preferences: a workspace id, list:<id>, sub:<id>,
+// holidays) ----
+const HOLIDAY_GREY = '#8E8E93'
+const own = (key: string) => prefs.calendarColors[key] || ''
+const wsColor = (ws: string) => own(ws) || wss.byId(ws)?.color || 'var(--ws)'
+const listOf = (ws: string, id: string) => tasksStore.listsOf(ws).find((l) => l.id === id)
+function colorOfOcc(o: Occurrence): string {
+  if (o.kind === 'holiday') return own('holidays') || HOLIDAY_GREY
+  if (o.kind === 'external') return own(`sub:${o.subscription_id}`) || o.color || wsColor(o.workspace_id)
+  if (o.own_color) return o.color // an event's own colour wins
+  return wsColor(o.workspace_id)
+}
+// A task: its list's colour in a workspace's calendar; the workspace's on all of them.
+function colorOfTask(task: Task): string {
+  if (!wsId.value) return wsColor(task.workspace_id)
+  return own(`list:${task.list_id}`) || listOf(task.workspace_id, task.list_id)?.color || wsColor(task.workspace_id)
+}
 const sources = computed<CalSource[]>(() => {
-  const hol = { ...holidaySource, name: t('cal.holidays') }
+  const hol: CalSource = { id: 'holidays', key: 'holidays', name: t('cal.holidays'), color: own('holidays') || HOLIDAY_GREY, base: HOLIDAY_GREY }
   if (!wsId.value) {
     const list = wss.active.filter((w) => w.modules.includes('calendar'))
-    return [...list.map((w) => ({ id: w.id, name: w.name, color: w.color })), ...(list.some((w) => w.holidays) ? [hol] : [])]
+    return [...list.map((w) => ({ id: w.id, key: w.id, name: w.name, color: wsColor(w.id), base: w.color })), ...(list.some((w) => w.holidays) ? [hol] : [])]
   }
   const w = workspace.value
+  const base = w?.color || ''
   return [
-    { id: 'events', name: w?.name ?? t('cal.events'), color: w?.color ?? '' },
-    { id: 'tasks', name: t('cal.pane.tasks'), color: w?.color ?? '' },
-    ...subs.value.map((s) => ({ id: s.id, name: s.name, color: s.color || w?.color || '' })),
+    // The workspace's own events (not its tasks): "Events" here.
+    { id: 'events', key: wsId.value, name: t('cal.events'), color: wsColor(wsId.value), base },
+    // Each list as its own calendar, in the list's colour.
+    ...(w?.modules.includes('tasks') ? tasksStore.listsOf(wsId.value) : []).map((l) => ({
+      id: `list:${l.id}`,
+      key: `list:${l.id}`,
+      name: l.name,
+      color: own(`list:${l.id}`) || l.color || base,
+      base: l.color || base,
+    })),
+    ...subs.value.map((s) => ({ id: s.id, key: `sub:${s.id}`, name: s.name, color: own(`sub:${s.id}`) || s.color || base, base: s.color || base })),
     ...(w?.holidays ? [hol] : []),
   ]
 })
+// A workspace's lists (each a calendar), when its calendar opens.
+watch(
+  wsId,
+  (ws) => {
+    if (ws && !tasksStore.lists[ws]) void tasksStore.loadLists(ws).catch(() => {})
+  },
+  { immediate: true },
+)
 // Public holidays: the workspace's country (its owners choose it).
 const countries = ref<{ code: string; name: string }[]>([])
 void calendarApi.holidayCountries().then((c) => (countries.value = c)).catch(() => {})
@@ -173,7 +209,7 @@ async function setHolidays(code: string) {
 function visible(o: { occ?: Occurrence; task?: Task }): boolean {
   if (o.occ?.kind === 'holiday') return !hidden.value.has('holidays')
   if (o.occ) return !hidden.value.has(wsId.value ? (o.occ.kind === 'external' ? o.occ.subscription_id ?? '' : 'events') : o.occ.workspace_id)
-  if (o.task) return !hidden.value.has(wsId.value ? 'tasks' : o.task.workspace_id)
+  if (o.task) return !hidden.value.has(wsId.value ? `list:${o.task.list_id}` : o.task.workspace_id)
   return true
 }
 const paneWs = computed(() => (wsId.value ? [wsId.value] : wss.active.filter((w) => w.modules.includes('tasks')).map((w) => w.id)))
@@ -285,12 +321,13 @@ async function load() {
 watch(wsId, () => (data.value = { events: [], tasks: [] }))
 watch(() => `${wsId.value}|${dateStr(range.value.start)}|${dateStr(range.value.end)}`, load, { immediate: true })
 
-const entries = computed(() => data.value.events.filter((occ) => visible({ occ })).map((o) => toEntry(o, canEditWs(wss.byId(o.workspace_id)))))
+// (The entry keeps the occurrence itself: a drag moves it at once.)
+const entries = computed(() => data.value.events.filter((occ) => visible({ occ })).map((o) => ({ ...toEntry(o, canEditWs(wss.byId(o.workspace_id))), color: colorOfOcc(o) })))
 // The time grid's: the events and my time blocks (of the workspace shown).
 const blockOccs = computed<Occurrence[]>(() =>
   blocks.value
     .filter((b) => (wsId.value ? b.workspace_id === wsId.value : !!wss.byId(b.workspace_id)))
-    .map((b) => ({ kind: 'block', id: b.id, task_id: b.task_id, workspace_id: b.workspace_id, title: b.done ? `✓ ${b.title}` : b.title, start: b.starts_at, end: b.ends_at, all_day: false, color: b.color || wss.byId(b.workspace_id)?.color || 'var(--ws)', recurring: false })),
+    .map((b) => ({ kind: 'block', id: b.id, task_id: b.task_id, workspace_id: b.workspace_id, title: b.done ? `✓ ${b.title}` : b.title, start: b.starts_at, end: b.ends_at, all_day: false, color: b.color || wsColor(b.workspace_id), recurring: false })),
 )
 const gridEntries = computed(() => [...entries.value, ...blockOccs.value.map((o) => toEntry(o, false))])
 
@@ -300,7 +337,7 @@ const planWorkspaces = computed(() => (wsId.value ? [wsId.value] : wss.list.filt
 const taskItems = computed<TaskItem[]>(() =>
   data.value.tasks.filter((task) => visible({ task })).map((task) => {
     const w = wss.byId(task.workspace_id)
-    return { task, color: w?.color ?? 'var(--ws)', editable: canEditWs(w) }
+    return { task, color: colorOfTask(task), editable: canEditWs(w) }
   }),
 )
 
@@ -543,6 +580,7 @@ const views: CalView[] = ['day', 'week', 'month']
         @toggle="toggleSource"
         @add="subsOpen = true"
         @holidays="setHolidays"
+        @color="(key, c) => prefs.setCalendarColor(key, c)"
       />
     </div>
     <div v-if="!wide && (leftOpen || rightOpen) && !phone" class="side-scrim" @click="(leftOpen = false), (rightOpen = false)" />
@@ -654,7 +692,8 @@ const views: CalView[] = ['day', 'week', 'month']
         :ws-ids="paneWs"
         :ws="wsId"
         :editable="(w) => canEditWs(wss.byId(w))"
-        :color="(w) => wss.byId(w)?.color ?? 'var(--ws)'"
+        :color="colorOfTask"
+        :paint="colorOfOcc"
         :visible="visible"
         :version="version"
         @open="openEntry"

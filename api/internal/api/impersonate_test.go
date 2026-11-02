@@ -201,6 +201,25 @@ func TestImpersonationAudit(t *testing.T) {
 	if !found {
 		t.Error("did not find the user.create audit entry for frank")
 	}
+
+	// Back as the owner: the end is recorded, and the impersonation filter
+	// shows the start, the end and what was done meanwhile — nothing else.
+	if w := authdo(r, "POST", "/api/v1/users/"+bob+"/impersonate/end", `{"reason":"returned"}`, owner); w.Code != 204 {
+		t.Fatalf("end impersonation: %d, body=%s", w.Code, w.Body.String())
+	}
+	fw := authdo(r, "GET", "/api/v1/audit?per_page=500&impersonation=1", "", owner)
+	page.Items = nil
+	_ = json.Unmarshal(fw.Body.Bytes(), &page)
+	var got []string
+	for _, it := range page.Items {
+		got = append(got, it.Action)
+	}
+	if strings.Join(got, ",") != "user.impersonate_end,user.create,user.impersonate" {
+		t.Errorf("impersonation filter: got %v", got)
+	}
+	if w := authdo(r, "POST", "/api/v1/users/"+bob+"/impersonate/end", "", tok.AccessToken); w.Code != 403 {
+		t.Errorf("bob (impersonated) may not record ends: got %d, want 403", w.Code)
+	}
 }
 
 // TestForceLogoutEndsImpersonation verifies that force-logging-out a user also

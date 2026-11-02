@@ -215,16 +215,20 @@ export const useAuthStore = defineStore('auth', {
       if (!res.access_token) throw new Error('Impersonation failed')
       beginImpersonation(res.access_token)
       await this.fetchMe()
+      void import('@/lib/live').then((m) => m.restartLiveUpdates())
     },
 
     // stopImpersonation restores the stashed admin session.
     async stopImpersonation(): Promise<void> {
+      const whom = this.user?.id
       if (!endImpersonation()) {
         this.clear()
         return
       }
       this.impersonator = null
+      if (whom) await recordImpersonationEnd(whom, 'returned')
       await this.fetchMe()
+      void import('@/lib/live').then((m) => m.restartLiveUpdates())
     },
 
     // Step-up: re-authenticate to mint a fresh token carrying the step-up
@@ -251,12 +255,26 @@ export const useAuthStore = defineStore('auth', {
   },
 })
 
+// recordImpersonationEnd tells the audit log an impersonation ended (as the
+// admin again); a failure must not keep anyone from getting back.
+async function recordImpersonationEnd(id: string, reason: 'returned' | 'expired') {
+  try {
+    const { usersApi } = await import('@/api')
+    await usersApi.endImpersonation(id, reason)
+  } catch {
+    /* the start and every change are recorded anyway */
+  }
+}
+
 // An impersonation token that expired mid-session: we've already fallen back to
 // the admin's stashed tokens, so just re-sync the store.
 onImpersonationEnded.add(async () => {
   const s = useAuthStore()
+  const whom = s.user?.id
   s.impersonator = null
+  if (whom) await recordImpersonationEnd(whom, 'expired')
   await s.fetchMe()
+  void import('@/lib/live').then((m) => m.restartLiveUpdates())
 })
 
 // Session expiry (refresh failed / account disabled) → clear + bounce to login.

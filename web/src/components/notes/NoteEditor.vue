@@ -2,7 +2,8 @@
 import Attachments from '@/components/ui/Attachments.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush, Maximize2, Minimize2 } from 'lucide-vue-next'
+import { noteWide } from './noteWide'
 import DrawingSheet from '@/components/draw/DrawingSheet.vue'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
 import RemindPicker from '@/components/ui/RemindPicker.vue'
@@ -211,8 +212,8 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
 </script>
 
 <template>
-  <Overlay :open="open && !!note" size="md" @close="close">
-    <div v-if="note" ref="root" class="note-sheet" :data-note="draft.color">
+  <Overlay :open="open && !!note" :size="noteWide ? 'xl' : 'md'" @close="close">
+    <div v-if="note" ref="root" class="note-sheet" :class="{ wide: noteWide }" :data-note="draft.color">
       <div class="relative">
         <NoteFields ref="fields" v-model="draft" big :readonly="!editable" @submit="close" />
         <Attachments
@@ -268,6 +269,10 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
             <MoreHorizontal class="h-[18px] w-[18px]" />
           </button>
         </template>
+        <button class="tb" :class="{ on: noteWide }" :aria-label="noteWide ? t('notes.smaller') : t('notes.bigger')" :title="noteWide ? t('notes.smaller') : t('notes.bigger')" :aria-pressed="noteWide" data-testid="note-size" @click="noteWide = !noteWide">
+          <Minimize2 v-if="noteWide" class="h-[18px] w-[18px]" />
+          <Maximize2 v-else class="h-[18px] w-[18px]" />
+        </button>
         <span class="ml-2 min-w-0 flex-1 truncate text-[12px] text-text-2">{{ edited }}</span>
         <button class="btn btn-sm close-btn" @click="close">{{ t('common.close') }}</button>
       </div>
@@ -291,6 +296,9 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
 </template>
 
 <style scoped>
+.note-sheet.wide :deep(.note-fields .cm-content) {
+  min-height: 50vh;
+}
 .drawing-pic {
   display: block;
   width: 100%;

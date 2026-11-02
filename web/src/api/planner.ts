@@ -275,6 +275,7 @@ export interface Occurrence {
   end: string
   all_day: boolean
   color: string
+  own_color?: boolean // the event's own colour, not its calendar's
   recurring: boolean
   course_id?: string // a class of a course (changed in Courses)
   tz?: string // an Orbit event's own time zone

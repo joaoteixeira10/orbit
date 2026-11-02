@@ -7,6 +7,7 @@ import FormulaAssist from '@/components/ui/FormulaAssist.vue'
 import { Book, MAX_COLS, MAX_ROWS, addr, newTab, reshape, series, show, toTSV, fromTSV, type Cell, type NumFmt, type SheetData, type Tab } from '@/lib/sheet'
 import { colName, dayOf, formatRef, shiftFormula } from '@/lib/formula'
 import { locale, todayStr } from '@/lib/dates'
+import { usePrefsStore } from '@/stores/prefs'
 
 // A spreadsheet, editable: tabs of cells in a grid that scrolls both ways
 // (only what's in view is drawn), a formula bar, a toolbar. It edits like
@@ -24,6 +25,7 @@ const data = defineModel<SheetData>({ required: true })
 const props = defineProps<{ editable: boolean }>()
 const emit = defineEmits<{ change: [] }>()
 const { t } = useI18n()
+const prefs = usePrefsStore() // Sheets may keep their own look (light or dark)
 
 const ROW_H = 26
 const HEAD_H = 26
@@ -684,7 +686,7 @@ defineExpose({ tabId })
 </script>
 
 <template>
-  <div class="sheet-ed" data-testid="sheet-editor">
+  <div class="sheet-ed" :class="prefs.editorClass('sheets')" data-testid="sheet-editor">
     <!-- Toolbar -->
     <div v-if="editable" class="sh-tools">
       <button type="button" class="icon-btn h-7 w-7" :disabled="!canUndo" :title="t('sheets.undo')" :aria-label="t('sheets.undo')" @click="undo"><Undo2 class="h-4 w-4" /></button>

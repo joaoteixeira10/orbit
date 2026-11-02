@@ -6,12 +6,45 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Added
+
+- **A calendar for each list, in colours of your own** — in a workspace's
+  calendar each list is a calendar of its own, in the list's colour (they
+  were one "Tasks"), and the workspace's own events are **Events** (they
+  carried its name). Every calendar's colour can be changed from the left
+  pane — workspaces, Events, lists, subscribed calendars, Holidays — for you
+  only; an event with a colour of its own keeps it.
+- **Editors in their own look** — Settings → Appearance → Editors: Sheets,
+  diagrams (draw.io) and whiteboards follow the theme, or stay light or dark
+  (Sheets and draw.io light in a dark Orbit, say).
+- **Bigger notes** — ⤢ in a note's toolbar and the Quick Note box opens notes
+  wide, with room to write (remembered on the device).
+- **Impersonation in the audit log** — its end is recorded too (returned, or
+  timed out), and **Impersonations** shows only those: starts, ends and what
+  was done in between.
+
 ### Changed
+
+- **Task comments beside the details** (Planner's way) on a wide window.
+- **A note turned into a page reads as written** — its lists ("- ", "* ",
+  "•", "1. "), tasks ("[ ] "), headings, quotes and links become those on the
+  page, and line breaks stay (they came out as escaped text before).
+- **A forced password change needs a new password** — the temporary one (an
+  admin's, or `ADMIN_PASSWORD`) again is refused. Only then: no password
+  history.
 
 - **Behind Cloudflare** — the reverse-proxy guide explains a proxied (orange
   cloud) record: trust Cloudflare's ranges in `TRUSTED_PROXIES` too, or the
   audit log and sign-in limits see Cloudflare's addresses, not people's;
   plus SSL mode, timeouts, the upload limit and Rocket Loader.
+
+### Fixed
+
+- **Impersonating showed the admin's workspaces**, not the person's (and,
+  back, theirs): the sidebar and the live updates now follow whoever is
+  signed in.
+- **Quick Draw's own colours were lost on reload** — they're sent with the
+  sign-in again (and so are the new editor looks and calendar colours).
 
 ## [0.1.0] - 2026-10-31
 

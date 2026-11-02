@@ -28,8 +28,12 @@
   --speed: 0.2s;
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
 
-  /* ---- LIGHT ---- */
+/* The light look; .theme-light keeps a part (an editor) light in a dark
+   Orbit. The accent stays the person's own (below). */
+:root,
+.theme-light {
   --bg: #ffffff; /* the content area */
   --side: rgba(242, 242, 247, 0.78); /* sidebar material */
   --side-solid: #f2f2f7;
@@ -51,14 +55,6 @@
   --text-2: #6e6e73;
   --text-3: #8e8e93;
   --text-faint: #aeaeb2;
-
-  --accent: #007aff;
-  --accent-strong: #0066d6;
-  --accent-soft: rgba(0, 122, 255, 0.14);
-  --accent-bg: rgba(0, 122, 255, 0.1);
-  --accent-text: #007aff;
-  --accent-fg: #ffffff;
-  --ring: rgba(0, 122, 255, 0.35);
 
   --ok: #34c759;
   --ok-soft: rgba(52, 199, 89, 0.14);
@@ -86,8 +82,6 @@
   --teal: #30b0c7;
   --yellow: #ffcc00;
 
-  --ws: var(--accent);
-
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 12px 40px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -95,8 +89,22 @@
   color-scheme: light;
 }
 
-/* ---- DARK ---- */
-html.dark {
+:root {
+  --accent: #007aff;
+  --accent-strong: #0066d6;
+  --accent-soft: rgba(0, 122, 255, 0.14);
+  --accent-bg: rgba(0, 122, 255, 0.1);
+  --accent-text: #007aff;
+  --accent-fg: #ffffff;
+  --ring: rgba(0, 122, 255, 0.35);
+
+
+  --ws: var(--accent);
+}
+
+/* ---- DARK ---- (.theme-dark keeps a part dark in a light Orbit) */
+html.dark,
+.theme-dark {
   --bg: #1c1c1e;
   --side: rgba(36, 36, 38, 0.74);
   --side-solid: #242426;
@@ -118,14 +126,6 @@ html.dark {
   --text-2: #a1a1a6;
   --text-3: #8e8e93;
   --text-faint: #636366;
-
-  --accent: #0a84ff;
-  --accent-strong: #409cff;
-  --accent-soft: rgba(10, 132, 255, 0.24);
-  --accent-bg: rgba(10, 132, 255, 0.18);
-  --accent-text: #409cff;
-  --accent-fg: #ffffff;
-  --ring: rgba(10, 132, 255, 0.45);
 
   --ok: #30d158;
   --ok-soft: rgba(48, 209, 88, 0.2);
@@ -158,6 +158,22 @@ html.dark {
   --shadow-lg: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 16px 48px rgba(0, 0, 0, 0.55);
   --backdrop: rgba(0, 0, 0, 0.45);
   color-scheme: dark;
+}
+
+html.dark {
+  --accent: #0a84ff;
+  --accent-strong: #409cff;
+  --accent-soft: rgba(10, 132, 255, 0.24);
+  --accent-bg: rgba(10, 132, 255, 0.18);
+  --accent-text: #409cff;
+  --accent-fg: #ffffff;
+  --ring: rgba(10, 132, 255, 0.45);
+}
+
+/* A part kept light or dark: its own text colour too (body's is inherited). */
+.theme-light,
+.theme-dark {
+  color: var(--text);
 }
 
 html,

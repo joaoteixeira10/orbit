@@ -36,6 +36,10 @@ async function submit() {
     err.value = t('acct.password.tooShort')
     return
   }
+  if (newPw.value === oldPw.value) {
+    err.value = t('acct.password.notSame')
+    return
+  }
   busy.value = true
   try {
     // The API signs out every other session and returns a fresh access token

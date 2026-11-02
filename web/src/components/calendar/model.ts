@@ -17,6 +17,7 @@ export interface Entry {
   last: string // last local date, inclusive
   editable: boolean // opens in the event sheet
   movable: boolean // can be dragged to another day (single Orbit events)
+  color?: string // as this person sees it (their own calendar colours), else the event's
 }
 
 export interface TaskItem {
@@ -176,7 +177,7 @@ export function daysBetween(a: string, b: string): number {
 }
 
 // eventColor: the colour an entry wears (its own, else its workspace's).
-export const eventColor = (e: Entry) => e.occ.color || 'var(--ws)'
+export const eventColor = (e: Entry) => e.color || e.occ.color || 'var(--ws)'
 
 const longDate: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
 const shortDate: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }

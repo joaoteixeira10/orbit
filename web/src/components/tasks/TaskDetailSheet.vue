@@ -78,6 +78,8 @@ function setAssignees(ids: string[]) {
 }
 
 const title = ref('')
+// Comments go beside the details (a sub-task has none).
+const sideComments = computed(() => !!task.value && !task.value.parent_id)
 const notes = ref('')
 // Notes are Markdown (as a linked git issue's body is): read rendered, with
 // boxes that tick; a click (not on a link or box) or the pencil edits them.
@@ -302,8 +304,9 @@ const estimateChoices = computed(() => {
 </script>
 
 <template>
-  <Overlay :open="open && !!task" size="lg" @close="emit('close')">
-    <template v-if="task">
+  <Overlay :open="open && !!task" :size="sideComments ? 'xl' : 'lg'" @close="emit('close')">
+    <div v-if="task" class="task-cols" :class="{ split: sideComments }">
+      <div class="task-main min-w-0">
       <div class="flex items-start gap-3 pt-2">
         <button
           class="check mt-1.5 !h-6 !w-6"
@@ -569,16 +572,18 @@ const estimateChoices = computed(() => {
         </div>
       </div>
 
-      <!-- Comments: any member, viewers too -->
-      <TaskComments
-        v-if="!task.parent_id"
-        :ws="ws"
-        :task-id="task.id"
-        :can-write="!!workspace && !workspace.archived_at && !auth.privileges.read_only"
-        :is-owner="workspace?.role === 'owner'"
-        :members="members"
-      />
-    </template>
+      </div>
+      <!-- Comments: any member, viewers too; beside the details when wide -->
+      <aside v-if="sideComments" class="task-side" data-testid="task-side">
+        <TaskComments
+          :ws="ws"
+          :task-id="task.id"
+          :can-write="!!workspace && !workspace.archived_at && !auth.privileges.read_only"
+          :is-owner="workspace?.role === 'owner'"
+          :members="members"
+        />
+      </aside>
+    </div>
     <template v-if="task && editable" #footer>
       <button class="btn-ghost mr-auto !text-danger" @click="remove"><Trash2 class="h-4 w-4" />{{ t('common.delete') }}</button>
       <button class="btn-primary" @click="emit('close')">{{ t('common.done') }}</button>
@@ -587,6 +592,27 @@ const estimateChoices = computed(() => {
 </template>
 
 <style scoped>
+/* Details on the left, comments on the right (Planner's way); stacked when
+   the sheet is narrow. The comments keep their place while the details scroll. */
+@media (min-width: 900px) {
+  .task-cols.split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 20px;
+  }
+  .task-side {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: calc(86vh - 140px);
+    overflow-y: auto;
+    padding: 8px 2px 4px 20px;
+    border-left: 0.5px solid var(--border);
+  }
+  .task-side :deep([data-testid='comments']) {
+    margin-top: 0;
+  }
+}
 .title-area {
   field-sizing: content;
 }

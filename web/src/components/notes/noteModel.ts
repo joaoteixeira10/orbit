@@ -2,7 +2,6 @@
 // converting text ↔ checklist, search, copy text, and turning a note into a
 // page document or tasks.
 import type { Note, NoteColor, NoteInput } from '@/api/planner'
-import { textToMarkdown } from '@/lib/markdown'
 
 export const MAX_TITLE = 300
 export const MAX_BODY = 20000
@@ -124,15 +123,64 @@ export function matches(n: Note, q: string): boolean {
   return n.title.toLowerCase().includes(ql) || n.body.toLowerCase().includes(ql) || n.items.some((i) => i.text.toLowerCase().includes(ql))
 }
 
-// pageDoc is the page (Markdown) for a note: its text, line for line, or a
-// task list for a checklist — escaped so it reads back as the same text.
+// pageDoc is the page (Markdown) for a note: its text as a page would show
+// what was typed (noteMarkdown), or a task list for a checklist.
 export function pageDoc(n: Pick<Note, 'body' | 'checklist' | 'items'>): string {
-  if (n.checklist) return n.items.map((i) => `- [${i.done ? 'x' : ' '}] ${textToMarkdown(i.text)}`).join('\n')
-  return n.body
-    .split(/\n{2,}/)
-    .map((para) => textToMarkdown(para.trimEnd()))
-    .filter(Boolean)
-    .join('\n\n')
+  if (n.checklist) return n.items.map((i) => `- [${i.done ? 'x' : ' '}] ${inline(i.text)}`).join('\n')
+  return noteMarkdown(n.body)
+}
+
+// A note is plain text, a page Markdown. What people type in a note as
+// structure becomes that structure on the page: "- " / "* " / "• " and "1. "
+// lines lists, "[ ] " / "[x] " lines tasks, "# " lines headings, "> " lines
+// quotes, and links stay links. Everything else is escaped (a "*" stays a
+// star), and line breaks stay where they were.
+const LIST = /^(\s*)([-*•+])\s+(.*)$/
+const NUMBERED = /^(\s*)(\d{1,9})([.)])\s+(.*)$/
+const TASK = /^(\s*)(?:[-*•+]\s+)?\[([ xX])\]\s+(.*)$/
+const HEADING = /^(#{1,6})\s+(.*)$/
+const QUOTE = /^>\s?(.*)$/
+const URL_RE = /(https?:\/\/[^\s<>]+[^\s<>.,;:!?)\]'"])/
+
+// inline escapes a line's text for Markdown, leaving web addresses whole.
+function inline(text: string): string {
+  return text
+    .split(URL_RE)
+    .map((part, i) => (i % 2 ? part : part.replace(/([\\`*_[\]~<#>|])/g, '\\$1')))
+    .join('')
+}
+
+type Block = 'text' | 'list' | 'quote' | 'heading'
+
+export function noteMarkdown(body: string): string {
+  const out: string[] = []
+  let prev: Block | '' = '' // the line before ('' after a blank line)
+  for (const raw of body.replace(/\r\n?/g, '\n').split('\n')) {
+    const line = raw.trimEnd()
+    if (!line.trim()) {
+      if (prev) out.push('')
+      prev = ''
+      continue
+    }
+    let md: string
+    let kind: Block
+    let m: RegExpMatchArray | null
+    if ((m = line.match(TASK))) [md, kind] = [`${m[1]}- [${m[2] === ' ' ? ' ' : 'x'}] ${inline(m[3])}`, 'list']
+    else if ((m = line.match(LIST))) [md, kind] = [`${m[1]}- ${inline(m[3])}`, 'list']
+    else if ((m = line.match(NUMBERED))) [md, kind] = [`${m[1]}${m[2]}${m[3]} ${inline(m[4])}`, 'list']
+    else if ((m = line.match(HEADING))) [md, kind] = [`${m[1]} ${inline(m[2])}`, 'heading']
+    else if ((m = line.match(QUOTE))) [md, kind] = [`> ${inline(m[1])}`, 'quote']
+    else {
+      // A line of only "-" or "=" would make a rule or a heading of the one above.
+      md = inline(line.trimStart()).replace(/^([-=])/, '\\$1')
+      kind = 'text'
+    }
+    if (prev && (prev !== kind || kind === 'heading')) out.push('') // a new block
+    else if (prev === kind && kind !== 'list') out[out.length - 1] += '  ' // a line break within it
+    out.push(md)
+    prev = kind
+  }
+  return out.join('\n').trim()
 }
 
 // taskTitles are the tasks a note turns into: its unchecked items, or its

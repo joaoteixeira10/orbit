@@ -53,6 +53,8 @@ export const usersApi = {
   forceLogout: (id: string) => api<void>(`/users/${id}/logout`, { method: 'POST' }),
   impersonate: (id: string) =>
     api<{ access_token: string; expires_in: number; user: User }>(`/users/${id}/impersonate`, { method: 'POST' }),
+  endImpersonation: (id: string, reason: 'returned' | 'expired') =>
+    api<void>(`/users/${id}/impersonate/end`, { method: 'POST', body: JSON.stringify({ reason }) }),
   remove: (id: string) => api<void>(`/users/${id}`, { method: 'DELETE' }),
 }
 
@@ -78,8 +80,8 @@ export const rolesApi = {
 
 // ---- Audit + settings ----
 export const auditApi = {
-  list: (page = 1, perPage = 50, q = '') =>
-    api<Paged<AuditEntry>>(`/audit?page=${page}&per_page=${perPage}${q ? `&q=${encodeURIComponent(q)}` : ''}`),
+  list: (page = 1, perPage = 50, q = '', impersonation = false) =>
+    api<Paged<AuditEntry>>(`/audit?page=${page}&per_page=${perPage}${q ? `&q=${encodeURIComponent(q)}` : ''}${impersonation ? '&impersonation=1' : ''}`),
   verify: () => api<{ ok: boolean; checked: number; broken_at?: string; reason?: string }>('/audit/verify'),
 }
 export const settingsApi = {

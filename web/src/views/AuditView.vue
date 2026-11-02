@@ -27,6 +27,7 @@ const toast = useToastStore()
 const PER_PAGE = 100
 
 const q = ref('')
+const onlyImp = ref(false) // only impersonations: start, end, and what was done meanwhile
 const entries = ref<AuditEntry[]>([])
 const page = ref(1)
 const more = ref(false)
@@ -37,7 +38,7 @@ async function load(append = false) {
   const my = ++seq
   const p = append ? page.value + 1 : 1
   try {
-    const res = await auditApi.list(p, PER_PAGE, q.value.trim())
+    const res = await auditApi.list(p, PER_PAGE, q.value.trim(), onlyImp.value)
     if (my !== seq) return
     entries.value = append ? entries.value.concat(res.items) : res.items
     page.value = p
@@ -54,8 +55,9 @@ watch(q, () => {
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => load(), 250)
 })
+watch(onlyImp, () => load())
 // Accounts or roles changed: refresh the first page (unless searching or paging back).
-const offs = ['users', 'roles', 'workspaces'].map((ev) => onLiveEvent(ev, () => !q.value && page.value === 1 && load()))
+const offs = ['users', 'roles', 'workspaces'].map((ev) => onLiveEvent(ev, () => !q.value && !onlyImp.value && page.value === 1 && load()))
 onMounted(() => load())
 onUnmounted(() => offs.forEach((off) => off()))
 
@@ -77,7 +79,10 @@ const downloading = ref(false)
 async function downloadCsv() {
   downloading.value = true
   try {
-    const qs = q.value.trim() ? `?q=${encodeURIComponent(q.value.trim())}` : ''
+    const params = new URLSearchParams()
+    if (q.value.trim()) params.set('q', q.value.trim())
+    if (onlyImp.value) params.set('impersonation', '1')
+    const qs = params.size ? `?${params}` : ''
     await downloadAuthed(`/audit/export${qs}`, `orbit-audit-${new Date().toISOString().slice(0, 10)}.csv`)
   } catch (e: any) {
     toast.error(t('audit.csvFailed'), e?.message)
@@ -117,6 +122,7 @@ function otherDetail(a: AuditEntry) {
       <span v-if="verify" class="verify" :class="verify.ok ? 'ok' : 'bad'">
         {{ verify.ok ? t('audit.intact', { n: verify.checked }) : t('audit.broken', { id: verify.broken_at }) }}
       </span>
+      <button type="button" class="btn btn-sm" :class="{ 'btn-on': onlyImp }" :aria-pressed="onlyImp" data-testid="audit-imp" @click="onlyImp = !onlyImp">{{ t('audit.impersonations') }}</button>
       <button type="button" class="btn btn-sm" :disabled="verifying" @click="verifyChain">{{ t('audit.verify') }}</button>
       <button type="button" class="btn btn-sm" :disabled="downloading" :title="t('audit.csvHint')" @click="downloadCsv">{{ t('audit.csv') }}</button>
       <label class="search">
@@ -160,7 +166,7 @@ function otherDetail(a: AuditEntry) {
           </tr>
         </tbody>
       </table>
-      <div v-else class="empty-state">{{ !loaded ? t('audit.loading') : q ? t('audit.noMatch') : t('audit.none') }}</div>
+      <div v-else class="empty-state">{{ !loaded ? t('audit.loading') : q || onlyImp ? t('audit.noMatch') : t('audit.none') }}</div>
     </div>
     <div v-if="more" class="panel-body"><button type="button" class="btn btn-sm" @click="load(true)">{{ t('audit.older') }}</button></div>
   </section>
@@ -168,6 +174,11 @@ function otherDetail(a: AuditEntry) {
 </template>
 
 <style scoped>
+.btn.btn-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
 .audit-page { padding: 32px clamp(16px, 4vw, 48px) 64px; }
 .panel-head { justify-content: flex-start; }
 .panel-head .search { height: 32px; min-width: 260px; }

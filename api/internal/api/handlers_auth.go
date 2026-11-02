@@ -253,6 +253,13 @@ func (h *Handlers) changePassword(c *gin.Context) {
 	if !h.recheckPassword(c, &user, req.OldPassword, http.StatusBadRequest, "current password is incorrect") {
 		return
 	}
+	// A forced change (the first admin's password from .env, one an admin
+	// chose) exists because someone else knows the current password: the same
+	// one again would change nothing. Only then; no history is kept.
+	if user.MustChangePassword && req.NewPassword == req.OldPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "choose a new password, not the current one"})
+		return
+	}
 	hash, err := auth.HashPassword(req.NewPassword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not hash password"})

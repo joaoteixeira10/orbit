@@ -96,6 +96,13 @@ export function stopLiveUpdates() {
   es = null
 }
 
+// restartLiveUpdates reopens the stream as whoever is signed in now (the
+// stream belongs to one person: impersonating, or returning, switches it).
+export function restartLiveUpdates() {
+  stopLiveUpdates()
+  startLiveUpdates()
+}
+
 // Built-in handler: re-sync the session when the server says privileges changed.
 // Dynamic import avoids a static import cycle (the auth store starts the stream).
 onLiveEvent('privileges', async () => {

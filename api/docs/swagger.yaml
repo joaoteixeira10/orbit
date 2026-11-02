@@ -771,6 +771,12 @@ definitions:
       version:
         type: integer
     type: object
+  api.endImpersonationRequest:
+    properties:
+      reason:
+        description: returned | expired
+        type: string
+    type: object
   api.eventRequest:
     properties:
       all_day:
@@ -2051,6 +2057,9 @@ definitions:
         type: string
       notes:
         type: string
+      own_color:
+        description: the event's own, not its calendar's
+        type: boolean
       recurring:
         type: boolean
       start:
@@ -2371,6 +2380,12 @@ definitions:
     properties:
       accent_color:
         type: string
+      calendar_colors:
+        additionalProperties:
+          type: string
+        description: 'CalendarColors: own colours for calendars (a workspace id, list:<id>,
+          sub:<id>, holidays).'
+        type: object
       channel_details:
         description: titles in shared channels too
         type: boolean
@@ -2381,6 +2396,11 @@ definitions:
         type: boolean
       digest_time:
         type: string
+      editor_themes:
+        additionalProperties:
+          type: string
+        description: 'sheets / diagrams / whiteboards: light | dark'
+        type: object
       locale:
         type: string
       notify_channels:
@@ -3040,6 +3060,13 @@ definitions:
       accent_color:
         description: '#rrggbb or "" (validated in the handler)'
         type: string
+      calendar_colors:
+        additionalProperties:
+          type: string
+        description: |-
+          Own colours for calendars: key → "#rrggbb", or "" to use the
+          calendar's own again.
+        type: object
       channel_details:
         type: boolean
       dev_theme:
@@ -3053,6 +3080,13 @@ definitions:
       digest_time:
         description: HH:MM
         type: string
+      editor_themes:
+        additionalProperties:
+          type: string
+        description: |-
+          Sheets, diagrams, whiteboards: "light" or "dark" whatever Orbit's
+          theme; "follow" (or leaving one out) follows it.
+        type: object
       locale:
         maxLength: 8
         type: string
@@ -4011,6 +4045,12 @@ definitions:
           AccentColor is a personal #rrggbb accent that overrides the org accent for
           this user only (empty = follow the org/developer-theme accent).
         type: string
+      calendar_colors:
+        description: |-
+          CalendarColors are this person's own colours for calendars (JSON
+          {key: "#rrggbb"}; keys: a workspace id, "list:<id>", "sub:<id>",
+          "holidays"); absent = the calendar's own colour.
+        type: string
       channel_details:
         description: |-
           ChannelDetails: the shared channels (chats, topics, webhooks — places
@@ -4036,6 +4076,12 @@ definitions:
           is the local date it was last sent.
         type: boolean
       digest_time:
+        type: string
+      editor_themes:
+        description: |-
+          EditorThemes keeps an editor light or dark whatever Orbit's theme
+          (JSON {"sheets"|"diagrams"|"whiteboards": "light"|"dark"}; absent =
+          follow Orbit's).
         type: string
       id:
         type: string
@@ -4070,6 +4116,11 @@ definitions:
           RemoteImages is whether pages show images from other sites at once
           ("always") or only after a click ("ask", the default): such an image
           tells its site who reads the page, and when.
+        type: string
+      sketch_colors:
+        description: |-
+          SketchColors is the person's own palette in Quick Draw (JSON
+          []string of #rrggbb).
         type: string
       theme:
         $ref: '#/definitions/models.Theme'
@@ -4355,6 +4406,10 @@ paths:
         in: query
         name: actions
         type: string
+      - description: '1: only impersonations (start, end, and what was done meanwhile)'
+        in: query
+        name: impersonation
+        type: string
       produces:
       - application/json
       responses:
@@ -4378,6 +4433,10 @@ paths:
       - description: Only these actions (comma-separated)
         in: query
         name: actions
+        type: string
+      - description: '1: only impersonations'
+        in: query
+        name: impersonation
         type: string
       produces:
       - text/csv
@@ -9289,6 +9348,27 @@ paths:
       security:
       - BearerAuth: []
       summary: Impersonate a user
+      tags:
+      - users
+  /users/{id}/impersonate/end:
+    post:
+      parameters:
+      - description: The impersonated user's id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Why it ended
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/api.endImpersonationRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Record the end of an impersonation
       tags:
       - users
   /users/{id}/logout:

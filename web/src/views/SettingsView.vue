@@ -7,7 +7,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n, I18nT } from 'vue-i18n'
 import { setLocale, currentLocale, SUPPORTED_LOCALES, type LocaleCode } from '@/i18n'
-import { usePrefsStore, type Theme } from '@/stores/prefs'
+import { usePrefsStore, type EditorKind, type EditorTheme, type Theme } from '@/stores/prefs'
 import { api, setAccessToken } from '@/lib/api'
 import { meApi, sessionsApi, type SessionInfo } from '@/api'
 import { passkeysApi, webauthnSupported } from '@/api/webauthn'
@@ -111,6 +111,9 @@ const themes: { value: Theme; label: string; icon: any }[] = [
   { value: 'dark', label: t('settings.themeDark'), icon: Moon },
   { value: 'system', label: t('settings.themeSystem'), icon: Monitor },
 ]
+// Sheets, diagrams and whiteboards: as Orbit, or always light / dark.
+const editorKinds: EditorKind[] = ['sheets', 'diagrams', 'whiteboards']
+const editorLooks: EditorTheme[] = ['follow', 'light', 'dark']
 const accentSwatches = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500', '#34C759', '#30B0C7']
 
 // ---- Language & time ----
@@ -497,6 +500,16 @@ onMounted(loadSessions)
                 <button v-for="t in themes" :key="t.value" class="inline-flex items-center gap-1.5" :class="{ on: prefs.theme === t.value }" @click="prefs.setTheme(t.value)">
                   <component :is="t.icon" class="h-3.5 w-3.5" /> {{ t.label }}
                 </button>
+              </div>
+            </div>
+            <div class="border-t border-border pt-5" data-testid="editor-themes">
+              <div class="text-[13px] font-semibold">{{ t('acct.appearance.editors') }}</div>
+              <div class="mb-1 text-[12px] text-text-3">{{ t('acct.appearance.editorsHint') }}</div>
+              <div v-for="k in editorKinds" :key="k" class="flex flex-wrap items-center justify-between gap-3 py-1.5">
+                <span class="text-[13px]">{{ t(`acct.appearance.editor.${k}`) }}</span>
+                <div class="seg">
+                  <button v-for="l in editorLooks" :key="l" :class="{ on: prefs.editorTheme(k) === l }" :data-testid="`editor-${k}-${l}`" @click="prefs.setEditorTheme(k, l)">{{ t(`acct.appearance.look.${l}`) }}</button>
+                </div>
               </div>
             </div>
             <div class="border-t border-border pt-5">

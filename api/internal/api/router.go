@@ -265,6 +265,7 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/users/:id/logout", h.auth.RequireGlobal(rbac.PUsersManage), h.forceLogout)
 			authed.POST("/users/:id/unlock", h.auth.RequireGlobal(rbac.PUsersManage), h.unlockUser)
 			authed.POST("/users/:id/impersonate", h.auth.RequireOwnerOrGlobal(rbac.PUsersImpersonate), h.requireStepUp(), h.impersonateUser)
+			authed.POST("/users/:id/impersonate/end", h.auth.RequireOwnerOrGlobal(rbac.PUsersImpersonate), h.endImpersonation)
 			authed.GET("/api-tokens", h.auth.RequireGlobal(rbac.PUsersManage), h.listAllAPITokens)
 			authed.DELETE("/api-tokens/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.revokeAnyAPIToken)
 			authed.DELETE("/users/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.deleteUser)

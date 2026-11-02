@@ -132,6 +132,12 @@ const docTemplate = `{
                         "description": "Only these actions (comma-separated)",
                         "name": "actions",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "1: only impersonations (start, end, and what was done meanwhile)",
+                        "name": "impersonation",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -170,6 +176,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Only these actions (comma-separated)",
                         "name": "actions",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "1: only impersonations",
+                        "name": "impersonation",
                         "in": "query"
                     }
                 ],
@@ -8182,6 +8194,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{id}/impersonate/end": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Record the end of an impersonation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The impersonated user's id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Why it ended",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/api.endImpersonationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/users/{id}/logout": {
             "post": {
                 "security": [
@@ -12167,6 +12214,15 @@ const docTemplate = `{
                 }
             }
         },
+        "api.endImpersonationRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "description": "returned | expired",
+                    "type": "string"
+                }
+            }
+        },
         "api.eventRequest": {
             "type": "object",
             "properties": {
@@ -14009,6 +14065,10 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "own_color": {
+                    "description": "the event's own, not its calendar's",
+                    "type": "boolean"
+                },
                 "recurring": {
                     "type": "boolean"
                 },
@@ -14467,6 +14527,13 @@ const docTemplate = `{
                 "accent_color": {
                     "type": "string"
                 },
+                "calendar_colors": {
+                    "description": "CalendarColors: own colours for calendars (a workspace id, list:\u003cid\u003e, sub:\u003cid\u003e, holidays).",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "channel_details": {
                     "description": "titles in shared channels too",
                     "type": "boolean"
@@ -14480,6 +14547,13 @@ const docTemplate = `{
                 },
                 "digest_time": {
                     "type": "string"
+                },
+                "editor_themes": {
+                    "description": "sheets / diagrams / whiteboards: light | dark",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "locale": {
                     "type": "string"
@@ -15401,6 +15475,13 @@ const docTemplate = `{
                     "description": "#rrggbb or \"\" (validated in the handler)",
                     "type": "string"
                 },
+                "calendar_colors": {
+                    "description": "Own colours for calendars: key → \"#rrggbb\", or \"\" to use the\ncalendar's own again.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "channel_details": {
                     "type": "boolean"
                 },
@@ -15418,6 +15499,13 @@ const docTemplate = `{
                 "digest_time": {
                     "description": "HH:MM",
                     "type": "string"
+                },
+                "editor_themes": {
+                    "description": "Sheets, diagrams, whiteboards: \"light\" or \"dark\" whatever Orbit's\ntheme; \"follow\" (or leaving one out) follows it.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "locale": {
                     "type": "string",
@@ -16772,6 +16860,10 @@ const docTemplate = `{
                     "description": "AccentColor is a personal #rrggbb accent that overrides the org accent for\nthis user only (empty = follow the org/developer-theme accent).",
                     "type": "string"
                 },
+                "calendar_colors": {
+                    "description": "CalendarColors are this person's own colours for calendars (JSON\n{key: \"#rrggbb\"}; keys: a workspace id, \"list:\u003cid\u003e\", \"sub:\u003cid\u003e\",\n\"holidays\"); absent = the calendar's own colour.",
+                    "type": "string"
+                },
                 "channel_details": {
                     "description": "ChannelDetails: the shared channels (chats, topics, webhooks — places\nthe owner set up, which others may read) get the notification's\ntext. Off (the default), they get only a ping; email, which is\npersonal, always has the text.",
                     "type": "boolean"
@@ -16792,6 +16884,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "digest_time": {
+                    "type": "string"
+                },
+                "editor_themes": {
+                    "description": "EditorThemes keeps an editor light or dark whatever Orbit's theme\n(JSON {\"sheets\"|\"diagrams\"|\"whiteboards\": \"light\"|\"dark\"}; absent =\nfollow Orbit's).",
                     "type": "string"
                 },
                 "id": {
@@ -16821,6 +16917,10 @@ const docTemplate = `{
                 },
                 "remote_images": {
                     "description": "RemoteImages is whether pages show images from other sites at once\n(\"always\") or only after a click (\"ask\", the default): such an image\ntells its site who reads the page, and when.",
+                    "type": "string"
+                },
+                "sketch_colors": {
+                    "description": "SketchColors is the person's own palette in Quick Draw (JSON\n[]string of #rrggbb).",
                     "type": "string"
                 },
                 "theme": {

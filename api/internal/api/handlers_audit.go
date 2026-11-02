@@ -46,6 +46,7 @@ func (h *Handlers) verifyAudit(c *gin.Context) {
 //	@Param		per_page	query	int	false	"Page size (default 50, max 500)"
 //	@Param		q			query	string	false	"Search action, detail, IP or user name"
 //	@Param		actions		query	string	false	"Only these actions (comma-separated)"
+//	@Param		impersonation	query	string	false	"1: only impersonations (start, end, and what was done meanwhile)"
 //	@Success	200		{object}	map[string]interface{}
 //	@Router		/audit [get]
 func (h *Handlers) listAudit(c *gin.Context) {
@@ -174,6 +175,10 @@ func (h *Handlers) auditQuery(c *gin.Context) *gorm.DB {
 	if acts := c.Query("actions"); acts != "" {
 		q = q.Where("action IN ?", strings.Split(acts, ","))
 	}
+	// Only impersonations: their starts and ends, and what was done meanwhile.
+	if c.Query("impersonation") == "1" {
+		q = q.Where("impersonator_id IS NOT NULL OR action IN ?", []string{"user.impersonate", "user.impersonate_end"})
+	}
 	return q
 }
 
@@ -189,6 +194,7 @@ const auditExportMax = 100000
 //	@Security	BearerAuth
 //	@Param		q		query	string	false	"Search action, detail, IP or user name"
 //	@Param		actions	query	string	false	"Only these actions (comma-separated)"
+//	@Param		impersonation	query	string	false	"1: only impersonations"
 //	@Success	200
 //	@Router		/audit/export [get]
 func (h *Handlers) exportAudit(c *gin.Context) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { currentLocale } from '@/i18n'
+import { usePrefsStore } from '@/stores/prefs'
 import type { Snapshot } from './drawing'
 
 // Excalidraw (a React component) in a Vue page: React, ReactDOM and
@@ -28,7 +29,9 @@ let api: any = null
 let lib: any = null
 let lastVersion = -1
 
-const dark = () => document.documentElement.classList.contains('dark')
+const prefs = usePrefsStore()
+// Orbit's theme, or the one this person keeps for whiteboards.
+const dark = () => prefs.editorDark('whiteboards')
 
 function parse(scene: string) {
   if (!scene) return { elements: [], appState: {}, files: {} }

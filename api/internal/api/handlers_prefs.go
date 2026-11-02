@@ -31,12 +31,18 @@ type prefsResponse struct {
 	DevTheme      string                    `json:"dev_theme"`     // "" (as the instance) | none | a theme id
 	RemoteImages  string                    `json:"remote_images"` // ask | always
 	SketchColors  []string                  `json:"sketch_colors"` // their own palette in Quick Draw
+	EditorThemes  map[string]string         `json:"editor_themes"` // sheets / diagrams / whiteboards: light | dark
+	// CalendarColors: own colours for calendars (a workspace id, list:<id>, sub:<id>, holidays).
+	CalendarColors map[string]string `json:"calendar_colors"`
 	// Quiet hours ("" = none): nothing to devices or channels between them.
 	QuietFrom      string `json:"quiet_from"`
 	QuietTo        string `json:"quiet_to"`
 	QuietReminders bool   `json:"quiet_reminders"`
 	Quiet          bool   `json:"quiet"` // it's quiet now
 }
+
+// editorKinds are the editors that may keep their own theme.
+var editorKinds = map[string]bool{"sheets": true, "diagrams": true, "whiteboards": true}
 
 func toPrefsResponse(p models.UserPrefs) prefsResponse {
 	chans := []string{}
@@ -47,7 +53,17 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 	if p.SketchColors != "" {
 		_ = json.Unmarshal([]byte(p.SketchColors), &colors)
 	}
+	editors := map[string]string{}
+	if p.EditorThemes != "" {
+		_ = json.Unmarshal([]byte(p.EditorThemes), &editors)
+	}
+	calColors := map[string]string{}
+	if p.CalendarColors != "" {
+		_ = json.Unmarshal([]byte(p.CalendarColors), &calColors)
+	}
 	return prefsResponse{
+		CalendarColors: calColors,
+		EditorThemes:   editors,
 		Timezone:       p.Timezone,
 		Theme:          p.Theme,
 		AccentColor:    p.AccentColor,
@@ -180,6 +196,48 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.RemoteImages != nil {
 		updates["remote_images"] = *req.RemoteImages
+	}
+	if req.EditorThemes != nil {
+		editors := map[string]string{}
+		if prefs.EditorThemes != "" {
+			_ = json.Unmarshal([]byte(prefs.EditorThemes), &editors)
+		}
+		for k, v := range *req.EditorThemes {
+			if !editorKinds[k] || (v != "light" && v != "dark" && v != "follow") {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "editor_themes: sheets, diagrams or whiteboards, each light, dark or follow"})
+				return
+			}
+			if v == "follow" {
+				delete(editors, k)
+			} else {
+				editors[k] = v
+			}
+		}
+		b, _ := json.Marshal(editors)
+		updates["editor_themes"] = string(b)
+	}
+	if req.CalendarColors != nil {
+		colors := map[string]string{}
+		if prefs.CalendarColors != "" {
+			_ = json.Unmarshal([]byte(prefs.CalendarColors), &colors)
+		}
+		for k, v := range *req.CalendarColors {
+			if k == "" || len(k) > 64 || (v != "" && !validHexColor(v)) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "calendar_colors: a calendar's key, and a #rrggbb colour (or empty)"})
+				return
+			}
+			if v == "" {
+				delete(colors, k)
+			} else {
+				colors[k] = v
+			}
+		}
+		if len(colors) > 500 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "too many calendar colours"})
+			return
+		}
+		b, _ := json.Marshal(colors)
+		updates["calendar_colors"] = string(b)
 	}
 	for _, q := range []struct {
 		v   *string

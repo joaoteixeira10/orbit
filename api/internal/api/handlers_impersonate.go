@@ -80,3 +80,41 @@ func (h *Handlers) impersonateUser(c *gin.Context) {
 		User:        &target,
 	})
 }
+
+// endImpersonation records that an impersonation ended: the admin, back in
+// their own session, says whose it was (stopped by hand, or its short token
+// ran out). The start is user.impersonate; between the two, every change
+// carries the admin as impersonator.
+//
+//	@Summary	Record the end of an impersonation
+//	@Tags		users
+//	@Security	BearerAuth
+//	@Param		id		path	string					true	"The impersonated user's id"
+//	@Param		body	body	endImpersonationRequest	false	"Why it ended"
+//	@Success	204
+//	@Router		/users/{id}/impersonate/end [post]
+func (h *Handlers) endImpersonation(c *gin.Context) {
+	if !h.impersonationEnabled(c) {
+		return
+	}
+	id, ok := idParam(c)
+	if !ok {
+		return
+	}
+	var req endImpersonationRequest
+	_ = c.ShouldBindJSON(&req)
+	if req.Reason != "expired" {
+		req.Reason = "returned"
+	}
+	var target models.User
+	if err := h.db.First(&target, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+	h.recordCtx(c, "user.impersonate_end", "user", target.ID, gin.H{"reason": req.Reason})
+	c.Status(http.StatusNoContent)
+}
+
+type endImpersonationRequest struct {
+	Reason string `json:"reason"` // returned | expired
+}

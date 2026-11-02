@@ -93,6 +93,12 @@ type updatePrefsRequest struct {
 	DevTheme      *string                    `json:"dev_theme" binding:"omitempty,max=10"`
 	RemoteImages  *string                    `json:"remote_images" binding:"omitempty,oneof=ask always"`
 	SketchColors  *[]string                  `json:"sketch_colors" binding:"omitempty,max=40"`
+	// Sheets, diagrams, whiteboards: "light" or "dark" whatever Orbit's
+	// theme; "follow" (or leaving one out) follows it.
+	EditorThemes *map[string]string `json:"editor_themes"`
+	// Own colours for calendars: key → "#rrggbb", or "" to use the
+	// calendar's own again.
+	CalendarColors *map[string]string `json:"calendar_colors"`
 	// Quiet hours: "HH:MM" each ("" both = none); reminders through or not.
 	QuietFrom      *string `json:"quiet_from"`
 	QuietTo        *string `json:"quiet_to"`

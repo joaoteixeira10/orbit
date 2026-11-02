@@ -93,6 +93,32 @@ func TestAdminResetPasswordForcesChangeAndSignsOut(t *testing.T) {
 	}
 }
 
+// TestForcedChangeNeedsANewPassword: a forced change refuses the current
+// password again; an ordinary change may keep or reuse one (no history).
+func TestForcedChangeNeedsANewPassword(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	admin := loginTok(t, r, "admin", "adminpass")
+	id := createUserVia(t, r, admin, `{"username":"rowan","password":"rowanpassword","role_ids":[]}`)
+	if w := authdo(r, "PUT", "/api/v1/users/"+id+"/password", `{"new_password":"temporary123"}`, admin); w.Code != http.StatusNoContent {
+		t.Fatalf("reset: got %d", w.Code)
+	}
+	me := loginTok(t, r, "rowan", "temporary123")
+	if w := authdo(r, "PUT", "/api/v1/me/password", `{"old_password":"temporary123","new_password":"temporary123"}`, me); w.Code != http.StatusBadRequest {
+		t.Fatalf("forced change to the same password: got %d, want 400", w.Code)
+	}
+	w := authdo(r, "PUT", "/api/v1/me/password", `{"old_password":"temporary123","new_password":"rowanpassword"}`, me)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forced change to an older password: got %d, body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		AccessToken string `json:"access_token"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if w := authdo(r, "PUT", "/api/v1/me/password", `{"old_password":"rowanpassword","new_password":"rowanpassword"}`, resp.AccessToken); w.Code != http.StatusOK {
+		t.Errorf("an ordinary change may keep the password: got %d", w.Code)
+	}
+}
+
 // TestEmailUniqueness: no two accounts may share an email (case-insensitively),
 // on any write path — emails are where notifications and SSO matching go.
 func TestEmailUniqueness(t *testing.T) {

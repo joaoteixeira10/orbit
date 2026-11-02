@@ -3199,3 +3199,138 @@ test('page pieces: a toggle section, columns, the sub-pages list, status badges,
   expect(md).toContain('plain words')
   expect(md).not.toContain('**plain words**')
 })
+
+test('impersonating shows the person’s workspaces; the audit log has its start and end', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.put('/api/v1/features', { headers: H, data: { impersonation: true } })
+  await request.post('/api/v1/users', { headers: H, data: { username: 'ivo', display_name: 'Ivo Reis', password: 'ivo-e2e-password-42' } })
+  const ivo = await (await request.post('/api/v1/auth/login', { data: { username: 'ivo', password: 'ivo-e2e-password-42' } })).json()
+  await request.post('/api/v1/workspaces', { headers: { Authorization: `Bearer ${ivo.access_token}` }, data: { name: 'Ivo Garden', kind: 'personal', starter: false, modules: ['home', 'pages'] } })
+  const mine = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Admin Desk', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  const side = page.locator('#sidebar')
+  await expect(side.getByText(mine.name, { exact: true })).toBeVisible()
+  await page.goto('/admin')
+  await page.locator('tr', { hasText: 'Ivo Reis' }).getByTitle('Impersonate').click()
+  await expect(page.getByText('Viewing as')).toBeVisible()
+  await expect(side.getByText('Ivo Garden', { exact: true })).toBeVisible()
+  await expect(side.getByText(mine.name, { exact: true })).toBeHidden()
+
+  await page.getByRole('button', { name: 'Return to my account' }).click()
+  await expect(side.getByText(mine.name, { exact: true })).toBeVisible()
+  await expect(side.getByText('Ivo Garden', { exact: true })).toBeHidden()
+
+  await page.goto('/audit')
+  await page.getByTestId('audit-imp').click()
+  await expect(page.locator('.act-kind', { hasText: 'user.impersonate_end' })).toBeVisible()
+  await expect(page.locator('.act-kind', { hasText: /^user\.impersonate$/ })).toBeVisible()
+  await expect(page.locator('.act-kind', { hasText: 'auth.login' })).toHaveCount(0)
+})
+
+test('a forced password change wants a new password, not the same one', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/users', { headers: H, data: { username: 'lia', password: 'lia-e2e-password-42', must_change_password: true } })
+  await page.goto('/')
+  await page.locator('input[autocomplete="username webauthn"]').fill('lia')
+  await page.locator('input[autocomplete="current-password"]').fill('lia-e2e-password-42')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible()
+  await page.getByPlaceholder('Current password').fill('lia-e2e-password-42')
+  await page.getByPlaceholder('New password (min 8)').fill('lia-e2e-password-42')
+  await page.getByPlaceholder('Confirm new password').fill('lia-e2e-password-42')
+  await page.getByRole('button', { name: 'Update password' }).click()
+  await expect(page.getByText('Choose a new password, not the current one.')).toBeVisible()
+  await page.getByPlaceholder('New password (min 8)').fill('lia-e2e-password-43')
+  await page.getByPlaceholder('Confirm new password').fill('lia-e2e-password-43')
+  await page.getByRole('button', { name: 'Update password' }).click()
+  await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeHidden()
+})
+
+test('a workspace calendar: each list a calendar in its colour, mine to change; "Events" for its own', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Colours', kind: 'personal', starter: false, modules: ['home', 'tasks', 'calendar'] } })).json()
+  const a = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Errands', color: '#FF9500' } })).json()
+  const b = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Shows', color: '#5856D6' } })).json()
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Post office', list_id: a.id, due: '2026-12-10' } })
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'New episode', list_id: b.id, due: '2026-12-10' } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1500, height: 900 })
+  await page.goto(`/w/${ws.id}/calendar?date=2026-12-10`)
+  for (const name of ['Events', 'Errands', 'Shows']) await expect(page.getByRole('checkbox', { name, exact: true })).toBeVisible()
+  const cell = page.locator('.mg-cell[data-day="2026-12-10"]')
+  await expect(cell).toContainText('Post office')
+  await expect(cell).toContainText('New episode')
+  // A list hidden: its tasks go; the other's stay.
+  await page.getByRole('checkbox', { name: 'Shows', exact: true }).click()
+  await expect(cell).not.toContainText('New episode')
+  await expect(cell).toContainText('Post office')
+  await page.getByRole('checkbox', { name: 'Shows', exact: true }).click()
+  // Errands in green, for me.
+  await page.getByRole('checkbox', { name: 'Errands', exact: true }).hover()
+  await page.getByTestId(`cal-color-list:${a.id}`).click()
+  await page.getByTestId('cal-swatch-#34C759').click()
+  await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
+  await page.reload()
+  await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
+})
+
+test('task sheet: comments beside the details; a note turns into a page with its list; a big note', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Side by side', kind: 'work', starter: false, modules: ['home', 'tasks', 'notes', 'pages'] } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Work', color: '#5856D6' } })).json()
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Two columns', list_id: list.id } })
+  await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Packing', body: 'For the trip\n- passport\n- charger\nsee https://example.org/a_b' } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto(`/w/${ws.id}/tasks`)
+  await page.getByText('Two columns').click()
+  const side = page.getByTestId('task-side')
+  await expect(side.getByTestId('comment-box')).toBeVisible()
+  const title = await page.locator('#task-title').boundingBox()
+  const box = await side.boundingBox()
+  expect(box!.x).toBeGreaterThan(title!.x + 300) // beside, not under
+  await page.keyboard.press('Escape')
+
+  await page.goto(`/w/${ws.id}/notes`)
+  await page.locator('.note-card', { hasText: 'Packing' }).click()
+  await page.getByTestId('note-size').click()
+  await expect(page.locator('.note-sheet.wide').first()).toBeVisible()
+  await page.getByTestId('note-size').click()
+  await page.getByRole('button', { name: 'More options' }).last().click()
+  await page.getByRole('button', { name: 'Turn into page' }).click()
+  await page.waitForURL(/\/p\//)
+  const doc = page.locator('.md-view').first() // it opens to read
+  await expect(doc.locator('li')).toHaveCount(2)
+  await expect(doc.locator('li').first()).toHaveText('passport')
+  await expect(doc.locator('a[href="https://example.org/a_b"]')).toHaveCount(1)
+})
+
+test('editors keep their own look: Sheets light in a dark Orbit', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Looks', kind: 'work', starter: false, modules: ['home', 'sheets'] } })).json()
+  const sh = await (await request.post(`/api/v1/workspaces/${ws.id}/sheets`, { headers: H, data: { title: 'Budget' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/settings')
+  await page.getByRole('button', { name: 'Dark', exact: true }).first().click()
+  await page.getByTestId('editor-sheets-light').click()
+  await page.goto(`/w/${ws.id}/s/${sh.id}`)
+  const ed = page.getByTestId('sheet-editor')
+  await expect(ed).toHaveClass(/theme-light/)
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  await expect(ed).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+
+  // Back as before, for the tests after this one.
+  await page.goto('/settings')
+  await page.getByTestId('editor-sheets-follow').click()
+  await page.getByRole('button', { name: 'Automatic', exact: true }).first().click()
+})

@@ -14,7 +14,9 @@ const props = defineProps<{
   wsIds: string[] // the workspaces shown
   ws: string // one workspace's calendar ('' = all)
   editable: (ws: string) => boolean
-  color: (ws: string) => string
+  color: (task: Task) => string
+  // An event's colour as this person sees it (their own calendar colours).
+  paint: (o: Occurrence) => string
   visible: (o: { occ?: Occurrence; task?: Task }) => boolean
   version: number // bumped when the calendar reloads
 }>()
@@ -51,7 +53,7 @@ watch(tab, (v) => v === 'tasks' && loadTasks())
 const days = computed(() => {
   const today = startOfDay(new Date())
   const out: { key: string; label: string; entries: Entry[] }[] = []
-  const entries = events.value.filter((o) => props.visible({ occ: o })).map((o) => toEntry(o, props.editable(o.workspace_id)))
+  const entries = events.value.filter((o) => props.visible({ occ: o })).map((o) => ({ ...toEntry(o, props.editable(o.workspace_id)), color: props.paint(o) }))
   for (let i = 0; i < 14; i++) {
     const d = addDays(today, i)
     const key = dateStr(d)
@@ -74,7 +76,7 @@ function length(e: Entry) {
 // ---- Tasks ----
 const groups = computed(() => {
   const today = todayStr()
-  const items = tasks.value.filter((x) => props.visible({ task: x })).map<TaskItem>((task) => ({ task, color: props.color(task.workspace_id), editable: props.editable(task.workspace_id) }))
+  const items = tasks.value.filter((x) => props.visible({ task: x })).map<TaskItem>((task) => ({ task, color: props.color(task), editable: props.editable(task.workspace_id) }))
   const byDue = (a: TaskItem, b: TaskItem) => `${a.task.due}${a.task.due_time ?? ''}`.localeCompare(`${b.task.due}${b.task.due_time ?? ''}`)
   return [
     { key: 'late', title: t('cal.pane.late'), items: items.filter((x) => isOverdue(x.task.due, x.task.due_time)).sort(byDue) },

@@ -7,6 +7,18 @@ export type Theme = 'light' | 'dark' | 'system'
 export type TimeFormat = '24h' | '12h'
 // How pages are edited: visually (blocks) or as Markdown source.
 export type PageEditorMode = 'visual' | 'markdown'
+// Editors that may keep their own look whatever Orbit's theme.
+export type EditorKind = 'sheets' | 'diagrams' | 'whiteboards'
+export type EditorTheme = 'follow' | 'light' | 'dark'
+type EditorThemes = Partial<Record<EditorKind, 'light' | 'dark'>>
+
+function readEditorThemes(): EditorThemes {
+  try {
+    return JSON.parse(localStorage.getItem('orbit_editor_themes') || '{}') as EditorThemes
+  } catch {
+    return {}
+  }
+}
 
 interface ServerPrefs {
   timezone: string
@@ -20,6 +32,8 @@ interface ServerPrefs {
   dev_theme?: string // "" = as the instance | none | a developer theme id
   remote_images?: 'ask' | 'always'
   sketch_colors?: string[] // their own palette in Quick Draw
+  editor_themes?: EditorThemes
+  calendar_colors?: Record<string, string>
 }
 
 function browserTZ(): string {
@@ -70,6 +84,9 @@ export const usePrefsStore = defineStore('prefs', {
     // Personal accent override ("" = follow the org accent).
     accentColor: localStorage.getItem('orbit_accent') || '',
     sketchColors: [] as string[],
+    editorThemes: readEditorThemes(),
+    // Own colours for calendars (a workspace id, list:<id>, sub:<id>, holidays).
+    calendarColors: {} as Record<string, string>,
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
@@ -114,6 +131,9 @@ export const usePrefsStore = defineStore('prefs', {
       pushDevTheme(this.devTheme)
       this.remoteImages = p.remote_images === 'always' ? 'always' : 'ask'
       this.sketchColors = p.sketch_colors ?? []
+      this.editorThemes = p.editor_themes ?? {}
+      this.calendarColors = p.calendar_colors ?? {}
+      localStorage.setItem('orbit_editor_themes', JSON.stringify(this.editorThemes))
       mediaPrefs.remoteImages = this.remoteImages
       localStorage.setItem('orbit_remote_images', this.remoteImages)
       this.applyTheme()
@@ -162,6 +182,36 @@ export const usePrefsStore = defineStore('prefs', {
       this.devTheme = choice
       pushDevTheme(choice)
       await this.persist({ dev_theme: choice })
+    },
+    // An editor's look: as Orbit's, or always light / dark.
+    editorTheme(kind: EditorKind): EditorTheme {
+      return this.editorThemes[kind] ?? 'follow'
+    },
+    // editorDark: is this editor shown dark now?
+    editorDark(kind: EditorKind): boolean {
+      const own = this.editorThemes[kind]
+      return own ? own === 'dark' : document.documentElement.classList.contains('dark')
+    },
+    // editorClass: the class that keeps an editor in its own look ('' = Orbit's).
+    editorClass(kind: EditorKind): string {
+      const own = this.editorThemes[kind]
+      return own ? `theme-${own}` : ''
+    },
+    async setEditorTheme(kind: EditorKind, v: EditorTheme) {
+      const next = { ...this.editorThemes }
+      if (v === 'follow') delete next[kind]
+      else next[kind] = v
+      this.editorThemes = next
+      localStorage.setItem('orbit_editor_themes', JSON.stringify(next))
+      await this.persist({ editor_themes: { [kind]: v } as any })
+    },
+    // A calendar's colour for this person ("" = the calendar's own again).
+    async setCalendarColor(key: string, color: string) {
+      const next = { ...this.calendarColors }
+      if (color) next[key] = color
+      else delete next[key]
+      this.calendarColors = next
+      await this.persist({ calendar_colors: { [key]: color } })
     },
     // Their own palette in Quick Draw.
     async setSketchColors(colors: string[]) {

@@ -151,3 +151,43 @@ func TestSketchColors(t *testing.T) {
 		t.Errorf("saved: %#v", p.SketchColors)
 	}
 }
+
+// TestEditorThemes: Sheets, diagrams and whiteboards may each stay light or
+// dark whatever Orbit's theme; "follow" goes back to following it.
+func TestEditorThemes(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p struct {
+		EditorThemes map[string]string `json:"editor_themes"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if len(p.EditorThemes) != 0 {
+		t.Fatalf("default: %#v", p.EditorThemes)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"editor_themes":{"pages":"light"}}`, owner), http.StatusBadRequest, "unknown editor")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"editor_themes":{"sheets":"blue"}}`, owner), http.StatusBadRequest, "unknown theme")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"editor_themes":{"sheets":"light","diagrams":"light"}}`, owner), http.StatusOK, "save")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"editor_themes":{"diagrams":"follow","whiteboards":"dark"}}`, owner), http.StatusOK, "change one")
+	p.EditorThemes = nil
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if len(p.EditorThemes) != 2 || p.EditorThemes["sheets"] != "light" || p.EditorThemes["whiteboards"] != "dark" {
+		t.Errorf("saved: %#v", p.EditorThemes)
+	}
+}
+
+// TestCalendarColors: a person's own colours for calendars are kept with
+// their preferences; "" goes back to the calendar's own.
+func TestCalendarColors(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p struct {
+		CalendarColors map[string]string `json:"calendar_colors"`
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_colors":{"holidays":"grey"}}`, owner), http.StatusBadRequest, "not hex")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_colors":{"holidays":"#34C759","list:abc":"#FF9500"}}`, owner), http.StatusOK, "save")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_colors":{"holidays":""}}`, owner), http.StatusOK, "reset one")
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if len(p.CalendarColors) != 1 || p.CalendarColors["list:abc"] != "#FF9500" {
+		t.Errorf("saved: %#v", p.CalendarColors)
+	}
+}

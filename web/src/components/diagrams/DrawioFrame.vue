@@ -5,6 +5,7 @@ import { LoaderCircle, TriangleAlert } from 'lucide-vue-next'
 import { editorUrl, originOf } from '@/lib/drawio'
 import { currentLocale } from '@/i18n'
 import { useBrandingStore } from '@/stores/branding'
+import { usePrefsStore } from '@/stores/prefs'
 
 // The draw.io editor in a frame, from the address the instance sets. It
 // says when it's ready and hands over the file at each change (it saves
@@ -17,7 +18,8 @@ const branding = useBrandingStore()
 
 const base = computed(() => branding.drawioUrl)
 const origin = computed(() => originOf(base.value))
-const src = editorUrl(base.value, currentLocale(), document.documentElement.classList.contains('dark'))
+// Orbit's theme, or the one this person keeps for diagrams.
+const src = editorUrl(base.value, currentLocale(), usePrefsStore().editorDark('diagrams'))
 const frame = ref<HTMLIFrameElement | null>(null)
 const ready = ref(false)
 const silent = ref(false) // no answer: the address is wrong, or out of reach

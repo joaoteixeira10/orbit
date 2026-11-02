@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Note } from '@/api/planner'
-import { ago, convertedInput, draftOf, inputOf, isEmptyDraft, matches, newItem, noteText, pageDoc, sameContent, taskTitles, toChecklist, toText } from './noteModel'
+import { ago, convertedInput, draftOf, inputOf, isEmptyDraft, matches, newItem, noteMarkdown, noteText, pageDoc, sameContent, taskTitles, toChecklist, toText } from './noteModel'
 import { NOTE_COLORS, noteColorCss, noteColors } from './noteColors'
 
 const note = (over: Partial<Note> = {}): Note => ({
@@ -82,6 +82,47 @@ describe('note text', () => {
   it('makes a page (Markdown)', () => {
     expect(pageDoc(note({ body: 'a\nb\n\n*c*' }))).toBe('a  \nb\n\n\\*c\\*')
     expect(pageDoc(list).split('\n')[0]).toBe('- [x] Bread')
+  })
+
+  it('turns what was typed as structure into that structure on a page', () => {
+    const body = [
+      '# Trip',
+      'Pack light',
+      'see https://example.org/a_b_c.',
+      '- passport',
+      '* tickets',
+      '• charger',
+      '1. book hotel',
+      '[x] visa',
+      '[ ] insurance',
+      'after the list',
+      '> quoted',
+      '---',
+      '2 * 3 = 6',
+    ].join('\n')
+    expect(noteMarkdown(body)).toBe(
+      [
+        '# Trip',
+        '',
+        'Pack light  ',
+        'see https://example.org/a_b_c.',
+        '',
+        '- passport',
+        '- tickets',
+        '- charger',
+        '1. book hotel',
+        '- [x] visa',
+        '- [ ] insurance',
+        '',
+        'after the list',
+        '',
+        '> quoted',
+        '',
+        '\\---  ',
+        '2 \\* 3 = 6',
+      ].join('\n'),
+    )
+    expect(noteMarkdown('a\n\n\n\nb')).toBe('a\n\nb')
   })
 
   it('says how long ago', () => {

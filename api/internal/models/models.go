@@ -192,7 +192,15 @@ type UserPrefs struct {
 	RemoteImages string `gorm:"size:8" json:"remote_images"`
 	// SketchColors is the person's own palette in Quick Draw (JSON
 	// []string of #rrggbb).
-	SketchColors string `gorm:"type:text" json:"-"`
+	SketchColors JSONText `gorm:"type:text" json:"sketch_colors"`
+	// EditorThemes keeps an editor light or dark whatever Orbit's theme
+	// (JSON {"sheets"|"diagrams"|"whiteboards": "light"|"dark"}; absent =
+	// follow Orbit's).
+	EditorThemes JSONText `gorm:"type:text" json:"editor_themes"`
+	// CalendarColors are this person's own colours for calendars (JSON
+	// {key: "#rrggbb"}; keys: a workspace id, "list:<id>", "sub:<id>",
+	// "holidays"); absent = the calendar's own colour.
+	CalendarColors JSONText `gorm:"type:text" json:"calendar_colors"`
 	// Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
 	// reaches devices or channels then (it waits in the inbox, and one
 	// summary goes when they end) — reminders too, unless QuietReminders.
@@ -392,4 +400,17 @@ func AllModels() []any {
 		&CalDAVItem{},
 		&CalendarFeed{},
 	}
+}
+
+// JSONText is JSON kept as text in a column, sent as the JSON it holds (so
+// the signed-in person's preferences come with their values, not a string);
+// empty or not JSON goes out as null.
+type JSONText string
+
+// MarshalJSON writes the JSON held, or null.
+func (j JSONText) MarshalJSON() ([]byte, error) {
+	if j == "" || !json.Valid([]byte(j)) {
+		return []byte("null"), nil
+	}
+	return []byte(j), nil
 }

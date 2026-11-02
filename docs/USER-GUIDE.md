@@ -57,6 +57,9 @@ skip it.
 
 1. Enter the **Current password** (the temporary one).
 2. Enter a **New password (min 8)** and type it again in **Confirm new password**.
+   It must be a new one: the temporary password again isn't accepted (someone
+   else knows it). Later changes, in your settings, may go back to an older
+   password.
 3. Click **Update password**.
 
 You carry on in the same session. Your other sessions are signed out. **Sign
@@ -622,7 +625,13 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
   by line, and back), and `⋯` → **Turn into page**, **Turn into tasks** (each
   open item or line becomes a task in the first list), **Copy text**,
   **Delete** (with **Undo** for a few seconds).
-- Click a card to open it larger; it saves as you type. Emptying a note and
+- **Turn into page** keeps the note as you wrote it: line breaks stay, lines
+  starting with "- ", "* " or "•" become a list, "1. " a numbered one,
+  "[ ] " / "[x] " tasks, "# " a heading, "> " a quote, and web addresses
+  links. Anything else stays the text it was (a "*" is a star).
+- Click a card to open it larger; it saves as you type. **⤢ Bigger** (in its
+  toolbar, and in the Quick Note box) opens notes wide, with room to write;
+  **Smaller** goes back. It's remembered on this device. Emptying a note and
   closing it deletes it.
 - **Draw** (🖌 in an open note): a drawing on the note — Excalidraw, nearly the
   whole window (see [Whiteboards](#14-whiteboards)); **Done** closes it, and
@@ -765,7 +774,8 @@ A task with sub-tasks shows a bar of how many are done (*1/3*) at the end of
 its row; the sub-tasks stay folded under it until you click the bar, and the
 ones you open stay open (in that browser).
 
-**Comments** (at the bottom of the details, as in Planner): any member
+**Comments** (beside the details on a wide window, as in Planner — they stay
+in view while the details scroll; under them when narrow): any member
 writes them, viewers too — in Markdown; type **@** to mention someone (pick
 them from the list). The task's assignees, whoever made it and those who
 commented before are told of a new comment; someone you @mention is told
@@ -1026,6 +1036,8 @@ workspace together, in each workspace's colour (the key is under the title).
   time** under the times, and people who can only view the event see its
   times there too. Repeats keep their time in the event's zone.
 - **Tasks** appear on their due date with a checkbox; tick them right there.
+  In a workspace each list is a calendar of its own, in the list's colour;
+  on the merged calendar they take the workspace's colour.
 
 **The side panes**, as in Outlook (on a wide window; narrower, they open over
 the calendar):
@@ -1033,8 +1045,12 @@ the calendar):
 - **Left** (the button left of the month's name): a **small month** — click
   a day to go there in the view you're in; the days on screen are shaded —
   and the **calendars**, each with a tick to show or hide it: every
-  workspace on the merged calendar; in a workspace, its events, its tasks and
-  each subscribed calendar (**+** subscribes to another).
+  workspace on the merged calendar; in a workspace, **Events** (its own
+  events), **each list** (its tasks with a date) and each subscribed calendar
+  (**+** subscribes to another), and **Holidays**. **A calendar's colour**:
+  point at it and click the palette; pick a colour, or **Its own colour** to
+  go back. The colour is yours only — others keep theirs, and the list or
+  workspace keeps its own. An event given a colour of its own keeps it.
 - **Right** (the button at the top right): **Calendar** lists what's coming,
   day by day for two weeks (Today and Tomorrow always); **Tasks** lists the
   open tasks — late, today, upcoming, without a date. **Drag a task** onto a
@@ -1534,7 +1550,10 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
 
 - **Account** — photo, display name, email.
 - **Appearance** — **Light**, **Dark** or **Automatic**; a personal **accent
-  colour**.
+  colour**. **Editors**: **Sheets**, **Diagrams (draw.io)** and
+  **Whiteboards** each **As the theme**, or always **Light** / **Dark** —
+  say Sheets and draw.io light in a dark Orbit (draw.io takes it when it
+  next opens).
   When the owner lets each person choose, **Developer theme**: as the
   instance (the default), none, or one of the five themes — for you only.
   **Images from other sites** in pages: **Ask first** (the default — they
@@ -1584,8 +1603,9 @@ Your name → **Admin** appears when you hold an admin privilege. Tabs:
 roles**), and **Branding** / **Notifications** when the owner delegated them.
 **Audit log** (your name → Audit log) needs **View audit log**: every sign-in,
 account, role, workspace and membership change, with **Verify integrity**
-(checks the tamper-evident chain) and **CSV** export. Admin screens update
-live.
+(checks the tamper-evident chain) and **CSV** export. **Impersonations**
+shows only those: each start and end (returned, or its time ran out) and what
+was done in between (`via <admin>`). Admin screens update live.
 
 > Admins manage **accounts**, not content: they can't open other people's
 > workspaces.
@@ -1641,7 +1661,7 @@ SSO users don't need creating. They appear at their first SSO sign-in.
 | **Reset password** | Local accounts only. **Generate a temporary password** (shown once), or type one and choose **Require a new password at next sign-in**. The user is signed out everywhere. |
 | **Force sign-out** | Signs the user out of every device. They must sign in again. |
 | **Disable** / **Enable** | Disable asks first, then signs the user out everywhere. They can't sign in or use API tokens until enabled. Enabling does not bring old sessions back. Not shown for yourself. |
-| **Impersonate** | Only when the owner turned on impersonation and you hold **Impersonate users**. Signs you in as that user for up to 15 minutes, with a banner. Not for yourself, disabled users or the owner; only the owner may impersonate an admin. Actions show `via <you>` in the audit log. |
+| **Impersonate** | Only when the owner turned on impersonation and you hold **Impersonate users**. Signs you in as that user for up to 15 minutes, with a banner — you see their workspaces; **Return to my account** brings back yours. Not for yourself, disabled users or the owner; only the owner may impersonate an admin. Actions show `via <you>` in the audit log. |
 | **Delete** | Removes the account for good. Not shown for yourself. Workspaces the user was alone in are deleted with it; in shared ones another member (an editor first) becomes owner if they were the last. |
 
 Safety rules the server enforces:

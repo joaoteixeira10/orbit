@@ -3286,7 +3286,7 @@ test('task sheet: comments beside the details; a note turns into a page with its
   const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Side by side', kind: 'work', starter: false, modules: ['home', 'tasks', 'notes', 'pages'] } })).json()
   const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Work', color: '#5856D6' } })).json()
   await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Two columns', list_id: list.id } })
-  await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Packing', body: 'For the trip\n- passport\n- charger\nsee https://example.org/a_b' } })
+  await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Packing', body: 'For the trip\n- passport\n- charger\nsee https://example.org/a_b\n```sh\n  pack --all *.txt\n```\nthen `zip` it' } })
 
   await signIn(page, NEW_PASSWORD)
   await page.setViewportSize({ width: 1400, height: 900 })
@@ -3311,6 +3311,8 @@ test('task sheet: comments beside the details; a note turns into a page with its
   await expect(doc.locator('li')).toHaveCount(2)
   await expect(doc.locator('li').first()).toHaveText('passport')
   await expect(doc.locator('a[href="https://example.org/a_b"]')).toHaveCount(1)
+  await expect(doc.locator('pre code')).toHaveText('  pack --all *.txt')
+  await expect(doc.locator('p code')).toHaveText('zip')
 })
 
 test('editors keep their own look: Sheets light in a dark Orbit', async ({ page, request }) => {

@@ -27,8 +27,9 @@ merge, not at release time.
 
 - **Task comments beside the details** (Planner's way) on a wide window.
 - **A note turned into a page reads as written** — its lists ("- ", "* ",
-  "•", "1. "), tasks ("[ ] "), headings, quotes and links become those on the
-  page, and line breaks stay (they came out as escaped text before).
+  "•", "1. "), tasks ("[ ] "), headings, quotes, links and code (``` blocks,
+  `inline`) become those on the page, and line breaks stay (they came out as
+  escaped text before).
 - **A forced password change needs a new password** — the temporary one (an
   admin's, or `ADMIN_PASSWORD`) again is refused. Only then: no password
   history.

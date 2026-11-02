@@ -123,6 +123,11 @@ describe('note text', () => {
       ].join('\n'),
     )
     expect(noteMarkdown('a\n\n\n\nb')).toBe('a\n\nb')
+    // Code stays code: a fenced block as written, and `inline code`.
+    expect(noteMarkdown('Run this:\n```sh\n  make up  # *all*\n\n  echo a_b\n```\nthen `make test` *now*')).toBe(
+      ['Run this:', '', '```sh', '  make up  # *all*', '', '  echo a_b', '```', '', 'then `make test` \\*now\\*'].join('\n'),
+    )
+    expect(noteMarkdown('```\nopen')).toBe('```\nopen\n```')
   })
 
   it('says how long ago', () => {

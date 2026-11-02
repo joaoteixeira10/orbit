@@ -627,8 +627,9 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
   **Delete** (with **Undo** for a few seconds).
 - **Turn into page** keeps the note as you wrote it: line breaks stay, lines
   starting with "- ", "* " or "•" become a list, "1. " a numbered one,
-  "[ ] " / "[x] " tasks, "# " a heading, "> " a quote, and web addresses
-  links. Anything else stays the text it was (a "*" is a star).
+  "[ ] " / "[x] " tasks, "# " a heading, "> " a quote, web addresses
+  links, a block between ``` lines code (as written, spaces and all) and
+  `this` inline code. Anything else stays the text it was (a "*" is a star).
 - Click a card to open it larger; it saves as you type. **⤢ Bigger** (in its
   toolbar, and in the Quick Note box) opens notes wide, with room to write;
   **Smaller** goes back. It's remembered on this device. Emptying a note and

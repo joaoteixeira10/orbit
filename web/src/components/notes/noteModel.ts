@@ -133,30 +133,49 @@ export function pageDoc(n: Pick<Note, 'body' | 'checklist' | 'items'>): string {
 // A note is plain text, a page Markdown. What people type in a note as
 // structure becomes that structure on the page: "- " / "* " / "• " and "1. "
 // lines lists, "[ ] " / "[x] " lines tasks, "# " lines headings, "> " lines
-// quotes, and links stay links. Everything else is escaped (a "*" stays a
-// star), and line breaks stay where they were.
+// quotes, links stay links, and code stays code: a ``` (or ~~~) block as
+// written, spaces and all, and `inline code`. Everything else is escaped (a
+// "*" stays a star), and line breaks stay where they were.
 const LIST = /^(\s*)([-*•+])\s+(.*)$/
 const NUMBERED = /^(\s*)(\d{1,9})([.)])\s+(.*)$/
 const TASK = /^(\s*)(?:[-*•+]\s+)?\[([ xX])\]\s+(.*)$/
 const HEADING = /^(#{1,6})\s+(.*)$/
 const QUOTE = /^>\s?(.*)$/
-const URL_RE = /(https?:\/\/[^\s<>]+[^\s<>.,;:!?)\]'"])/
+const FENCE = /^\s*(`{3,}|~{3,})/
+// `inline code`, or a web address: kept as they are.
+const KEEP_RE = /(`[^`\n]+`|https?:\/\/[^\s<>`]+[^\s<>`.,;:!?)\]'"])/
 
-// inline escapes a line's text for Markdown, leaving web addresses whole.
+// inline escapes a line's text for Markdown, leaving code and web addresses whole.
 function inline(text: string): string {
   return text
-    .split(URL_RE)
+    .split(KEEP_RE)
     .map((part, i) => (i % 2 ? part : part.replace(/([\\`*_[\]~<#>|])/g, '\\$1')))
     .join('')
 }
 
-type Block = 'text' | 'list' | 'quote' | 'heading'
+type Block = 'text' | 'list' | 'quote' | 'heading' | 'code'
 
 export function noteMarkdown(body: string): string {
   const out: string[] = []
   let prev: Block | '' = '' // the line before ('' after a blank line)
+  let fence = '' // inside a code block: the fence that closes it
   for (const raw of body.replace(/\r\n?/g, '\n').split('\n')) {
     const line = raw.trimEnd()
+    if (fence) {
+      // A code block, line for line, until its fence.
+      out.push(raw)
+      const f = line.match(FENCE)
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !line.trim().slice(f[1].length)) fence = ''
+      continue
+    }
+    const open = line.match(FENCE)
+    if (open) {
+      if (prev) out.push('')
+      out.push(line.trimStart())
+      fence = open[1]
+      prev = 'code'
+      continue
+    }
     if (!line.trim()) {
       if (prev) out.push('')
       prev = ''
@@ -180,6 +199,7 @@ export function noteMarkdown(body: string): string {
     out.push(md)
     prev = kind
   }
+  if (fence) out.push(fence) // a block left open: closed at the end
   return out.join('\n').trim()
 }
 

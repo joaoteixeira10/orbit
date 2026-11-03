@@ -17,6 +17,7 @@ merge, not at release time.
 - **Editors in their own look** — Settings → Appearance → Editors: Sheets,
   diagrams (draw.io) and whiteboards follow the theme, or stay light or dark
   (Sheets and draw.io light in a dark Orbit, say).
+- **Tasks by their tags in ⌘K** — a tag finds its tasks, as it finds pages.
 - **Bigger notes** — ⤢ in a note's toolbar and the Quick Note box opens notes
   wide, with room to write (remembered on the device).
 - **Impersonation in the audit log** — its end is recorded too (returned, or
@@ -47,6 +48,10 @@ merge, not at release time.
 - **Impersonating showed the admin's workspaces**, not the person's (and,
   back, theirs): the sidebar and the live updates now follow whoever is
   signed in.
+- **Search on SQLite kept indexing the old way after an upgrade** — its
+  triggers were made once and never again, so page tags (and now task tags)
+  weren't found on an instance that existed before. A new index version now
+  makes them again.
 - **Quick Draw's own colours were lost on reload** — they're sent with the
   sign-in again (and so are the new editor looks and calendar colours).
 

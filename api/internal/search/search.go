@@ -23,7 +23,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "8"
+const version = "9"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -32,7 +32,7 @@ var sources = []struct {
 	table, kind, ref, ws, owner, title, body string
 }{
 	{"pages", "page", "@.id", "@.workspace_id", "''", "coalesce(@.title,'') || ' ' || coalesce(@.tags,'')", "coalesce(@.content_text,'') || ' ' || coalesce(@.fields_text,'')"},
-	{"tasks", "task", "@.id", "@.workspace_id", "''", "@.title", "@.notes"},
+	{"tasks", "task", "@.id", "@.workspace_id", "''", "coalesce(@.title,'') || ' ' || coalesce(@.tags,'')", "@.notes"},
 	{"notes", "note", "@.id", "@.workspace_id", "@.owner_id", "@.title", "@.plain_text"},
 	{"events", "event", "@.id", "@.workspace_id", "''", "@.title", "coalesce(@.location,'') || ' ' || coalesce(@.notes,'')"},
 	{"task_comments", "comment", "@.task_id", "@.workspace_id", "''", "''", "@.body"},
@@ -69,12 +69,26 @@ func setup(db *gorm.DB) bool {
 	if db.Name() != "sqlite" {
 		return false
 	}
-	stmts := []string{
+	// A new version may index differently: its triggers are made again
+	// (CREATE TRIGGER IF NOT EXISTS keeps an old one as it was).
+	var have string
+	if db.Migrator().HasTable("search_meta") {
+		db.Raw(`SELECT version FROM search_meta LIMIT 1`).Scan(&have)
+	}
+	stmts := []string{}
+	if have != version {
+		for _, s := range sources {
+			for _, t := range []string{"ai", "au", "ad"} {
+				stmts = append(stmts, fmt.Sprintf(`DROP TRIGGER IF EXISTS search_%s_%s`, s.table, t))
+			}
+		}
+	}
+	stmts = append(stmts,
 		`CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(kind UNINDEXED, id UNINDEXED, ref UNINDEXED, workspace_id UNINDEXED, owner_id UNINDEXED, title, body, tokenize='unicode61 remove_diacritics 2')`,
 		// Where each row sits in the index, to replace it without a scan.
 		`CREATE TABLE IF NOT EXISTS search_rows (key TEXT PRIMARY KEY, rid INTEGER NOT NULL)`,
 		`CREATE TABLE IF NOT EXISTS search_meta (version TEXT NOT NULL)`,
-	}
+	)
 	for _, s := range sources {
 		at := func(expr, p string) string { return strings.ReplaceAll(expr, "@", p) }
 		key := func(p string) string { return fmt.Sprintf("'%s:' || %s.id", s.kind, p) }
@@ -96,8 +110,6 @@ func setup(db *gorm.DB) bool {
 			return false
 		}
 	}
-	var have string
-	db.Raw(`SELECT version FROM search_meta LIMIT 1`).Scan(&have)
 	if have != version {
 		if Rebuild(db) != nil {
 			return false

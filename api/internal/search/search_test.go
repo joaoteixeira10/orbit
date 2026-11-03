@@ -88,3 +88,45 @@ func TestIndex(t *testing.T) {
 		t.Fatalf("match %q", Match(`"OR" -x (a`))
 	}
 }
+
+// TestTagsAndUpgrade: a task is found by its tags; and an index made by an
+// older version (triggers indexing differently) is made again on start.
+func TestTagsAndUpgrade(t *testing.T) {
+	g := db(t)
+	if !Setup(g) {
+		t.Fatal("no FTS5")
+	}
+	task := models.Task{WorkspaceID: "w1", ListID: "l", ColumnID: "c", Title: "Call the bank", Tags: `["urgent","money"]`}
+	g.Create(&task)
+	find := func(q string) map[string]string {
+		h, err := Find(g, q, []string{"w1"}, "u1", 20)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return kinds(h)
+	}
+	if k := find("urgent"); k["task"] != task.ID {
+		t.Fatalf("by a tag: %v", k)
+	}
+	if g.Name() != "sqlite" {
+		return
+	}
+	// As an older version left it: its task trigger without tags.
+	g.Exec(`DROP TRIGGER search_tasks_au`)
+	g.Exec(`CREATE TRIGGER search_tasks_au AFTER UPDATE ON tasks BEGIN DELETE FROM search_index WHERE rowid = (SELECT rid FROM search_rows WHERE key = 'task:' || old.id); DELETE FROM search_rows WHERE key = 'task:' || old.id; INSERT INTO search_index(kind, id, ref, workspace_id, owner_id, title, body) VALUES ('task', new.id, new.id, new.workspace_id, '', new.title, coalesce(new.notes,'')); INSERT OR REPLACE INTO search_rows(key, rid) VALUES ('task:' || new.id, last_insert_rowid()); END`)
+	g.Exec(`UPDATE search_meta SET version = '8'`)
+	g.Model(&task).Update("title", "Call the bank today")
+	if k := find("urgent"); len(k) != 0 {
+		t.Fatalf("the old trigger should miss tags: %v", k)
+	}
+	if !Setup(g) {
+		t.Fatal("setup again")
+	}
+	if k := find("urgent"); k["task"] != task.ID {
+		t.Fatalf("after the upgrade: %v", k)
+	}
+	g.Model(&task).Update("tags", `["later"]`)
+	if k := find("later"); k["task"] != task.ID {
+		t.Fatalf("a new tag, by the new trigger: %v", k)
+	}
+}

@@ -975,5 +975,9 @@ func (t Task) AssignedTo(uid string) bool {
 // argument, AssigneeArg(uid)) or to nobody.
 const MineOrUnassigned = "(assignees IS NULL OR assignees = '' OR assignees = '[]' OR assignees LIKE ?)"
 
+// InOpenList is a where clause for tasks whose list isn't archived (an
+// archived list's tasks stay, out of Today, the calendar and reminders).
+const InOpenList = "list_id NOT IN (SELECT id FROM task_lists WHERE archived_at IS NOT NULL)"
+
 // AssigneeArg is MineOrUnassigned's argument for uid.
 func AssigneeArg(uid string) string { return `%"` + uid + `"%` }

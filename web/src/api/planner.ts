@@ -115,6 +115,7 @@ export interface TaskList {
   done_count?: number
   folder_id?: string // the folder it's the project of
   git?: GitLink // the list holds a repository's issues
+  archived_at?: string | null // put away: out of Today, the calendar, reminders
 }
 // A list's link to a repository on Gitea / Forgejo or GitHub.
 export interface GitLink {
@@ -558,7 +559,7 @@ export const tasksApi = {
   lists: (ws: string) => api<TaskList[]>(`/workspaces/${ws}/lists`),
   createList: (ws: string, b: { name: string; color?: string; icon?: string; columns?: Column[]; folder_id?: string }) =>
     api<TaskList>(`/workspaces/${ws}/lists`, { method: 'POST', body: j(b) }),
-  updateList: (id: string, b: Partial<{ name: string; color: string; icon: string; columns: Column[] }>) =>
+  updateList: (id: string, b: Partial<{ name: string; color: string; icon: string; columns: Column[]; archived: boolean }>) =>
     api<TaskList>(`/lists/${id}`, { method: 'PUT', body: j(b) }),
   removeList: (id: string) => api<void>(`/lists/${id}`, { method: 'DELETE' }),
   orderLists: (ws: string, ids: string[]) => api<void>(`/workspaces/${ws}/lists/order`, { method: 'PUT', body: j({ ids }) }),

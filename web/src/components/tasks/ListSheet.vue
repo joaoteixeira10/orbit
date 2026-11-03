@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap, FolderOpen } from 'lucide-vue-next'
+import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap, FolderOpen, Archive, ArchiveRestore } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
@@ -45,7 +45,7 @@ interface DraftColumn {
   done: boolean
 }
 
-const list = computed(() => (props.listId ? tasks.listsOf(props.ws).find((l) => l.id === props.listId) : undefined))
+const list = computed(() => (props.listId ? tasks.allListsOf(props.ws).find((l) => l.id === props.listId) : undefined))
 const creating = computed(() => !props.listId)
 const workspace = computed(() => wss.byId(props.ws))
 const editable = computed(
@@ -67,7 +67,7 @@ const folders = ref<Folder[]>([])
 const folderId = ref('')
 const folderOptions = computed(() =>
   tree(folders.value).map((x) => {
-    const other = x.folder.list_id && x.folder.list_id !== props.listId ? tasks.listsOf(props.ws).find((l) => l.id === x.folder.list_id) : undefined
+    const other = x.folder.list_id && x.folder.list_id !== props.listId ? tasks.allListsOf(props.ws).find((l) => l.id === x.folder.list_id) : undefined
     return { id: x.folder.id, label: `${'\u00a0\u00a0\u00a0'.repeat(x.depth)}${x.folder.name}${other ? ` · ${other.name}` : ''}` }
   }),
 )
@@ -282,14 +282,26 @@ async function unlink() {
   }
 }
 
+// Archive: put the list away, its tasks kept (or bring it back).
+async function archive(on: boolean) {
+  if (!props.listId) return
+  try {
+    const l = await tasks.archiveList(props.ws, props.listId, on)
+    toast.success(on ? t('lists.archivedTo', { name: l.name }) : t('lists.restored', { name: l.name }))
+    emit('close')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 const confirmDelete = ref(false)
 async function destroy() {
   if (!props.listId) return
   const id = props.listId
   try {
     await tasksApi.removeList(id)
-    tasks.lists[props.ws] = tasks.listsOf(props.ws).filter((l) => l.id !== id)
-    tasks.tasks[props.ws] = tasks.tasksOf(props.ws).filter((x) => x.list_id !== id)
+    tasks.lists[props.ws] = tasks.allListsOf(props.ws).filter((l) => l.id !== id)
+    tasks.tasks[props.ws] = tasks.allTasksOf(props.ws).filter((x) => x.list_id !== id)
     confirmDelete.value = false
     toast.success(t('lists.deleted'))
     emit('close')
@@ -463,9 +475,14 @@ async function destroy() {
       <button v-if="creating && editable && gitOn" type="button" class="btn-ghost mr-auto !px-2.5" @click="fromGit = true">
         <GitBranch class="h-4 w-4" />{{ t('git.list.fromGit') }}
       </button>
-      <button v-if="!creating && editable" type="button" class="btn-ghost mr-auto !px-2.5 !text-danger" @click="confirmDelete = true">
-        <Trash2 class="h-4 w-4" />{{ t('lists.delete') }}
-      </button>
+      <span v-if="!creating && editable" class="mr-auto flex gap-1">
+        <button type="button" class="btn-ghost !px-2.5 !text-danger" @click="confirmDelete = true">
+          <Trash2 class="h-4 w-4" />{{ t('lists.delete') }}
+        </button>
+        <button type="button" class="btn-ghost !px-2.5" :title="list?.archived_at ? undefined : t('lists.archiveHint')" data-testid="list-archive" @click="archive(!list?.archived_at)">
+          <component :is="list?.archived_at ? ArchiveRestore : Archive" class="h-4 w-4" />{{ list?.archived_at ? t('lists.restore') : t('lists.archive') }}
+        </button>
+      </span>
       <template v-if="editable">
         <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
         <button type="button" class="btn-primary" :disabled="!canSave" @click="save">{{ creating ? t('lists.create') : t('common.save') }}</button>

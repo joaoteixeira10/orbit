@@ -150,7 +150,7 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		minute.UTC().Format(planner.DateLayout),
 		minute.AddDate(0, 0, 1).UTC().Format(planner.DateLayout),
 	}
-	s.db.Where("completed_at IS NULL AND due IN ? AND due_time IS NOT NULL", days).Find(&tasks)
+	s.db.Where("completed_at IS NULL AND due IN ? AND due_time IS NOT NULL AND "+models.InOpenList, days).Find(&tasks)
 	for _, t := range tasks {
 		to := t.AssigneeList()
 		if len(to) == 0 {

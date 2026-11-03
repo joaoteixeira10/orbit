@@ -32,7 +32,7 @@ const comments = ref<TaskComment[]>([])
 watch(
   () => comments.value.length,
   (n) => {
-    const tk = tasksStore.tasksOf(props.ws).find((x) => x.id === props.taskId)
+    const tk = tasksStore.allTasksOf(props.ws).find((x) => x.id === props.taskId)
     if (tk) tk.comment_count = n
   },
 )
@@ -147,7 +147,7 @@ async function load() {
   const [c, a] = await Promise.all([commentsApi.list(props.taskId).catch(() => []), commentsApi.activity(props.taskId).catch(() => []), loadFiles()])
   comments.value = c
   // A task from before its changes were kept: its start, from the task itself.
-  const tk = tasksStore.tasksOf(props.ws).find((x) => x.id === props.taskId)
+  const tk = tasksStore.allTasksOf(props.ws).find((x) => x.id === props.taskId)
   const acts: TaskActivity[] = a
   if (tk && !acts.some((x) => x.kind === 'created')) {
     acts.unshift({ id: `created-${tk.id}`, kind: 'created', actor_id: tk.created_by, actor_name: '', params: {}, created_at: tk.created_at })

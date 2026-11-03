@@ -193,7 +193,7 @@ func (h *Handlers) serveFeed(c *gin.Context) {
 	if len(wsIDs) > 0 {
 		h.db.Where("workspace_id IN ? AND (until IS NULL OR until > ?)", wsIDs, now.AddDate(0, 0, -60)).Order("starts_at").Limit(5000).Find(&events)
 		if f.IncludeTasks {
-			h.db.Where("workspace_id IN ? AND completed_at IS NULL AND due >= ?", wsIDs, now.AddDate(0, 0, -30).Format(planner.DateLayout)).Order("due").Limit(5000).Find(&tasks)
+			h.db.Where("workspace_id IN ? AND completed_at IS NULL AND due >= ? AND "+models.InOpenList, wsIDs, now.AddDate(0, 0, -30).Format(planner.DateLayout)).Order("due").Limit(5000).Find(&tasks)
 		}
 	}
 	host := c.Request.Host

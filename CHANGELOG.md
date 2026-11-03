@@ -8,6 +8,10 @@ merge, not at release time.
 
 ### Added
 
+- **Archive a list** — a finished project's list put away, its tasks kept:
+  out of My Lists, Today, the board, the timeline, the calendar, feeds and
+  reminders (search still finds it). **Archived lists** under My Lists holds
+  them; **Restore** brings one back.
 - **Quick notes coloured as an editor would** — Markdown (headings, bold,
   lists, links, ``` blocks with their code coloured), code (JSON, YAML,
   shell, SQL, Python, Go, Dockerfile, nginx… — monospaced and coloured), or

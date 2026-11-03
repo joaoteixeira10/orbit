@@ -1068,7 +1068,8 @@ func (e *Engine) refreshLinked(ctx context.Context) {
 // SyncAll pulls every linked list, then the tasks linked by hand.
 func (e *Engine) SyncAll(ctx context.Context) {
 	var links []models.GitLink
-	e.db.Find(&links)
+	// An archived list rests: nothing to fetch or send until it's back.
+	e.db.Where("list_id NOT IN (SELECT id FROM task_lists WHERE archived_at IS NOT NULL)").Find(&links)
 	for _, l := range links {
 		if err := e.SyncLink(ctx, l); err != nil {
 			e.log.Debug("git sync failed", zap.String("repo", l.Owner+"/"+l.Repo), zap.Error(err))

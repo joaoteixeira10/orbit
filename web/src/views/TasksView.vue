@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Eye, EyeOff, Pencil, CalendarClock, Inbox, CheckCircle2, CalendarDays, ChevronLeft, ListPlus, Rows3, Check, ListFilter, FolderOpen } from 'lucide-vue-next'
+import { Plus, Eye, EyeOff, Pencil, CalendarClock, Inbox, CheckCircle2, CalendarDays, ChevronLeft, ListPlus, Rows3, Check, ListFilter, FolderOpen, ChevronRight, Archive, ArchiveRestore } from 'lucide-vue-next'
 import { countParts, filesApi, type Folder } from '@/lib/filesApi'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
@@ -39,13 +39,26 @@ const ws = computed(() => String(route.params.ws))
 const workspace = computed(() => wss.byId(ws.value))
 const editable = computed(() => !!workspace.value && workspace.value.role !== 'viewer' && !workspace.value.archived_at && !auth.privileges.read_only)
 const lists = computed(() => tasks.listsOf(ws.value))
-const all = computed(() => tasks.tasksOf(ws.value))
+// Archived lists are put away under My Lists; one opened shows its tasks.
+const archivedLists = computed(() => tasks.archivedListsOf(ws.value))
+const showArchived = ref(false)
+const active = computed(() => tasks.tasksOf(ws.value))
 const members = computed(() => wss.members[ws.value] ?? [])
 
 type Smart = 'today' | 'scheduled' | 'all' | 'completed'
 const SMART: Smart[] = ['today', 'scheduled', 'all', 'completed']
 const sel = computed(() => (typeof route.params.list === 'string' ? route.params.list : ''))
-const list = computed(() => lists.value.find((l) => l.id === sel.value))
+const list = computed(() => tasks.allListsOf(ws.value).find((l) => l.id === sel.value))
+const all = computed(() => (list.value?.archived_at ? tasks.allTasksOf(ws.value) : active.value))
+async function restoreList() {
+  if (!list.value) return
+  try {
+    const l = await tasks.archiveList(ws.value, list.value.id, false)
+    toast.success(t('lists.restored', { name: l.name }))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 
 // A list that's a folder's (a project): the folder, what it holds, a way there.
 const folders = ref<Folder[]>([])
@@ -101,14 +114,14 @@ watch([sel, () => all.value.length], async () => {
 
 // ---- Counts and selections ----
 const today = todayStr()
-const open = computed(() => all.value.filter((x) => !x.done && !x.parent_id))
+const open = computed(() => active.value.filter((x) => !x.done && !x.parent_id))
 const counts = computed(() => ({
   today: open.value.filter((x) => x.due && x.due <= today).length,
   scheduled: open.value.filter((x) => x.due).length,
   all: open.value.length,
-  completed: all.value.filter((x) => x.done && !x.parent_id).length,
+  completed: active.value.filter((x) => x.done && !x.parent_id).length,
 }))
-const listById = computed(() => new Map(lists.value.map((l) => [l.id, l])))
+const listById = computed(() => new Map(tasks.allListsOf(ws.value).map((l) => [l.id, l])))
 const showDone = ref(localStorage.getItem('orbit_show_done') === '1')
 watch(showDone, (v) => localStorage.setItem('orbit_show_done', v ? '1' : '0'))
 // Tasks ticked a moment ago stay visible briefly, so ticking feels done.
@@ -460,6 +473,19 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         </button>
         <div v-if="!lists.length" class="group-row text-[14px] text-text-3">{{ t('tasks.noLists') }}</div>
       </div>
+      <template v-if="archivedLists.length">
+        <button type="button" class="arch-toggle" :aria-expanded="showArchived || !!list?.archived_at" data-testid="archived-lists" @click="showArchived = !showArchived">
+          <ChevronRight class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': showArchived || list?.archived_at }" />
+          <Archive class="h-3.5 w-3.5" />{{ t('lists.archived') }}<span class="text-text-3">{{ archivedLists.length }}</span>
+        </button>
+        <div v-if="showArchived || list?.archived_at" class="group archived">
+          <button v-for="l in archivedLists" :key="l.id" class="group-row w-full text-left" :class="{ 'list-on': sel === l.id }" @click="pick(l.id)">
+            <WsIcon :icon="l.icon || 'list-checks'" :color="l.color" :size="28" />
+            <span class="min-w-0 flex-1 truncate text-[15px]">{{ l.name }}</span>
+            <span class="text-[13px] text-text-3">{{ l.open_count || '' }}</span>
+          </button>
+        </div>
+      </template>
       <div class="mt-2 flex flex-wrap gap-x-3">
         <button v-if="editable" class="btn-plain" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</button>
         <button v-if="canSmart" class="btn-plain" data-testid="smart-add" @click="newSmart"><ListFilter class="h-4 w-4" />{{ t('smartList.add') }}</button>
@@ -503,6 +529,11 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
       </Popover>
 
       <p v-if="workspace?.archived_at" class="mb-4 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
+      <div v-else-if="list?.archived_at" class="mb-4 flex items-center gap-3 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2" data-testid="list-archived">
+        <Archive class="h-4 w-4 shrink-0" />
+        <span class="min-w-0 flex-1">{{ t('lists.archivedBanner') }}</span>
+        <button v-if="editable" type="button" class="btn btn-sm shrink-0" data-testid="list-restore" @click="restoreList"><ArchiveRestore class="h-3.5 w-3.5" />{{ t('lists.restore') }}</button>
+      </div>
 
       <div v-for="(s, i) in filteredOut ? [] : sections" :key="s.key" class="mb-6">
         <h3 v-if="sections.length > 1 || !list || grouping !== 'default'" class="sec-head" :class="{ 'text-crit-text': s.overdue }">
@@ -531,7 +562,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
             </div>
           </div>
         </div>
-        <div v-if="editable && sel !== 'completed' && !s.noAdd" class="add-row">
+        <div v-if="editable && sel !== 'completed' && !s.noAdd && !list?.archived_at" class="add-row">
           <template v-if="adding === s.key">
             <span class="check pointer-events-none" :style="{ '--check': s.color || heading.color }" />
             <input
@@ -634,6 +665,21 @@ html.dark .lists-pane {
 }
 .list-on {
   background: var(--accent-bg);
+}
+/* Archived lists: folded away under My Lists, quieter when open. */
+.arch-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 4px 6px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.arch-toggle:hover {
+  color: var(--text);
+}
+.group.archived .group-row:not(.list-on) {
+  opacity: 0.75;
 }
 .tasks-pane {
   padding: 22px clamp(16px, 4vw, 48px) 80px;

@@ -62,7 +62,7 @@ func (s *Scheduler) dayOf(uid, today string, zone *time.Location) (map[string]an
 		return nil, false
 	}
 	var tasks []models.Task
-	s.db.Where("workspace_id IN ? AND completed_at IS NULL AND parent_id IS NULL AND due <= ? AND "+models.MineOrUnassigned, wsIDs, today, models.AssigneeArg(uid)).
+	s.db.Where("workspace_id IN ? AND completed_at IS NULL AND parent_id IS NULL AND due <= ? AND "+models.InOpenList+" AND "+models.MineOrUnassigned, wsIDs, today, models.AssigneeArg(uid)).
 		Order("due, due_time, rank").Limit(100).Find(&tasks)
 	var items []digestItem
 	overdue := 0

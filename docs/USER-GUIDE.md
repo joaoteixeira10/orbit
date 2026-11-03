@@ -778,6 +778,13 @@ The **Tasks** screen has two panes (two screens on a phone):
   date, by day), **All** (open, by list), **Completed** (by day completed).
 - **My Lists**: the workspace's lists with their colour, icon and open count.
   **Add List** creates one (name, colour, icon, and its columns — see Boards).
+- **Archive** a list you're done with but want to keep (a finished project):
+  the pencil (**Edit list**) → **Archive**. It leaves My Lists, the board,
+  the timeline, the charts, Today, the calendar (and calendar feeds) and
+  reminders; its tasks stay, and search still finds them. **Archived lists**
+  under My Lists unfolds them: open one to read it (no new tasks there), and
+  **Restore** brings it back as it was. A list linked to a repository stops
+  syncing while archived.
 
 **Add a task**: **New Task** at the bottom of a section, type, Enter (the
 field stays for the next one). **Quick add** reads, in English or Portuguese:

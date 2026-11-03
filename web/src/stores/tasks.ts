@@ -13,7 +13,10 @@ function gitWarn(t: Task) {
 
 // Task lists and tasks per workspace. The Tasks and Board views share it, so
 // a change on one shows on the other at once. Updates are applied locally
-// first and reconciled with the server's answer.
+// first and reconciled with the server's answer. An archived list and its
+// tasks are put away: listsOf / tasksOf leave them out (Today, the board,
+// the calendar, the timeline… don't see them); the all… getters keep them,
+// for the archived list itself and a task opened from search.
 export const useTasksStore = defineStore('tasks', {
   state: () => ({
     lists: {} as Record<string, TaskList[]>,
@@ -22,9 +25,16 @@ export const useTasksStore = defineStore('tasks', {
     smart: {} as Record<string, SmartList[]>, // saved filters, per workspace
   }),
   getters: {
-    listsOf: (s) => (ws: string) => s.lists[ws] ?? [],
+    listsOf: (s) => (ws: string) => (s.lists[ws] ?? []).filter((l) => !l.archived_at),
+    archivedListsOf: (s) => (ws: string) => (s.lists[ws] ?? []).filter((l) => !!l.archived_at),
+    allListsOf: (s) => (ws: string) => s.lists[ws] ?? [],
     smartOf: (s) => (ws: string) => s.smart[ws] ?? [],
-    tasksOf: (s) => (ws: string) => s.tasks[ws] ?? [],
+    tasksOf: (s) => (ws: string) => {
+      const away = new Set((s.lists[ws] ?? []).filter((l) => l.archived_at).map((l) => l.id))
+      const all = s.tasks[ws] ?? []
+      return away.size ? all.filter((t) => !away.has(t.list_id)) : all
+    },
+    allTasksOf: (s) => (ws: string) => s.tasks[ws] ?? [],
     subtasksOf: (s) => (ws: string, parent: string) =>
       (s.tasks[ws] ?? []).filter((t) => t.parent_id === parent).sort((a, b) => a.rank - b.rank),
   },
@@ -102,6 +112,14 @@ export const useTasksStore = defineStore('tasks', {
     async removeSmart(ws: string, id: string) {
       await smartListsApi.remove(id)
       this.smart[ws] = (this.smart[ws] ?? []).filter((x) => x.id !== id)
+    },
+    // archiveList puts a list away (or brings it back), its tasks kept.
+    async archiveList(ws: string, id: string, archived: boolean) {
+      const l = await tasksApi.updateList(id, { archived })
+      const arr = (this.lists[ws] ??= [])
+      const i = arr.findIndex((x) => x.id === id)
+      if (i >= 0) arr[i] = l
+      return l
     },
     async remove(ws: string, id: string) {
       await tasksApi.remove(id)

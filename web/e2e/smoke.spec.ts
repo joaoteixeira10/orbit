@@ -3470,6 +3470,49 @@ test('task sheet: how its date stands, a status from its menu, any estimate, a f
   await page.getByTestId('focus-stop').click()
 })
 
+test('lists: a finished project archived — out of the lists, Today and the calendar, its tasks kept — then restored', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Projects', kind: 'work', starter: false, modules: ['home', 'tasks', 'calendar'] } })).json()
+  const keep = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Ongoing', color: '#007AFF' } })).json()
+  const done = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Website launch', color: '#FF9500' } })).json()
+  const d = new Date()
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Weekly report', list_id: keep.id } })
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Final launch check', list_id: done.id, due: today } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1280, height: 860 })
+  await page.goto(`/w/${ws.id}/tasks/${done.id}`)
+  await expect(page.getByText('Final launch check')).toBeVisible()
+  // Edit list → Archive.
+  await page.getByTitle('Edit list').click()
+  await page.getByTestId('list-archive').click()
+  await expect(page.getByText('“Website launch” archived')).toBeVisible()
+  // Still open, marked archived, its task there; no new tasks in it.
+  await expect(page.getByTestId('list-archived')).toBeVisible()
+  await expect(page.getByText('Final launch check')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New Task' })).toHaveCount(0)
+  // My Lists has only the other one; Archived holds it.
+  const pane = page.locator('.lists-pane')
+  await expect(pane.locator('.group').filter({ hasText: 'Ongoing' }).first()).not.toContainText('Website launch')
+  await expect(page.getByTestId('archived-lists')).toContainText('1')
+  // Out of Today.
+  await page.locator('.lists-pane .smart', { hasText: 'Today' }).click()
+  await expect(page.getByText('Final launch check')).toHaveCount(0)
+  await page.screenshot({ path: 'test-results/list-archived.png' })
+
+  // Back from the archive.
+  await page.getByTestId('archived-lists').click()
+  await page.locator('.group.archived').getByText('Website launch').click()
+  await page.getByTestId('list-restore').click()
+  await expect(page.getByText('“Website launch” is back')).toBeVisible()
+  await expect(page.getByTestId('list-archived')).toHaveCount(0)
+  await expect(page.getByTestId('archived-lists')).toHaveCount(0)
+  await page.locator('.lists-pane .smart', { hasText: 'Today' }).click()
+  await expect(page.getByText('Final launch check')).toBeVisible()
+})
+
 test('task sheet: comments beside the details; a note turns into a page with its list; a big note', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

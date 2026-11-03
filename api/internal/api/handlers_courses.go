@@ -240,7 +240,7 @@ func (h *Handlers) courseResponses(c *gin.Context, ws models.Workspace, courses 
 			r.Target = &v
 		}
 		if co.Tag != "" {
-			h.db.Model(&models.Task{}).Where("workspace_id = ? AND completed_at IS NULL AND tags LIKE ?", ws.ID, `%"`+co.Tag+`"%`).Count(&r.OpenTasks)
+			h.db.Model(&models.Task{}).Where("workspace_id = ? AND completed_at IS NULL AND tags LIKE ? AND "+models.InOpenList, ws.ID, `%"`+co.Tag+`"%`).Count(&r.OpenTasks)
 		}
 		out = append(out, r)
 	}

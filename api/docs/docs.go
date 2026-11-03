@@ -13701,6 +13701,10 @@ const docTemplate = `{
         "api.listRequest": {
             "type": "object",
             "properties": {
+                "archived": {
+                    "description": "Archived (changing one): true puts the list away — out of the lists,\nToday, the calendar and reminders, its tasks kept; false brings it back.",
+                    "type": "boolean"
+                },
                 "color": {
                     "type": "string"
                 },

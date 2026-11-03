@@ -87,14 +87,14 @@ func (h *Handlers) home(c *gin.Context) {
 	d, _ := time.Parse(planner.DateLayout, today)
 	weekEnd := d.AddDate(0, 0, 7).Format(planner.DateLayout)
 	// My tasks: assigned to me, or unassigned ones I can see.
-	mine := h.db.Where("workspace_id IN ? AND completed_at IS NULL AND parent_id IS NULL AND "+models.MineOrUnassigned, wsIDs, models.AssigneeArg(uid))
+	mine := h.db.Where("workspace_id IN ? AND completed_at IS NULL AND parent_id IS NULL AND "+models.InOpenList+" AND "+models.MineOrUnassigned, wsIDs, models.AssigneeArg(uid))
 	var overdue, todays, upcoming []models.Task
 	mine.Session(&gorm.Session{}).Where("due < ?", today).Order("due, due_time").Limit(50).Find(&overdue)
 	mine.Session(&gorm.Session{}).Where("due = ?", today).Order("due_time, priority DESC, rank").Limit(100).Find(&todays)
 	mine.Session(&gorm.Session{}).Where("due > ? AND due <= ?", today, weekEnd).Order("due, due_time").Limit(100).Find(&upcoming)
 	resp.Overdue, resp.Today, resp.Upcoming = h.counted(toTaskResponses(overdue)), h.counted(toTaskResponses(todays)), h.counted(toTaskResponses(upcoming))
 	var exams []models.Task
-	h.db.Where("workspace_id IN ? AND completed_at IS NULL AND kind = ? AND due >= ? AND due <= ?", wsIDs, "exam", today, d.AddDate(0, 0, 60).Format(planner.DateLayout)).
+	h.db.Where("workspace_id IN ? AND completed_at IS NULL AND kind = ? AND due >= ? AND due <= ? AND "+models.InOpenList, wsIDs, "exam", today, d.AddDate(0, 0, 60).Format(planner.DateLayout)).
 		Order("due, due_time").Limit(12).Find(&exams)
 	resp.Exams = toTaskResponses(exams)
 	resp.Events = h.calendarFor(wsIDs, from, to, today, today).Events

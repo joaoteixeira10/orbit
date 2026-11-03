@@ -80,6 +80,9 @@ type listRequest struct {
 	// own (or the one at the top with its name); "none": no folder; a
 	// folder's id: that one (taken from the list it had, if any).
 	FolderID *string `json:"folder_id"`
+	// Archived (changing one): true puts the list away — out of the lists,
+	// Today, the calendar and reminders, its tasks kept; false brings it back.
+	Archived *bool `json:"archived"`
 }
 
 // createList adds a task list (editors).
@@ -198,6 +201,14 @@ func (h *Handlers) updateList(c *gin.Context) {
 	if req.Icon != nil {
 		up["icon"] = *req.Icon
 	}
+	if req.Archived != nil && *req.Archived != (l.ArchivedAt != nil) {
+		if *req.Archived {
+			now := time.Now()
+			up["archived_at"] = &now
+		} else {
+			up["archived_at"] = nil
+		}
+	}
 	err := h.db.Transaction(func(tx *gorm.DB) error {
 		if req.Columns != nil {
 			cols, err := planner.CleanColumns(*req.Columns)
@@ -246,6 +257,9 @@ func (h *Handlers) updateList(c *gin.Context) {
 	}
 	l = reloadTaskList(h, l.ID)
 	h.publishWS(c, l.WorkspaceID, "lists")
+	if req.Archived != nil {
+		h.publishWS(c, l.WorkspaceID, "tasks") // Today, the calendar…
+	}
 	if req.Name != nil || req.Color != nil {
 		h.publishWS(c, l.WorkspaceID, "files")
 	}

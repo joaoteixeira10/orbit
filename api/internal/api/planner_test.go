@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 
@@ -562,5 +563,65 @@ func TestSeriesScopes(t *testing.T) {
 	expect(t, authdo(r, "DELETE", id+"?scope=following&occurrence=2026-11-02T09:00:00Z", "", alice), http.StatusNoContent, "delete all from first")
 	if got := titles(); len(got) != 3 {
 		t.Errorf("after deleting the first series: %v", got)
+	}
+}
+
+// TestListArchive: an archived list keeps its tasks but leaves Today and
+// the calendar; brought back, they're there again.
+func TestListArchive(t *testing.T) {
+	r, _, alice, bob := plannerSetup(t)
+	ws := createWS(t, r, alice, `{"name":"Work","kind":"work"}`)
+	var l struct {
+		ID         string  `json:"id"`
+		ArchivedAt *string `json:"archived_at"`
+	}
+	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/lists", `{"name":"Website launch"}`, alice), &l)
+	today := time.Now().Format("2006-01-02")
+	expect(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/tasks", `{"title":"Ship it","list_id":"`+l.ID+`","due":"`+today+`"}`, alice), http.StatusCreated, "task")
+	from := time.Now().AddDate(0, 0, -1).UTC().Format(time.RFC3339)
+	to := time.Now().AddDate(0, 0, 2).UTC().Format(time.RFC3339)
+	shows := func() (home, cal int) {
+		var h struct {
+			Today []struct{ Title string } `json:"today"`
+		}
+		decode(t, authdo(r, "GET", "/api/v1/home?today="+today+"&from="+from+"&to="+to, "", alice), &h)
+		var c struct {
+			Tasks []struct{ Title string } `json:"tasks"`
+		}
+		decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/calendar?from="+from+"&to="+to, "", alice), &c)
+		return len(h.Today), len(c.Tasks)
+	}
+	if h, c := shows(); h != 1 || c != 1 {
+		t.Fatalf("before: home %d, calendar %d", h, c)
+	}
+
+	expect(t, authdo(r, "PUT", "/api/v1/lists/"+l.ID, `{"archived":true}`, bob), http.StatusNotFound, "not a member")
+	w := authdo(r, "PUT", "/api/v1/lists/"+l.ID, `{"archived":true}`, alice)
+	expect(t, w, http.StatusOK, "archive")
+	decode(t, w, &l)
+	if l.ArchivedAt == nil {
+		t.Fatal("not archived")
+	}
+	if h, c := shows(); h != 0 || c != 0 {
+		t.Fatalf("archived: home %d, calendar %d", h, c)
+	}
+	// Its tasks are kept.
+	var tasks []struct {
+		ListID string `json:"list_id"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/tasks", "", alice), &tasks)
+	if len(tasks) != 1 {
+		t.Fatalf("tasks: %d", len(tasks))
+	}
+
+	w = authdo(r, "PUT", "/api/v1/lists/"+l.ID, `{"archived":false}`, alice)
+	expect(t, w, http.StatusOK, "restore")
+	l.ArchivedAt = nil // left out when not archived
+	decode(t, w, &l)
+	if l.ArchivedAt != nil {
+		t.Fatal("still archived")
+	}
+	if h, c := shows(); h != 1 || c != 1 {
+		t.Fatalf("restored: home %d, calendar %d", h, c)
 	}
 }

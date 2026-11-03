@@ -34,9 +34,10 @@ const wss = useWorkspacesStore()
 const toast = useToastStore()
 const { t } = useI18n()
 
-const task = computed(() => tasks.tasksOf(props.ws).find((x) => x.id === props.taskId))
+// (A task of an archived list opens too: from search, or the list itself.)
+const task = computed(() => tasks.allTasksOf(props.ws).find((x) => x.id === props.taskId))
 const lists = computed(() => tasks.listsOf(props.ws))
-const list = computed(() => lists.value.find((l) => l.id === task.value?.list_id))
+const list = computed(() => tasks.allListsOf(props.ws).find((l) => l.id === task.value?.list_id))
 const subtasks = computed(() => (task.value ? tasks.subtasksOf(props.ws, task.value.id) : []))
 const workspace = computed(() => wss.byId(props.ws))
 // A task of a git-linked list is an issue there: changed only by someone with
@@ -529,6 +530,7 @@ async function startFocus() {
             <span class="flex-1 text-[14px]">{{ t('tasks.list') }}</span>
             <label class="plain-select">
               <select :value="task.list_id" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.list')" @change="save({ list_id: ($event.target as HTMLSelectElement).value })">
+                <option v-if="list?.archived_at" :value="list.id">{{ list.name }} · {{ t('lists.archivedTag') }}</option>
                 <option v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</option>
               </select>
               <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />

@@ -143,7 +143,7 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 	sort.SliceStable(resp.Events, func(i, j int) bool { return resp.Events[i].Start.Before(resp.Events[j].Start) })
 
 	var tasks []models.Task
-	h.db.Where("workspace_id IN ? AND due >= ? AND due <= ?", wsIDs, fromDate, toDate).Order("due, due_time, rank").Find(&tasks)
+	h.db.Where("workspace_id IN ? AND due >= ? AND due <= ? AND "+models.InOpenList, wsIDs, fromDate, toDate).Order("due, due_time, rank").Find(&tasks)
 	resp.Tasks = h.counted(toTaskResponses(tasks))
 	return resp
 }

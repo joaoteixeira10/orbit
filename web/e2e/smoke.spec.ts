@@ -320,7 +320,7 @@ test('git: connect an account, make a list from a repository, a new task opens a
   const number = (await badge.innerText()).replace(/\D/g, '')
   await page.locator('.task-row', { hasText: title }).click()
   await page.getByTestId('comment-box').fill('Hello from **Orbit**')
-  await page.getByRole('button', { name: 'Comment', exact: true }).click()
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
   await expect(page.getByTestId('comments')).toContainText('Hello from Orbit')
   const r = await page.request.get(`${GIT_URL}/api/v1/repos/${process.env.E2E_GIT_OWNER || 'ana'}/${GIT_REPO}/issues/${number}/comments`, { headers: { Authorization: `token ${GIT_TOKEN}` } })
   const onGit = (await r.json()) as { body: string }[]
@@ -426,13 +426,14 @@ test('attachments: an image on a task shows as a thumbnail, and goes when remove
   const row = page.locator('.task-row', { hasText: 'Essay' })
   await row.hover()
   await row.getByTitle('Details').click()
-  // A 1×1 PNG, uploaded through the sheet's file input.
+  // A 1×1 PNG, attached through the comment box's clip: it shows in the activity.
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
-  await page.locator('.attachments input[type=file]').setInputFiles({ name: 'diagram.png', mimeType: 'image/png', buffer: png })
-  const thumb = page.locator('.attachments .thumb-img img')
-  await expect(thumb).toHaveAttribute('src', /^blob:/)
-  await page.locator('.attachments .thumb-x').click()
-  await expect(thumb).toHaveCount(0)
+  await page.getByTestId('comment-files').setInputFiles({ name: 'diagram.png', mimeType: 'image/png', buffer: png })
+  const file = page.getByTestId('activity-file').filter({ hasText: 'diagram.png' })
+  await expect(file).toContainText('attached a file')
+  await expect(file.locator('img.file-thumb')).toHaveAttribute('src', /^blob:/)
+  await file.getByTestId('activity-file-remove').click()
+  await expect(file).toHaveCount(0)
 })
 
 test('courses and grades: a course with a weekly class, a grade, a goal and what is needed', async ({ page }) => {
@@ -528,9 +529,10 @@ test('notifications: a task someone gives you rings the bell and opens', async (
   await expect(page.locator('#task-title')).toHaveValue('Water the plants')
   // Several people: add Ana as well.
   const who = page.getByTestId('assignees')
-  await expect(who.locator('.pill')).toHaveCount(1)
-  await who.getByLabel('Assign someone').selectOption({ label: 'Ana' })
-  await expect(who.locator('.pill')).toHaveCount(2)
+  await expect(who.locator('.person')).toHaveCount(1)
+  await who.getByLabel('Assign someone').click()
+  await page.getByRole('menuitem', { name: 'Ana' }).click()
+  await expect(who.locator('.person')).toHaveCount(2)
   // A comment, mentioning Ana through the suggestions.
   const box = page.getByTestId('comment-box')
   await box.fill('Thanks! ')
@@ -538,7 +540,7 @@ test('notifications: a task someone gives you rings the bell and opens', async (
   await box.pressSequentially('@an')
   await page.getByRole('option', { name: /Ana/ }).click()
   await box.pressSequentially('will water them **tomorrow**')
-  await page.getByRole('button', { name: 'Comment', exact: true }).click()
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
   const comments = page.getByTestId('comments')
   await expect(comments.locator('strong')).toHaveText('tomorrow')
   await expect(comments).toContainText('Thanks! @ana will water them')
@@ -821,7 +823,7 @@ test('time estimates and the week planner: tasks fitted into free working hours 
   await expect(block).toBeVisible()
   await page.screenshot({ path: 'test-results/planner.png' })
   await block.click()
-  await expect(page.getByTestId('task-estimate')).toHaveValue('90')
+  await expect(page.getByTestId('task-estimate').locator('select')).toHaveValue('90')
 })
 
 test('Google Calendar: the owner sets up signing in with Google; a workspace owner is sent to Google to sign in', async ({ page, request }) => {
@@ -1194,6 +1196,7 @@ function tinyPdf(): Buffer {
 }
 
 test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours kept, the lasso, paper, layers with a picture and a PDF page', async ({ page, request }) => {
+  test.setTimeout(60_000) // a PDF drawn page by page: slow on a busy machine
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
   await signIn(page, NEW_PASSWORD)
@@ -3365,6 +3368,56 @@ test('a workspace calendar: each list a calendar in its colour, mine to change; 
   await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
   await page.reload()
   await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
+})
+
+test('task sheet: how its date stands, status and estimate at a tap, a file dropped in the activity, Start focus', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'New sheet', kind: 'work', starter: false, modules: ['home', 'tasks', 'focus'] } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Assignments', color: '#5856D6' } })).json()
+  const late = new Date(Date.now() - 4 * 86400000)
+  const due = `${late.getFullYear()}-${String(late.getMonth() + 1).padStart(2, '0')}-${String(late.getDate()).padStart(2, '0')}`
+  const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Biology lab report', list_id: list.id, due } })).json()
+  const get = async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { id: string; due: string; estimate: number; column_id: string }[]).find((x) => x.id === task.id)!
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await page.goto(`/w/${ws.id}/tasks`)
+  await page.getByText('Biology lab report').click()
+  const sheet = page.getByTestId('task-sheet')
+  await expect(sheet).toContainText('Assignments')
+  await expect(page.getByTestId('task-due-bar')).toContainText('Overdue by 4 days')
+  await expect(page.getByTestId('activity-line').first()).toContainText('created this task')
+  await page.screenshot({ path: 'test-results/task-sheet.png' })
+
+  // Tomorrow, from the bar.
+  await page.getByTestId('task-due-bar').getByRole('button', { name: 'Tomorrow' }).click()
+  await expect(page.getByTestId('task-due-bar')).toContainText('Due tomorrow')
+  // A status and an estimate, each a tap.
+  const doing = list.columns[1]
+  await sheet.getByRole('radio', { name: doing.name }).click()
+  await page.getByTestId('task-estimate').getByRole('button', { name: '30m' }).click()
+  await expect.poll(async () => [(await get()).column_id, (await get()).estimate]).toEqual([doing.id, 30])
+  // The date from its chip; removed there too.
+  await page.getByTestId('task-due').click()
+  await page.getByTestId('task-date-pop').getByRole('button', { name: 'Remove the date' }).click()
+  await expect.poll(async () => (await get()).due ?? '').toBe('')
+  await expect(page.getByTestId('task-due-bar')).toContainText('No date')
+
+  // A file dropped on the comment box shows in the activity.
+  const dt = await page.evaluateHandle(() => {
+    const d = new DataTransfer()
+    d.items.add(new File(['hello'], 'notes.txt', { type: 'text/plain' }))
+    return d
+  })
+  await page.getByTestId('comment-box').dispatchEvent('drop', { dataTransfer: dt })
+  await expect(page.getByTestId('activity-file').filter({ hasText: 'notes.txt' })).toBeVisible()
+
+  // Start focus: a session on it, on the focus timer.
+  await page.getByTestId('task-start-focus').click()
+  await page.waitForURL(/\/focus/)
+  await expect(page.getByTestId('focus-pill')).toContainText('Biology lab report')
+  await page.getByTestId('focus-stop').click()
 })
 
 test('task sheet: comments beside the details; a note turns into a page with its list; a big note', async ({ page, request }) => {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MessageSquare, Pencil, Trash2, History } from 'lucide-vue-next'
+import { Paperclip, Pencil, Trash2, X } from 'lucide-vue-next'
 import Avatar from '@/components/ui/Avatar.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
@@ -12,11 +12,16 @@ import { useToastStore } from '@/stores/toast'
 import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 import { dueLabel, locale } from '@/lib/dates'
+import { fileSize, uploadBlobUrl, uploadFile, uploadsApi, type Upload } from '@/lib/uploads'
+import { openFile } from '@/lib/fileView'
 
-// A task's comments, as in Planner: oldest first, each in Markdown with its
-// author and when; the author edits or deletes theirs, an owner deletes any.
-// The box below writes one; "@" suggests the workspace's members.
-const props = defineProps<{ ws: string; taskId: string; canWrite: boolean; isOwner: boolean; members: Member[] }>()
+// A task's activity, as in Planner: oldest first — its comments (Markdown,
+// with author and when; the author edits or deletes theirs, an owner any),
+// its changes, and the files put on it. The box at the bottom writes a
+// comment ("@" suggests the workspace's members) and takes files (dropped
+// on it, or the clip). side: the column beside the details, with a close.
+const props = defineProps<{ ws: string; taskId: string; canWrite: boolean; canAttach: boolean; isOwner: boolean; members: Member[]; side?: boolean }>()
+const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -56,14 +61,74 @@ function setShow(v: boolean) {
     /* private mode */
   }
 }
-type Item = { at: string; c?: TaskComment; a?: TaskActivity }
+type Item = { at: string; c?: TaskComment; a?: TaskActivity; f?: Upload }
 const timeline = computed<Item[]>(() => {
   const items: Item[] = comments.value.map((c) => ({ at: c.created_at, c }))
+  items.push(...files.value.map((f) => ({ at: f.created_at, f })))
   if (showActivity.value) items.push(...activity.value.map((a) => ({ at: a.created_at, a })))
   return items.sort((x, y) => x.at.localeCompare(y.at))
 })
+const keyOf = (it: Item) => it.c?.id ?? it.f?.id ?? it.a!.id
+
+// ---- Files on the task ----
+const files = ref<Upload[]>([])
+const thumbs = ref<Record<string, string>>({})
+const uploading = ref(0)
+const over = ref(false)
+const fileEl = ref<HTMLInputElement | null>(null)
+const nameOf = (id: string) => {
+  const m = props.members.find((x) => x.user_id === id)
+  return m ? m.display_name || m.username : t('comments.someone')
+}
+const avatarOf = (id: string) => props.members.find((x) => x.user_id === id)?.avatar_url
+function extOf(f: Upload): string {
+  const m = /\.([a-z0-9]{1,4})$/i.exec(f.name)
+  return (m ? m[1] : 'file').toUpperCase()
+}
+async function loadFiles() {
+  try {
+    files.value = await uploadsApi.list('task', props.taskId)
+  } catch {
+    files.value = []
+  }
+  for (const f of files.value) {
+    if (f.image && !thumbs.value[f.id]) void uploadBlobUrl(f.url).then((u) => (thumbs.value = { ...thumbs.value, [f.id]: u })).catch(() => {})
+  }
+}
+async function attach(list: FileList | File[] | null) {
+  for (const f of [...(list ?? [])]) {
+    uploading.value++
+    try {
+      await uploadFile('task', props.taskId, f)
+    } catch (e: any) {
+      toast.error(e?.message ?? String(e))
+    } finally {
+      uploading.value--
+    }
+  }
+  await loadFiles()
+}
+async function removeFile(f: Upload) {
+  try {
+    await uploadsApi.remove(f.id)
+    files.value = files.value.filter((x) => x.id !== f.id)
+  } catch (e: any) {
+    toast.error(e?.message ?? String(e))
+  }
+}
+function onDrop(e: DragEvent) {
+  over.value = false
+  if (!props.canAttach || !e.dataTransfer?.files.length) return
+  e.preventDefault()
+  void attach(e.dataTransfer.files)
+}
+function onDragOver(e: DragEvent) {
+  if (!props.canAttach || ![...(e.dataTransfer?.types ?? [])].includes('Files')) return
+  e.preventDefault()
+  over.value = true
+}
 function describe(a: TaskActivity): string {
-  const actor = a.actor_name || '?'
+  const actor = a.actor_name || nameOf(a.actor_id)
   const p = a.params ?? {}
   switch (a.kind) {
     case 'due':
@@ -79,26 +144,35 @@ function describe(a: TaskActivity): string {
 }
 
 async function load() {
-  const [c, a] = await Promise.all([commentsApi.list(props.taskId).catch(() => []), commentsApi.activity(props.taskId).catch(() => [])])
+  const [c, a] = await Promise.all([commentsApi.list(props.taskId).catch(() => []), commentsApi.activity(props.taskId).catch(() => []), loadFiles()])
   comments.value = c
-  activity.value = a
+  // A task from before its changes were kept: its start, from the task itself.
+  const tk = tasksStore.tasksOf(props.ws).find((x) => x.id === props.taskId)
+  const acts: TaskActivity[] = a
+  if (tk && !acts.some((x) => x.kind === 'created')) {
+    acts.unshift({ id: `created-${tk.id}`, kind: 'created', actor_id: tk.created_by, actor_name: '', params: {}, created_at: tk.created_at })
+  }
+  activity.value = acts
 }
 watch(() => props.taskId, () => ((draft.value = ''), (editing.value = ''), load()), { immediate: true })
 const off = onLiveEvent('ws', (e) => {
   if (String(e.ws) !== props.ws) return
   // Others' comments; anyone's change to tasks (ours too: a new line).
   if ((e.what === 'comments' && e.origin !== CLIENT_ID) || e.what === 'tasks') void load()
+  else if (e.what === 'uploads') void loadFiles()
 })
 onUnmounted(off)
 
+// When: "5 minutes ago" today, else the day ("25 Oct"; the year if not this one).
 function when(iso: string): string {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  const d = new Date(iso)
+  const m = Math.floor((Date.now() - d.getTime()) / 60000)
   if (m < 1) return t('comments.justNow')
   const rtf = new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' })
   if (m < 60) return rtf.format(-m, 'minute')
-  if (m < 24 * 60) return rtf.format(-Math.floor(m / 60), 'hour')
-  if (m < 7 * 24 * 60) return rtf.format(-Math.floor(m / 1440), 'day')
-  return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
+  if (m < 12 * 60) return rtf.format(-Math.floor(m / 60), 'hour')
+  const year = d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'
+  return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year }).format(d)
 }
 
 async function send() {
@@ -200,98 +274,232 @@ function onKey(e: KeyboardEvent) {
 </script>
 
 <template>
-  <section class="mt-4" data-testid="comments">
-    <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1">
-      <MessageSquare class="h-3.5 w-3.5" />{{ t('comments.activity') }}<span v-if="comments.length" class="font-normal text-text-3">{{ comments.length }}</span>
-      <button v-if="activity.length" type="button" class="ml-auto font-normal normal-case text-accent-text hover:underline" @click="setShow(!showActivity)">{{ showActivity ? t('comments.hideActivity') : t('comments.showActivity') }}</button>
-    </h3>
-    <ol class="space-y-3">
-      <template v-for="it in timeline" :key="it.c?.id ?? it.a!.id">
-      <li v-if="it.a" class="act" data-testid="activity-line">
-        <History class="h-3.5 w-3.5 shrink-0" />
-        <span class="min-w-0 flex-1">{{ describe(it.a) }}</span>
-        <span class="shrink-0" :title="new Date(it.a.created_at).toLocaleString()">{{ when(it.a.created_at) }}</span>
-      </li>
-      <li v-else-if="it.c" class="flex gap-2.5">
-        <Avatar :name="it.c!.author_name || '?'" :src="it.c!.author_avatar" :size="26" class="mt-0.5" />
-        <div class="min-w-0 flex-1">
-          <div class="flex items-baseline gap-2">
-            <b class="truncate text-[13.5px]">{{ it.c!.author_name }}</b>
-            <span v-if="it.c!.git_author" class="pill shrink-0 !py-0 text-[11px]">{{ t('comments.fromGit') }}</span>
-            <span class="text-[12px] text-text-3" :title="new Date(it.c!.created_at).toLocaleString()">{{ when(it.c!.created_at) }}<template v-if="it.c!.edited_at"> · {{ t('comments.edited') }}</template></span>
-            <span class="ml-auto flex shrink-0 gap-0.5">
-              <button v-if="canWrite && it.c!.author_id === auth.user?.id && editing !== it.c!.id" class="icon-btn h-6 w-6" :title="t('comments.edit')" :aria-label="t('comments.edit')" @click="startEdit(it.c!)"><Pencil class="h-3.5 w-3.5" /></button>
-              <button v-if="canWrite && (it.c!.author_id === auth.user?.id || isOwner)" class="icon-btn h-6 w-6" :title="t('comments.delete')" :aria-label="t('comments.delete')" @click="askDelete = it.c!"><Trash2 class="h-3.5 w-3.5" /></button>
-            </span>
-          </div>
-          <form v-if="editing === it.c!.id" class="mt-1 space-y-1.5" @submit.prevent="saveEdit(it.c!)">
-            <textarea v-model="editText" class="comment-box" rows="3" maxlength="10000" @keydown.meta.enter.prevent="saveEdit(it.c!)" @keydown.ctrl.enter.prevent="saveEdit(it.c!)" @keydown.esc.stop="editing = ''" />
-            <div class="flex justify-end gap-2">
-              <button type="button" class="btn btn-sm" @click="editing = ''">{{ t('comments.cancel') }}</button>
-              <button class="btn-primary btn-sm" :disabled="!editText.trim()">{{ t('comments.save') }}</button>
+  <section class="act-col" :class="{ side }" data-testid="comments">
+    <header class="act-head">
+      <h3 class="min-w-0 flex-1 text-[15px] font-semibold">{{ t('comments.activity') }}</h3>
+      <button v-if="activity.length" type="button" class="text-[12.5px] text-accent-text hover:underline" @click="setShow(!showActivity)">{{ showActivity ? t('comments.hideActivity') : t('comments.showActivity') }}</button>
+      <button v-if="side" type="button" class="icon-btn h-7 w-7" :aria-label="t('common.close')" :title="t('common.close')" @click="emit('close')"><X class="h-4 w-4" /></button>
+    </header>
+    <ol class="act-list">
+      <li v-for="it in timeline" :key="keyOf(it)" :class="it.a ? 'act' : 'post'" :data-testid="it.a ? 'activity-line' : it.f ? 'activity-file' : undefined">
+        <template v-if="it.a">
+          <span class="act-dot" aria-hidden="true" />
+          <span class="min-w-0 flex-1">{{ describe(it.a) }} · <span :title="new Date(it.a.created_at).toLocaleString()">{{ when(it.a.created_at) }}</span></span>
+        </template>
+        <template v-else-if="it.f">
+          <Avatar :name="nameOf(it.f.owner_id)" :src="avatarOf(it.f.owner_id)" :size="26" class="mt-0.5 shrink-0" />
+          <div class="min-w-0 flex-1">
+            <p class="text-[13px] text-text-3">
+              <b class="text-text">{{ nameOf(it.f.owner_id) }}</b> {{ t('comments.attached') }} · <span :title="new Date(it.f.created_at).toLocaleString()">{{ when(it.f.created_at) }}</span>
+            </p>
+            <div class="file-card">
+              <button type="button" class="flex min-w-0 flex-1 items-center gap-3 text-left" :title="it.f.name" @click="openFile(it.f.id)">
+                <img v-if="thumbs[it.f.id]" :src="thumbs[it.f.id]" alt="" class="file-thumb" />
+                <span v-else class="file-ext" :class="{ pdf: extOf(it.f) === 'PDF' }">{{ extOf(it.f) }}</span>
+                <span class="min-w-0">
+                  <span class="block truncate text-[13.5px]">{{ it.f.name }}</span>
+                  <span class="block text-[12px] text-text-3">{{ fileSize(it.f.size) }}</span>
+                </span>
+              </button>
+              <button v-if="canAttach" type="button" class="icon-btn h-6 w-6 shrink-0" :aria-label="t('comments.removeFile', { name: it.f.name })" :title="t('comments.removeFile', { name: it.f.name })" data-testid="activity-file-remove" @click="removeFile(it.f)"><X class="h-3.5 w-3.5" /></button>
             </div>
-          </form>
-          <div v-else class="bubble"><MarkdownView class="comment-md" :content="it.c!.body" :editable="false" /></div>
-        </div>
+          </div>
+        </template>
+        <template v-else-if="it.c">
+          <Avatar :name="it.c.author_name || '?'" :src="it.c.author_avatar" :size="26" class="mt-0.5 shrink-0" />
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2">
+              <b class="truncate text-[13.5px]">{{ it.c.author_name }}</b>
+              <span v-if="it.c.git_author" class="pill shrink-0 !py-0 text-[11px]">{{ t('comments.fromGit') }}</span>
+              <span class="shrink-0 text-[12px] text-text-3" :title="new Date(it.c.created_at).toLocaleString()">{{ when(it.c.created_at) }}<template v-if="it.c.edited_at"> · {{ t('comments.edited') }}</template></span>
+              <span class="ml-auto flex shrink-0 gap-0.5">
+                <button v-if="canWrite && it.c.author_id === auth.user?.id && editing !== it.c.id" class="icon-btn h-6 w-6" :title="t('comments.edit')" :aria-label="t('comments.edit')" @click="startEdit(it.c)"><Pencil class="h-3.5 w-3.5" /></button>
+                <button v-if="canWrite && (it.c.author_id === auth.user?.id || isOwner)" class="icon-btn h-6 w-6" :title="t('comments.delete')" :aria-label="t('comments.delete')" @click="askDelete = it.c"><Trash2 class="h-3.5 w-3.5" /></button>
+              </span>
+            </div>
+            <form v-if="editing === it.c.id" class="mt-1 space-y-1.5" @submit.prevent="saveEdit(it.c)">
+              <textarea v-model="editText" class="comment-edit" rows="3" maxlength="10000" @keydown.meta.enter.prevent="saveEdit(it.c)" @keydown.ctrl.enter.prevent="saveEdit(it.c)" @keydown.esc.stop="editing = ''" />
+              <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-sm" @click="editing = ''">{{ t('comments.cancel') }}</button>
+                <button class="btn-primary btn-sm" :disabled="!editText.trim()">{{ t('comments.save') }}</button>
+              </div>
+            </form>
+            <div v-else class="bubble"><MarkdownView class="comment-md" :content="it.c.body" :editable="false" /></div>
+          </div>
+        </template>
       </li>
-      </template>
+      <li v-if="!timeline.length" class="px-1 text-[13px] text-text-3">{{ t('comments.none') }}</li>
     </ol>
-    <p v-if="!comments.length && !canWrite" class="px-1 text-[13px] text-text-3">{{ t('comments.none') }}</p>
 
-    <form v-if="canWrite" class="relative mt-3" @submit.prevent="send">
-      <textarea
-        ref="box"
-        v-model="draft"
-        class="comment-box"
-        rows="2"
-        maxlength="10000"
-        :placeholder="t('comments.placeholder')"
-        :aria-label="t('comments.placeholder')"
-        data-testid="comment-box"
-        @input="onInput"
-        @click="onInput"
-        @keydown="onKey"
-        @blur="mention = null"
-      />
-      <ul v-if="suggestions.length" class="mentions" role="listbox">
-        <li v-for="(m, i) in suggestions" :key="m.user_id" role="option" :aria-selected="i === pick">
-          <button type="button" :class="{ on: i === pick }" @mousedown.prevent="choose(m)">
-            <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="20" />
-            <span class="truncate">{{ m.display_name || m.username }}</span><span class="text-text-3">@{{ m.username }}</span>
-          </button>
-        </li>
-      </ul>
-      <div class="mt-1.5 flex items-center justify-end gap-3">
-        <span class="text-[11.5px] text-text-3">{{ t('comments.sendHint') }}</span>
-        <button class="btn-primary btn-sm" :disabled="!draft.trim() || sending">{{ t('comments.send') }}</button>
+    <form v-if="canWrite" class="act-foot" @submit.prevent="send">
+      <div class="composer" :class="{ over }" @dragover="onDragOver" @dragleave="over = false" @drop="onDrop">
+        <textarea
+          ref="box"
+          v-model="draft"
+          class="comment-box"
+          rows="2"
+          maxlength="10000"
+          :placeholder="canAttach ? t('comments.placeholderFiles') : t('comments.placeholder')"
+          :aria-label="t('comments.placeholder')"
+          data-testid="comment-box"
+          @input="onInput"
+          @click="onInput"
+          @keydown="onKey"
+          @blur="mention = null"
+        />
+        <ul v-if="suggestions.length" class="mentions" role="listbox">
+          <li v-for="(m, i) in suggestions" :key="m.user_id" role="option" :aria-selected="i === pick">
+            <button type="button" :class="{ on: i === pick }" @mousedown.prevent="choose(m)">
+              <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="20" />
+              <span class="truncate">{{ m.display_name || m.username }}</span><span class="text-text-3">@{{ m.username }}</span>
+            </button>
+          </li>
+        </ul>
+        <div class="flex items-center justify-end gap-1.5 px-2 pb-2">
+          <template v-if="canAttach">
+            <input ref="fileEl" type="file" multiple class="hidden" data-testid="comment-files" @change="attach(($event.target as HTMLInputElement).files); ($event.target as HTMLInputElement).value = ''" />
+            <span v-if="uploading" class="mr-auto pl-1 text-[12px] text-text-3">{{ t('comments.uploading') }}</span>
+            <button type="button" class="icon-btn h-8 w-8" :title="t('comments.attach')" :aria-label="t('comments.attach')" @click="fileEl?.click()"><Paperclip class="h-4 w-4" /></button>
+          </template>
+          <button class="btn-primary btn-sm !px-4" :disabled="!draft.trim() || sending">{{ t('comments.send') }}</button>
+        </div>
       </div>
+      <p class="mt-1.5 px-1 text-[11.5px] text-text-3">{{ t('comments.sendHint') }}</p>
     </form>
     <Confirm :open="!!askDelete" :title="t('comments.deleteTitle')" :message="t('comments.deleteBody')" :confirm-label="t('comments.delete')" danger @confirm="remove" @close="askDelete = null" />
   </section>
 </template>
 
 <style scoped>
+.act-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.act-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px 10px;
+}
+.act-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 20px 16px;
+}
+/* Beside the details: the list scrolls, the box stays at the bottom. */
+.act-col.side {
+  height: 100%;
+}
+.act-col.side .act-head {
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 14px;
+}
+.act-col.side .act-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 16px;
+}
+.act-foot {
+  position: relative;
+  padding: 0 20px 16px;
+}
+.act {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-left: 8px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.act-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transform: translateY(-2px);
+}
+.post {
+  display: flex;
+  gap: 10px;
+}
+.file-card {
+  display: flex;
+  max-width: 400px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px 10px 10px 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 0 0.5px var(--border-2);
+  background: var(--surface);
+}
+.file-card:hover {
+  background: var(--surface-hover);
+}
+.file-ext {
+  display: inline-flex;
+  flex: none;
+  width: 28px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: var(--fill);
+  color: var(--text-2);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.file-ext.pdf {
+  background: var(--crit-bg);
+  color: var(--crit-text);
+}
+.file-thumb {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.composer {
+  position: relative;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border-2);
+}
+.composer:focus-within {
+  box-shadow: 0 0 0 0.5px var(--accent), 0 0 0 3px var(--ring);
+}
+.composer.over {
+  box-shadow: 0 0 0 2px var(--accent);
+  background: var(--accent-bg);
+}
 .comment-box {
   display: block;
   width: 100%;
-  resize: vertical;
   min-height: 3.2em;
+  max-height: 30vh;
+  padding: 10px 12px 4px;
+  resize: none;
+  field-sizing: content;
+  background: transparent;
+  font-size: 14px;
+  outline: none;
+}
+.comment-edit {
+  display: block;
+  width: 100%;
+  resize: vertical;
   padding: 9px 12px;
   border-radius: 12px;
   background: var(--fill-2);
   font-size: 14px;
   outline: none;
-}
-.comment-box:focus {
-  box-shadow: 0 0 0 3px var(--ring);
-}
-.act {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 6px;
-  font-size: 12.5px;
-  color: var(--text-3);
 }
 .bubble {
   margin-top: 2px;
@@ -304,7 +512,7 @@ function onKey(e: KeyboardEvent) {
 .mentions {
   position: absolute;
   left: 8px;
-  bottom: calc(100% - 34px);
+  bottom: calc(100% + 4px);
   z-index: 5;
   min-width: 220px;
   padding: 4px;

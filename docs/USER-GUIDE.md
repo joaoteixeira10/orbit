@@ -781,22 +781,38 @@ rule in words ("Every other Tuesday").
 
 **Complete** with the round checkbox (it fades after a moment; the eye button
 shows or hides completed tasks). **Click a task** (anywhere but its
-checkbox) to open its details — rename it there, in the title. The details
-hold: notes, **Start date**, **Date** and **Time**, **Repeat** (every day,
-weekday, week, 2 weeks, month, year), **Priority**, **List**, **Status** (its
-board column), **Assignees** (one or several members — each gets the reminders; alone in a workspace, **Invite people** opens its Members), **tags**,
-**Attachments** (add files or drop them; images show as thumbnails — click to
-open, other files download) and **Sub-tasks**. **Delete** is at the bottom
-(it deletes the task's attachments too).
+checkbox) to open its details — rename it there, in the title. At the top:
+its list, the title, **Add notes…**, and a bar that says how its date stands
+(*Overdue by 4 days* in red, *Due today*, *Due in 3 days*, *No date*) with
+**Today**, **Tomorrow** and **Next week** to set it. Then:
+
+- **Schedule** — **Dates** (the start, then the due date: click either to
+  change or remove it), **Time** (**Add time**), **Repeat** (every day,
+  weekday, week, 2 weeks, month, year).
+- **Planning** — **Status** (its board columns, one tap), **Priority**,
+  **Estimate** (–, 30m, 1h, or longer from **2h+**), **Exam** (in school
+  workspaces), **List**, **Goal**, **Waits on**.
+- **People & tags** — **Assignees** (one or several members — each gets the
+  reminders; **+** adds one; alone in a workspace, **Invite people** opens
+  its Members) and **Tags**.
+- The git issue (where git is on) and **Sub-tasks**.
+
+At the bottom: **Delete** (it deletes the task's files too) and **Start
+focus** (a focus session on it at once, with the length you picked last —
+in workspaces with the Focus timer; otherwise **Done**).
 
 A task with sub-tasks shows a bar of how many are done (*1/3*) at the end of
 its row; the sub-tasks stay folded under it until you click the bar, and the
 ones you open stay open (in that browser).
 
-**Comments** (beside the details on a wide window, as in Planner — they stay
-in view while the details scroll; under them when narrow): any member
-writes them, viewers too — in Markdown; type **@** to mention someone (pick
-them from the list). The task's assignees, whoever made it and those who
+**Activity** (beside the details on a wide window, as in Planner — it stays
+in view while the details scroll; under them when narrow) is the task's
+story, oldest first: who created it, what changed (**Hide changes** leaves
+only comments and files), the **files** put on it (images as thumbnails;
+click one to open it, **✕** removes it) and the **comments**. The box at the
+bottom writes a comment — any member, viewers too — in Markdown; type **@**
+to mention someone (pick them from the list); **⌘↩** or **Send** sends it.
+Drop files on the box, or use its clip, to attach them to the task. The task's assignees, whoever made it and those who
 commented before are told of a new comment; someone you @mention is told
 they were mentioned. **✎** changes your own comment (it says *edited*); **🗑**
 deletes it — owners can delete anyone's. The notification kind **Comments

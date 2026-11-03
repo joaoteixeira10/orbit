@@ -1,29 +1,32 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarArrowUp, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Trash2, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Paperclip, Milestone, Timer, Target, Link2 } from 'lucide-vue-next'
+import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight } from 'lucide-vue-next'
 import { estimateText } from '@/lib/weekPlan'
-import { durationOf } from '@/stores/focus'
+import { durationOf, useFocusStore } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
 import Overlay from '@/components/ui/Overlay.vue'
+import Popover from '@/components/ui/Popover.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
-import { gitApi, type TaskInput, type GitMilestone } from '@/api/planner'
+import { gitApi, type Column, type TaskInput, type GitMilestone } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'
 import GitBadge from './GitBadge.vue'
-import Attachments from '@/components/ui/Attachments.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import TaskComments from './TaskComments.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
 import CodeArea from '@/components/editor/CodeArea.vue'
-import { todayStr, dateStr, addDays, REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset } from '@/lib/dates'
+import { todayStr, dateStr, addDays, parseDate, fmtDate, isOverdue, REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset } from '@/lib/dates'
 
-// Everything about one task, Reminders' "Details": notes, start, date and
-// time, repeat, priority, tags, list and column, who it's for, sub-tasks.
-// Each field saves when it changes.
+// Everything about one task: its title and notes, how its date stands (with
+// Today / Tomorrow / Next week), then Schedule (dates, time, repeat),
+// Planning (status, priority, estimate, list…), People & tags, sub-tasks;
+// Delete and Start focus below. Beside it (Planner's way) its Activity:
+// comments, changes and files. Each field saves when it changes.
 const props = defineProps<{ open: boolean; ws: string; taskId: string }>()
 const emit = defineEmits<{ close: [] }>()
 const tasks = useTasksStore()
@@ -180,22 +183,11 @@ function notesClick(e: MouseEvent) {
 }
 
 // Date and time.
-const hasDate = computed(() => !!task.value?.due)
-const hasTime = computed(() => !!task.value?.due_time)
 const quick = computed(() => [
   { label: t('dates.today'), v: todayStr() },
   { label: t('dates.tomorrow'), v: dateStr(addDays(new Date(), 1)) },
   { label: t('tasks.nextWeek'), v: dateStr(addDays(new Date(), 7)) },
 ])
-function setDate(on: boolean) {
-  void save(on ? { due: task.value?.due || todayStr() } : { due: '', repeat: '' })
-}
-// The start (the timeline bar's left end) defaults to the due date, else today.
-const hasStart = computed(() => !!task.value?.start)
-function setStart(on: boolean) {
-  const due = task.value?.due
-  void save({ start: on ? (due && due < todayStr() ? due : todayStr()) : '' })
-}
 function setTime(on: boolean) {
   void save({ due_time: on ? task.value?.due_time || '09:00' : '' })
 }
@@ -301,335 +293,530 @@ const estimateChoices = computed(() => {
   const own = task.value?.estimate ?? 0
   return own && !base.includes(own) ? [...base, own].sort((a, b) => a - b) : base
 })
+
+// ---- How its date stands, and the date chips ----
+const router = useRouter()
+const focus = useFocusStore()
+const dayText = (s: string) => fmtDate(parseDate(s), { weekday: 'short', day: 'numeric', month: 'short' })
+const late = computed(() => !!task.value && isOverdue(task.value.due, task.value.due_time, task.value.done))
+const dueState = computed(() => {
+  const tk = task.value
+  if (!tk || tk.done) return null
+  if (!tk.due) return { tone: 'none', text: t('tasks.noDate') }
+  const days = Math.round((parseDate(tk.due).getTime() - parseDate(todayStr()).getTime()) / 86400000)
+  if (late.value) return days < 0 ? { tone: 'late', text: t('tasks.overdueBy', { n: -days }, -days) } : { tone: 'late', text: t('tasks.overdue') }
+  if (days === 0) return { tone: 'today', text: t('tasks.dueToday') }
+  if (days === 1) return { tone: 'soon', text: t('tasks.dueTomorrow') }
+  return { tone: 'soon', text: t('tasks.dueIn', { n: days }, days) }
+})
+const datePop = ref<'start' | 'due' | ''>('')
+const startPill = ref<HTMLElement | null>(null)
+const duePill = ref<HTMLElement | null>(null)
+function setDay(which: 'start' | 'due', v: string) {
+  if (which === 'due') void save(v ? { due: v } : { due: '', repeat: '' })
+  else void save({ start: v })
+  if (!v) datePop.value = ''
+}
+
+// Status: the list's columns, each with its dot.
+function colDot(c: Column, i: number): string {
+  return c.color || (c.done ? 'var(--ok)' : i === 0 ? 'var(--text-3)' : 'var(--warn)')
+}
+
+// Estimate: none, 30 min, 1 h at a tap; the rest from "2h+".
+const estChips = [0, 30, 60]
+const estOther = computed(() => {
+  const e = task.value?.estimate ?? 0
+  return estChips.includes(e) ? 0 : e
+})
+const estMore = computed(() => estimateChoices.value.filter((m) => !estChips.includes(m)))
+
+// People and tags.
+const assignPop = ref(false)
+const assignBtn = ref<HTMLElement | null>(null)
+const tagging = ref(false)
+const tagEl = ref<HTMLInputElement | null>(null)
+async function openTag() {
+  tagging.value = true
+  await nextTick()
+  tagEl.value?.focus()
+}
+function tagBlur() {
+  addTag()
+  tagging.value = false
+}
+
+// Start focus: a session on it at once (the length picked last), shown on
+// the focus timer.
+const canFocus = computed(() => focusWs.value && !!task.value && !task.value.parent_id && !task.value.done)
+async function startFocus() {
+  if (!task.value) return
+  let m = 25
+  try {
+    const x = Number(localStorage.getItem('orbit_focus_minutes'))
+    if (x >= 1 && x <= 180) m = x
+  } catch {
+    /* private window */
+  }
+  try {
+    await focus.start(props.ws, task.value.id, m)
+    emit('close')
+    void router.push({ name: 'ws-focus', params: { ws: props.ws }, query: { task: task.value.id } })
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 </script>
 
 <template>
-  <Overlay :open="open && !!task" :size="sideComments ? 'xl' : 'lg'" @close="emit('close')">
-    <div v-if="task" class="task-cols" :class="{ split: sideComments }">
-      <div class="task-main min-w-0">
-      <div class="flex items-start gap-3 pt-2">
-        <button
-          class="check mt-1.5 !h-6 !w-6"
-          :class="{ on: task.done }"
-          :style="{ '--check': list?.color || 'var(--ws)' }"
-          :disabled="!editable"
-          @click="save({ completed: !task.done })"
-        >
-          <Check class="h-3.5 w-3.5" :stroke-width="3.4" />
-        </button>
-        <textarea
-          id="task-title"
-          v-model="title"
-          rows="1"
-          class="title-area min-w-0 flex-1 resize-none bg-transparent text-[20px] font-semibold leading-snug outline-none"
-          :class="{ 'text-text-3 line-through': task.done }"
-          :readonly="!editable"
-          maxlength="500"
-          @blur="saveTitle"
-          @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
-        />
-      </div>
-      <p v-if="gitReadOnly" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text" data-testid="git-read-only">{{ t('git.bot.readOnlyTask', { host: gitHost }) }}</p>
-      <div v-if="notes.trim() && !editingNotes" class="notes-box mt-2" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
-        <MarkdownView class="notes-md" :content="notes" :editable="editable" math @toggle="tickInNotes" @edit="editNotes" />
-      </div>
-      <div v-else-if="editable || notes.trim()" class="math-wrap mt-2">
-      <div @keydown.esc="notesEsc">
-        <CodeArea
-          id="task-notes"
-          ref="notesEl"
-          v-model="notes"
-          class="notes-area w-full rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] focus-within:shadow-[0_0_0_3px_var(--ring)]"
-          sums
-          :placeholder="t('tasks.notesMd')"
-          :readonly="!editable"
-          :label="t('tasks.notesMd')"
-          testid="task-notes"
-          @blur="saveNotes"
-        />
-      </div>
-      </div>
-
-      <!-- When -->
-      <div class="group mt-4">
-        <div class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #ff9500"><CalendarArrowUp class="h-4 w-4" /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-[14px]">{{ t('tasks.start') }}</span>
-            <input v-if="hasStart" type="date" class="mt-0.5 bg-transparent text-[13px] text-accent-text outline-none" :value="task.start ?? ''" :max="task.due ?? undefined" :disabled="!editable" @change="save({ start: ($event.target as HTMLInputElement).value })" />
-            <span v-else class="block text-[12px] text-text-3">{{ t('tasks.startHint') }}</span>
-          </span>
-          <Toggle :model-value="hasStart" :disabled="!editable" @update:model-value="setStart" />
+  <Overlay :open="open && !!task" :size="sideComments ? 'xxl' : 'lg'" bare @close="emit('close')">
+    <div v-if="task" class="tsheet" :class="{ split: sideComments }" data-testid="task-sheet">
+      <!-- The task -->
+      <header class="t-head">
+        <div class="flex items-center gap-2">
+          <span v-if="list" class="crumb"><span class="crumb-dot" :style="{ background: list.color || 'var(--ws)' }" />{{ list.name }}</span>
+          <button type="button" class="icon-btn head-x ml-auto h-7 w-7" :aria-label="t('common.close')" :title="t('common.close')" @click="emit('close')"><X class="h-4 w-4" /></button>
         </div>
-        <div class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #ff3b30"><Calendar class="h-4 w-4" /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-[14px]">{{ t('tasks.date') }}</span>
-            <input v-if="hasDate" type="date" class="mt-0.5 bg-transparent text-[13px] text-accent-text outline-none" :value="task.due ?? ''" :disabled="!editable" @change="save({ due: ($event.target as HTMLInputElement).value })" />
-          </span>
-          <Toggle :model-value="hasDate" :disabled="!editable" @update:model-value="setDate" />
-        </div>
-        <div v-if="hasDate && editable" class="flex gap-1.5 px-3.5 py-2">
-          <button v-for="q in quick" :key="q.v" class="pill hover:bg-fill-strong" :class="{ '!bg-accent !text-accent-fg': task.due === q.v }" @click="save({ due: q.v })">{{ q.label }}</button>
-        </div>
-        <div v-if="hasDate" class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #007aff"><Clock class="h-4 w-4" /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-[14px]">{{ t('tasks.time') }}</span>
-            <input v-if="hasTime" type="time" class="mt-0.5 bg-transparent text-[13px] text-accent-text outline-none" :value="task.due_time ?? ''" :disabled="!editable" @change="save({ due_time: ($event.target as HTMLInputElement).value })" />
-          </span>
-          <Toggle :model-value="hasTime" :disabled="!editable" @update:model-value="setTime" />
-        </div>
-        <div class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #8e8e93"><Repeat class="h-4 w-4" /></span>
-          <span class="flex-1 text-[14px]">{{ t('tasks.repeat') }}</span>
-          <select class="input !w-auto !py-1 text-[13px]" :value="repeat" :disabled="!editable" @change="setRepeat(($event.target as HTMLSelectElement).value)">
-            <option value="">{{ t('repeat.never') }}</option>
-            <option value="daily">{{ t('repeat.daily') }}</option>
-            <option value="weekdays">{{ t('repeat.weekdays') }}</option>
-            <option value="weekly">{{ t('repeat.weekly') }}</option>
-            <option value="biweekly">{{ t('repeat.biweekly') }}</option>
-            <option value="monthly">{{ t('repeat.monthly') }}</option>
-            <option value="yearly">{{ t('repeat.yearly') }}</option>
-            <option v-if="repeat === 'custom'" value="custom">{{ repeatLabel(task?.repeat ?? '') }}</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- What / where -->
-      <div class="group mt-4">
-        <div class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #ff9500"><Flag class="h-4 w-4" /></span>
-          <span class="flex-1 text-[14px]">{{ t('tasks.priority') }}</span>
-          <div class="seg">
-            <button v-for="p in [0, 1, 2, 3]" :key="p" :class="{ on: task.priority === p }" :disabled="!editable" @click="save({ priority: p })">
-              {{ p === 0 ? t('tasks.prioNone') : '!'.repeat(p) }}
-            </button>
+        <div class="mt-1.5 flex items-start gap-3">
+          <button
+            class="check mt-1 !h-6 !w-6"
+            :class="{ on: task.done }"
+            :style="{ '--check': list?.color || 'var(--ws)' }"
+            :disabled="!editable"
+            :aria-label="task.done ? t('tasks.reopen') : t('tasks.complete')"
+            @click="save({ completed: !task.done })"
+          >
+            <Check class="h-3.5 w-3.5" :stroke-width="3.4" />
+          </button>
+          <div class="min-w-0 flex-1">
+            <textarea
+              id="task-title"
+              v-model="title"
+              rows="1"
+              class="title-area w-full resize-none bg-transparent text-[22px] font-bold leading-snug outline-none"
+              :class="{ 'text-text-3 line-through': task.done }"
+              :readonly="!editable"
+              maxlength="500"
+              @blur="saveTitle"
+              @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
+            />
+            <div v-if="notes.trim() && !editingNotes" class="notes-box" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
+              <MarkdownView class="notes-md" :content="notes" :editable="editable" math @toggle="tickInNotes" @edit="editNotes" />
+            </div>
+            <div v-else-if="editable || notes.trim()" class="math-wrap" @keydown.esc="notesEsc">
+              <CodeArea
+                id="task-notes"
+                ref="notesEl"
+                v-model="notes"
+                class="notes-area w-full"
+                sums
+                :placeholder="t('tasks.addNotes')"
+                :readonly="!editable"
+                :label="t('tasks.notesMd')"
+                testid="task-notes"
+                @blur="saveNotes"
+              />
+            </div>
           </div>
         </div>
-        <div class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #30b0c7"><Hourglass class="h-4 w-4" /></span>
-          <span class="flex-1 text-[14px]">{{ t('tasks.estimate') }}</span>
-          <select class="input !w-auto !py-1 text-[13.5px]" :value="String(task.estimate || 0)" :disabled="!editable" :aria-label="t('tasks.estimate')" data-testid="task-estimate" @change="save({ estimate: Number(($event.target as HTMLSelectElement).value) })">
-            <option v-for="m in estimateChoices" :key="m" :value="String(m)">{{ m ? estimateText(m) : t('tasks.noEstimate') }}</option>
-          </select>
-        </div>
-        <div class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #5856d6"><List class="h-4 w-4" /></span>
-          <span class="flex-1 text-[14px]">{{ t('tasks.list') }}</span>
-          <select class="input !w-auto !py-1 text-[13px]" :value="task.list_id" :disabled="!editable || !!task.parent_id" @change="save({ list_id: ($event.target as HTMLSelectElement).value })">
-            <option v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</option>
-          </select>
-        </div>
-        <div v-if="list" class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #30b0c7"><Columns3 class="h-4 w-4" /></span>
-          <span class="flex-1 text-[14px]">{{ t('tasks.status') }}</span>
-          <select class="input !w-auto !py-1 text-[13px]" :value="task.column_id" :disabled="!editable || !!task.parent_id" @change="save({ column_id: ($event.target as HTMLSelectElement).value })">
-            <option v-for="c in list.columns" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-        </div>
-        <div v-if="schoolWs && !task.parent_id" class="group-row">
-          <span class="tile h-7 w-7" style="--tile: #ff3b30"><GraduationCap class="h-4 w-4" /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-[14px]">{{ t('school.exam') }}</span>
-            <span class="block text-[12px] text-text-3">{{ t('school.examHint') }}</span>
+        <p v-if="gitReadOnly" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text" data-testid="git-read-only">{{ t('git.bot.readOnlyTask', { host: gitHost }) }}</p>
+        <div v-if="dueState" class="due-bar" :class="dueState.tone" data-testid="task-due-bar">
+          <Calendar class="h-4 w-4 shrink-0" />
+          <span class="due-text">{{ dueState.text }}</span>
+          <span v-if="editable" class="flex flex-none gap-1.5">
+            <button v-for="q in quick" :key="q.v" type="button" class="due-chip" :class="{ on: task.due === q.v }" @click="save({ due: q.v })">{{ q.label }}</button>
           </span>
-          <Toggle :model-value="task.kind === 'exam'" :disabled="!editable" :aria-label="t('school.exam')" @update:model-value="(v) => save({ kind: v ? 'exam' : 'task' })" />
         </div>
-        <div class="group-row !items-start" data-testid="assignees">
-          <span class="tile mt-0.5 h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>
-          <div class="min-w-0 flex-1">
-            <span class="block text-[14px]">{{ t('tasks.assignee') }}</span>
-            <div class="mt-1 flex flex-wrap items-center gap-1.5">
-              <span v-for="m in assigned" :key="m.user_id" class="pill inline-flex items-center gap-1.5 !pl-0.5">
-                <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="18" />{{ m.display_name || m.username }}
-                <button v-if="editable" type="button" class="-mr-0.5 text-text-3 hover:text-text" :aria-label="t('tasks.removeAssignee', { name: m.display_name || m.username })" @click="setAssignees(task.assignee_ids.filter((x) => x !== m.user_id))"><X class="h-3 w-3" /></button>
+      </header>
+
+      <div class="t-body">
+        <!-- Schedule -->
+        <h3 class="sec">{{ t('tasks.schedule') }}</h3>
+        <div class="group">
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #ff3b30"><Calendar class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.dates') }}</span>
+            <div class="flex flex-wrap items-center justify-end gap-1.5">
+              <button ref="startPill" type="button" class="day-pill" :class="{ ghost: !task.start }" :disabled="!editable" :title="t('tasks.startHint')" data-testid="task-start" @click="datePop = 'start'">{{ task.start ? dayText(task.start) : t('tasks.startsOn') }}</button>
+              <ArrowRight class="h-3.5 w-3.5 text-text-3" aria-hidden="true" />
+              <button ref="duePill" type="button" class="day-pill" :class="{ ghost: !task.due, late }" :disabled="!editable" data-testid="task-due" @click="datePop = 'due'">{{ task.due ? dayText(task.due) : t('tasks.addDate') }}</button>
+            </div>
+          </div>
+          <div v-if="task.due" class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #007aff"><Clock class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.time') }}</span>
+            <template v-if="task.due_time">
+              <input type="time" class="day-pill" :value="task.due_time" :disabled="!editable" :aria-label="t('tasks.time')" @change="save({ due_time: ($event.target as HTMLInputElement).value })" />
+              <button v-if="editable" type="button" class="icon-btn h-6 w-6" :aria-label="t('tasks.noTime')" :title="t('tasks.noTime')" @click="setTime(false)"><X class="h-3.5 w-3.5" /></button>
+            </template>
+            <button v-else-if="editable" type="button" class="text-[14px] text-accent-text hover:underline" @click="setTime(true)">{{ t('tasks.addTime') }}</button>
+          </div>
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #8e8e93"><Repeat class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.repeat') }}</span>
+            <label class="plain-select">
+              <select :value="repeat" :disabled="!editable" :aria-label="t('tasks.repeat')" @change="setRepeat(($event.target as HTMLSelectElement).value)">
+                <option value="">{{ t('repeat.never') }}</option>
+                <option value="daily">{{ t('repeat.daily') }}</option>
+                <option value="weekdays">{{ t('repeat.weekdays') }}</option>
+                <option value="weekly">{{ t('repeat.weekly') }}</option>
+                <option value="biweekly">{{ t('repeat.biweekly') }}</option>
+                <option value="monthly">{{ t('repeat.monthly') }}</option>
+                <option value="yearly">{{ t('repeat.yearly') }}</option>
+                <option v-if="repeat === 'custom'" value="custom">{{ repeatLabel(task?.repeat ?? '') }}</option>
+              </select>
+              <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Planning -->
+        <h3 class="sec">{{ t('tasks.planning') }}</h3>
+        <div class="group">
+          <div v-if="list" class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #30b0c7"><Columns3 class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.status') }}</span>
+            <div class="flex flex-wrap justify-end gap-1.5" role="radiogroup" :aria-label="t('tasks.status')">
+              <button
+                v-for="(c, i) in list.columns"
+                :key="c.id"
+                type="button"
+                role="radio"
+                class="status-chip"
+                :class="{ on: task.column_id === c.id }"
+                :aria-checked="task.column_id === c.id"
+                :disabled="!editable || !!task.parent_id"
+                @click="save({ column_id: c.id })"
+              >
+                <span class="dot" :style="{ background: colDot(c, i) }" />{{ c.name }}
+              </button>
+            </div>
+          </div>
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #ff9500"><Flag class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.priority') }}</span>
+            <div class="seg">
+              <button v-for="p in [0, 1, 2, 3]" :key="p" :class="{ on: task.priority === p }" :disabled="!editable" :aria-label="t(`tasks.prio.${p}`)" :title="t(`tasks.prio.${p}`)" @click="save({ priority: p })">
+                {{ p === 0 ? '–' : '!'.repeat(p) }}
+              </button>
+            </div>
+          </div>
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #30b0c7"><Hourglass class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.estimate') }}</span>
+            <div class="flex items-center gap-1.5" data-testid="task-estimate">
+              <button v-for="m in estChips" :key="m" type="button" class="est-chip" :class="{ on: (task.estimate || 0) === m }" :disabled="!editable" :aria-label="m ? estimateText(m) : t('tasks.noEstimate')" @click="save({ estimate: m })">{{ m ? estimateText(m) : '–' }}</button>
+              <select class="est-chip" :class="{ on: estOther }" :value="String(estOther)" :disabled="!editable" :aria-label="t('tasks.estimate')" @change="save({ estimate: Number(($event.target as HTMLSelectElement).value) })">
+                <option value="0" disabled>{{ t('tasks.estMore') }}</option>
+                <option v-for="m in estMore" :key="m" :value="String(m)">{{ estimateText(m) }}</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="schoolWs && !task.parent_id" class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #ff3b30"><GraduationCap class="h-4 w-4" /></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[14px]">{{ t('school.exam') }}</span>
+              <span class="block text-[12px] text-text-3">{{ t('school.examHint') }}</span>
+            </span>
+            <Toggle :model-value="task.kind === 'exam'" :disabled="!editable" :aria-label="t('school.exam')" @update:model-value="(v) => save({ kind: v ? 'exam' : 'task' })" />
+          </div>
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #5856d6"><List class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.list') }}</span>
+            <label class="plain-select">
+              <select :value="task.list_id" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.list')" @change="save({ list_id: ($event.target as HTMLSelectElement).value })">
+                <option v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</option>
+              </select>
+              <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
+            </label>
+          </div>
+          <div v-if="goalsWs && !task.parent_id && (goalList.length || task.goal_id)" class="group-row" data-testid="task-goal">
+            <span class="tile h-7 w-7" style="--tile: #ff2d55"><Target class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('goals.field') }}</span>
+            <label class="plain-select">
+              <select :value="task.goal_id || ''" :disabled="!editable" :aria-label="t('goals.field')" @change="save({ goal_id: ($event.target as HTMLSelectElement).value })">
+                <option value="">{{ t('goals.noGoal') }}</option>
+                <option v-for="g in goalList" :key="g.id" :value="g.id">{{ g.icon ? `${g.icon} ` : '' }}{{ g.title }}</option>
+              </select>
+              <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
+            </label>
+          </div>
+          <div v-if="!task.parent_id && (waits.length || (editable && waitChoices.length))" class="group-row !items-start" data-testid="task-waits">
+            <span class="tile mt-0.5 h-7 w-7" style="--tile: #8e8e93"><Link2 class="h-4 w-4" /></span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="flex-1 text-[14px]">{{ t('tasks.waitsOn') }}</span>
+                <label v-if="editable && waitChoices.length" class="plain-select">
+                  <select value="" :aria-label="t('tasks.waitsAdd')" data-testid="waits-add" @change="addWait(($event.target as HTMLSelectElement).value)">
+                    <option value="" disabled>{{ t('tasks.waitsAddShort') }}</option>
+                    <option v-for="x in waitChoices" :key="x.id" :value="x.id">{{ x.done ? '✓ ' : '' }}{{ x.title }}</option>
+                  </select>
+                  <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
+                </label>
+              </div>
+              <div v-if="waits.length" class="mt-1.5 flex flex-wrap gap-1.5">
+                <span v-for="w in waits" :key="w.id" class="pill" :class="{ 'line-through opacity-60': w.done }">
+                  {{ w.title }}
+                  <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" :aria-label="t('tasks.waitsRemove', { title: w.title })" @click="removeWait(w.id)"><X class="h-3 w-3" /></button>
+                </span>
+              </div>
+              <p v-if="waits.length" class="mt-1 text-[12px] text-text-3">{{ t('tasks.waitsHint') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- People & tags -->
+        <h3 class="sec">{{ t('tasks.peopleTags') }}</h3>
+        <div class="group">
+          <div class="group-row" data-testid="assignees">
+            <span class="tile h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>
+            <span class="flex-1 text-[14px]">{{ t('tasks.assignee') }}</span>
+            <div class="flex flex-wrap items-center justify-end gap-1.5">
+              <span v-for="m in assigned" :key="m.user_id" class="person">
+                <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="20" />{{ (m.display_name || m.username).split(' ')[0] }}
+                <button v-if="editable" type="button" class="person-x" :aria-label="t('tasks.removeAssignee', { name: m.display_name || m.username })" @click="setAssignees(task.assignee_ids.filter((x) => x !== m.user_id))"><X class="h-3 w-3" /></button>
               </span>
               <span v-if="!assigned.length && !editable" class="text-[13px] text-text-3">{{ t('tasks.nobody') }}</span>
-              <select
-                v-if="editable && unassigned.length"
-                class="input !w-auto !py-0.5 text-[13px]"
-                :aria-label="t('tasks.addAssignee')"
-                value=""
-                @change="setAssignees([...task.assignee_ids, ($event.target as HTMLSelectElement).value]); ($event.target as HTMLSelectElement).value = ''"
-              >
-                <option value="" disabled>{{ assigned.length ? '+' : t('tasks.addAssignee') }}</option>
-                <option v-for="m in unassigned" :key="m.user_id" :value="m.user_id">{{ m.display_name || m.username }}</option>
-              </select>
+              <button v-if="editable && unassigned.length" ref="assignBtn" type="button" class="add-person" :aria-label="t('tasks.addAssignee')" :title="t('tasks.addAssignee')" data-testid="assign-add" @click="assignPop = !assignPop"><Plus class="h-3.5 w-3.5" /></button>
               <!-- Alone in the workspace: others are invited from its Members. -->
               <button v-if="members.length <= 1 && workspace?.role === 'owner'" type="button" class="text-[13px] text-accent-text hover:underline" @click="invitePeople">{{ t('tasks.invitePeople') }}</button>
             </div>
           </div>
-        </div>
-        <div class="group-row !items-start">
-          <span class="tile mt-0.5 h-7 w-7" style="--tile: #8e8e93"><Tag class="h-4 w-4" /></span>
-          <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-0.5">
-            <span v-for="tag in task.tags" :key="tag" class="pill !bg-accent-bg !text-accent-text">
-              #{{ tag }}
-              <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" @click="removeTag(tag)"><X class="h-3 w-3" /></button>
-            </span>
-            <input v-if="editable" v-model="tagDraft" class="min-w-[90px] flex-1 bg-transparent py-1 text-[14px] outline-none" :placeholder="t('tasks.addTag')" @keydown.enter="addTag" @blur="addTag" />
-          </div>
-        </div>
-      </div>
-
-      <!-- The goal it counts towards -->
-      <label v-if="goalsWs && !task.parent_id && (goalList.length || task.goal_id)" class="mt-4 flex items-center gap-2 px-1" data-testid="task-goal">
-        <Target class="h-4 w-4 text-text-3" />
-        <span class="text-[13.5px] text-text-2">{{ t('goals.field') }}</span>
-        <select class="input ml-auto !w-auto max-w-[60%] !py-1 text-[13.5px]" :value="task.goal_id || ''" :disabled="!editable" @change="save({ goal_id: ($event.target as HTMLSelectElement).value })">
-          <option value="">{{ t('goals.noGoal') }}</option>
-          <option v-for="g in goalList" :key="g.id" :value="g.id">{{ g.icon ? `${g.icon} ` : '' }}{{ g.title }}</option>
-        </select>
-      </label>
-
-      <!-- What it waits on -->
-      <div v-if="!task.parent_id && (waits.length || (editable && waitChoices.length))" class="mt-4 px-1" data-testid="task-waits">
-        <div class="flex items-center gap-2">
-          <Link2 class="h-4 w-4 text-text-3" />
-          <span class="text-[13.5px] text-text-2">{{ t('tasks.waitsOn') }}</span>
-          <select v-if="editable && waitChoices.length" class="input ml-auto !w-auto max-w-[60%] !py-1 text-[13.5px]" value="" :aria-label="t('tasks.waitsAdd')" data-testid="waits-add" @change="addWait(($event.target as HTMLSelectElement).value)">
-            <option value="" disabled>{{ t('tasks.waitsAdd') }}</option>
-            <option v-for="x in waitChoices" :key="x.id" :value="x.id">{{ x.done ? '✓ ' : '' }}{{ x.title }}</option>
-          </select>
-        </div>
-        <div v-if="waits.length" class="mt-1.5 flex flex-wrap gap-1.5 pl-6">
-          <span v-for="w in waits" :key="w.id" class="pill" :class="{ 'line-through opacity-60': w.done }">
-            {{ w.title }}
-            <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" :aria-label="t('tasks.waitsRemove', { title: w.title })" @click="removeWait(w.id)"><X class="h-3 w-3" /></button>
-          </span>
-        </div>
-        <p v-if="waits.length" class="mt-1 pl-6 text-[12px] text-text-3">{{ t('tasks.waitsHint') }}</p>
-      </div>
-
-      <!-- Focus: the time spent on it, and a timer for it -->
-      <div v-if="focusWs && !task.parent_id && !task.done" class="mt-4 flex items-center gap-2 px-1" data-testid="task-focus">
-        <span v-if="task.focus_minutes" class="flex items-center gap-1.5 text-[13px] text-text-2"><Timer class="h-4 w-4" />{{ t('focus.spent', { t: durationOf(task.focus_minutes) }) }}</span>
-        <RouterLink :to="{ name: 'ws-focus', params: { ws }, query: { task: task.id } }" class="btn-plain ml-auto !text-[13px]" @click="emit('close')"><Timer class="h-4 w-4" />{{ t('focus.onTask') }}</RouterLink>
-      </div>
-
-      <!-- Its issue -->
-      <div v-if="gitOn && !task.parent_id && (task.git_number || list?.git || editable)" class="mt-4">
-        <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1"><GitBranch class="h-3.5 w-3.5" />{{ t('git.task.title') }}</h3>
-        <div class="group">
-          <div v-if="task.git_number" class="group-row">
-            <div class="min-w-0 flex-1 text-[13.5px]">
-              <span class="text-text-2">{{ task.git_repo }}</span>
-              <GitBadge :task="task" class="ml-1.5" />
-              <span class="ml-1.5 text-[12.5px] text-text-3">{{ t(`git.task.state.${task.git_state || 'open'}`) }}</span>
+          <div class="group-row">
+            <span class="tile h-7 w-7" style="--tile: #8e8e93"><Tag class="h-4 w-4" /></span>
+            <span class="text-[14px]">{{ t('tasks.tags') }}</span>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+              <span v-for="tag in task.tags" :key="tag" class="pill !bg-accent-bg !text-accent-text">
+                #{{ tag }}
+                <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" :aria-label="t('tasks.removeTag', { tag })" @click="removeTag(tag)"><X class="h-3 w-3" /></button>
+              </span>
+              <input v-if="editable && tagging" ref="tagEl" v-model="tagDraft" class="w-[110px] bg-transparent py-0.5 text-right text-[14px] outline-none" :placeholder="t('tasks.addTag')" :aria-label="t('tasks.addTag')" @keydown.enter="addTag" @keydown.esc.stop="tagging = false" @blur="tagBlur" />
+              <button v-else-if="editable" type="button" class="text-[14px] text-text-3 hover:text-text-2" data-testid="tag-add" @click="openTag">{{ t('tasks.addTagShort') }}</button>
             </div>
-            <button v-if="editable" class="btn-plain shrink-0 !text-danger" @click="unlinkGit">{{ t('git.task.unlink') }}</button>
-          </div>
-          <label v-if="task.git_number && list?.git" class="group-row">
-            <Milestone class="h-4 w-4 shrink-0 text-text-3" />
-            <span class="flex-1 text-[14px]">{{ t('git.task.milestone') }}</span>
-            <select
-              :value="task.git_milestone_id || 0"
-              class="input !w-auto max-w-[60%] !py-1 text-[13.5px]"
-              :disabled="!editable"
-              data-testid="milestone"
-              @change="setMilestone(Number(($event.target as HTMLSelectElement).value))"
-            >
-              <option :value="0">{{ t('git.task.noMilestone') }}</option>
-              <option v-if="task.git_milestone_id && !milestones.some((m) => m.ref === task!.git_milestone_id)" :value="task.git_milestone_id">{{ task.git_milestone }}</option>
-              <option v-for="m in milestones" :key="m.ref" :value="m.ref">{{ m.title }}</option>
-            </select>
-          </label>
-          <form v-else-if="editable && !list?.git" class="group-row" @submit.prevent="linkGit">
-            <input v-model="gitDraft" type="url" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('git.task.placeholder')" :aria-label="t('git.task.placeholder')" />
-            <button type="submit" class="btn-plain shrink-0" :disabled="!gitDraft.trim() || linking">{{ t('git.task.link') }}</button>
-          </form>
-          <div v-if="task.git_dirty" class="group-row !min-h-0 !py-2 text-[12.5px] text-warn-text"><TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.task.pending') }}</div>
-        </div>
-        <p class="footnote mt-1 px-1 leading-snug">
-          {{ list?.git ? t('git.task.inList', { repo: `${list.git.owner}/${list.git.repo}` }) : t('git.task.hint') }}
-        </p>
-      </div>
-
-      <!-- Files -->
-      <div v-if="!task.parent_id" class="mt-4">
-        <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1"><Paperclip class="h-3.5 w-3.5" />{{ t('files.title') }}</h3>
-        <div class="group px-3 py-1.5">
-          <Attachments target="task" :target-id="task.id" :editable="editable" />
-        </div>
-      </div>
-
-      <!-- Sub-tasks -->
-      <div v-if="!task.parent_id" class="mt-4">
-        <h3 class="cap mb-1.5 flex items-center gap-1.5 px-1"><ListTree class="h-3.5 w-3.5" />{{ t('tasks.subtasks') }}</h3>
-        <div class="group">
-          <div v-for="s in subtasks" :key="s.id" class="group-row !min-h-[40px]">
-            <button class="check !h-[18px] !w-[18px]" :class="{ on: s.done }" :style="{ '--check': list?.color || 'var(--ws)' }" :disabled="!editable" @click="toggleSub(s.id, !s.done)">
-              <Check class="h-2.5 w-2.5" :stroke-width="3.4" />
-            </button>
-            <span class="flex-1 text-[14px]" :class="{ 'text-text-3 line-through': s.done }">{{ s.title }}</span>
-            <button v-if="editable" class="icon-btn h-6 w-6" @click="removeSub(s.id)"><X class="h-3.5 w-3.5" /></button>
-          </div>
-          <div v-if="editable" class="group-row !min-h-[40px]">
-            <Plus class="h-4 w-4 text-text-3" />
-            <input v-model="subDraft" class="flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('tasks.addSubtask')" @keydown.enter="addSub" />
           </div>
         </div>
+
+        <!-- Its issue -->
+        <template v-if="gitOn && !task.parent_id && (task.git_number || list?.git || editable)">
+          <h3 class="sec flex items-center gap-1.5"><GitBranch class="h-3.5 w-3.5" />{{ t('git.task.title') }}</h3>
+          <div class="group">
+            <div v-if="task.git_number" class="group-row">
+              <div class="min-w-0 flex-1 text-[13.5px]">
+                <span class="text-text-2">{{ task.git_repo }}</span>
+                <GitBadge :task="task" class="ml-1.5" />
+                <span class="ml-1.5 text-[12.5px] text-text-3">{{ t(`git.task.state.${task.git_state || 'open'}`) }}</span>
+              </div>
+              <button v-if="editable" class="btn-plain shrink-0 !text-danger" @click="unlinkGit">{{ t('git.task.unlink') }}</button>
+            </div>
+            <label v-if="task.git_number && list?.git" class="group-row">
+              <Milestone class="h-4 w-4 shrink-0 text-text-3" />
+              <span class="flex-1 text-[14px]">{{ t('git.task.milestone') }}</span>
+              <select
+                :value="task.git_milestone_id || 0"
+                class="input !w-auto max-w-[60%] !py-1 text-[13.5px]"
+                :disabled="!editable"
+                data-testid="milestone"
+                @change="setMilestone(Number(($event.target as HTMLSelectElement).value))"
+              >
+                <option :value="0">{{ t('git.task.noMilestone') }}</option>
+                <option v-if="task.git_milestone_id && !milestones.some((m) => m.ref === task!.git_milestone_id)" :value="task.git_milestone_id">{{ task.git_milestone }}</option>
+                <option v-for="m in milestones" :key="m.ref" :value="m.ref">{{ m.title }}</option>
+              </select>
+            </label>
+            <form v-else-if="editable && !list?.git" class="group-row" @submit.prevent="linkGit">
+              <input v-model="gitDraft" type="url" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('git.task.placeholder')" :aria-label="t('git.task.placeholder')" />
+              <button type="submit" class="btn-plain shrink-0" :disabled="!gitDraft.trim() || linking">{{ t('git.task.link') }}</button>
+            </form>
+            <div v-if="task.git_dirty" class="group-row !min-h-0 !py-2 text-[12.5px] text-warn-text"><TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.task.pending') }}</div>
+          </div>
+          <p class="footnote mt-1 px-1 leading-snug">
+            {{ list?.git ? t('git.task.inList', { repo: `${list.git.owner}/${list.git.repo}` }) : t('git.task.hint') }}
+          </p>
+        </template>
+
+        <!-- Sub-tasks -->
+        <template v-if="!task.parent_id">
+          <h3 class="sec flex items-center gap-1.5"><ListTree class="h-3.5 w-3.5" />{{ t('tasks.subtasks') }}</h3>
+          <div class="group">
+            <div v-for="s in subtasks" :key="s.id" class="group-row !min-h-[40px]">
+              <button class="check !h-[18px] !w-[18px]" :class="{ on: s.done }" :style="{ '--check': list?.color || 'var(--ws)' }" :disabled="!editable" @click="toggleSub(s.id, !s.done)">
+                <Check class="h-2.5 w-2.5" :stroke-width="3.4" />
+              </button>
+              <span class="flex-1 text-[14px]" :class="{ 'text-text-3 line-through': s.done }">{{ s.title }}</span>
+              <button v-if="editable" class="icon-btn h-6 w-6" @click="removeSub(s.id)"><X class="h-3.5 w-3.5" /></button>
+            </div>
+            <div v-if="editable" class="group-row !min-h-[40px]">
+              <Plus class="h-4 w-4 text-text-3" />
+              <input v-model="subDraft" class="flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('tasks.addSubtask')" @keydown.enter="addSub" />
+            </div>
+            <p v-if="!subtasks.length && !editable" class="group-row text-[13px] text-text-3">–</p>
+          </div>
+        </template>
       </div>
 
-      </div>
-      <!-- Comments: any member, viewers too; beside the details when wide -->
-      <aside v-if="sideComments" class="task-side" data-testid="task-side">
+      <!-- Activity: any member, viewers too; beside the details when wide -->
+      <aside v-if="sideComments" class="t-side" data-testid="task-side">
         <TaskComments
           :ws="ws"
           :task-id="task.id"
           :can-write="!!workspace && !workspace.archived_at && !auth.privileges.read_only"
+          :can-attach="editable"
           :is-owner="workspace?.role === 'owner'"
           :members="members"
+          side
+          @close="emit('close')"
         />
       </aside>
+
+      <footer v-if="editable || canFocus" class="t-foot">
+        <button v-if="editable" type="button" class="btn-plain !text-danger" @click="remove">{{ t('common.delete') }}</button>
+        <span v-if="focusWs && task.focus_minutes" class="ml-auto flex items-center gap-1.5 text-[12.5px] text-text-3" data-testid="task-focus"><Timer class="h-3.5 w-3.5" />{{ t('focus.spent', { t: durationOf(task.focus_minutes) }) }}</span>
+        <button v-if="canFocus" type="button" class="btn-primary" :class="{ 'ml-auto': !task.focus_minutes }" data-testid="task-start-focus" @click="startFocus"><Timer class="h-4 w-4" />{{ t('focus.startFocus') }}</button>
+        <button v-else type="button" class="btn-primary ml-auto" @click="emit('close')">{{ t('common.done') }}</button>
+      </footer>
+
+      <Popover v-if="datePop" :anchor="datePop === 'start' ? startPill : duePill" placement="bottom-end" :width="240" @close="datePop = ''">
+        <div class="space-y-2 p-3" data-testid="task-date-pop">
+          <p class="text-[12px] font-medium text-text-3">{{ datePop === 'start' ? t('tasks.start') : t('tasks.date') }}</p>
+          <input
+            type="date"
+            class="input w-full"
+            :value="(datePop === 'start' ? task.start : task.due) ?? ''"
+            :max="datePop === 'start' ? (task.due ?? undefined) : undefined"
+            :aria-label="datePop === 'start' ? t('tasks.start') : t('tasks.date')"
+            @change="setDay(datePop as 'start' | 'due', ($event.target as HTMLInputElement).value)"
+          />
+          <p v-if="datePop === 'start'" class="text-[12px] leading-snug text-text-3">{{ t('tasks.startHint') }}</p>
+          <button v-if="datePop === 'start' ? task.start : task.due" type="button" class="btn-plain w-full justify-center !text-danger" @click="setDay(datePop as 'start' | 'due', '')">{{ t('tasks.removeDate') }}</button>
+        </div>
+      </Popover>
+      <Popover v-if="assignPop" :anchor="assignBtn" placement="bottom-end" :width="240" @close="assignPop = false">
+        <div class="max-h-[280px] overflow-y-auto p-1" role="menu">
+          <button
+            v-for="m in unassigned"
+            :key="m.user_id"
+            type="button"
+            role="menuitem"
+            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13.5px] hover:bg-fill-2"
+            @click="setAssignees([...task.assignee_ids, m.user_id]); assignPop = unassigned.length > 1"
+          >
+            <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="22" />
+            <span class="min-w-0 flex-1 truncate">{{ m.display_name || m.username }}</span>
+          </button>
+        </div>
+      </Popover>
     </div>
-    <template v-if="task && editable" #footer>
-      <button class="btn-ghost mr-auto !text-danger" @click="remove"><Trash2 class="h-4 w-4" />{{ t('common.delete') }}</button>
-      <button class="btn-primary" @click="emit('close')">{{ t('common.done') }}</button>
-    </template>
   </Overlay>
 </template>
 
 <style scoped>
-/* Details on the left, comments on the right (Planner's way); stacked when
-   the sheet is narrow. The comments keep their place while the details scroll. */
+/* One column: everything scrolls, Delete / Start focus stay at the bottom.
+   Wide (a task with its activity): the details on the left — header, the
+   fields scrolling, the buttons — and the activity on the right. */
+.tsheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+.t-head {
+  padding: 18px 22px 14px;
+}
+.t-body {
+  padding: 2px 18px 22px;
+  background: var(--grouped);
+}
+.t-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 0.5px solid var(--border);
+  background: var(--surface);
+}
+:global(html.dark) .t-foot {
+  background: #2c2c2e;
+}
+.t-side {
+  border-top: 0.5px solid var(--border);
+}
 @media (min-width: 900px) {
-  .task-cols.split {
+  .tsheet.split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 20px;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 46%);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'head side' 'body side' 'foot side';
+    height: min(86vh, 860px);
+    overflow: hidden;
   }
-  .task-side {
-    position: sticky;
-    top: 0;
-    align-self: start;
-    max-height: calc(86vh - 140px);
+  .split .t-head {
+    grid-area: head;
+  }
+  .split .t-body {
+    grid-area: body;
     overflow-y: auto;
-    padding: 8px 2px 4px 20px;
+  }
+  .split .t-foot {
+    grid-area: foot;
+    position: static;
+  }
+  .split .t-side {
+    grid-area: side;
+    min-height: 0;
+    border-top: 0;
     border-left: 0.5px solid var(--border);
   }
-  .task-side :deep([data-testid='comments']) {
-    margin-top: 0;
+  .split .head-x {
+    display: none;
   }
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.crumb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.sec {
+  margin: 18px 4px 6px;
+  font-size: 13px;
+  color: var(--text-2);
 }
 .title-area {
   field-sizing: content;
 }
 .notes-area {
   field-sizing: content;
-  min-height: 4.5em;
-  max-height: 50vh;
+  min-height: 1.6em;
+  max-height: 40vh;
+  margin-top: 2px;
+  padding: 2px 0;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.notes-area:focus-within {
+  padding: 6px 10px;
+  background: var(--fill-2);
   font-family: var(--font-mono);
   font-size: 13px;
-  line-height: 1.55;
+  color: var(--text);
 }
 .notes-box {
-  max-height: 50vh;
+  max-height: 40vh;
   overflow-y: auto;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--fill-2);
+  margin-top: 2px;
 }
 .notes-box.editable {
   cursor: text;
@@ -638,5 +825,171 @@ const estimateChoices = computed(() => {
   font-size: 14px;
   line-height: 1.55;
   padding-bottom: 0;
+  color: var(--text-2);
+}
+/* How its date stands. */
+.due-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: var(--fill-2);
+  color: var(--text-2);
+}
+.due-bar.late {
+  background: var(--crit-bg);
+  color: var(--crit-text);
+}
+.due-bar.today {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+/* The words first; on a narrow sheet the buttons go under them. */
+.due-text {
+  flex: 1 0 auto;
+}
+.due-chip {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: 0 0 0 0.5px var(--border);
+}
+.due-chip:hover {
+  background: var(--surface-2);
+}
+.due-chip.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.day-pill {
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: var(--fill);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.day-pill:hover:not(:disabled) {
+  background: var(--fill-strong);
+}
+.day-pill.ghost {
+  color: var(--text-3);
+}
+.day-pill.late {
+  background: var(--crit-bg);
+  color: var(--crit-text);
+  font-weight: 600;
+}
+.plain-select {
+  position: relative;
+  display: inline-flex;
+  max-width: 60%;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-3);
+}
+.plain-select select {
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 2px 0;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 14px;
+  text-align: right;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  outline: none;
+}
+.plain-select select:focus-visible {
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  box-shadow: 0 0 0 0.5px var(--border-2);
+}
+.status-chip:hover:not(:disabled):not(.on) {
+  background: var(--fill-2);
+}
+.status-chip.on {
+  background: var(--text);
+  color: var(--surface);
+  font-weight: 600;
+  box-shadow: none;
+}
+.status-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.est-chip {
+  min-width: 34px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  color: var(--text);
+  background: transparent;
+  box-shadow: 0 0 0 0.5px var(--border-2);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.est-chip:hover:not(:disabled):not(.on) {
+  background: var(--fill-2);
+}
+.est-chip.on {
+  background: var(--text);
+  color: var(--surface);
+  box-shadow: none;
+}
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px 2px 2px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 13px;
+  font-weight: 500;
+}
+.person-x {
+  margin-right: -3px;
+  opacity: 0.5;
+}
+.person-x:hover {
+  opacity: 1;
+}
+.add-person {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-3);
+}
+.add-person:hover {
+  color: var(--text);
+  border-color: var(--text-3);
 }
 </style>

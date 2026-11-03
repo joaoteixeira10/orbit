@@ -5,10 +5,11 @@ import { X } from 'lucide-vue-next'
 
 // Overlay is Orbit's sheet: a centred panel on wide screens, a bottom sheet
 // on phones ('centered'), or an inspector sliding in from the right ('side').
-// The title row is optional; #actions sits at its right (e.g. Done).
+// The title row is optional; #actions sits at its right (e.g. Done). bare:
+// the content lays itself out (its own scrolling, header and footer).
 const props = withDefaults(
-  defineProps<{ open: boolean; title?: string; mode?: 'side' | 'centered'; wide?: boolean; size?: 'sm' | 'md' | 'lg' | 'xl' }>(),
-  { mode: 'centered', wide: false, size: 'md' },
+  defineProps<{ open: boolean; title?: string; mode?: 'side' | 'centered'; wide?: boolean; size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl'; bare?: boolean }>(),
+  { mode: 'centered', wide: false, size: 'md', bare: false },
 )
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
@@ -38,7 +39,7 @@ onUnmounted(() => {
   document.body.style.overflow = ''
 })
 
-const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[680px]', xl: 'sm:max-w-[880px]' }
+const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[680px]', xl: 'sm:max-w-[880px]', xxl: 'sm:max-w-[1060px]' }
 </script>
 
 <template>
@@ -59,7 +60,8 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
             <slot name="actions" />
             <button class="icon-btn -mr-1.5 h-7 w-7 rounded-full bg-fill" :aria-label="t('common.close')" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
           </header>
-          <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-2"><slot /></div>
+          <div v-if="bare" class="flex min-h-0 flex-1 flex-col"><slot /></div>
+          <div v-else class="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-2"><slot /></div>
           <footer v-if="$slots.footer" class="flex shrink-0 items-center justify-end gap-2 border-t-[0.5px] border-border px-5 py-3">
             <slot name="footer" />
           </footer>

@@ -3502,9 +3502,13 @@ test('lists: a finished project archived — out of the lists, Today and the cal
   await expect(page.getByText('Final launch check')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/list-archived.png' })
 
-  // Back from the archive.
-  await page.getByTestId('archived-lists').click()
+  // Back from the archive (the section, unfolded by archiving, folds and unfolds — an archived list open or not).
   await page.locator('.group.archived').getByText('Website launch').click()
+  await expect(page.locator('.group.archived')).toBeVisible()
+  await page.getByTestId('archived-lists').click()
+  await expect(page.locator('.group.archived')).toHaveCount(0)
+  await page.getByTestId('archived-lists').click()
+  await expect(page.locator('.group.archived')).toBeVisible()
   await page.getByTestId('list-restore').click()
   await expect(page.getByText('“Website launch” is back')).toBeVisible()
   await expect(page.getByTestId('list-archived')).toHaveCount(0)

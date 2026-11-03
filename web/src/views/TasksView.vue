@@ -50,6 +50,14 @@ const SMART: Smart[] = ['today', 'scheduled', 'all', 'completed']
 const sel = computed(() => (typeof route.params.list === 'string' ? route.params.list : ''))
 const list = computed(() => tasks.allListsOf(ws.value).find((l) => l.id === sel.value))
 const all = computed(() => (list.value?.archived_at ? tasks.allTasksOf(ws.value) : active.value))
+// Opening an archived list unfolds them (once); the toggle folds them again.
+watch(
+  () => list.value?.archived_at && list.value.id,
+  (id) => {
+    if (id) showArchived.value = true
+  },
+  { immediate: true },
+)
 async function restoreList() {
   if (!list.value) return
   try {
@@ -474,11 +482,11 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         <div v-if="!lists.length" class="group-row text-[14px] text-text-3">{{ t('tasks.noLists') }}</div>
       </div>
       <template v-if="archivedLists.length">
-        <button type="button" class="arch-toggle" :aria-expanded="showArchived || !!list?.archived_at" data-testid="archived-lists" @click="showArchived = !showArchived">
-          <ChevronRight class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': showArchived || list?.archived_at }" />
+        <button type="button" class="arch-toggle" :aria-expanded="showArchived" data-testid="archived-lists" @click="showArchived = !showArchived">
+          <ChevronRight class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': showArchived }" />
           <Archive class="h-3.5 w-3.5" />{{ t('lists.archived') }}<span class="text-text-3">{{ archivedLists.length }}</span>
         </button>
-        <div v-if="showArchived || list?.archived_at" class="group archived">
+        <div v-if="showArchived" class="group archived">
           <button v-for="l in archivedLists" :key="l.id" class="group-row w-full text-left" :class="{ 'list-on': sel === l.id }" @click="pick(l.id)">
             <WsIcon :icon="l.icon || 'list-checks'" :color="l.color" :size="28" />
             <span class="min-w-0 flex-1 truncate text-[15px]">{{ l.name }}</span>

@@ -4,6 +4,7 @@
 package api
 
 import (
+	"bytes"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -552,7 +553,7 @@ func New(d Deps) *gin.Engine {
 	r.POST("/api/v1/oauth/token", open, authLimit, h.oauthToken)
 	r.OPTIONS("/api/v1/oauth/token", open)
 
-	registerSPA(r)
+	registerSPA(r, h)
 	return r
 }
 
@@ -603,8 +604,9 @@ func (h *Handlers) version(c *gin.Context) {
 	})
 }
 
-// registerSPA serves the embedded Vue app with HTML5 history-mode fallback.
-func registerSPA(r *gin.Engine) {
+// registerSPA serves the embedded Vue app with HTML5 history-mode fallback;
+// its page carries the link-preview tags (preview.go).
+func registerSPA(r *gin.Engine, h *Handlers) {
 	// Go's built-in table has no .webmanifest; it only comes from the host's
 	// /etc/mime.types, so without this it's sniffed as text/plain on some hosts.
 	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
@@ -627,6 +629,12 @@ func registerSPA(r *gin.Engine) {
 				fileServer.ServeHTTP(c.Writer, c.Request)
 				return
 			}
+		}
+		if index, err := fs.ReadFile(dist, "index.html"); err == nil && bytes.Contains(index, []byte("</head>")) {
+			page := bytes.Replace(index, []byte("</head>"), []byte("  "+h.previewTags(c)+"\n  </head>"), 1)
+			c.Header("Cache-Control", "no-cache")
+			c.Data(http.StatusOK, "text/html; charset=utf-8", page)
+			return
 		}
 		c.Request.URL.Path = "/"
 		fileServer.ServeHTTP(c.Writer, c.Request)

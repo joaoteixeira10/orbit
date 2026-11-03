@@ -565,6 +565,12 @@ its code, links to the shared pages leading to their Markdown — for an
 assistant or a script to read without an account.
 The owner can turn guest links off for the whole Orbit (Owner → Features).
 
+**Pasted in Slack, Teams or a chat**, an Orbit link shows a small preview: a
+guest link shows its page's title and first words (it's public by your
+choice); any other link shows only your Orbit's name and icon — never what's
+behind it, since whoever sees the chat may not be allowed to open it. Set
+`PUBLIC_URL` so the preview's links and picture point to the right address.
+
 **Page history.** Every save of a page is kept, with who saved it — the
 last 50 of each page, or as many as the owner sets (Owner → Page history,
 5 to 1000). The history

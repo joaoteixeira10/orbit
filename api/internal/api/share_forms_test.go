@@ -213,3 +213,31 @@ func TestGuestMarkdown(t *testing.T) {
 	}
 	expect(t, do(r, "GET", g+"/markdown?page="+outside.ID, ""), http.StatusNotFound, "a page it doesn't open")
 }
+
+// TestLinkPreviews: a link pasted in Slack or Teams shows the instance's name
+// for any page of the app — never what's behind a private one — and, for a
+// guest link, its page's title and first words.
+func TestLinkPreviews(t *testing.T) {
+	r, _, _, alice, _ := plannerSetupDB(t)
+	ws := createWS(t, r, alice, `{"name":"Docs","kind":"work","starter":false,"modules":["home","pages"]}`)
+	var secret, open struct{ ID string }
+	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/pages", `{"title":"Salaries 2027","content":"private numbers"}`, alice), &secret)
+	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/pages", `{"title":"Handbook","content":"Welcome to the team & <b>hello</b>."}`, alice), &open)
+	var link struct{ URL string }
+	decode(t, authdo(r, "POST", "/api/v1/pages/"+open.ID+"/links", `{"mode":"read"}`, alice), &link)
+	tok := link.URL[strings.LastIndex(link.URL, "/")+1:]
+
+	priv := do(r, "GET", "/w/"+ws.ID+"/p/"+secret.ID, "").Body.String()
+	if !strings.Contains(priv, `property="og:title" content="Orbit"`) || strings.Contains(priv, "Salaries") || strings.Contains(priv, "Docs") {
+		t.Fatalf("a private link must say nothing of its page:\n%s", priv)
+	}
+	pub := do(r, "GET", "/shared/"+tok, "").Body.String()
+	for _, want := range []string{`property="og:title" content="Handbook"`, `content="Welcome to the team &amp; hello."`, `property="og:site_name" content="Docs · Orbit"`} {
+		if !strings.Contains(pub, want) {
+			t.Errorf("guest link preview: missing %q in\n%s", want, pub)
+		}
+	}
+	if bad := do(r, "GET", "/shared/not-a-token", "").Body.String(); !strings.Contains(bad, `property="og:title" content="Orbit"`) {
+		t.Errorf("an unknown link: the instance only:\n%s", bad)
+	}
+}

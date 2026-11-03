@@ -19,6 +19,9 @@ merge, not at release time.
   (Sheets and draw.io light in a dark Orbit, say).
 - **Tasks and bookmarks by their tags in ⌘K** — a tag finds its tasks and
   bookmarks, as it finds pages.
+- **Link previews in Slack, Teams and chats** — a guest link shows its
+  page's title and first words; any other Orbit link only the instance's name
+  and icon, never what's behind it.
 - **Documentation** — Orbit's guides in one place (user menu → Documentation,
   `/docs`, beside the API reference): user guide, configuration, reverse
   proxies, SSO with Authentik / Entra, troubleshooting, security, the API,

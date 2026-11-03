@@ -222,6 +222,26 @@ type guestShare struct {
 
 // guestAccess finds the link in the address and what it opens; a link
 // that's gone, expired or off is "not found".
+// shareOf finds what a guest link opens — its link, page and workspace — or
+// false when it opens nothing (guest links off, taken back, expired, its page
+// gone). It changes nothing (a link preview uses it too).
+func (h *Handlers) shareOf(tok string) (guestShare, bool) {
+	var g guestShare
+	if tok == "" || !feature.Enabled(h.db, feature.GuestLinks) {
+		return g, false
+	}
+	if h.db.First(&g.link, "token_hash = ?", linkHash(tok)).Error != nil {
+		return g, false
+	}
+	if g.link.ExpiresAt != nil && time.Now().After(*g.link.ExpiresAt) {
+		return g, false
+	}
+	if h.db.First(&g.root, "id = ? AND trashed_at IS NULL", g.link.PageID).Error != nil || h.db.First(&g.ws, "id = ?", g.link.WorkspaceID).Error != nil {
+		return g, false
+	}
+	return g, true
+}
+
 func (h *Handlers) guestAccess(c *gin.Context) (guestShare, bool) {
 	c.Header("X-Robots-Tag", "noindex, nofollow")
 	c.Header("Cache-Control", "no-store")
@@ -230,17 +250,8 @@ func (h *Handlers) guestAccess(c *gin.Context) (guestShare, bool) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "this link doesn't open anything (taken back, expired, or mistyped)"})
 		return g, false
 	}
-	if !feature.Enabled(h.db, feature.GuestLinks) {
-		return gone()
-	}
-	tok := c.Param("token")
-	if tok == "" || h.db.First(&g.link, "token_hash = ?", linkHash(tok)).Error != nil {
-		return gone()
-	}
-	if g.link.ExpiresAt != nil && time.Now().After(*g.link.ExpiresAt) {
-		return gone()
-	}
-	if h.db.First(&g.root, "id = ? AND trashed_at IS NULL", g.link.PageID).Error != nil || h.db.First(&g.ws, "id = ?", g.link.WorkspaceID).Error != nil {
+	g, ok := h.shareOf(c.Param("token"))
+	if !ok {
 		return gone()
 	}
 	g.pages = map[string]bool{g.root.ID: true}

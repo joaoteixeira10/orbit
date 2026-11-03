@@ -3377,7 +3377,7 @@ test('task sheet: how its date stands, a status from its menu, any estimate, a f
   const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Assignments', color: '#5856D6' } })).json()
   const late = new Date(Date.now() - 4 * 86400000)
   const due = `${late.getFullYear()}-${String(late.getMonth() + 1).padStart(2, '0')}-${String(late.getDate()).padStart(2, '0')}`
-  const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Biology lab report', list_id: list.id, due } })).json()
+  const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Biology lab report', list_id: list.id, due, notes: ['1500 words, two sources', ...Array.from({ length: 60 }, (_, i) => `line ${i}`)].join('\n') } })).json()
   const get = async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { id: string; due: string; estimate: number; column_id: string }[]).find((x) => x.id === task.id)!
 
   await signIn(page, NEW_PASSWORD)
@@ -3388,6 +3388,12 @@ test('task sheet: how its date stands, a status from its menu, any estimate, a f
   await expect(sheet).toContainText('Assignments')
   await expect(page.getByTestId('task-due-bar')).toContainText('Overdue by 4 days')
   await expect(page.getByTestId('activity-line').first()).toContainText('created this task')
+  // Notes keep their lines; long ones, even while written in, leave the fields and buttons in reach.
+  await expect(page.getByTestId('task-notes-view').locator('br')).toHaveCount(60)
+  await page.getByTestId('task-notes-view').locator('p').first().click()
+  await expect(page.getByTestId('task-start-focus')).toBeInViewport()
+  await expect(page.getByTestId('task-due-bar')).toBeInViewport()
+  await page.keyboard.press('Escape')
   await page.screenshot({ path: 'test-results/task-sheet.png' })
 
   // Tomorrow, from the bar.

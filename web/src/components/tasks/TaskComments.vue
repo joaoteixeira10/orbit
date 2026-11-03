@@ -324,7 +324,7 @@ function onKey(e: KeyboardEvent) {
                 <button class="btn-primary btn-sm" :disabled="!editText.trim()">{{ t('comments.save') }}</button>
               </div>
             </form>
-            <div v-else class="bubble"><MarkdownView class="comment-md" :content="it.c.body" :editable="false" /></div>
+            <div v-else class="bubble"><MarkdownView class="comment-md" :content="it.c.body" :editable="false" breaks /></div>
           </div>
         </template>
       </li>

@@ -69,6 +69,10 @@ merge, not at release time.
 
 ### Fixed
 
+- **Task notes and comments keep their lines** — a line typed on its own
+  reads on its own (they ran together in one paragraph). Long notes, while
+  written in, scroll in their own box: the task's fields and buttons stay
+  in reach.
 - **Enter in a new page's title** sometimes left you in the title (its
   editor still loading); it now goes on into the page once it's there.
 - **Impersonating showed the admin's workspaces**, not the person's (and,

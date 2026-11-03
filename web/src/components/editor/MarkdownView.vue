@@ -19,12 +19,12 @@ import { markTerms, type Term } from '@/lib/glossary'
 // guest: a guest link's secret — pictures, files and what's shown in place
 // load through it, and a link to a page asks the guest view (page) to go.
 // terms: the workspace's glossary, marked where used (pointing explains them).
-const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string; terms?: Term[] }>()
+const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string; terms?: Term[]; breaks?: boolean }>()
 const emit = defineEmits<{ toggle: [index: number]; edit: []; page: [id: string] }>()
 const { t } = useI18n()
 const router = useRouter()
 
-const html = computed(() => renderMarkdown(props.content))
+const html = computed(() => renderMarkdown(props.content, props.breaks))
 const root = ref<HTMLElement | null>(null)
 
 // Lucide's copy and check icons, drawn into each button (the HTML is rendered

@@ -127,9 +127,10 @@ let cached: Marked | null = null
 
 // renderMarkdown is a page's HTML for the reading view, sanitised (pages are
 // shared, and Markdown may hold HTML).
-export function renderMarkdown(md: string): string {
+// breaks: a line break is kept as one (notes and comments, written as typed).
+export function renderMarkdown(md: string, breaks = false): string {
   cached ??= reader()
-  const html = cached.parse(md, { async: false }) as string
+  const html = cached.parse(md, { async: false, breaks }) as string
   return mentionize(
     DOMPurify.sanitize(html, {
       ADD_ATTR: ['target', 'data-task', 'data-kind', 'data-lang', 'data-upload', 'data-name'],

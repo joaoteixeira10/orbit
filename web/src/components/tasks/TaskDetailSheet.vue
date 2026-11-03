@@ -387,7 +387,8 @@ async function startFocus() {
 <template>
   <Overlay :open="open && !!task" :size="sideComments ? 'xxl' : 'lg'" bare @close="emit('close')">
     <div v-if="task" class="tsheet" :class="{ split: sideComments }" data-testid="task-sheet">
-      <!-- The task -->
+      <!-- The task: its header and fields scroll together -->
+      <div class="t-scroll">
       <header class="t-head">
         <div class="flex items-center gap-2">
           <span v-if="list" class="crumb"><span class="crumb-dot" :style="{ background: list.color || 'var(--ws)' }" />{{ list.name }}</span>
@@ -417,14 +418,15 @@ async function startFocus() {
               @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
             />
             <div v-if="notes.trim() && !editingNotes" class="notes-box" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
-              <MarkdownView class="notes-md" :content="notes" :editable="editable" math @toggle="tickInNotes" @edit="editNotes" />
+              <MarkdownView class="notes-md" :content="notes" :editable="editable" math breaks @toggle="tickInNotes" @edit="editNotes" />
             </div>
-            <div v-else-if="editable || notes.trim()" class="math-wrap" @keydown.esc="notesEsc">
+            <!-- The editor's size and look from here (it takes no class of its own). -->
+            <div v-else-if="editable || notes.trim()" class="math-wrap notes-area" @keydown.esc="notesEsc">
               <CodeArea
                 id="task-notes"
                 ref="notesEl"
                 v-model="notes"
-                class="notes-area w-full"
+                class="w-full"
                 sums
                 :placeholder="t('tasks.addNotes')"
                 :readonly="!editable"
@@ -656,6 +658,8 @@ async function startFocus() {
         </template>
       </div>
 
+      </div>
+
       <!-- Activity: any member, viewers too; beside the details when wide -->
       <aside v-if="sideComments" class="t-side" data-testid="task-side">
         <TaskComments
@@ -756,6 +760,10 @@ async function startFocus() {
 }
 .t-head {
   padding: 18px 22px 14px;
+  background: var(--surface);
+}
+:global(html.dark) .t-head {
+  background: #2c2c2e;
 }
 .t-body {
   padding: 2px 18px 22px;
@@ -782,17 +790,16 @@ async function startFocus() {
   .tsheet.split {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(340px, 46%);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: 'head side' 'body side' 'foot side';
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: 'main side' 'foot side';
     height: min(86vh, 860px);
     overflow: hidden;
   }
-  .split .t-head {
-    grid-area: head;
-  }
-  .split .t-body {
-    grid-area: body;
+  .split .t-scroll {
+    grid-area: main;
+    min-height: 0;
     overflow-y: auto;
+    background: var(--grouped);
   }
   .split .t-foot {
     grid-area: foot;
@@ -829,10 +836,11 @@ async function startFocus() {
 .title-area {
   field-sizing: content;
 }
+/* Notes: quiet text under the title; while written in, a box of its own
+   that scrolls when long (the fields stay a scroll away). */
 .notes-area {
-  field-sizing: content;
-  min-height: 1.6em;
   max-height: 40vh;
+  overflow-y: auto;
   margin-top: 2px;
   padding: 2px 0;
   border-radius: 8px;
@@ -846,6 +854,9 @@ async function startFocus() {
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--text);
+}
+.notes-area :deep(.cm-content) {
+  min-height: 1.6em;
 }
 .notes-box {
   max-height: 40vh;

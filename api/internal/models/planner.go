@@ -252,18 +252,21 @@ type Task struct {
 // workspace.
 type Note struct {
 	Base
-	WorkspaceID string  `gorm:"size:36;not null;default:'';index" json:"workspace_id"`
-	OwnerID     string  `gorm:"size:36;not null;default:'';index" json:"owner_id"` // personal notes only
-	Title       string  `gorm:"size:300" json:"title"`
-	Body        string  `gorm:"type:text" json:"body"`
-	Items       string  `gorm:"type:text" json:"-"`
-	Checklist   bool    `gorm:"not null;default:false" json:"checklist"`
-	PlainText   string  `gorm:"type:text" json:"-"`   // body or items as text, for search
-	Color       string  `gorm:"size:16" json:"color"` // a colour key (yellow, green, …); "" = plain
-	Pinned      bool    `gorm:"not null;default:false" json:"pinned"`
-	Rank        float64 `gorm:"not null;default:0" json:"rank"`
-	CreatedBy   string  `gorm:"size:36" json:"created_by"`
-	UpdatedBy   string  `gorm:"size:36" json:"updated_by"`
+	WorkspaceID string `gorm:"size:36;not null;default:'';index" json:"workspace_id"`
+	OwnerID     string `gorm:"size:36;not null;default:'';index" json:"owner_id"` // personal notes only
+	Title       string `gorm:"size:300" json:"title"`
+	Body        string `gorm:"type:text" json:"body"`
+	Items       string `gorm:"type:text" json:"-"`
+	Checklist   bool   `gorm:"not null;default:false" json:"checklist"`
+	PlainText   string `gorm:"type:text" json:"-"`   // body or items as text, for search
+	Color       string `gorm:"size:16" json:"color"` // a colour key (yellow, green, …); "" = plain
+	// Lang is how the text is coloured as it's written: "" = guessed from it,
+	// "text", "markdown", or a code language (highlight.js's name: json, bash…).
+	Lang      string  `gorm:"size:24" json:"lang"`
+	Pinned    bool    `gorm:"not null;default:false" json:"pinned"`
+	Rank      float64 `gorm:"not null;default:0" json:"rank"`
+	CreatedBy string  `gorm:"size:36" json:"created_by"`
+	UpdatedBy string  `gorm:"size:36" json:"updated_by"`
 	// RemindAt: a one-off reminder (to RemindBy, who set it); cleared once sent.
 	RemindAt *time.Time `gorm:"index" json:"remind_at,omitempty"`
 	RemindBy string     `gorm:"size:36" json:"-"`

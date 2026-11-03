@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Plus, X, ChevronRight } from 'lucide-vue-next'
+import { Check, ChevronDown, Plus, X, ChevronRight } from 'lucide-vue-next'
 import { newItem, MAX_BODY, MAX_ITEMS, MAX_ITEM_TEXT, MAX_TITLE, type Draft, type DraftItem } from './noteModel'
 import { evaluate } from '@/lib/mathnotes'
 import CodeArea from '@/components/editor/CodeArea.vue'
+import Popover from '@/components/ui/Popover.vue'
+import { CODE_LANGS, guessNoteLang, isCodeLang, noteLangLabel } from '@/lib/noteSyntax'
 
 // The editable inside of a note, shared by the capture box and the editor:
 // a title, then either the text (growing with it) or checklist rows. In a
@@ -129,6 +131,28 @@ function remove(it: DraftItem) {
   draft.value.items.splice(draft.value.items.indexOf(it), 1)
 }
 
+// ---- Its language, as an editor shows it: chosen on the note, or guessed
+// from the text a moment after typing stops. The corner says which. ----
+const guessed = ref(guessNoteLang(draft.value.body))
+let guessTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => draft.value.body,
+  (b) => {
+    clearTimeout(guessTimer)
+    guessTimer = setTimeout(() => (guessed.value = guessNoteLang(b)), 400)
+  },
+)
+onBeforeUnmount(() => clearTimeout(guessTimer))
+const lang = computed(() => draft.value.lang || guessed.value)
+const code = computed(() => isCodeLang(lang.value))
+const langLabel = (l: string) => noteLangLabel(l, t('notes.lang.text'))
+const langOpen = ref(false)
+const langBtn = ref<HTMLElement | null>(null)
+function setLang(l: string) {
+  draft.value.lang = l
+  langOpen.value = false
+}
+
 // focus puts the caret in the title, the body (or the add row), or at the end.
 async function focus(where: 'title' | 'body' | 'end' = 'end') {
   await nextTick()
@@ -160,6 +184,8 @@ defineExpose({ focus })
         v-model="draft.body"
         class="f-body"
         :markdown="false"
+        :syntax="lang"
+        :mono="code"
         sums
         submit
         :placeholder="t('notes.takeNote')"
@@ -169,7 +195,40 @@ defineExpose({ focus })
         testid="note-body"
         @submit="emit('submit')"
       />
-      <p v-if="answers.length && !readonly" class="calc-hint">{{ t('notes.mathHint') }}</p>
+      <div v-if="(answers.length && !readonly) || draft.body.trim() || draft.lang" class="f-foot">
+        <p v-if="answers.length && !readonly" class="calc-hint">{{ t('notes.mathHint') }}</p>
+        <button
+          v-if="draft.body.trim() || draft.lang"
+          ref="langBtn"
+          type="button"
+          class="f-lang"
+          :disabled="readonly"
+          :title="draft.lang ? t('notes.lang.chosen') : t('notes.lang.guessed')"
+          :aria-label="t('notes.lang.label', { lang: langLabel(lang) })"
+          data-testid="note-lang"
+          @click="langOpen = !langOpen"
+        >
+          {{ langLabel(lang) }}<ChevronDown v-if="!readonly" class="h-3 w-3" aria-hidden="true" />
+        </button>
+      </div>
+      <Popover v-if="langOpen" :anchor="langBtn" placement="bottom-end" :width="270" @close="langOpen = false">
+        <div class="max-h-[320px] overflow-y-auto p-1" role="menu" data-testid="note-lang-menu">
+          <button type="button" role="menuitemradio" :aria-checked="!draft.lang" class="lang-opt" @click="setLang('')">
+            <span class="min-w-0 flex-1 truncate">{{ t('notes.lang.auto') }} <span class="text-text-3">· {{ langLabel(guessed) }}</span></span>
+            <Check v-if="!draft.lang" class="h-4 w-4 text-accent-text" />
+          </button>
+          <div class="my-1 border-t-[0.5px] border-border" />
+          <button v-for="l in ['text', 'markdown']" :key="l" type="button" role="menuitemradio" :aria-checked="draft.lang === l" class="lang-opt" @click="setLang(l)">
+            <span class="min-w-0 flex-1 truncate">{{ langLabel(l) }}</span>
+            <Check v-if="draft.lang === l" class="h-4 w-4 text-accent-text" />
+          </button>
+          <div class="my-1 border-t-[0.5px] border-border" />
+          <button v-for="l in CODE_LANGS" :key="l.id" type="button" role="menuitemradio" :aria-checked="draft.lang === l.id" class="lang-opt" @click="setLang(l.id)">
+            <span class="min-w-0 flex-1 truncate">{{ l.label }}</span>
+            <Check v-if="draft.lang === l.id" class="h-4 w-4 text-accent-text" />
+          </button>
+        </div>
+      </Popover>
     </div>
 
     <div v-else class="f-list">
@@ -260,6 +319,40 @@ textarea::placeholder,
 .big .f-body {
   font-size: 15px;
   min-height: 7.5em;
+}
+/* The note's language, quietly in the corner (as an editor's status bar). */
+.f-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.f-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.f-lang:hover:not(:disabled) {
+  background: var(--note-line, var(--fill-2));
+  color: var(--text-2);
+}
+.lang-opt {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  text-align: left;
+}
+.lang-opt:hover {
+  background: var(--fill-2);
 }
 .f-list {
   display: flex;

@@ -1954,6 +1954,12 @@ definitions:
         items:
           $ref: '#/definitions/api.noteItem'
         type: array
+      lang:
+        description: |-
+          Lang: how its text is coloured — "" (guessed), "text", "markdown", or
+          a code language (json, bash, python…).
+        maxLength: 24
+        type: string
       pinned:
         type: boolean
       remind_at:
@@ -1993,6 +1999,11 @@ definitions:
         items:
           $ref: '#/definitions/api.noteItem'
         type: array
+      lang:
+        description: |-
+          Lang is how the text is coloured as it's written: "" = guessed from it,
+          "text", "markdown", or a code language (highlight.js's name: json, bash…).
+        type: string
       owner_id:
         description: personal notes only
         type: string

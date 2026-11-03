@@ -13,6 +13,7 @@ const note = (over: Partial<Note> = {}): Note => ({
   items: [],
   color: '',
   pinned: false,
+  lang: '',
   rank: 1024,
   created_by: 'u',
   updated_by: 'u',
@@ -145,5 +146,13 @@ describe('note colours', () => {
       expect(noteColors[c].light).toMatch(/^#/)
       expect(css).toContain(`[data-note="${c}"]`)
     }
+  })
+})
+
+describe('a code note', () => {
+  it('becomes a page with one block of its language, chosen or guessed', () => {
+    expect(pageDoc(note({ body: '{"a": 1}', lang: 'json' }))).toBe('```json\n{"a": 1}\n```')
+    expect(pageDoc(note({ body: 'package main\n\nfunc main() {}' }))).toBe('```go\npackage main\n\nfunc main() {}\n```')
+    expect(pageDoc(note({ body: 'just words here, nothing else', lang: '' }))).toBe('just words here, nothing else')
   })
 })

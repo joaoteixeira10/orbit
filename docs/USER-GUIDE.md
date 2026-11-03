@@ -668,6 +668,25 @@ decimals with a dot or a comma (answers follow the note), and a currency sign
 the answers too, and the same works in **pages** (each paragraph, list item
 or heading is a line; code blocks are left alone) and in **task notes**.
 
+**Colours, as an editor shows them** (VS Code's way): a note is coloured by
+what its text is, as you type and on its card.
+
+- **Markdown**: headings, **bold**, lists, quotes and links in their colours,
+  with the marks kept as written. A block between ``` lines is in a
+  monospaced font with its code coloured: in the language named after the
+  opening ``` (```` ```python ````), or the one the code clearly is (a line
+  of shell is enough).
+- **Code**: a note that is all code — JSON, YAML, a shell script, SQL,
+  Python, Go, a Dockerfile, an nginx config… — reads like an editor:
+  monospaced, coloured, indentation kept.
+- **Plain text**: anything else, as before (sums work in every kind).
+
+The kind is **guessed** from the text a moment after you stop typing; short
+or unclear notes stay plain. The corner of an open note says which it is
+(*Markdown*, *JSON*, *Plain text*…): click it to choose another, or **Detect
+automatically** to go back to guessing. The choice is kept with the note.
+**Turn into page** makes a code note one code block of its language.
+
 ### Quick Notes (your own)
 
 **Quick Notes** (under Today and Calendar in the sidebar) is your scratchpad:

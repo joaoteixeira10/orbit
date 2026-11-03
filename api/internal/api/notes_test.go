@@ -228,3 +228,27 @@ func TestPersonalNotes(t *testing.T) {
 	}
 	expect(t, authdo(r, "PUT", "/api/v1/notes/"+n.ID, `{"pinned":true}`, bob), http.StatusNotFound, "bob after the move out")
 }
+
+// TestNoteLang: a note keeps the language its text is coloured as ("" =
+// guessed), a name of letters only.
+func TestNoteLang(t *testing.T) {
+	r, _, alice, _ := plannerSetup(t)
+	ws := createWS(t, r, alice, `{"name":"Ops","kind":"work"}`)
+	var n struct {
+		ID   string `json:"id"`
+		Lang string `json:"lang"`
+	}
+	w := authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/notes", `{"body":"{\"a\":1}","lang":"json"}`, alice)
+	expect(t, w, http.StatusCreated, "create")
+	decode(t, w, &n)
+	if n.Lang != "json" {
+		t.Fatalf("lang: %q", n.Lang)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/notes/"+n.ID, `{"lang":"<b>"}`, alice), http.StatusBadRequest, "not a name")
+	w = authdo(r, "PUT", "/api/v1/notes/"+n.ID, `{"lang":""}`, alice)
+	expect(t, w, http.StatusOK, "back to guessed")
+	decode(t, w, &n)
+	if n.Lang != "" {
+		t.Fatalf("lang: %q", n.Lang)
+	}
+}

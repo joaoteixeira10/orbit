@@ -221,6 +221,7 @@ export interface Note {
   items: NoteItem[]
   color: NoteColor
   pinned: boolean
+  lang: string // how its text is coloured: "" guessed, "text", "markdown", a code language
   rank: number
   created_by: string
   updated_by: string
@@ -237,6 +238,7 @@ export interface NoteInput {
   items?: NoteItem[]
   color?: NoteColor
   pinned?: boolean
+  lang?: string
   remind_at?: string // RFC 3339; "" takes it off
 }
 

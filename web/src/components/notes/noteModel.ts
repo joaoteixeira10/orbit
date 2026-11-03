@@ -2,6 +2,7 @@
 // converting text ↔ checklist, search, copy text, and turning a note into a
 // page document or tasks.
 import type { Note, NoteColor, NoteInput } from '@/api/planner'
+import { guessNoteLang, isCodeLang } from '@/lib/noteSyntax'
 
 export const MAX_TITLE = 300
 export const MAX_BODY = 20000
@@ -23,6 +24,7 @@ export interface Draft {
   items: DraftItem[]
   color: NoteColor
   pinned: boolean
+  lang: string // "" = guessed from the text
 }
 
 let seq = 0
@@ -38,6 +40,7 @@ export function draftOf(n?: Note | null, over: Partial<Draft> = {}): Draft {
     items: (n?.items ?? []).map((i) => newItem(i.text, i.done, i.id)),
     color: n?.color ?? '',
     pinned: n?.pinned ?? false,
+    lang: n?.lang ?? '',
     ...over,
   }
 }
@@ -53,6 +56,7 @@ export function inputOf(d: Draft): NoteInput {
       : [],
     color: d.color,
     pinned: d.pinned,
+    lang: d.lang,
   }
 }
 
@@ -69,6 +73,7 @@ export function sameContent(d: Draft, n: Note): boolean {
     a.checklist === n.checklist &&
     a.color === n.color &&
     a.pinned === n.pinned &&
+    (a.lang ?? '') === (n.lang ?? '') &&
     (n.checklist ? items(a.items ?? []) === items(n.items) : (a.body ?? '').trimEnd() === n.body)
   )
 }
@@ -124,9 +129,15 @@ export function matches(n: Note, q: string): boolean {
 }
 
 // pageDoc is the page (Markdown) for a note: its text as a page would show
-// what was typed (noteMarkdown), or a task list for a checklist.
-export function pageDoc(n: Pick<Note, 'body' | 'checklist' | 'items'>): string {
+// what was typed (noteMarkdown), a code note as one block of its language,
+// or a task list for a checklist.
+export function pageDoc(n: Pick<Note, 'body' | 'checklist' | 'items'> & { lang?: string }): string {
   if (n.checklist) return n.items.map((i) => `- [${i.done ? 'x' : ' '}] ${inline(i.text)}`).join('\n')
+  const lang = n.lang || guessNoteLang(n.body)
+  if (isCodeLang(lang)) {
+    const fence = '`'.repeat(Math.max(3, ...(n.body.match(/`{3,}/g) ?? []).map((f) => f.length + 1)))
+    return `${fence}${lang}\n${n.body.replace(/\s+$/, '')}\n${fence}`
+  }
   return noteMarkdown(n.body)
 }
 

@@ -207,6 +207,43 @@ test('quick notes: jot one on Today, find it in Quick Notes, move it into a work
   await expect(page.getByText(/^Moved to /)).toBeVisible()
 })
 
+test('quick notes colour their text as an editor would: Markdown, code, or plain — guessed, or chosen', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/me/notes', { headers: H, data: { title: 'Compose file', body: 'services:\n  orbit:\n    image: orbit:0.1.0\n    ports:\n      - "8080:8080"' } })
+  await request.post('/api/v1/me/notes', { headers: H, data: { title: 'Vault steps', body: '# Add entity to group\n\nGet the id:\n\n```\nvault read -field=id identity/group/name/linux-users\n```' } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/notes')
+  // On the wall: YAML in its colours, Markdown's heading and its code.
+  const yaml = page.locator('.note-card', { hasText: 'Compose file' })
+  await expect(yaml.getByTestId('card-coloured')).toHaveClass(/code/)
+  await expect(yaml.locator('.hljs-attr').first()).toHaveText('services:')
+  const md = page.locator('.note-card', { hasText: 'Vault steps' })
+  await expect(md.locator('.md-heading')).toHaveText('# Add entity to group')
+  await expect(md.locator('.md-codeblock').first()).toBeVisible()
+
+  // Open it: the same colours while writing, and the corner says Markdown.
+  await md.click()
+  await expect(page.getByTestId('note-lang')).toHaveText('Markdown')
+  await expect(page.getByTestId('note-body').locator('.md-heading')).toHaveText('# Add entity to group')
+  // Chosen: plain text — no colours, here and on the wall.
+  await page.getByTestId('note-lang').click()
+  await page.getByTestId('note-lang-menu').getByRole('menuitemradio', { name: 'Plain text' }).click()
+  await expect(page.getByTestId('note-lang')).toHaveText('Plain text')
+  await expect(page.getByTestId('note-body').locator('.md-heading')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(md.getByTestId('card-coloured')).toHaveCount(0)
+  const notes = (await (await request.get('/api/v1/me/notes', { headers: H })).json()) as { title: string; lang: string }[]
+  expect(notes.find((n) => n.title === 'Vault steps')?.lang).toBe('text')
+
+  // Typed: a few lines of shell become Bash after a moment.
+  await page.getByText('Take a note…').click()
+  await page.keyboard.type('docker compose pull\ndocker compose up -d\ndocker logs -f orbit')
+  await expect(page.getByTestId('note-lang')).toHaveText('Bash')
+})
+
 test('share target: a link shared from another app becomes a Quick Note (after signing in)', async ({ page }) => {
   // Not signed in: the sign-in keeps what was shared.
   await page.goto('/share?title=Trail%20map&text=For%20Saturday&url=https%3A%2F%2Fexample.com%2Ftrail')

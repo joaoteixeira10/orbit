@@ -91,6 +91,13 @@ export function labelOf(id: string): string {
   return LANGUAGES.find((l) => l.id === id)?.label ?? id
 }
 
+// detectLanguage is highlight.js's best guess among the given languages
+// (all but Markdown by default) and how sure it is.
+export function detectLanguage(code: string, subset = SUBSET.filter((l) => l !== 'markdown')): { language: string; relevance: number } {
+  const auto = hljs.highlightAuto(code, subset)
+  return { language: auto.language ?? '', relevance: auto.relevance }
+}
+
 // highlightCode is a code block's HTML (escaped, with hljs token spans) and
 // the language it was read as ('' = plain).
 export function highlightCode(code: string, lang?: string | null): { html: string; language: string } {

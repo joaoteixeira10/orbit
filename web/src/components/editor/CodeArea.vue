@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref, watch, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Annotation, Compartment, EditorSelection, EditorState, Prec, StateField, type Extension } from '@codemirror/state'
-import { Decoration, EditorView, WidgetType, drawSelection, dropCursor, highlightSpecialChars, keymap, placeholder as cmPlaceholder, rectangularSelection, type DecorationSet } from '@codemirror/view'
+import { Annotation, Compartment, EditorSelection, EditorState, Prec, RangeSetBuilder, StateField, type Extension } from '@codemirror/state'
+import { Decoration, EditorView, ViewPlugin, WidgetType, drawSelection, dropCursor, highlightSpecialChars, keymap, placeholder as cmPlaceholder, rectangularSelection, type DecorationSet } from '@codemirror/view'
 import { history } from '@codemirror/commands'
 import { highlightSelectionMatches, search } from '@codemirror/search'
 import { HighlightStyle, indentUnit, syntaxHighlighting } from '@codemirror/language'
@@ -10,6 +10,7 @@ import { markdown as markdownLang, markdownLanguage } from '@codemirror/lang-mar
 import { tags } from '@lezer/highlight'
 import { AtSign, CalendarDays, FileText } from 'lucide-vue-next'
 import { evaluate, type MathLine } from '@/lib/mathnotes'
+import { noteTokens } from '@/lib/noteSyntax'
 import { markdownOf, type MentionItem } from '@/lib/mentions'
 import { currentLocale } from '@/i18n'
 import SlashMenu from './SlashMenu.vue'
@@ -22,12 +23,14 @@ import { addsCursor, boxSelects, copyCutLines, vsKeymap } from './vscode'
 // vscode.ts for every key. In Markdown it colours the source and continues
 // lists on Enter. Optional: sums (a line ending in "=" shows its answer;
 // Tab writes it in), files (pasted or dropped: upload gives the Markdown to
-// put in), @-mentions (mentions gives what "@" offers), submit (Mod-Enter).
+// put in), @-mentions (mentions gives what "@" offers), submit (Mod-Enter),
+// syntax (colour the text as a language, as a note's: lib/noteSyntax).
 const props = withDefaults(
   defineProps<{
     modelValue: string
     markdown?: boolean
     mono?: boolean
+    syntax?: string
     placeholder?: string
     readonly?: boolean
     label?: string
@@ -220,6 +223,33 @@ const PT_PHRASES: Record<string, string> = {
   'replaced $ matches': '$ substituídas', 'Go to line': 'Ir para a linha', go: 'ir', 'Control character': 'Carácter de controlo',
 }
 
+// ---- Colours by language (a note's): the same stretches as its card ----
+const syntaxCo = new Compartment()
+const marks = new Map<string, Decoration>()
+const markOf = (cls: string) => marks.get(cls) ?? marks.set(cls, Decoration.mark({ class: cls })).get(cls)!
+function syntaxColours(lang: string | undefined): Extension {
+  if (!lang || lang === 'text') return []
+  const build = (v: EditorView): DecorationSet => {
+    const text = v.state.doc.toString()
+    if (text.length > 60000) return Decoration.none
+    const b = new RangeSetBuilder<Decoration>()
+    for (const t of noteTokens(text, lang)) if (t.to > t.from) b.add(t.from, t.to, markOf(t.cls))
+    return b.finish()
+  }
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet
+      constructor(v: EditorView) {
+        this.decorations = build(v)
+      }
+      update(u: { docChanged: boolean; view: EditorView }) {
+        if (u.docChanged) this.decorations = build(u.view)
+      }
+    },
+    { decorations: (p) => p.decorations },
+  )
+}
+
 function extensions(): Extension[] {
   const ext: Extension[] = [
     history(),
@@ -240,6 +270,7 @@ function extensions(): Extension[] {
     fileHandlers,
     theme,
     readonlyCo.of(EditorState.readOnly.of(props.readonly)),
+    syntaxCo.of(syntaxColours(props.syntax)),
     EditorView.contentAttributes.of({ 'aria-label': props.label || t('editor.mdLabel'), spellcheck: 'true', autocorrect: 'on', ...(props.testid ? { 'data-testid': props.testid } : {}) }),
     EditorView.updateListener.of((u) => {
       if (u.docChanged && !u.transactions.some((tr) => tr.annotation(outside))) {
@@ -282,6 +313,10 @@ watch(
       annotations: [outside.of(true)],
     })
   },
+)
+watch(
+  () => props.syntax,
+  (lang) => view?.dispatch({ effects: syntaxCo.reconfigure(syntaxColours(lang)) }),
 )
 watch(
   () => props.readonly,

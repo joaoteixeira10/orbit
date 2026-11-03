@@ -8,6 +8,12 @@ merge, not at release time.
 
 ### Added
 
+- **Quick notes coloured as an editor would** — Markdown (headings, bold,
+  lists, links, ``` blocks with their code coloured), code (JSON, YAML,
+  shell, SQL, Python, Go, Dockerfile, nginx… — monospaced and coloured), or
+  plain text: guessed from the text as you type, shown in the note's corner,
+  and changeable there. The cards show the same colours; a code note turns
+  into a page as one code block.
 - **A calendar for each list, in colours of your own** — in a workspace's
   calendar each list is a calendar of its own, in the list's colour (they
   were one "Tasks"), and the workspace's own events are **Events** (they

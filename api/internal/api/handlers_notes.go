@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -220,6 +221,9 @@ type noteRequest struct {
 	Items     *[]noteItem `json:"items"`
 	Color     *string     `json:"color"`
 	Pinned    *bool       `json:"pinned"`
+	// Lang: how its text is coloured — "" (guessed), "text", "markdown", or
+	// a code language (json, bash, python…).
+	Lang *string `json:"lang" binding:"omitempty,max=24"`
 	// RemindAt: an RFC 3339 instant for a one-off reminder to whoever sets
 	// it; "" takes it off.
 	RemindAt *string `json:"remind_at"`
@@ -254,6 +258,12 @@ func applyNoteFields(req noteRequest, n *models.Note, uid string) string {
 	if req.Pinned != nil {
 		n.Pinned = *req.Pinned
 	}
+	if req.Lang != nil {
+		if !noteLang.MatchString(*req.Lang) {
+			return "lang: a language's name (letters), or empty"
+		}
+		n.Lang = *req.Lang
+	}
 	items := decodeItems(n.Items)
 	if req.Items != nil {
 		var msg string
@@ -282,6 +292,9 @@ func applyNoteFields(req noteRequest, n *models.Note, uid string) string {
 	}
 	return ""
 }
+
+// noteLang is a language's name as the app knows it (json, bash, cpp…).
+var noteLang = regexp.MustCompile(`^[a-z0-9]{0,24}$`)
 
 func noteEmpty(n models.Note) bool {
 	return n.Title == "" && strings.TrimSpace(n.Body) == "" && len(decodeItems(n.Items)) == 0

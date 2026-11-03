@@ -13986,6 +13986,11 @@ const docTemplate = `{
                         "$ref": "#/definitions/api.noteItem"
                     }
                 },
+                "lang": {
+                    "description": "Lang: how its text is coloured — \"\" (guessed), \"text\", \"markdown\", or\na code language (json, bash, python…).",
+                    "type": "string",
+                    "maxLength": 24
+                },
                 "pinned": {
                     "type": "boolean"
                 },
@@ -14041,6 +14046,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.noteItem"
                     }
+                },
+                "lang": {
+                    "description": "Lang is how the text is coloured as it's written: \"\" = guessed from it,\n\"text\", \"markdown\", or a code language (highlight.js's name: json, bash…).",
+                    "type": "string"
                 },
                 "owner_id": {
                     "description": "personal notes only",

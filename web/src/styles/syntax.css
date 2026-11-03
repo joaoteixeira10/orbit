@@ -92,3 +92,35 @@ html.dark {
 .hljs-strong {
   font-weight: 700;
 }
+
+/* A quick note's Markdown as written (lib/noteSyntax.ts), coloured as an
+   editor colours it: the marks stay, in colour. */
+.md-heading {
+  color: var(--code-type);
+  font-weight: 700;
+}
+.md-fence,
+.md-bullet {
+  color: var(--code-comment);
+}
+.md-codeblock,
+.md-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.md-code {
+  color: var(--code-string);
+}
+.md-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.md-link {
+  color: var(--accent-text);
+}
+.md-strong {
+  font-weight: 700;
+}
+.md-em {
+  font-style: italic;
+}

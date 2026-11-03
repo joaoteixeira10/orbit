@@ -10,6 +10,7 @@ import NoteColorPicker from './NoteColorPicker.vue'
 import { orderedItems } from './noteModel'
 import type { Note, NoteColor } from '@/api/planner'
 import { evaluate } from '@/lib/mathnotes'
+import { guessNoteLang, isCodeLang, noteTokens, tokensHtml } from '@/lib/noteSyntax'
 
 // One sticky note on the wall: its tint, title, text (clamped with a fade)
 // or checklist (tick right here; open items first, then the checked ones).
@@ -55,6 +56,14 @@ const bodyEl = ref<HTMLElement | null>(null)
 const bodyLines = computed(() => props.note.body.split('\n'))
 // Sums ending in "=" show their answer, as in the editor.
 const answers = computed(() => new Map(props.note.checklist ? [] : evaluate(props.note.body).map((a) => [a.line, a.result])))
+// Coloured as in the editor (Markdown, or code in its language); only the
+// lines the card can show.
+const lang = computed(() => (props.note.checklist ? 'text' : props.note.lang || guessNoteLang(props.note.body)))
+const coloured = computed(() => {
+  if (lang.value === 'text' || answers.value.size) return ''
+  const shown = props.note.body.split('\n').slice(0, 40).join('\n')
+  return tokensHtml(shown, noteTokens(shown, lang.value))
+})
 const clamped = ref(false)
 const measure = () => nextTick(() => (clamped.value = !!bodyEl.value && bodyEl.value.scrollHeight > bodyEl.value.clientHeight + 2))
 onMounted(measure)
@@ -103,7 +112,9 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     <img v-if="note.drawing?.preview" :src="previewSrc(note.drawing.preview)" alt="" class="n-drawing" data-testid="card-drawing" draggable="false" />
     <h3 v-if="note.title" class="n-title" :class="{ 'pr-7': editable }">{{ note.title }}</h3>
 
-    <div v-if="!note.checklist && note.body" ref="bodyEl" class="n-body" :class="{ clamped, big: !note.title && note.body.length < 80 }"><template v-if="answers.size"><template v-for="(l, i) in bodyLines" :key="i">{{ l }}<b v-if="answers.get(i)" class="n-calc">{{ /\s$/.test(l) ? '' : ' ' }}{{ answers.get(i) }}</b>{{ i < bodyLines.length - 1 ? '\n' : '' }}</template></template><template v-else>{{ note.body }}</template></div>
+    <!-- eslint-disable-next-line vue/no-v-html -- escaped by tokensHtml -->
+    <div v-if="!note.checklist && note.body && coloured" ref="bodyEl" class="n-body" :class="{ clamped, code: isCodeLang(lang) }" data-testid="card-coloured" v-html="coloured" />
+    <div v-else-if="!note.checklist && note.body" ref="bodyEl" class="n-body" :class="{ clamped, big: !note.title && note.body.length < 80 }"><template v-if="answers.size"><template v-for="(l, i) in bodyLines" :key="i">{{ l }}<b v-if="answers.get(i)" class="n-calc">{{ /\s$/.test(l) ? '' : ' ' }}{{ answers.get(i) }}</b>{{ i < bodyLines.length - 1 ? '\n' : '' }}</template></template><template v-else>{{ note.body }}</template></div>
 
     <ul v-else-if="note.checklist && items.length" class="n-list">
       <li v-for="it in shown" :key="it.id" class="n-item" :class="{ done: it.done }">
@@ -225,6 +236,11 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   line-height: 1.4;
   letter-spacing: -0.012em;
   max-height: calc(14 * 1.4em);
+}
+/* A code note: as in an editor. */
+.n-body.code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 .n-body.clamped {
   -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);

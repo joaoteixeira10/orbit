@@ -108,6 +108,11 @@ func TestTagsAndUpgrade(t *testing.T) {
 	if k := find("urgent"); k["task"] != task.ID {
 		t.Fatalf("by a tag: %v", k)
 	}
+	bm := models.Bookmark{WorkspaceID: "w1", URL: "https://example.org", Title: "A recipe", Tags: `["cooking"]`}
+	g.Create(&bm)
+	if k := find("cooking"); k["bookmark"] != bm.ID {
+		t.Fatalf("a bookmark by its tag: %v", k)
+	}
 	if g.Name() != "sqlite" {
 		return
 	}

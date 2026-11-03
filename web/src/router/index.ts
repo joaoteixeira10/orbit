@@ -67,6 +67,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'w/:ws/trash', name: 'ws-trash', component: () => import('@/views/TrashView.vue') },
       { path: 'audit', name: 'audit', component: () => import('@/views/AuditView.vue'), meta: { privilege: 'audit.read' } },
       { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
+      { path: 'docs/:slug?', name: 'docs', component: () => import('@/views/DocsView.vue') },
       { path: 'admin', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { role: 'admin', area: 'admin' } },
       // Owner-only area: same view, owner tabs only (selected via meta.area).
       { path: 'owner', name: 'owner', component: () => import('@/views/AdminView.vue'), meta: { role: 'owner', area: 'owner' } },

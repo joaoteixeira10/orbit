@@ -18,6 +18,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/helpdocs"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/inbox"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/linkpreview"
@@ -60,6 +61,7 @@ type Handlers struct {
 	auth     *auth.Manager
 	audit    *audit.Recorder
 	updates  *version.Checker
+	guides   *helpdocs.Set // Orbit's own guides (the docs page, orbit_help)
 	notify   *notify.Service
 	sealer   *keystore.Sealer
 	oidc     *auth.OIDC
@@ -83,7 +85,7 @@ type Handlers struct {
 // New builds the configured *gin.Engine.
 func New(d Deps) *gin.Engine {
 	gin.SetMode(d.Cfg.GinMode)
-	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV, links: d.Links, room: collab.New()}
+	h := &Handlers{cfg: d.Cfg, db: d.DB, log: d.Log, auth: d.Auth, audit: d.Audit, updates: d.Updates, notify: d.Notify, sealer: d.Sealer, oidc: d.OIDC, webauthn: d.WebAuthn, events: d.Events, ephemeral: ephemeral.New(d.DB), calsync: d.CalSync, inbox: d.Inbox, git: d.Git, dav: d.CalDAV, links: d.Links, room: collab.New(), guides: helpdocs.Load()}
 	if h.calsync == nil {
 		h.calsync = calsync.New(d.DB, d.Sealer, d.Log)
 	}
@@ -265,6 +267,8 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/users/:id/logout", h.auth.RequireGlobal(rbac.PUsersManage), h.forceLogout)
 			authed.POST("/users/:id/unlock", h.auth.RequireGlobal(rbac.PUsersManage), h.unlockUser)
 			authed.POST("/users/:id/impersonate", h.auth.RequireOwnerOrGlobal(rbac.PUsersImpersonate), h.requireStepUp(), h.impersonateUser)
+			authed.GET("/docs", h.listGuides)
+			authed.GET("/docs/:slug", h.getGuide)
 			authed.POST("/users/:id/impersonate/end", h.auth.RequireOwnerOrGlobal(rbac.PUsersImpersonate), h.endImpersonation)
 			authed.GET("/api-tokens", h.auth.RequireGlobal(rbac.PUsersManage), h.listAllAPITokens)
 			authed.DELETE("/api-tokens/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.revokeAnyAPIToken)

@@ -167,8 +167,14 @@ The **sidebar** on the left (a drawer behind the ☰ button on narrow screens):
   members and trash. **+** creates a workspace.
 - **Archived** workspaces gather at the bottom.
 - Your **name** at the bottom opens Settings, the Audit log, Admin and Owner
-  (if you may), the appearance switch, the API reference and **Sign out**.
-  The status line below it opens **About** (version, updates).
+  (if you may), the appearance switch, **Documentation**, the API reference
+  and **Sign out**. The status line below it opens **About** (version,
+  updates).
+- **Documentation** (`/docs`) has Orbit's guides in one place — this user
+  guide, configuration, reverse proxies, SSO with Authentik or Entra,
+  troubleshooting, security, the API for scripts and what's new — as the
+  version you run has them. Search across them all at the top; links
+  between guides stay on the page.
 
 ⌘\ (Ctrl+\) hides the sidebar; the panel button at the top brings it back.
 Everything updates live: when someone else changes a shared workspace, you see
@@ -1592,7 +1598,9 @@ privileges** keeps only some admin privileges. The token is shown once. See
 **Assistants (MCP)**: Claude, ChatGPT, Cursor and other assistants that
 speak MCP (the Model Context Protocol) can use Orbit as you — read and
 write pages, tasks and sub-tasks, comments, events, notes, Mermaid
-diagrams; read sheets, diagrams, history and the graph; search. Settings →
+diagrams; read sheets, diagrams, history and the graph; search; and ask
+Orbit's own guides how something is done (`orbit_help`: "set up SSO with
+Authentik" gets the guide's steps). Settings →
 **Assistants (MCP)** gives the address (`https://<your Orbit>/mcp`) and
 how to add it in each. The assistant then sends you to Orbit to allow it:
 **Read and change**, or **Only read**. Allowing it makes it an API token of

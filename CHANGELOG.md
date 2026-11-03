@@ -17,7 +17,14 @@ merge, not at release time.
 - **Editors in their own look** — Settings → Appearance → Editors: Sheets,
   diagrams (draw.io) and whiteboards follow the theme, or stay light or dark
   (Sheets and draw.io light in a dark Orbit, say).
-- **Tasks by their tags in ⌘K** — a tag finds its tasks, as it finds pages.
+- **Tasks and bookmarks by their tags in ⌘K** — a tag finds its tasks and
+  bookmarks, as it finds pages.
+- **Documentation** — Orbit's guides in one place (user menu → Documentation,
+  `/docs`, beside the API reference): user guide, configuration, reverse
+  proxies, SSO with Authentik / Entra, troubleshooting, security, the API,
+  what's new — built into the version you run, with a search across them.
+  Assistants get them too: the MCP's `orbit_help` answers how something is
+  done in Orbit from them.
 - **Bigger notes** — ⤢ in a note's toolbar and the Quick Note box opens notes
   wide, with room to write (remembered on the device).
 - **Impersonation in the audit log** — its end is recorded too (returned, or

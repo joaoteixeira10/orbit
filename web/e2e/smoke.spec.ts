@@ -2978,6 +2978,10 @@ test('assistants: an app signs in with OAuth (allowed read only here), then uses
   const list = await rpc('tools/call', { name: 'list_workspaces', arguments: {} })
   expect(list.result.isError).toBe(false)
   expect(list.result.content[0].text).toContain(mine.id)
+  // Orbit's own guides, for how Orbit works (built into this version).
+  const help = await rpc('tools/call', { name: 'orbit_help', arguments: { query: 'Authentik provider redirect' } })
+  expect(help.result.isError).toBe(false)
+  expect(help.result.content[0].text).toContain('/docs/sso-authentik#')
   const write = await rpc('tools/call', { name: 'create_page', arguments: { workspace_id: mine.id, title: 'Nope' } })
   expect(write.result.isError).toBe(true)
 
@@ -3369,4 +3373,26 @@ test('two Konami cards: ↑↑↓↓←→←→ B A, and ↑↑↓↓←→←�
   for (const k of [...arrows, 'b', 'a']) await page.keyboard.press(k)
   await expect(page.getByText('João Teixeira')).toBeVisible()
   await expect(page.getByTestId('egg-tn')).toHaveCount(0)
+})
+
+test('documentation: Orbit’s guides in one place — read, follow a link between guides, search', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.locator('button.user-btn').click()
+  await page.getByTestId('menu-docs').click()
+  await expect(page).toHaveURL(/\/docs$/)
+  const guide = page.getByTestId('docs-guide')
+  await expect(guide.locator('h1').first()).toContainText('Orbit')
+  await page.getByRole('link', { name: 'SSO with Authentik', exact: true }).click()
+  await expect(guide.locator('h1').first()).toContainText('SSO with Authentik')
+  // A link to another guide stays on the page.
+  await guide.locator('a[href^="/docs/sso-entra"]').first().click()
+  await expect(page).toHaveURL(/\/docs\/sso-entra/)
+  await expect(guide.locator('h1').first()).toContainText('Entra')
+  // Search across them: a hit opens its part.
+  await page.getByTestId('docs-search').fill('UPLOAD_STORE')
+  await expect(page.getByTestId('docs-hit').first()).toBeVisible()
+  await page.getByTestId('docs-hit').first().click()
+  await expect(page).toHaveURL(/\/docs\/[a-z-]+#/)
+  await expect(guide).toBeVisible()
 })

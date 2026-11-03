@@ -1,5 +1,6 @@
-# Build context for the image: only api/ and web/ are needed (lb-agent is
-# built from api/ too). The lab and the docs stay out.
+# Build context for the image: api/ and web/, and Orbit's guides (docs/*.md
+# and the changelog, built into the binary for the docs page). The lab stays
+# out.
 .git
 .gitignore
 **/node_modules
@@ -11,6 +12,7 @@ api/internal/webui/dist/*
 *.db
 *.sqlite
 **/.env
-docs
 lab
 *.md
+!docs/*.md
+!CHANGELOG.md

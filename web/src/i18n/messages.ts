@@ -106,6 +106,14 @@ const en = {
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     apiDocs: 'API reference',
+    docs: 'Documentation',
+  },
+  docs: {
+    title: 'Documentation',
+    search: 'Search the guides…',
+    found: '{n} parts of the guides',
+    none: 'Nothing in the guides for that.',
+    missing: 'There’s no such guide.',
   },
   impersonate: {
     action: 'Impersonate',
@@ -382,6 +390,14 @@ const pt: typeof en = {
     openMenu: 'Abrir menu',
     closeMenu: 'Fechar menu',
     apiDocs: 'Referência da API',
+    docs: 'Documentação',
+  },
+  docs: {
+    title: 'Documentação',
+    search: 'Procurar nos guias…',
+    found: '{n} partes dos guias',
+    none: 'Nada nos guias sobre isso.',
+    missing: 'Esse guia não existe.',
   },
   impersonate: {
     action: 'Personificar',

@@ -77,6 +77,31 @@ var (
 func items(list any) map[string]any { return map[string]any{"items": list} }
 
 var mcpTools = []mcpTool{
+	// ---- Orbit's own guides ----
+	{
+		Name: "orbit_help", Title: "Orbit's guides", ReadOnly: true,
+		Description: "How Orbit works and how to set it up, from its own guides (user guide, configuration, reverse proxies, SSO with Authentik or Entra, troubleshooting, security, API, what's new): the sections that answer a question, with where they are. Use it before answering how to do something in Orbit.",
+		Props:       map[string]mcpProp{"query": {Type: "string", Description: "The question or its key words, e.g. \"SSO Authentik\" or \"move files to S3\""}},
+		Required:    []string{"query"},
+		Run: func(m *mcpCall, a mcpArgs) (any, error) {
+			var hits []map[string]any
+			if err := m.do("GET", "/docs", url.Values{"q": {a.str("query")}}, nil, &hits); err != nil {
+				return nil, err
+			}
+			if len(hits) > 4 {
+				hits = hits[:4]
+			}
+			for _, h := range hits {
+				if t, _ := h["text"].(string); len(t) > 6000 {
+					h["text"] = t[:6000] + "\n…"
+				}
+				slug, _ := h["slug"].(string)
+				anchor, _ := h["anchor"].(string)
+				h["link"] = "/docs/" + slug + "#" + anchor
+			}
+			return items(hits), nil
+		},
+	},
 	// ---- Overview ----
 	{
 		Name: "list_workspaces", Title: "List workspaces", ReadOnly: true,

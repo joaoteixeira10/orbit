@@ -22,6 +22,8 @@ RUN go mod download
 COPY api/ ./
 # Drop the built SPA into the embed directory so go:embed picks it up.
 COPY --from=web /web/dist/ ./internal/webui/dist/
+# Orbit's guides (the docs page, the assistants' orbit_help), as this version has them.
+COPY docs/ CHANGELOG.md ./internal/helpdocs/files/
 
 # Version stamping. .git is not in the build context, so these are passed as
 # build args (Makefile `image` target, build.yml) and injected via -ldflags.

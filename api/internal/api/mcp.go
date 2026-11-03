@@ -25,7 +25,7 @@ import (
 var mcpVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
 
 const mcpInstructions = `Orbit is a planner: workspaces hold pages (Markdown documents in a tree, which may be filed in folders), task lists with tasks (due dates, priorities, assignees, sub-tasks), calendar events, quick notes, sheets, diagrams (draw.io or Mermaid), whiteboards and folders.
-Start with list_workspaces; most tools take a workspace_id. Use search to find things by their words. Pages are read and written as Markdown; a link to another Orbit thing is written [Title](/w/{workspace_id}/p/{page_id}) (s/ for a sheet, d/ for a diagram, whiteboards/ for a whiteboard), and such a link alone on its line shows that thing inside the page. Dates are YYYY-MM-DD; times HH:MM; instants RFC 3339.`
+Start with list_workspaces; most tools take a workspace_id. For how Orbit itself works or is set up (SSO, proxies, files, backups…), ask orbit_help: it answers from Orbit's own guides. Use search to find things by their words. Pages are read and written as Markdown; a link to another Orbit thing is written [Title](/w/{workspace_id}/p/{page_id}) (s/ for a sheet, d/ for a diagram, whiteboards/ for a whiteboard), and such a link alone on its line shows that thing inside the page. Dates are YYYY-MM-DD; times HH:MM; instants RFC 3339.`
 
 type mcpRequest struct {
 	JSONRPC string          `json:"jsonrpc"`

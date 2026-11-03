@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
-  ClipboardList, LogOut, Moon, Sun, BookOpen, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
+  ClipboardList, LogOut, Moon, Sun, BookOpen, LifeBuoy, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
   PanelRight, FolderOpen,
 } from 'lucide-vue-next'
 import SideRail from '@/components/SideRail.vue'
@@ -510,6 +510,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <button class="menu-item" @click="prefs.setTheme(prefs.isDark() ? 'light' : 'dark')">
         <component :is="prefs.isDark() ? Sun : Moon" class="h-4 w-4 text-text-2" />{{ prefs.isDark() ? t('cmd.lightMode') : t('cmd.darkMode') }}
       </button>
+      <button class="menu-item" data-testid="menu-docs" @click="go('docs')"><LifeBuoy class="h-4 w-4 text-text-2" />{{ t('nav.docs') }}</button>
       <a class="menu-item" href="/api/docs" target="_blank" rel="noopener" @click="userMenu = false"><BookOpen class="h-4 w-4 text-text-2" />{{ t('nav.apiDocs') }}</a>
       <div class="menu-sep" />
       <button class="menu-item" @click="logout"><LogOut class="h-4 w-4 text-text-2" />{{ t('nav.signOut') }}</button>

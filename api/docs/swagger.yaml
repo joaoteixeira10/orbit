@@ -1496,6 +1496,17 @@ definitions:
       version:
         type: integer
     type: object
+  api.guideResponse:
+    properties:
+      file:
+        type: string
+      markdown:
+        type: string
+      slug:
+        type: string
+      title:
+        type: string
+    type: object
   api.habitCheckRequest:
     properties:
       done:
@@ -3609,6 +3620,15 @@ definitions:
       login:
         type: string
     type: object
+  helpdocs.Guide:
+    properties:
+      file:
+        type: string
+      slug:
+        type: string
+      title:
+        type: string
+    type: object
   inbox.Delivery:
     properties:
       channels:
@@ -5319,6 +5339,47 @@ paths:
       summary: Save a diagram
       tags:
       - diagrams
+  /docs:
+    get:
+      parameters:
+      - description: Words to find; without it, the guides
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/helpdocs.Guide'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Orbit's guides, or a search in them
+      tags:
+      - docs
+  /docs/{slug}:
+    get:
+      parameters:
+      - description: The guide (user-guide, configuration, …)
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.guideResponse'
+      security:
+      - BearerAuth: []
+      summary: One of Orbit's guides
+      tags:
+      - docs
   /drawings/{id}:
     delete:
       parameters:

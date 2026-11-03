@@ -1600,6 +1600,74 @@ const docTemplate = `{
                 }
             }
         },
+        "/docs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docs"
+                ],
+                "summary": "Orbit's guides, or a search in them",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Words to find; without it, the guides",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/helpdocs.Guide"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/docs/{slug}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docs"
+                ],
+                "summary": "One of Orbit's guides",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The guide (user-guide, configuration, …)",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.guideResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/drawings/{id}": {
             "get": {
                 "security": [
@@ -13251,6 +13319,23 @@ const docTemplate = `{
                 }
             }
         },
+        "api.guideResponse": {
+            "type": "object",
+            "properties": {
+                "file": {
+                    "type": "string"
+                },
+                "markdown": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "api.habitCheckRequest": {
             "type": "object",
             "properties": {
@@ -16235,6 +16320,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "login": {
+                    "type": "string"
+                }
+            }
+        },
+        "helpdocs.Guide": {
+            "type": "object",
+            "properties": {
+                "file": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }

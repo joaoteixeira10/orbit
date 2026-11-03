@@ -23,7 +23,7 @@ import (
 )
 
 // version: bump it to rebuild the index (when what's indexed changes).
-const version = "9"
+const version = "10"
 
 // Each source: its table, kind, and how one of its rows (written @) reads
 // into the index columns: ref (what a hit opens — a comment opens its task),
@@ -46,7 +46,7 @@ var sources = []struct {
 	{"diagrams", "diagram", "@.id", "@.workspace_id", "''", "@.title", "@.text"},
 	// A file by its name and what it says (read from it: upload_texts).
 	{"uploads", "file", "@.id", "@.workspace_id", "@.owner_id", "@.name", "coalesce((SELECT t.text FROM upload_texts t WHERE t.id = @.id), '')"},
-	{"bookmarks", "bookmark", "@.id", "@.workspace_id", "''", "@.title", "coalesce(@.description,'') || ' ' || coalesce(@.site_name,'') || ' ' || coalesce(@.url,'') || ' ' || coalesce(@.notes,'')"},
+	{"bookmarks", "bookmark", "@.id", "@.workspace_id", "''", "coalesce(@.title,'') || ' ' || coalesce(@.tags,'')", "coalesce(@.description,'') || ' ' || coalesce(@.site_name,'') || ' ' || coalesce(@.url,'') || ' ' || coalesce(@.notes,'')"},
 }
 
 var ready atomic.Bool

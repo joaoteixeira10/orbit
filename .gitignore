@@ -18,6 +18,9 @@ web/test-results/
 # Built SPA is copied into the Go embed dir only at image-build time; keep the placeholder
 api/internal/webui/dist/*
 !api/internal/webui/dist/index.html
+# Orbit's guides go into the Go embed dir only at image-build time (helpdocs)
+api/internal/helpdocs/files/*
+!api/internal/helpdocs/files/.gitkeep
 # Local Claude Code settings, dockerized Go cache
 .claude/
 /.gocache/

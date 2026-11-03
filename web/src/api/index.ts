@@ -78,6 +78,25 @@ export const rolesApi = {
   remove: (id: string) => api<void>(`/roles/${id}`, { method: 'DELETE' }),
 }
 
+// ---- Orbit's own guides (the docs page) ----
+export interface Guide {
+  slug: string
+  title: string
+  file: string
+}
+export interface GuideSection {
+  slug: string
+  guide: string
+  heading: string
+  anchor: string
+  text: string
+}
+export const guidesApi = {
+  list: () => api<Guide[]>('/docs'),
+  get: (slug: string) => api<Guide & { markdown: string }>(`/docs/${encodeURIComponent(slug)}`),
+  search: (q: string) => api<GuideSection[]>(`/docs?q=${encodeURIComponent(q)}`),
+}
+
 // ---- Audit + settings ----
 export const auditApi = {
   list: (page = 1, perPage = 50, q = '', impersonation = false) =>

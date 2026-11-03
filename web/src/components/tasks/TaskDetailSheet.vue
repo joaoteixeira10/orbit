@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight } from 'lucide-vue-next'
+import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, ChevronDown, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight } from 'lucide-vue-next'
 import { estimateText } from '@/lib/weekPlan'
 import { durationOf, useFocusStore } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
@@ -286,14 +286,6 @@ async function remove() {
   }
 }
 
-// How long it should take (the week planner fits it in): the usual ones,
-// and the task's own when it's another.
-const estimateChoices = computed(() => {
-  const base = [0, 15, 30, 45, 60, 90, 120, 180, 240, 360, 480]
-  const own = task.value?.estimate ?? 0
-  return own && !base.includes(own) ? [...base, own].sort((a, b) => a - b) : base
-})
-
 // ---- How its date stands, and the date chips ----
 const router = useRouter()
 const focus = useFocusStore()
@@ -318,18 +310,42 @@ function setDay(which: 'start' | 'due', v: string) {
   if (!v) datePop.value = ''
 }
 
-// Status: the list's columns, each with its dot.
+// Status: the list's columns, each with its dot, picked from a menu.
 function colDot(c: Column, i: number): string {
   return c.color || (c.done ? 'var(--ok)' : i === 0 ? 'var(--text-3)' : 'var(--warn)')
 }
-
-// Estimate: none, 30 min, 1 h at a tap; the rest from "2h+".
-const estChips = [0, 30, 60]
-const estOther = computed(() => {
-  const e = task.value?.estimate ?? 0
-  return estChips.includes(e) ? 0 : e
+const statusPop = ref(false)
+const statusBtn = ref<HTMLElement | null>(null)
+const column = computed(() => {
+  const cols = list.value?.columns ?? []
+  const i = cols.findIndex((c) => c.id === task.value?.column_id)
+  return i < 0 ? null : { c: cols[i], i }
 })
-const estMore = computed(() => estimateChoices.value.filter((m) => !estChips.includes(m)))
+function setStatus(id: string) {
+  statusPop.value = false
+  if (id !== task.value?.column_id) void save({ column_id: id })
+}
+
+// Estimate: any length, in hours and minutes (a week at most).
+const estPop = ref(false)
+const estBtn = ref<HTMLElement | null>(null)
+const estH = ref<number | ''>('')
+const estM = ref<number | ''>('')
+const estHEl = ref<HTMLInputElement | null>(null)
+async function openEstimate() {
+  const e = task.value?.estimate ?? 0
+  estH.value = e ? Math.floor(e / 60) : ''
+  estM.value = e ? e % 60 : ''
+  estPop.value = true
+  await nextTick()
+  estHEl.value?.select()
+}
+function setEstimate(clear = false) {
+  const min = clear ? 0 : Math.round(Number(estH.value || 0) * 60 + Number(estM.value || 0))
+  if (min < 0 || min > 10080) return toast.error(t('tasks.estRange'))
+  estPop.value = false
+  if (min !== (task.value?.estimate ?? 0)) void save({ estimate: min })
+}
 
 // People and tags.
 const assignPop = ref(false)
@@ -476,21 +492,10 @@ async function startFocus() {
           <div v-if="list" class="group-row">
             <span class="tile h-7 w-7" style="--tile: #30b0c7"><Columns3 class="h-4 w-4" /></span>
             <span class="flex-1 text-[14px]">{{ t('tasks.status') }}</span>
-            <div class="flex flex-wrap justify-end gap-1.5" role="radiogroup" :aria-label="t('tasks.status')">
-              <button
-                v-for="(c, i) in list.columns"
-                :key="c.id"
-                type="button"
-                role="radio"
-                class="status-chip"
-                :class="{ on: task.column_id === c.id }"
-                :aria-checked="task.column_id === c.id"
-                :disabled="!editable || !!task.parent_id"
-                @click="save({ column_id: c.id })"
-              >
-                <span class="dot" :style="{ background: colDot(c, i) }" />{{ c.name }}
-              </button>
-            </div>
+            <button ref="statusBtn" type="button" class="pick" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.status')" aria-haspopup="menu" data-testid="task-status" @click="statusPop = !statusPop">
+              <span v-if="column" class="dot" :style="{ background: colDot(column.c, column.i) }" />{{ column?.c.name ?? '–' }}
+              <ChevronDown v-if="editable && !task.parent_id" class="h-3.5 w-3.5 text-text-3" aria-hidden="true" />
+            </button>
           </div>
           <div class="group-row">
             <span class="tile h-7 w-7" style="--tile: #ff9500"><Flag class="h-4 w-4" /></span>
@@ -504,13 +509,10 @@ async function startFocus() {
           <div class="group-row">
             <span class="tile h-7 w-7" style="--tile: #30b0c7"><Hourglass class="h-4 w-4" /></span>
             <span class="flex-1 text-[14px]">{{ t('tasks.estimate') }}</span>
-            <div class="flex items-center gap-1.5" data-testid="task-estimate">
-              <button v-for="m in estChips" :key="m" type="button" class="est-chip" :class="{ on: (task.estimate || 0) === m }" :disabled="!editable" :aria-label="m ? estimateText(m) : t('tasks.noEstimate')" @click="save({ estimate: m })">{{ m ? estimateText(m) : '–' }}</button>
-              <select class="est-chip" :class="{ on: estOther }" :value="String(estOther)" :disabled="!editable" :aria-label="t('tasks.estimate')" @change="save({ estimate: Number(($event.target as HTMLSelectElement).value) })">
-                <option value="0" disabled>{{ t('tasks.estMore') }}</option>
-                <option v-for="m in estMore" :key="m" :value="String(m)">{{ estimateText(m) }}</option>
-              </select>
-            </div>
+            <button ref="estBtn" type="button" class="pick" :class="{ empty: !task.estimate }" :disabled="!editable" :aria-label="t('tasks.estimate')" aria-haspopup="dialog" data-testid="task-estimate" @click="estPop ? (estPop = false) : openEstimate()">
+              {{ task.estimate ? estimateText(task.estimate) : t('tasks.noEstimate') }}
+              <ChevronDown v-if="editable" class="h-3.5 w-3.5 text-text-3" aria-hidden="true" />
+            </button>
           </div>
           <div v-if="schoolWs && !task.parent_id" class="group-row">
             <span class="tile h-7 w-7" style="--tile: #ff3b30"><GraduationCap class="h-4 w-4" /></span>
@@ -689,6 +691,38 @@ async function startFocus() {
           <p v-if="datePop === 'start'" class="text-[12px] leading-snug text-text-3">{{ t('tasks.startHint') }}</p>
           <button v-if="datePop === 'start' ? task.start : task.due" type="button" class="btn-plain w-full justify-center !text-danger" @click="setDay(datePop as 'start' | 'due', '')">{{ t('tasks.removeDate') }}</button>
         </div>
+      </Popover>
+      <Popover v-if="statusPop && list" :anchor="statusBtn" placement="bottom-end" :width="220" @close="statusPop = false">
+        <div class="p-1" role="menu" data-testid="task-status-menu">
+          <button
+            v-for="(c, i) in list.columns"
+            :key="c.id"
+            type="button"
+            role="menuitemradio"
+            :aria-checked="task.column_id === c.id"
+            class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13.5px] hover:bg-fill-2"
+            @click="setStatus(c.id)"
+          >
+            <span class="dot" :style="{ background: colDot(c, i) }" />
+            <span class="min-w-0 flex-1 truncate">{{ c.name }}</span>
+            <Check v-if="task.column_id === c.id" class="h-4 w-4 text-accent-text" />
+          </button>
+        </div>
+      </Popover>
+      <Popover v-if="estPop" :anchor="estBtn" placement="bottom-end" :width="250" @close="estPop = false">
+        <form class="space-y-2.5 p-3" data-testid="task-estimate-pop" @submit.prevent="setEstimate()">
+          <p class="text-[12px] font-medium text-text-3">{{ t('tasks.estimateHint') }}</p>
+          <div class="flex items-center gap-2">
+            <input ref="estHEl" v-model.number="estH" type="number" min="0" max="168" step="1" inputmode="numeric" class="input !w-16 !py-1.5 text-center" :aria-label="t('tasks.estHours')" placeholder="0" />
+            <span class="text-[13px] text-text-2">h</span>
+            <input v-model.number="estM" type="number" min="0" max="59" step="5" inputmode="numeric" class="input !w-16 !py-1.5 text-center" :aria-label="t('tasks.estMinutes')" placeholder="0" />
+            <span class="text-[13px] text-text-2">min</span>
+          </div>
+          <div class="flex gap-2">
+            <button v-if="task.estimate" type="button" class="btn-plain flex-1 justify-center !text-danger" @click="setEstimate(true)">{{ t('tasks.estClear') }}</button>
+            <button type="submit" class="btn-primary btn-sm flex-1 justify-center">{{ t('tasks.estSet') }}</button>
+          </div>
+        </form>
       </Popover>
       <Popover v-if="assignPop" :anchor="assignBtn" placement="bottom-end" :width="240" @close="assignPop = false">
         <div class="max-h-[280px] overflow-y-auto p-1" role="menu">
@@ -914,52 +948,32 @@ async function startFocus() {
   border-radius: 6px;
   box-shadow: 0 0 0 3px var(--ring);
 }
-.status-chip {
+.pick {
   display: inline-flex;
+  max-width: 60%;
   align-items: center;
   gap: 6px;
-  padding: 4px 11px;
+  padding: 3px 8px 3px 10px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
   box-shadow: 0 0 0 0.5px var(--border-2);
 }
-.status-chip:hover:not(:disabled):not(.on) {
+.pick:hover:not(:disabled) {
   background: var(--fill-2);
 }
-.status-chip.on {
-  background: var(--text);
-  color: var(--surface);
-  font-weight: 600;
-  box-shadow: none;
+.pick:disabled {
+  padding-right: 10px;
 }
-.status-chip .dot {
+.pick.empty {
+  color: var(--text-3);
+}
+.dot {
+  flex: none;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-}
-.est-chip {
-  min-width: 34px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: center;
-  color: var(--text);
-  background: transparent;
-  box-shadow: 0 0 0 0.5px var(--border-2);
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
-.est-chip:hover:not(:disabled):not(.on) {
-  background: var(--fill-2);
-}
-.est-chip.on {
-  background: var(--text);
-  color: var(--surface);
-  box-shadow: none;
 }
 .person {
   display: inline-flex;

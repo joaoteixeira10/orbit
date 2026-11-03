@@ -45,7 +45,8 @@ merge, not at release time.
 - **A task's details, redone** — the list it's on, the title and notes, and
   a bar saying how its date stands (*Overdue by 4 days*, *Due today*…) with
   Today / Tomorrow / Next week; then Schedule (start → due, time, repeat),
-  Planning (status and estimate at a tap, priority, list, goal…), People &
+  Planning (status from the board's columns, an estimate of any length,
+  priority, list, goal…), People &
   tags; **Delete** and **Start focus** at the bottom. Beside it, **Activity**:
   the comments, the changes and the files, with the box at the bottom —
   drop files on it, or its clip, to attach them.

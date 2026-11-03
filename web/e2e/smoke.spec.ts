@@ -823,7 +823,7 @@ test('time estimates and the week planner: tasks fitted into free working hours 
   await expect(block).toBeVisible()
   await page.screenshot({ path: 'test-results/planner.png' })
   await block.click()
-  await expect(page.getByTestId('task-estimate').locator('select')).toHaveValue('90')
+  await expect(page.getByTestId('task-estimate')).toHaveText('1h 30m')
 })
 
 test('Google Calendar: the owner sets up signing in with Google; a workspace owner is sent to Google to sign in', async ({ page, request }) => {
@@ -3370,7 +3370,7 @@ test('a workspace calendar: each list a calendar in its colour, mine to change; 
   await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
 })
 
-test('task sheet: how its date stands, status and estimate at a tap, a file dropped in the activity, Start focus', async ({ page, request }) => {
+test('task sheet: how its date stands, a status from its menu, any estimate, a file dropped in the activity, Start focus', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
   const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'New sheet', kind: 'work', starter: false, modules: ['home', 'tasks', 'focus'] } })).json()
@@ -3393,11 +3393,18 @@ test('task sheet: how its date stands, status and estimate at a tap, a file drop
   // Tomorrow, from the bar.
   await page.getByTestId('task-due-bar').getByRole('button', { name: 'Tomorrow' }).click()
   await expect(page.getByTestId('task-due-bar')).toContainText('Due tomorrow')
-  // A status and an estimate, each a tap.
+  // A status from its menu; an estimate of any length.
   const doing = list.columns[1]
-  await sheet.getByRole('radio', { name: doing.name }).click()
-  await page.getByTestId('task-estimate').getByRole('button', { name: '30m' }).click()
-  await expect.poll(async () => [(await get()).column_id, (await get()).estimate]).toEqual([doing.id, 30])
+  await page.getByTestId('task-status').click()
+  await page.getByTestId('task-status-menu').getByRole('menuitemradio', { name: doing.name }).click()
+  await expect(page.getByTestId('task-status')).toHaveText(doing.name)
+  await page.getByTestId('task-estimate').click()
+  const est = page.getByTestId('task-estimate-pop')
+  await est.getByLabel('Hours').fill('2')
+  await est.getByLabel('Minutes').fill('40')
+  await est.getByRole('button', { name: 'Set' }).click()
+  await expect(page.getByTestId('task-estimate')).toHaveText('2h 40m')
+  await expect.poll(async () => [(await get()).column_id, (await get()).estimate]).toEqual([doing.id, 160])
   // The date from its chip; removed there too.
   await page.getByTestId('task-due').click()
   await page.getByTestId('task-date-pop').getByRole('button', { name: 'Remove the date' }).click()

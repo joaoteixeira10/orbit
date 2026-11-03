@@ -789,8 +789,8 @@ its list, the title, **Add notes…**, and a bar that says how its date stands
 - **Schedule** — **Dates** (the start, then the due date: click either to
   change or remove it), **Time** (**Add time**), **Repeat** (every day,
   weekday, week, 2 weeks, month, year).
-- **Planning** — **Status** (its board columns, one tap), **Priority**,
-  **Estimate** (–, 30m, 1h, or longer from **2h+**), **Exam** (in school
+- **Planning** — **Status** (pick one of its board's columns), **Priority**,
+  **Estimate** (any length: hours and minutes, up to a week), **Exam** (in school
   workspaces), **List**, **Goal**, **Waits on**.
 - **People & tags** — **Assignees** (one or several members — each gets the
   reminders; **+** adds one; alone in a workspace, **Invite people** opens

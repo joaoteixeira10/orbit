@@ -14640,6 +14640,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "focus_lengths": {
+                    "description": "own focus timer lengths, minutes",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "locale": {
                     "type": "string"
                 },
@@ -15590,6 +15597,14 @@ const docTemplate = `{
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
+                    }
+                },
+                "focus_lengths": {
+                    "description": "Own lengths for the focus timer, in minutes (1–180), besides 15, 25, 50.",
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                        "type": "integer"
                     }
                 },
                 "locale": {
@@ -16987,6 +17002,10 @@ const docTemplate = `{
                 },
                 "editor_themes": {
                     "description": "EditorThemes keeps an editor light or dark whatever Orbit's theme\n(JSON {\"sheets\"|\"diagrams\"|\"whiteboards\": \"light\"|\"dark\"}; absent =\nfollow Orbit's).",
+                    "type": "string"
+                },
+                "focus_lengths": {
+                    "description": "FocusLengths are this person's own lengths for the focus timer, in\nminutes (JSON []int), besides 15, 25 and 50.",
                     "type": "string"
                 },
                 "id": {

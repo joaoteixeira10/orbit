@@ -744,6 +744,9 @@ Draw (in a workspace's file browser: **Move to another workspace…**).
 - **On a tablet**: once you've drawn with a stylus, fingers only move and
   zoom the paper, so your palm can rest on it. Tap with two fingers to undo,
   three to redo.
+- **Full screen**: the last button at the bottom right — the sketch fills
+  the whole screen, with its tools (on an iPhone, the whole window). Esc or
+  the button again leaves.
 
 Keys: P pen, N pencil, M marker, H highlighter, B brush, E eraser, L lasso,
 G bucket, I eyedropper, ⌘Z / ⌘⇧Z undo and redo.
@@ -1437,8 +1440,10 @@ sees anyone else's.
 **Focus timer** (a module) is for working in focused stretches — the
 Pomodoro way: 25 minutes on one thing, then a break.
 
-- Pick a **length** (15, 25 or 50 minutes) and, if you like, **a task** of
-  the workspace, then **Start**. The dial counts down; the sidebar shows
+- Pick a **length** (15, 25 or 50 minutes, or your own: **+** adds one, from
+  1 to 180 minutes — it stays on the list, on all your devices, until you
+  **remove** it) and, if you like, **a task** of the workspace, then
+  **Start**. The length you picked last is picked again next time. The dial counts down; the sidebar shows
   what's running and how long is left, wherever you are in Orbit. It goes on
   in your other tabs and devices, and survives closing the page.
 - When the time is up you're told (*Time for a break*), on your devices too.

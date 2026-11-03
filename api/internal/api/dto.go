@@ -99,6 +99,8 @@ type updatePrefsRequest struct {
 	// Own colours for calendars: key → "#rrggbb", or "" to use the
 	// calendar's own again.
 	CalendarColors *map[string]string `json:"calendar_colors"`
+	// Own lengths for the focus timer, in minutes (1–180), besides 15, 25, 50.
+	FocusLengths *[]int `json:"focus_lengths" binding:"omitempty,max=8"`
 	// Quiet hours: "HH:MM" each ("" both = none); reminders through or not.
 	QuietFrom      *string `json:"quiet_from"`
 	QuietTo        *string `json:"quiet_to"`

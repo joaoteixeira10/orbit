@@ -2412,6 +2412,11 @@ definitions:
           type: string
         description: 'sheets / diagrams / whiteboards: light | dark'
         type: object
+      focus_lengths:
+        description: own focus timer lengths, minutes
+        items:
+          type: integer
+        type: array
       locale:
         type: string
       notify_channels:
@@ -3098,6 +3103,13 @@ definitions:
           Sheets, diagrams, whiteboards: "light" or "dark" whatever Orbit's
           theme; "follow" (or leaving one out) follows it.
         type: object
+      focus_lengths:
+        description: Own lengths for the focus timer, in minutes (1–180), besides
+          15, 25, 50.
+        items:
+          type: integer
+        maxItems: 8
+        type: array
       locale:
         maxLength: 8
         type: string
@@ -4102,6 +4114,11 @@ definitions:
           EditorThemes keeps an editor light or dark whatever Orbit's theme
           (JSON {"sheets"|"diagrams"|"whiteboards": "light"|"dark"}; absent =
           follow Orbit's).
+        type: string
+      focus_lengths:
+        description: |-
+          FocusLengths are this person's own lengths for the focus timer, in
+          minutes (JSON []int), besides 15, 25 and 50.
         type: string
       id:
         type: string

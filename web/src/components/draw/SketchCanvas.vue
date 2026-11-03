@@ -2,8 +2,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  Brush, Copy, Eraser, Eye, EyeOff, FileImage, Hand, Highlighter, Lasso, Layers, NotebookText, PaintBucket, Pen, PenLine, Pencil, Pipette, Plus,
-  Redo2, Trash2, Undo2, ChevronUp, ChevronDown, ZoomIn, ZoomOut,
+  Brush, Copy, Eraser, Eye, EyeOff, FileImage, Hand, Highlighter, Lasso, Layers, Maximize2, Minimize2, NotebookText, PaintBucket, Pen, PenLine, Pencil,
+  Pipette, Plus, Redo2, Trash2, Undo2, ChevronUp, ChevronDown, ZoomIn, ZoomOut,
 } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import ColorPicker from './ColorPicker.vue'
@@ -628,10 +628,36 @@ function place(src: string, w: number, h: number, name: string) {
   commit(layers)
 }
 
+// ---- Full screen ----
+// The canvas fills the screen: the browser's own full screen where there is
+// one (popovers then open inside it), else the whole window. Esc, or the
+// button again, leaves.
+const full = ref(false)
+let native = false
+async function toggleFull() {
+  if (full.value) return leaveFull()
+  full.value = true
+  if (wrap.value?.requestFullscreen) {
+    native = await wrap.value.requestFullscreen().then(
+      () => true,
+      () => false,
+    )
+  }
+}
+function leaveFull() {
+  full.value = false
+  if (native && document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+  native = false
+}
+function onFullChange() {
+  if (native && !document.fullscreenElement) leaveFull()
+}
+
 // ---- Keys ----
 function onKey(e: KeyboardEvent) {
   const el = e.target as HTMLElement
   if (e.key === 'Shift') shiftDown.value = true
+  if (e.key === 'Escape' && full.value && !native && !document.querySelector('.popover')) leaveFull()
   if (el.closest('input, textarea, [contenteditable="true"]') || props.readonly) return
   const mod = e.metaKey || e.ctrlKey
   if (mod && e.key.toLowerCase() === 'z') {
@@ -665,12 +691,15 @@ onMounted(() => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', shiftOff)
+  document.addEventListener('fullscreenchange', onFullChange)
   void nextTick(fit)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', shiftOff)
+  document.removeEventListener('fullscreenchange', onFullChange)
+  if (full.value) leaveFull()
   clearTimeout(snapTimer)
 })
 
@@ -721,7 +750,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
 </script>
 
 <template>
-  <div ref="wrap" class="sketch" :style="{ background: sketch.paperColor }" data-testid="sketch">
+  <div ref="wrap" class="sketch" :class="{ full }" :style="{ background: sketch.paperColor }" data-testid="sketch">
     <svg
       ref="svg"
       class="board"
@@ -854,6 +883,10 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
       <button type="button" class="tb" :title="t('sketch.zoomOut')" :aria-label="t('sketch.zoomOut')" @click="zoomBy(1 / 1.25)"><ZoomOut class="h-[18px] w-[18px]" /></button>
       <button type="button" class="zoom" :title="t('sketch.fit')" data-testid="sketch-fit" @click="fit">{{ Math.round(view.z * 100) }}%</button>
       <button type="button" class="tb" :title="t('sketch.zoomIn')" :aria-label="t('sketch.zoomIn')" @click="zoomBy(1.25)"><ZoomIn class="h-[18px] w-[18px]" /></button>
+      <span class="sep" />
+      <button type="button" class="tb" :class="{ on: full }" :title="full ? t('sketch.leaveFull') : t('sketch.full')" :aria-label="full ? t('sketch.leaveFull') : t('sketch.full')" :aria-pressed="full" data-testid="sketch-full" @click="toggleFull">
+        <component :is="full ? Minimize2 : Maximize2" class="h-[18px] w-[18px]" />
+      </button>
     </div>
 
     <!-- What's chosen -->
@@ -956,6 +989,12 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+}
+/* Without the browser's full screen (iPhone): the whole window. */
+.sketch.full {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
 }
 .board {
   position: absolute;

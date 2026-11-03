@@ -201,6 +201,9 @@ type UserPrefs struct {
 	// {key: "#rrggbb"}; keys: a workspace id, "list:<id>", "sub:<id>",
 	// "holidays"); absent = the calendar's own colour.
 	CalendarColors JSONText `gorm:"type:text" json:"calendar_colors"`
+	// FocusLengths are this person's own lengths for the focus timer, in
+	// minutes (JSON []int), besides 15, 25 and 50.
+	FocusLengths JSONText `gorm:"type:text" json:"focus_lengths"`
 	// Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
 	// reaches devices or channels then (it waits in the inbox, and one
 	// summary goes when they end) — reminders too, unless QuietReminders.

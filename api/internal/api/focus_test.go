@@ -73,3 +73,25 @@ func TestFocus(t *testing.T) {
 		t.Fatalf("on the task after: %d", tk.FocusMinutes)
 	}
 }
+
+// TestFocusLengths: a person's own lengths for the focus timer are kept with
+// their preferences, each 1 to 180 minutes, a few at most.
+func TestFocusLengths(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p struct {
+		FocusLengths []int `json:"focus_lengths"`
+	}
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if p.FocusLengths == nil || len(p.FocusLengths) != 0 {
+		t.Errorf("none yet: %#v", p.FocusLengths)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"focus_lengths":[0]}`, owner), http.StatusBadRequest, "too short")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"focus_lengths":[181]}`, owner), http.StatusBadRequest, "too long")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"focus_lengths":[1,2,3,4,5,6,7,8,9]}`, owner), http.StatusBadRequest, "too many")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"focus_lengths":[40,90]}`, owner), http.StatusOK, "save")
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if len(p.FocusLengths) != 2 || p.FocusLengths[0] != 40 || p.FocusLengths[1] != 90 {
+		t.Errorf("saved: %#v", p.FocusLengths)
+	}
+}

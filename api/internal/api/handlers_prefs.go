@@ -34,6 +34,7 @@ type prefsResponse struct {
 	EditorThemes  map[string]string         `json:"editor_themes"` // sheets / diagrams / whiteboards: light | dark
 	// CalendarColors: own colours for calendars (a workspace id, list:<id>, sub:<id>, holidays).
 	CalendarColors map[string]string `json:"calendar_colors"`
+	FocusLengths   []int             `json:"focus_lengths"` // own focus timer lengths, minutes
 	// Quiet hours ("" = none): nothing to devices or channels between them.
 	QuietFrom      string `json:"quiet_from"`
 	QuietTo        string `json:"quiet_to"`
@@ -61,8 +62,13 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 	if p.CalendarColors != "" {
 		_ = json.Unmarshal([]byte(p.CalendarColors), &calColors)
 	}
+	lengths := []int{}
+	if p.FocusLengths != "" {
+		_ = json.Unmarshal([]byte(p.FocusLengths), &lengths)
+	}
 	return prefsResponse{
 		CalendarColors: calColors,
+		FocusLengths:   lengths,
 		EditorThemes:   editors,
 		Timezone:       p.Timezone,
 		Theme:          p.Theme,
@@ -193,6 +199,16 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 		}
 		b, _ := json.Marshal(*req.SketchColors)
 		updates["sketch_colors"] = string(b)
+	}
+	if req.FocusLengths != nil {
+		for _, m := range *req.FocusLengths {
+			if m < 1 || m > 180 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "focus_lengths: minutes from 1 to 180"})
+				return
+			}
+		}
+		b, _ := json.Marshal(*req.FocusLengths)
+		updates["focus_lengths"] = string(b)
 	}
 	if req.RemoteImages != nil {
 		updates["remote_images"] = *req.RemoteImages

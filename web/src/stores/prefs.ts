@@ -34,6 +34,7 @@ interface ServerPrefs {
   sketch_colors?: string[] // their own palette in Quick Draw
   editor_themes?: EditorThemes
   calendar_colors?: Record<string, string>
+  focus_lengths?: number[] // own focus timer lengths, minutes
 }
 
 function browserTZ(): string {
@@ -87,6 +88,8 @@ export const usePrefsStore = defineStore('prefs', {
     editorThemes: readEditorThemes(),
     // Own colours for calendars (a workspace id, list:<id>, sub:<id>, holidays).
     calendarColors: {} as Record<string, string>,
+    // Own lengths for the focus timer (minutes), besides 15, 25 and 50.
+    focusLengths: [] as number[],
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
@@ -133,6 +136,7 @@ export const usePrefsStore = defineStore('prefs', {
       this.sketchColors = p.sketch_colors ?? []
       this.editorThemes = p.editor_themes ?? {}
       this.calendarColors = p.calendar_colors ?? {}
+      this.focusLengths = p.focus_lengths ?? []
       localStorage.setItem('orbit_editor_themes', JSON.stringify(this.editorThemes))
       mediaPrefs.remoteImages = this.remoteImages
       localStorage.setItem('orbit_remote_images', this.remoteImages)
@@ -212,6 +216,11 @@ export const usePrefsStore = defineStore('prefs', {
       else delete next[key]
       this.calendarColors = next
       await this.persist({ calendar_colors: { [key]: color } })
+    },
+    // Their own lengths for the focus timer.
+    async setFocusLengths(lengths: number[]) {
+      this.focusLengths = lengths
+      await this.persist({ focus_lengths: lengths })
     },
     // Their own palette in Quick Draw.
     async setSketchColors(colors: string[]) {

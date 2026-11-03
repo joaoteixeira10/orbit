@@ -10,6 +10,8 @@ const props = withDefaults(defineProps<{ anchor: HTMLElement | null; placement?:
 })
 const emit = defineEmits<{ close: [] }>()
 const el = ref<HTMLElement | null>(null)
+// Inside what's full screen, if anything is (only it is drawn then).
+const target = (document.fullscreenElement as HTMLElement | null) ?? 'body'
 let cleanup: (() => void) | null = null
 
 async function place() {
@@ -52,7 +54,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport :to="target">
     <Transition name="pop" appear>
       <div ref="el" class="popover fixed left-0 top-0 z-[60]" :style="{ width: typeof width === 'number' ? width + 'px' : width }" role="menu">
         <slot />

@@ -28,6 +28,12 @@ merge, not at release time.
   what's new — built into the version you run, with a search across them.
   Assistants get them too: the MCP's `orbit_help` answers how something is
   done in Orbit from them.
+- **Quick Draw full screen** — a button at the bottom right fills the
+  screen with the sketch and its tools (for drawing on a tablet); Esc or the
+  button again leaves.
+- **Focus timer lengths of your own** — **+** beside 15, 25 and 50 adds a
+  length (1–180 minutes), kept on your account for every device; the last
+  one picked is picked again.
 - **Bigger notes** — ⤢ in a note's toolbar and the Quick Note box opens notes
   wide, with room to write (remembered on the device).
 - **Impersonation in the audit log** — its end is recorded too (returned, or
@@ -55,6 +61,8 @@ merge, not at release time.
 
 ### Fixed
 
+- **Enter in a new page's title** sometimes left you in the title (its
+  editor still loading); it now goes on into the page once it's there.
 - **Impersonating showed the admin's workspaces**, not the person's (and,
   back, theirs): the sidebar and the live updates now follow whoever is
   signed in.

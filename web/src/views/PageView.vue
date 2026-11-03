@@ -453,15 +453,27 @@ function onTitleEnter(e: KeyboardEvent) {
   if (e.isComposing) return
   e.preventDefault()
   void saveTitle()
-  if (editing.value) editorRef.value?.focusStart()
+  if (editing.value) focusBody()
   else void startEdit()
+}
+// focusBody goes on into the document — once its editor is there (a new
+// page's may still be loading; what's typed meanwhile stays out of the title).
+function focusBody() {
+  if (editorRef.value) return editorRef.value.focusStart()
+  titleEl.value?.blur()
+  const stop = watch(editorRef, (ed) => {
+    if (!ed) return
+    stop()
+    void nextTick(() => ed.focusStart())
+  })
+  setTimeout(stop, 10000)
 }
 function onTitleDown(e: KeyboardEvent) {
   // ↓ at the end of the title continues into the document.
   const el = titleEl.value
   if (el && el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
     e.preventDefault()
-    if (editing.value) editorRef.value?.focusStart()
+    if (editing.value) focusBody()
     else void startEdit()
   }
 }

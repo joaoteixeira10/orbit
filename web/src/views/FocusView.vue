@@ -2,27 +2,71 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { Play, Square, Timer, Check } from 'lucide-vue-next'
+import { Play, Plus, Square, Timer, Check } from 'lucide-vue-next'
 import { useFocusStore, clockOf, durationOf } from '@/stores/focus'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
+import { usePrefsStore } from '@/stores/prefs'
 import { fmtTime } from '@/lib/dates'
 
-// The focus timer: pick a task (or none) and a length, Start; a ring counts
-// down. Stopping early counts the time so far; either way it's logged on
+// The focus timer: pick a task (or none) and a length (15, 25, 50 or one of
+// the person's own), Start; a ring counts down. Stopping early counts the time so far; either way it's logged on
 // the task. Below: what was focused on today.
 const route = useRoute()
 const focus = useFocusStore()
 const tasks = useTasksStore()
 const wss = useWorkspacesStore()
 const toast = useToastStore()
+const prefs = usePrefsStore()
 const { t } = useI18n()
 
 const ws = computed(() => String(route.params.ws))
 const workspace = computed(() => wss.byId(ws.value))
-const lengths = [15, 25, 50]
-const minutes = ref(25)
+// The lengths: the usual three and the person's own (kept with their
+// preferences, so on every device); the last one picked is picked again.
+const BASIC = [15, 25, 50]
+const MAX_OWN = 8
+const lengths = computed(() => [...new Set([...BASIC, ...prefs.focusLengths])].sort((a, b) => a - b))
+const own = computed(() => prefs.focusLengths.includes(minutes.value) && !BASIC.includes(minutes.value))
+const minutes = ref(lastMinutes())
+watch(minutes, (m) => {
+  try {
+    localStorage.setItem('orbit_focus_minutes', String(m))
+  } catch {
+    /* private window */
+  }
+})
+function lastMinutes(): number {
+  try {
+    const m = Number(localStorage.getItem('orbit_focus_minutes'))
+    if (m >= 1 && m <= 180) return m
+  } catch {
+    /* private window */
+  }
+  return 25
+}
+const adding = ref(false)
+const custom = ref<number | ''>('')
+const customEl = ref<HTMLInputElement | null>(null)
+async function openAdd() {
+  adding.value = true
+  custom.value = ''
+  await nextTick()
+  customEl.value?.focus()
+}
+function addLength() {
+  const m = Math.round(Number(custom.value))
+  if (!(m >= 1 && m <= 180)) return toast.error(t('focus.lengthRange'))
+  adding.value = false
+  minutes.value = m
+  if (!lengths.value.includes(m)) void prefs.setFocusLengths([...prefs.focusLengths, m].sort((a, b) => a - b))
+}
+function forgetLength() {
+  const m = minutes.value
+  minutes.value = 25
+  void prefs.setFocusLengths(prefs.focusLengths.filter((x) => x !== m))
+}
 const taskId = ref(typeof route.query.task === 'string' ? route.query.task : '')
 
 watch(
@@ -90,9 +134,18 @@ const shown = computed(() => (here.value ? clockOf(focus.left) : clockOf(minutes
 
       <template v-if="!here">
         <p v-if="elsewhere" class="mt-4 text-[13px] text-text-3">{{ t('focus.elsewhere') }}</p>
-        <div class="seg mt-6" role="radiogroup">
-          <button v-for="m in lengths" :key="m" :class="{ on: minutes === m }" @click="minutes = m">{{ t('focus.minutes', { n: m }) }}</button>
+        <form v-if="adding" class="mt-6 flex items-center gap-2" data-testid="focus-custom" @submit.prevent="addLength">
+          <input ref="customEl" v-model.number="custom" type="number" min="1" max="180" step="1" class="input !w-24 !py-1.5 text-center text-[14px]" :aria-label="t('focus.lengthLabel')" :placeholder="t('focus.lengthLabel')" @keydown.esc.stop="adding = false" />
+          <span class="text-[13px] text-text-2">{{ t('focus.min') }}</span>
+          <button type="submit" class="btn-primary btn-sm">{{ t('focus.addLength') }}</button>
+          <button type="button" class="btn btn-sm" @click="adding = false">{{ t('common.cancel') }}</button>
+        </form>
+        <div v-else class="seg mt-6 max-w-full flex-wrap justify-center" role="radiogroup" :aria-label="t('focus.length')">
+          <button v-for="m in lengths" :key="m" type="button" role="radio" :aria-checked="minutes === m" :class="{ on: minutes === m }" @click="minutes = m">{{ t('focus.minutes', { n: m }) }}</button>
+          <button v-if="!lengths.includes(minutes)" type="button" role="radio" aria-checked="true" class="on">{{ t('focus.minutes', { n: minutes }) }}</button>
+          <button v-if="prefs.focusLengths.length < MAX_OWN" type="button" :title="t('focus.addLength')" :aria-label="t('focus.addLength')" data-testid="focus-add-length" @click="openAdd"><Plus class="mx-auto h-4 w-4" /></button>
         </div>
+        <button v-if="own && !adding" type="button" class="mt-2 text-[12.5px] text-text-3 hover:text-text-2" data-testid="focus-forget-length" @click="forgetLength">{{ t('focus.forgetLength', { n: minutes }) }}</button>
         <label class="mt-4 flex w-full max-w-[380px] items-center gap-2">
           <span class="text-[13px] text-text-2">{{ t('focus.task') }}</span>
           <select v-model="taskId" class="input min-w-0 flex-1 !py-1.5 text-[14px]" data-testid="focus-task">

@@ -67,6 +67,8 @@ test('a page: write in the editor, and it is saved', async ({ page }) => {
   await page.getByRole('button', { name: 'New page' }).first().click()
   await page.getByPlaceholder('Untitled').fill('Biology notes')
   await page.keyboard.press('Enter')
+  // Into the document (once its editor is there), not the title.
+  await expect(page.locator('.ProseMirror')).toBeFocused()
   await page.keyboard.type('Cells divide by mitosis.')
   await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 })
   await page.reload()
@@ -1063,6 +1065,35 @@ test('focus timer: a session on a task runs (with a pill in the sidebar) and sto
   await expect(page.getByTestId('focus-clock')).toHaveText('50:00')
 })
 
+test('focus timer: my own length, kept on my account, then removed', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Long focus', kind: 'work', modules: ['home', 'tasks', 'focus'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1200, height: 820 })
+  await page.goto(`/w/${ws.id}/focus`)
+  await page.getByTestId('focus-add-length').click()
+  const form = page.getByTestId('focus-custom')
+  await form.getByRole('spinbutton').fill('40')
+  await form.getByRole('button', { name: 'Add a length' }).click()
+  await expect(page.getByRole('radio', { name: '40 min' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('focus-clock')).toHaveText('40:00')
+  await expect.poll(async () => (await (await request.get('/api/v1/me/prefs', { headers: H })).json()).focus_lengths).toEqual([40])
+  await page.getByTestId('focus-start').click()
+  await expect(page.getByTestId('focus-stop')).toBeVisible()
+  expect((await (await request.get('/api/v1/me/focus', { headers: H })).json()).running.minutes).toBe(40)
+  await page.getByTestId('focus-stop').click()
+
+  // Still there after a reload, and picked again; then taken off the list.
+  await page.reload()
+  await expect(page.getByRole('radio', { name: '40 min' })).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('focus-forget-length').click()
+  await expect(page.getByRole('radio', { name: '40 min' })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: '25 min' })).toHaveAttribute('aria-checked', 'true')
+  await expect.poll(async () => (await (await request.get('/api/v1/me/prefs', { headers: H })).json()).focus_lengths).toEqual([])
+})
+
 test('goals: one with a date, two tasks towards it, half done', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
@@ -1328,6 +1359,37 @@ test('Quick Draw: the bucket fills what the lines close off, under them', async 
   await page.screenshot({ path: 'test-results/bucket.png' })
   await page.keyboard.press('Control+z')
   await expect.poll(async () => (await items()).length).toBe(2)
+})
+
+test('Quick Draw: full screen, with its pickers still there, and back', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.getByTestId('quick-draw-new').click()
+  await page.waitForURL(/\/draw\/[^/]+$/)
+  const before = (await page.getByTestId('sketch-board').boundingBox())!
+  expect(before.height).toBeLessThan(860)
+
+  await page.getByTestId('sketch-full').click()
+  await expect(page.getByTestId('sketch-full')).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(async () => (await page.getByTestId('sketch-board').boundingBox())!.height).toBe(860)
+  expect((await page.getByTestId('sketch-board').boundingBox())!.width).toBe(1300)
+  // The colour picker opens over it.
+  await page.getByTestId('sketch-color').click()
+  await expect(page.locator('.popover')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.popover')).toHaveCount(0)
+  // And still draws.
+  await page.mouse.move(400, 400)
+  await page.mouse.down()
+  await page.mouse.move(600, 500, { steps: 10 })
+  await page.mouse.up()
+  await expect(page.getByTestId('sketch-undo')).toBeEnabled()
+  await page.screenshot({ path: 'test-results/sketch-full.png' })
+
+  await page.getByTestId('sketch-full').click()
+  await expect(page.getByTestId('sketch-full')).toHaveAttribute('aria-pressed', 'false')
+  await expect.poll(async () => (await page.getByTestId('sketch-board').boundingBox())!.height).toBeLessThan(860)
+  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull()
 })
 
 test('Quick Draw: a sketch moved into a workspace as a whiteboard, and back', async ({ page, request }) => {

@@ -3669,7 +3669,7 @@ test('documentation: Orbit’s guides in one place — read, follow a link betwe
   await expect(guide).toBeVisible()
 })
 
-test('holiday themes: the owner picks one; Home and the sidebar dress up, the decorations never take a click; Effects off and on; off is Orbit as always', async ({ page, request }) => {
+test('holiday themes: the owner picks one; every page dresses up, the overviews most, the decorations never take a click; Effects off and on; off is Orbit as always', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }
   const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Season', kind: 'personal', modules: ['home', 'tasks'], starter: false } })).json()
@@ -3730,11 +3730,17 @@ test('holiday themes: the owner picks one; Home and the sidebar dress up, the de
   await expect(fx).toHaveCount(0)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
 
-  // A workspace's own Home isn't dressed.
+  // A workspace's overview is dressed too (no countdown: that's by my greeting),
+  // and every other page wears the colours and the snow.
   await page.goto(`/w/${ws.id}`)
   await expect(page.getByRole('heading', { name: 'Season' })).toBeVisible()
-  await expect(page.locator('main.holiday-main')).toHaveCount(0)
+  await expect(hang).toBeAttached()
+  await expect(page.getByTestId('holiday-corner').first()).toBeAttached()
   await expect(page.getByTestId('holiday-chip')).toHaveCount(0)
+  await page.goto(`/w/${ws.id}/tasks/${list.id}`)
+  await expect(page.locator('main.holiday-main')).toBeVisible()
+  await expect(fx).toBeAttached()
+  await expect(hang).toHaveCount(0)
 
   // Off: Orbit as always.
   await request.put('/api/v1/settings', { headers: H, data: { holiday_theme: 'off' } })

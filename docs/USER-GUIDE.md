@@ -1873,21 +1873,22 @@ The theme chosen here stays the default and the sign-in page's.
 **Live preview** shows the result before you save — the tab, the sidebar brand
 and a button; **Save branding**.
 
-**Holiday themes** (off by default): for a few weeks around a holiday, your
-Home and the sidebar dress up for everyone — the holiday's colours (light and
-dark, over a developer theme too), its own mark in place of the logo, the
-Today tile in its pattern, a countdown by the greeting ("51 days to
-Christmas"; New Year's in hours on 31 December), lights, bunting or things on
-threads along the top, art on the Today and Up Next cards, and falling snow,
-bats, confetti or petals. Pick **Off**, **Automatic** — each in its season:
+**Holiday themes** (off by default): for a few weeks around a holiday, Orbit
+dresses up for everyone — every page and the sidebar in the holiday's colours
+(light and dark, over a developer theme too), its own mark in place of the
+logo, the Today tile in its pattern, and falling snow, bats, confetti or
+petals; on the overviews (your Home and each workspace's) also lights,
+bunting or things on threads along the top and art on the cards, and by your
+greeting a countdown ("51 days to Christmas"; New Year's in hours on 31
+December). Pick **Off**, **Automatic** — each in its season:
 Halloween 15 October – 1 November, Christmas 1–26 December, New Year's Eve
 27 December – 1 January, Easter Palm Sunday – Easter Monday, Santos Populares
 June, Lunar New Year a week before to two weeks after (the card says which
 shows now) — or one of the six, shown now whatever the date. It's saved at
 once. Nobody can turn the theme off for themselves; each person can turn off
-only the falling part (**Holiday effects**). Other pages, a workspace's own
-home and the editors keep Orbit's look; with reduced motion set on the
-device, nothing falls and nothing moves.
+only the falling part (**Holiday effects**). Dialogs and menus keep Orbit's
+look; with reduced motion set on the device, nothing falls and nothing
+moves.
 
 > Try ↑ ↑ ↓ ↓ ← → ← → B A anywhere in Orbit.
 

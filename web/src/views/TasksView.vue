@@ -651,6 +651,10 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
 html.dark .lists-pane {
   background: #161618;
 }
+/* A holiday theme: the lists' column in its sidebar colour. */
+html.holiday .lists-pane {
+  background: var(--h-side);
+}
 .one-pane .lists-pane {
   border: 0;
   padding: 24px 16px;

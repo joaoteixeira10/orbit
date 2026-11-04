@@ -26,6 +26,7 @@ import { emptySketch } from '@/lib/sketch'
 import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
 import HolidayEffectsRow from '@/components/holiday/HolidayEffectsRow.vue'
+import HolidayParticles from '@/components/holiday/HolidayParticles.vue'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
 import { pagesApi, workspacesApi, type Workspace } from '@/api/planner'
 import { ICONS, MODULE_ROUTES } from '@/lib/icons'
@@ -47,8 +48,15 @@ const branding = useBrandingStore()
 const holiday = useHolidayStore()
 watch(() => [holiday.active?.id, holiday.mode], () => holiday.apply(), { immediate: true })
 const holidayClock = window.setInterval(() => holiday.tick(), 60_000)
+// Its falling snow, bats, confetti… over every page: each person's Effects,
+// never with reduced motion.
+const still = window.matchMedia('(prefers-reduced-motion: reduce)')
+const motionOk = ref(!still.matches)
+const onMotion = () => (motionOk.value = !still.matches)
+still.addEventListener('change', onMotion)
 onUnmounted(() => {
   window.clearInterval(holidayClock)
+  still.removeEventListener('change', onMotion)
   holiday.clear()
 })
 const toast = useToastStore()
@@ -576,7 +584,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <button class="menu-item" @click="router.push({ name: 'ws-trash', params: { ws: wsMenu } }); wsMenu = ''"><Trash2 class="h-4 w-4 text-text-2" />{{ t('pages.trash') }}</button>
     </Popover>
 
-    <main class="main" :class="{ 'holiday-main': holiday.active && route.name === 'home' }" :style="wsStyle">
+    <main class="main" :class="{ 'holiday-main': holiday.active }" :style="wsStyle">
       <div v-if="auth.impersonator" class="imp-banner">
         <VenetianMask class="h-4 w-4" />
         <span>{{ t('impersonate.banner', { user: displayName, admin: auth.impersonator.username }) }}</span>
@@ -617,6 +625,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
     </template>
     <button v-if="railHere && !rail.open && !phone" type="button" class="rail-tab" :title="t('outline.title')" :aria-label="t('outline.title')" data-testid="rail-open" @click="setRailOpen(true)"><PanelRight class="h-4 w-4" /></button>
 
+    <HolidayParticles v-if="holiday.active && prefs.holidayEffects && motionOk" />
     <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
     <QuickNoteSheet :open="quickNoteOpen" @close="quickNoteOpen = false" />
     <NewWorkspaceSheet :open="newWsOpen" @close="newWsOpen = false" />

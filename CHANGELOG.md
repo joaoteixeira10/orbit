@@ -9,10 +9,11 @@ merge, not at release time.
 ### Added
 
 - **Holiday themes** — Christmas, Halloween, New Year's Eve, Easter, Santos
-  Populares and Lunar New Year: Home and the sidebar in the holiday's colours
-  (light and dark), its mark, the Today tile in its pattern, a countdown by
-  the greeting, lights, bunting or things on threads along the top, art on
-  the cards, and falling snow, bats, confetti or petals. The owner turns
+  Populares and Lunar New Year: every page and the sidebar in the holiday's
+  colours (light and dark), its mark, the Today tile in its pattern, falling
+  snow, bats, confetti or petals; on the overviews also lights, bunting or
+  things on threads along the top and art on the cards, and a countdown by
+  the greeting. The owner turns
   them on (Owner → Branding): each in its season, or one now. Everyone sees
   it; each person can turn off only the falling part (Settings → Appearance,
   or the switch in the sidebar). Never in the way: nothing takes a click,

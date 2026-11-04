@@ -1,10 +1,11 @@
 /* Holiday themes (docs/design/holiday-themes): the holiday's colours, set as
-   --h-* on <html> by stores/holiday.ts, take over Orbit's own in the sidebar,
-   everywhere, and in the main column on Home — nowhere else (dialogs, other
-   pages and the editors keep Orbit's look). Off: html has no .holiday and
-   none of this applies. */
+   --h-* on <html> by stores/holiday.ts, take over Orbit's own in the sidebar
+   and the main column, on every page (dialogs and popovers, outside them,
+   keep Orbit's look). Off: html has no .holiday and none of this applies. */
 html.holiday .side,
-html.holiday .holiday-main {
+html.holiday .holiday-main,
+html.holiday .rail-col,
+html.holiday .rail-drawer {
   --text: var(--h-text);
   --text-2: var(--h-muted);
   --text-3: var(--h-muted);
@@ -19,8 +20,18 @@ html.holiday .side {
   --side: var(--h-side);
   --side-solid: var(--h-side);
 }
+html.holiday .rail-col,
+html.holiday .rail-drawer {
+  --bg: var(--h-bg);
+  --side: var(--h-side);
+  --surface-2: var(--h-field);
+}
 html.holiday .holiday-main {
   --bg: var(--h-bg);
+  --grouped: var(--h-bg);
+  --surface-2: var(--h-field);
+  --side: var(--h-side);
+  --side-solid: var(--h-side);
   background: radial-gradient(ellipse 70% 40% at 45% -8%, var(--h-glow), transparent 70%), var(--h-bg);
 }
 /* The sidebar's icons and the inbox's count in the holiday's colours. */

@@ -25,8 +25,6 @@ import WorkspaceFeed from '@/components/WorkspaceFeed.vue'
 import HolidayChip from '@/components/holiday/HolidayChip.vue'
 import HolidayCorner from '@/components/holiday/HolidayCorner.vue'
 import HolidayHang from '@/components/holiday/HolidayHang.vue'
-import HolidayParticles from '@/components/holiday/HolidayParticles.vue'
-import { usePrefsStore } from '@/stores/prefs'
 import { useHolidayStore } from '@/stores/holiday'
 
 // Home. At / it is Today across every workspace: what's late and due, the
@@ -42,19 +40,13 @@ const { t } = useI18n()
 
 const wsId = computed(() => (typeof route.params.ws === 'string' ? route.params.ws : ''))
 const workspace = computed(() => wss.byId(wsId.value))
-// A holiday theme dresses my own Home (not a workspace's).
+// A holiday theme dresses the overview (mine and a workspace's): what hangs
+// along the top, the cards' art, the bars; the countdown and the capture
+// line on mine. Its colours and what falls are the shell's, on every page.
 const holiday = useHolidayStore()
-const themed = computed(() => !wsId.value && !!holiday.active)
+const themed = computed(() => !!holiday.active)
 // Something hangs along the top (the greeting moves down to make room).
 const hung = computed(() => themed.value && !!(holiday.active?.decor || holiday.active?.extraDecor))
-// The falling snow, bats, confetti…: each person's Effects, never with
-// reduced motion.
-const prefs = usePrefsStore()
-const still = window.matchMedia('(prefers-reduced-motion: reduce)')
-const motionOk = ref(!still.matches)
-const onMotion = () => (motionOk.value = !still.matches)
-still.addEventListener('change', onMotion)
-onUnmounted(() => still.removeEventListener('change', onMotion))
 const data = ref<Home | null>(null)
 const loading = ref(true)
 
@@ -208,7 +200,6 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 <template>
   <div class="home" :class="{ hung }">
     <HolidayHang v-if="themed" />
-    <HolidayParticles v-if="themed && prefs.holidayEffects && motionOk" />
     <!-- Header -->
     <header v-if="workspace" class="mb-8 flex flex-wrap items-center gap-4">
       <WsIcon :icon="workspace.icon" :color="workspace.color" :size="56" :name="workspace.name" />

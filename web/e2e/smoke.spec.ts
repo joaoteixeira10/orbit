@@ -3474,12 +3474,15 @@ test('workspace modules: the owner drags one to a new place, and the sidebar fol
   const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'In order', kind: 'work', starter: false, modules: ['home', 'tasks', 'calendar', 'notes'] } })).json()
   await signIn(page, NEW_PASSWORD)
   await page.setViewportSize({ width: 1280, height: 900 })
-  await page.evaluate((id) => window.dispatchEvent(new CustomEvent('orbit:settings', { detail: { ws: id, tab: 'modules' } })), ws.id)
-  const rows = page.locator('.group-row[data-id]')
-  await expect(rows.first()).toBeVisible()
+  await expect(page.locator('#sidebar')).toBeVisible()
+  await expect(async () => {
+    await page.evaluate((id) => window.dispatchEvent(new CustomEvent('orbit:settings', { detail: { ws: id, tab: 'modules' } })), ws.id)
+    await expect(page.getByRole('dialog').locator('.group-row[data-id="notes"]')).toBeVisible({ timeout: 1500 })
+  }).toPass()
+  const dialog = page.getByRole('dialog')
   // Notes, by its grip, above Tasks.
-  const a = (await page.locator('.group-row[data-id="notes"] .drag').boundingBox())!
-  const b = (await page.locator('.group-row[data-id="tasks"]').boundingBox())!
+  const a = (await dialog.locator('.group-row[data-id="notes"] .drag').boundingBox())!
+  const b = (await dialog.locator('.group-row[data-id="tasks"]').boundingBox())!
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
   await page.mouse.down()
   await page.mouse.move(a.x + a.width / 2, a.y - 10, { steps: 5 })
@@ -3490,6 +3493,39 @@ test('workspace modules: the owner drags one to a new place, and the sidebar fol
   await page.mouse.up()
   const order = async () => ((await (await request.get('/api/v1/workspaces', { headers: H })).json()) as { id: string; modules: string[] }[]).find((w) => w.id === ws.id)?.modules
   await expect.poll(order).toEqual(['home', 'notes', 'tasks', 'calendar'])
+})
+
+test('workspaces: dragged into my own order in the sidebar, and moved with the menu', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  for (const name of ['Alpha', 'Beta', 'Gamma']) await request.post('/api/v1/workspaces', { headers: H, data: { name, kind: 'work', starter: false, modules: ['home', 'tasks'] } })
+  const mine = async () => ((await (await request.get('/api/v1/workspaces', { headers: H })).json()) as { name: string; archived_at?: string }[]).filter((w) => !w.archived_at && ['Alpha', 'Beta', 'Gamma'].includes(w.name)).map((w) => w.name)
+  expect(await mine()).toEqual(['Alpha', 'Beta', 'Gamma'])
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  const row = (name: string) => page.getByTestId('ws-list').locator('.ws-row', { hasText: name })
+  // Gamma dragged above Alpha (a long list scrolls: the two in view first).
+  await row('Gamma').scrollIntoViewIfNeeded()
+  await row('Alpha').scrollIntoViewIfNeeded()
+  const a = (await row('Gamma').boundingBox())!
+  const b = (await row('Alpha').boundingBox())!
+  await page.mouse.move(a.x + 60, a.y + a.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(a.x + 60, a.y - 8, { steps: 5 })
+  await page.mouse.move(b.x + 60, b.y + 3, { steps: 15 })
+  await page.waitForTimeout(150)
+  await page.mouse.move(b.x + 62, b.y + 2, { steps: 2 })
+  await page.waitForTimeout(150)
+  await page.mouse.up()
+  await expect.poll(mine).toEqual(['Gamma', 'Alpha', 'Beta'])
+  // Its menu: Move down.
+  await row('Gamma').hover()
+  await row('Gamma').locator('.more').click()
+  await page.getByRole('button', { name: 'Move down' }).click()
+  await expect.poll(mine).toEqual(['Alpha', 'Gamma', 'Beta'])
+  await page.reload()
+  await expect(page.getByTestId('ws-list').locator('.ws-row').filter({ hasText: /Alpha|Beta|Gamma/ })).toHaveText([/Alpha/, /Gamma/, /Beta/])
 })
 
 test('task sheet: how its date stands, a status from its menu, any estimate, a file dropped in the activity, Start focus', async ({ page, request }) => {

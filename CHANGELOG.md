@@ -15,6 +15,8 @@ merge, not at release time.
   button of its own on the sign-in page), and can **lock Orbit** after a
   while idle until Face ID. The owner may cap the lock's wait or require it.
   Passkeys underneath, made on the device and verified.
+- **Workspaces in your own order** — drag them in the sidebar, or **Move up**
+  / **Move down** in a workspace's `⋯`; each person's order is their own.
 
 ### Fixed
 

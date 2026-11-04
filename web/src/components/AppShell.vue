@@ -5,8 +5,9 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
   ClipboardList, LogOut, Moon, Sun, BookOpen, LifeBuoy, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
-  PanelRight, FolderOpen,
+  PanelRight, FolderOpen, ArrowUp, ArrowDown,
 } from 'lucide-vue-next'
+import { useSortable } from '@/lib/sortable'
 import SideRail from '@/components/SideRail.vue'
 import BioLock from '@/components/bio/BioLock.vue'
 import BioOffer from '@/components/bio/BioOffer.vue'
@@ -199,6 +200,31 @@ async function toggleMute(id: string) {
   }
 }
 const wsMenuAnchor = ref<HTMLElement | null>(null)
+
+// Workspaces in your own order (each person's; others keep theirs): drag a
+// row in the sidebar — on touch, a short press first — or Move up / down in
+// its ⋯ menu.
+const wsList = ref<HTMLElement | null>(null)
+useSortable(
+  wsList,
+  (m) => {
+    const ids = wss.active.map((w) => w.id)
+    const from = ids.indexOf(m.id)
+    if (from < 0) return
+    ids.splice(from, 1)
+    ids.splice(m.beforeId ? ids.indexOf(m.beforeId) + 1 : 0, 0, m.id)
+    void wss.reorder(ids).catch(() => {})
+  },
+  { handle: '.ws-row', draggable: '.ws-block' },
+)
+function moveWs(id: string, by: -1 | 1) {
+  const ids = wss.active.map((w) => w.id)
+  const i = ids.indexOf(id)
+  const j = i + by
+  if (i < 0 || j < 0 || j >= ids.length) return
+  ;[ids[i], ids[j]] = [ids[j], ids[i]]
+  void wss.reorder(ids).catch(() => {})
+}
 function openWsMenu(id: string, e: MouseEvent) {
   wsMenu.value = id
   wsMenuAnchor.value = e.currentTarget as HTMLElement
@@ -430,7 +456,8 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           <button v-if="auth.canCreateWorkspaces" class="add-btn" :title="t('ws.new')" @click="newWsOpen = true"><Plus class="h-3.5 w-3.5" /></button>
         </div>
 
-        <div v-for="w in wss.active" :key="w.id" class="ws-block" :style="{ '--ws': w.color }">
+        <div ref="wsList" data-testid="ws-list">
+        <div v-for="w in wss.active" :key="w.id" :data-id="w.id" class="ws-block" :style="{ '--ws': w.color }">
           <div class="ws-row group/ws" :class="{ on: currentWsId === w.id && route.name === 'ws' }" @click="router.push({ name: 'ws', params: { ws: w.id } })">
             <button class="chev" :aria-label="t('nav.expand')" @click.stop="toggleWs(w.id)">
               <ChevronRight class="h-3 w-3 transition-transform" :class="{ 'rotate-90': expanded.has(w.id) }" :stroke-width="2.6" />
@@ -475,6 +502,8 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
         <div v-if="wss.loaded && !wss.active.length" class="empty-ws">
           <p>{{ t('nav.noWorkspaces') }}</p>
           <button v-if="auth.canCreateWorkspaces" class="btn-tinted btn-sm mt-2" @click="newWsOpen = true"><Plus class="h-3.5 w-3.5" />{{ t('ws.new') }}</button>
+        </div>
+
         </div>
 
         <template v-if="wss.archived.length">
@@ -528,6 +557,11 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <button v-if="(wss.byId(wsMenu)?.member_count ?? 1) > 1" class="menu-item" @click="toggleMute(wsMenu)">
         <component :is="wss.byId(wsMenu)?.muted ? Bell : BellOff" class="h-4 w-4 text-text-2" />{{ wss.byId(wsMenu)?.muted ? t('notif.unmute') : t('notif.mute') }}
       </button>
+      <template v-if="wss.active.length > 1 && wss.active.some((w) => w.id === wsMenu)">
+        <div class="menu-sep" />
+        <button class="menu-item" :disabled="wss.active[0]?.id === wsMenu" @click="moveWs(wsMenu, -1)"><ArrowUp class="h-4 w-4 text-text-2" />{{ t('nav.moveUp') }}</button>
+        <button class="menu-item" :disabled="wss.active[wss.active.length - 1]?.id === wsMenu" @click="moveWs(wsMenu, 1)"><ArrowDown class="h-4 w-4 text-text-2" />{{ t('nav.moveDown') }}</button>
+      </template>
       <div class="menu-sep" />
       <button class="menu-item" @click="router.push({ name: 'ws-trash', params: { ws: wsMenu } }); wsMenu = ''"><Trash2 class="h-4 w-4 text-text-2" />{{ t('pages.trash') }}</button>
     </Popover>

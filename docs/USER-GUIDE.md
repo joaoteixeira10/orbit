@@ -186,7 +186,11 @@ The **sidebar** on the left (a drawer behind the ☰ button on narrow screens):
 - **Favorites**: pages you starred.
 - **Workspaces**: each with its icon and colour. The chevron shows its modules
   (and, under **Pages**, its page tree); the `⋯` opens its settings, modules,
-  members and trash. **+** creates a workspace.
+  members and trash. **+** creates a workspace. **Drag** a workspace up or
+  down to put them in your own order (on a touch screen, press a moment
+  first), or use **Move up** / **Move down** in its `⋯`; the order is yours
+  alone. A workspace's modules are in the order its owner gives them
+  (`⋯` → **Modules**, drag by the grip).
 - **Archived** workspaces gather at the bottom.
 - Your **name** at the bottom opens Settings, the Audit log, Admin and Owner
   (if you may), the appearance switch, **Documentation**, the API reference

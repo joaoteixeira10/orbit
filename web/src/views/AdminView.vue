@@ -30,6 +30,7 @@ import { api as apiCall } from '@/lib/api'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 import DevThemesCard from '@/components/admin/DevThemesCard.vue'
+import HolidayThemesCard from '@/components/admin/HolidayThemesCard.vue'
 
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -1098,6 +1099,9 @@ function switchTab(t: Tab) {
         :has-logo="!!brandForm.logo_data_url"
         :has-favicon="!!brandForm.favicon_data_url"
       />
+
+      <!-- Holiday themes: off, each in its season, or one now -->
+      <HolidayThemesCard />
 
       <!-- Page history: how many versions a page keeps -->
       <div class="card overflow-hidden" data-testid="history-admin">

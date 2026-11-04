@@ -92,9 +92,25 @@ func TestHolidayEffects(t *testing.T) {
 	if p.HolidayEffects {
 		t.Error("effects stayed on")
 	}
+	// The signed-in user carries it too (the app reads it from there on a reload).
+	var me struct {
+		User struct {
+			Prefs struct {
+				HolidayEffects bool `json:"holiday_effects"`
+			} `json:"prefs"`
+		} `json:"user"`
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/auth/me", "", owner).Body.Bytes(), &me)
+	if me.User.Prefs.HolidayEffects {
+		t.Error("me: effects still on")
+	}
 	authdo(r, "PUT", "/api/v1/me/prefs", `{"holiday_effects":true}`, owner)
 	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
 	if !p.HolidayEffects {
 		t.Error("effects stayed off")
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/auth/me", "", owner).Body.Bytes(), &me)
+	if !me.User.Prefs.HolidayEffects {
+		t.Error("me: effects still off")
 	}
 }

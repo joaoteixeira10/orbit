@@ -4161,6 +4161,11 @@ definitions:
           FocusLengths are this person's own lengths for the focus timer, in
           minutes (JSON []int), besides 15, 25 and 50.
         type: string
+      holiday_effects:
+        description: |-
+          HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
+          until turned off; the theme's colours and art are the owner's).
+        type: boolean
       id:
         type: string
       locale:

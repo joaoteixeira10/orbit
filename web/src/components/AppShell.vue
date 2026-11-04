@@ -25,6 +25,7 @@ import { drawingsApi } from '@/components/draw/drawing'
 import { emptySketch } from '@/lib/sketch'
 import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
+import HolidayEffectsRow from '@/components/holiday/HolidayEffectsRow.vue'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
 import { pagesApi, workspacesApi, type Workspace } from '@/api/planner'
 import { ICONS, MODULE_ROUTES } from '@/lib/icons'
@@ -531,6 +532,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       </nav>
 
       <div class="side-foot">
+        <HolidayEffectsRow />
         <button ref="userAnchor" class="user-btn" :aria-expanded="userMenu" @click="userMenu = !userMenu">
           <Avatar :name="displayName" :src="auth.user?.avatar_url" :size="28" class="me-avatar" />
           <span class="min-w-0 flex-1 text-left">

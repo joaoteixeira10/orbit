@@ -17,6 +17,7 @@ import { useToastStore } from '@/stores/toast'
 import { fmtDate, parseUA, relTime } from '@/lib/format'
 import Avatar from '@/components/ui/Avatar.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
+import Toggle from '@/components/ui/Toggle.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
@@ -501,6 +502,10 @@ onMounted(loadSessions)
                   <component :is="t.icon" class="h-3.5 w-3.5" /> {{ t.label }}
                 </button>
               </div>
+            </div>
+            <div v-if="branding.holidayTheme !== 'off'" class="flex items-center justify-between gap-4 border-t border-border pt-5">
+              <div><div class="text-[13px] font-semibold">{{ t('holiday.effectsSetting') }}</div><div class="text-[12px] text-text-3">{{ t('holiday.effectsHint') }}</div></div>
+              <Toggle :model-value="prefs.holidayEffects" :aria-label="t('holiday.effectsSetting')" data-testid="holiday-effects" @update:model-value="prefs.setHolidayEffects" />
             </div>
             <div class="border-t border-border pt-5" data-testid="editor-themes">
               <div class="text-[13px] font-semibold">{{ t('acct.appearance.editors') }}</div>

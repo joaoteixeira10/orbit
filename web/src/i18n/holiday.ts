@@ -3,6 +3,29 @@
 // line. Portuguese is European Portuguese.
 export const holidayEn = {
   holiday: {
+    // Owner → Branding; Settings → Appearance; the sidebar.
+    admin: {
+      title: 'Holiday themes',
+      hint: 'Home and the sidebar dress up for a holiday: its colours, what hangs along the top, a countdown by the greeting. Everyone sees it; each person can turn off only the falling snow, bats or confetti.',
+      off: 'Off',
+      offHint: 'Orbit as always',
+      auto: 'Automatic',
+      autoHint: 'Each holiday in its season',
+      pickHint: 'Shown now, whatever the date',
+      nowShowing: 'Showing now: {name}',
+      noneNow: 'None in season today',
+      saved: 'Holiday theme saved',
+      season: {
+        christmas: '1–26 December',
+        halloween: '15 October – 1 November',
+        nye: '27 December – 1 January',
+        easter: 'Palm Sunday – Easter Monday',
+        santos: 'June',
+        lunar: 'A week before – two weeks after',
+      },
+    },
+    effectsSetting: 'Holiday effects',
+    effectsHint: 'The holiday theme’s falling snow, bats, confetti or petals. Its colours stay.',
     name: {
       christmas: 'Christmas',
       halloween: 'Halloween',
@@ -49,6 +72,28 @@ export const holidayEn = {
 
 export const holidayPt = {
   holiday: {
+    admin: {
+      title: 'Temas festivos',
+      hint: 'A página inicial e a barra lateral vestem-se para uma festa: as suas cores, o que pende ao cimo, uma contagem junto à saudação. Todos o veem; cada pessoa só pode desligar a neve, os morcegos ou os confetti a cair.',
+      off: 'Desligado',
+      offHint: 'O Orbit de sempre',
+      auto: 'Automático',
+      autoHint: 'Cada festa na sua época',
+      pickHint: 'Mostrado já, seja qual for a data',
+      nowShowing: 'A mostrar agora: {name}',
+      noneNow: 'Nenhuma na época hoje',
+      saved: 'Tema festivo guardado',
+      season: {
+        christmas: '1–26 de dezembro',
+        halloween: '15 de outubro – 1 de novembro',
+        nye: '27 de dezembro – 1 de janeiro',
+        easter: 'Domingo de Ramos – Segunda-feira de Páscoa',
+        santos: 'Junho',
+        lunar: 'Uma semana antes – duas semanas depois',
+      },
+    },
+    effectsSetting: 'Efeitos festivos',
+    effectsHint: 'A neve, os morcegos, os confetti ou as pétalas a cair do tema festivo. As cores ficam.',
     name: {
       christmas: 'Natal',
       halloween: 'Halloween',

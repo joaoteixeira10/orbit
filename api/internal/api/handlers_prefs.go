@@ -93,7 +93,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		QuietTo:        p.QuietTo,
 		QuietReminders: p.QuietReminders,
 		Quiet:          inbox.Quiet(p, time.Now()),
-		HolidayEffects: !p.HolidayEffectsOff,
+		HolidayEffects: p.HolidayEffects,
 	}
 }
 
@@ -276,7 +276,7 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 		updates["quiet_reminders"] = *req.QuietReminders
 	}
 	if req.HolidayEffects != nil {
-		updates["holiday_effects_off"] = !*req.HolidayEffects
+		updates["holiday_effects"] = *req.HolidayEffects
 	}
 	if req.DevTheme != nil {
 		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {

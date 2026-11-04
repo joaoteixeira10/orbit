@@ -1,0 +1,25 @@
+/* Holiday themes (docs/design/holiday-themes): the holiday's colours, set as
+   --h-* on <html> by stores/holiday.ts, take over Orbit's own in the sidebar,
+   everywhere, and in the main column on Home — nowhere else (dialogs, other
+   pages and the editors keep Orbit's look). Off: html has no .holiday and
+   none of this applies. */
+html.holiday .side,
+html.holiday .holiday-main {
+  --text: var(--h-text);
+  --text-2: var(--h-muted);
+  --text-3: var(--h-muted);
+  --text-faint: var(--h-faint);
+  --surface: var(--h-card);
+  --border: var(--h-cardLine);
+  --line-soft: var(--h-rowLine);
+  --surface-hover: var(--h-hover);
+  --fill-2: var(--h-hover);
+}
+html.holiday .side {
+  --side: var(--h-side);
+  --side-solid: var(--h-side);
+}
+html.holiday .holiday-main {
+  --bg: var(--h-bg);
+  background: radial-gradient(ellipse 70% 40% at 45% -8%, var(--h-glow), transparent 70%), var(--h-bg);
+}

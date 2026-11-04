@@ -16,3 +16,5 @@ lab
 *.md
 !docs/*.md
 !CHANGELOG.md
+# Design handoffs (reference only; not built into the image)
+docs/design

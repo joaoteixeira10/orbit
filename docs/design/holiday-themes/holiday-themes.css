@@ -1,0 +1,42 @@
+/* Orbit — Holiday Themes: keyframes + variable contract.
+   Holiday vars are set as --h-<token> on the app root (see cssVars()).
+   Components read them with a fallback to the normal theme, e.g.:
+     background: var(--h-bg, var(--bg));
+*/
+
+/* ── Decoration layers ── */
+.holiday-hang   { position: absolute; top: 0; left: 0; right: 0; height: 0; z-index: 2; pointer-events: none; }
+.holiday-fx     { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
+.holiday-main-glow { background: radial-gradient(ellipse 70% 40% at 45% -8%, var(--h-glow), transparent 70%), var(--h-bg); }
+
+/* ── Particles ── */
+@keyframes h-fallL { from { transform: translate(0, 0); } to { transform: translate(-50px, 940px); } }
+@keyframes h-fallR { from { transform: translate(0, 0); } to { transform: translate(50px, 940px); } }
+@keyframes h-rise  { from { transform: translate(0, 940px); } to { transform: translate(40px, -60px); } }
+@keyframes h-spin3d { from { transform: rotate3d(1, 1, 0.3, 0deg); } to { transform: rotate3d(1, 1, 0.3, 360deg); } }
+
+/* Bats (Halloween): wrapper flies, inner svg flaps (transform-origin: center 35%) */
+@keyframes h-flyA { 0% { transform: translate(-60px, 0); } 25% { transform: translate(360px, -28px); } 50% { transform: translate(740px, 12px); } 75% { transform: translate(1120px, -22px); } 100% { transform: translate(1520px, 6px); } }
+@keyframes h-flyB { 0% { transform: translate(-60px, 0); } 30% { transform: translate(420px, 22px); } 55% { transform: translate(800px, -16px); } 80% { transform: translate(1200px, 18px); } 100% { transform: translate(1520px, -8px); } }
+@keyframes h-flap { from { transform: scaleY(1); } to { transform: scaleY(0.35); } }
+/* NOTE: fly distances assume a 1440px-wide window. Use calc(100vw + 80px) or set via JS for other widths. */
+
+/* ── Hanging decor ── */
+@keyframes h-twinkle { from { opacity: 1; } to { opacity: 0.4; } }          /* Christmas bulbs, alternate */
+@keyframes h-bob     { from { transform: translateY(0); } to { transform: translateY(10px); } } /* drops, alternate */
+@keyframes h-sway    { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }     /* bunting flags / petals, alternate, origin top centre */
+
+/* Christmas bulb */
+.h-bulb-glass { width: 8px; height: 12px; border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; }
+.h-bulb-cap   { width: 5px; height: 4px; border-radius: 1px; background: var(--h-bulbCap); }
+
+/* Halloween moon */
+.h-moon { position: absolute; top: 34px; right: 120px; width: 70px; height: 70px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #fffaf0, var(--h-moon) 60%);
+  box-shadow: 0 0 50px 18px var(--h-moonGlow); pointer-events: none; }
+
+/* ── Reduced motion: keep static art, drop all infinite motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .holiday-fx { display: none; }
+  .holiday-hang * { animation: none !important; }
+}

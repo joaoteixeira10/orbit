@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { settingsApi } from '@/api'
 import type { Branding } from '@/api/types'
+import type { HolidaySetting } from '@/lib/holidayThemes'
 import { DEV_THEMES, isDevThemeId, resolveCrest, resolveCrestIcons, resolveThemeAccent, type DevTheme, type DevThemeId } from '@/lib/devThemes'
 
 // upsertLink returns the (created-if-missing) <link rel=...> in <head>.
@@ -62,6 +63,8 @@ export const useBrandingStore = defineStore('branding', {
     assetSourceFavicon: 'theme' as 'theme' | 'keep',
     // The owner lets each person pick their own theme (Settings → Appearance).
     devThemesPersonal: false,
+    // Holiday themes (the owner's): off, auto (each in its season) or one now.
+    holidayTheme: 'off' as HolidaySetting,
     // This person's choice ("" = as the instance, "none", or a theme id; set
     // by the prefs store, cached for the first paint, cleared at sign-out).
     userDevTheme: localStorage.getItem('orbit_dev_theme') || '',
@@ -135,6 +138,7 @@ export const useBrandingStore = defineStore('branding', {
       this.assetSourceWordmark = b.asset_source_wordmark || 'theme'
       this.assetSourceFavicon = b.asset_source_favicon || 'theme'
       this.devThemesPersonal = !!b.developer_themes_personal
+      this.holidayTheme = (b.holiday_theme || 'off') as HolidaySetting
       if (b.drawio_url) this.drawioUrl = b.drawio_url
 
       document.title = this.appName

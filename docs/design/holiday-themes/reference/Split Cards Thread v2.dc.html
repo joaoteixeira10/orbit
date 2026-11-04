@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;color:#1d1d1f}
+a{color:#0a6cff;text-decoration:none}a:hover{text-decoration:underline}
+textarea,input,button{font-family:inherit}
+.sct{--backdrop:rgba(0,0,0,0.28);--modal:#fff;--modal-shadow:0 24px 80px rgba(0,0,0,0.25),0 0 0 0.5px rgba(0,0,0,0.12);--side:#f2f2f7;--head:#fff;--card:#fff;--fill:#f2f2f7;--line:#e5e5ea;--hair:#ececee;--hover:#fafafa;--tx:#1d1d1f;--tx2:#3a3a3c;--sub:#6e6e73;--mut:#86868b;--mut2:#aeaeb2;--faint:#c7c7cc;--link:#0a6cff;--accent:#0a6cff;--seg:#eeeef0;--seg-on:#fff;--seg-shadow:0 1px 2px rgba(0,0,0,.12);--quick:rgba(255,255,255,0.85);--quick-tx:#1d1d1f;--input-line:#e3e3e6;--chip-on:#1d1d1f;--chip-on-tx:#fff;--chip-off:#fff;--chip-line:#e3e3e6;--switch-off:#e5e5ea;--icon-dark:#1d1d1f;--danger:#e5372b;--danger-tint:#fdeceb;--late:#c4271c;--late-bg:#fdeceb;--soon:#a35c00;--soon-bg:#fff4e0;--later:#0a5bd6;--later-bg:#eef4ff;--bubble:#f2f2f7;color:var(--tx)}
+.sct.dark{--backdrop:rgba(0,0,0,0.55);--modal:#1c1c1e;--modal-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 0 0.5px rgba(255,255,255,0.1);--side:#1c1c1e;--head:#1c1c1e;--card:#2c2c2e;--fill:#3a3a3c;--line:rgba(255,255,255,0.09);--hair:rgba(255,255,255,0.08);--hover:rgba(255,255,255,0.04);--tx:#f5f5f7;--tx2:#e5e5ea;--sub:#98989d;--mut:#98989d;--mut2:#8e8e93;--faint:#636366;--link:#4c9bff;--accent:#0a84ff;--seg:rgba(118,118,128,0.24);--seg-on:#636366;--seg-shadow:0 1px 2px rgba(0,0,0,.4);--quick:rgba(255,255,255,0.1);--quick-tx:#f5f5f7;--input-line:rgba(255,255,255,0.12);--chip-on:#f5f5f7;--chip-on-tx:#1c1c1e;--chip-off:transparent;--chip-line:rgba(255,255,255,0.14);--switch-off:#39393d;--icon-dark:#636366;--danger:#ff453a;--danger-tint:rgba(255,69,58,0.16);--late:#ff6961;--late-bg:rgba(255,69,58,0.16);--soon:#ffb340;--soon-bg:rgba(255,159,10,0.16);--later:#64a8ff;--later-bg:rgba(10,132,255,0.18);--bubble:#2c2c2e}
+.sct textarea::placeholder,.sct input::placeholder{color:var(--mut2)}
+</style>
+</helmet>
+<div class="sct {{ themeClass }}" style="min-height:880px;background:var(--backdrop);display:flex;align-items:center;justify-content:center;padding:40px 20px;box-sizing:border-box">
+<div style="width:100%;max-width:1040px;height:780px;background:var(--modal);border-radius:14px;box-shadow:var(--modal-shadow);display:grid;grid-template-columns:450px minmax(0,1fr);overflow:hidden">
+
+<div style="background:var(--side);display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)">
+  <div style="background:var(--head);padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)"><span style="width:8px;height:8px;border-radius:2px;background:#5e5ce6"></span>Assignments</div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <button onClick="{{ toggleDone }}" style="{{ checkStyle }}"><sc-if value="{{ done }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"></path></svg></sc-if></button>
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0">
+        <div style="{{ titleStyle }}">Biology lab report</div>
+        <textarea placeholder="Add notes…" rows="2" style="border:none;outline:none;resize:none;font-size:14px;line-height:1.5;color:var(--tx2);background:transparent;padding:0"></textarea>
+      </div>
+    </div>
+    <div style="{{ dueBanner }}">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3"></path></svg>
+      <span style="flex:1;font-weight:600">{{ dueText }}</span>
+      <sc-for list="{{ quick }}" as="q"><button onClick="{{ q.pick }}" style="height:24px;padding:0 8px;border:none;background:var(--quick);border-radius:6px;font-size:12px;cursor:pointer;color:var(--quick-tx)">{{ q.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:12px;color:var(--sub);padding-left:12px">Schedule</div>
+      <div style="background:var(--card);border-radius:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;font-size:14px;cursor:pointer" style-hover="background:var(--hover)">
+          <span style="width:26px;height:26px;border-radius:7px;background:#ff453a;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3"></path></svg></span>
+          <span style="flex:1">Dates</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:13px"><span style="padding:3px 8px;background:var(--fill);border-radius:6px;color:var(--tx2)">Sun 25 Oct</span><span style="color:var(--faint)">→</span><span style="{{ duePill }}">{{ dueShort }}</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:0.5px solid var(--hair);font-size:14px;cursor:pointer" style-hover="background:var(--hover)">
+          <span style="width:26px;height:26px;border-radius:7px;background:#0a84ff;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11M8 5v3l2 1.5"></path></svg></span>
+          <span style="flex:1">Time</span><span style="color:var(--link);font-size:13px">Add time</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:0.5px solid var(--hair);font-size:14px;cursor:pointer" style-hover="background:var(--hover)">
+          <span style="width:26px;height:26px;border-radius:7px;background:#8e8e93;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V6a2 2 0 0 1 2-2h7l-2-2M13 9v1a2 2 0 0 1-2 2H4l2 2"></path></svg></span>
+          <span style="flex:1">Repeat</span><span style="color:var(--mut2);font-size:13px">Never</span><span style="color:var(--faint)">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:12px;color:var(--sub);padding-left:12px">Planning</div>
+      <div style="background:var(--card);border-radius:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;font-size:14px">
+          <span style="width:26px;height:26px;border-radius:7px;background:#30b0c7;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h10v10H3zM6.5 3v10M9.5 3v10"></path></svg></span>
+          <span style="flex:1">Status</span>
+          <span style="display:flex;gap:4px"><sc-for list="{{ statuses }}" as="st"><button onClick="{{ st.pick }}" style="{{ st.style }}"><span style="{{ st.dot }}"></span>{{ st.label }}</button></sc-for></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:0.5px solid var(--hair);font-size:14px">
+          <span style="width:26px;height:26px;border-radius:7px;background:#ff9f0a;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14V2.5h7l-1.5 3 1.5 3H4"></path></svg></span>
+          <span style="flex:1">Priority</span>
+          <span style="display:flex;background:var(--seg);border-radius:7px;padding:2px"><sc-for list="{{ prio }}" as="p"><button onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.label }}</button></sc-for></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:0.5px solid var(--hair);font-size:14px">
+          <span style="width:26px;height:26px;border-radius:7px;background:#30b0c7;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5h7M4.5 13.5h7M5 2.5c0 3 6 3 6 5.5s-6 2.5-6 5.5M11 2.5c0 3-6 3-6 5.5s6 2.5 6 5.5"></path></svg></span>
+          <span style="flex:1">Estimate</span>
+          <span style="display:flex;gap:4px"><sc-for list="{{ estimates }}" as="e"><button onClick="{{ e.pick }}" style="{{ e.style }}">{{ e.label }}</button></sc-for></span>
+        </div>
+        <div onClick="{{ toggleExam }}" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border-top:0.5px solid var(--hair);font-size:14px;cursor:pointer" style-hover="background:var(--hover)">
+          <span style="width:26px;height:26px;border-radius:7px;background:#ff453a;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8"></path></svg></span>
+          <span style="flex:1;display:flex;flex-direction:column"><span>Exam</span><span style="font-size:12px;color:var(--mut)">Countdown on overview and course</span></span>
+          <span style="{{ examTrack }}"><span style="{{ examKnob }}"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:12px;color:var(--sub);padding-left:12px">People &amp; tags</div>
+      <div style="background:var(--card);border-radius:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;font-size:14px">
+          <span style="width:26px;height:26px;border-radius:7px;background:#34c759;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8a2.5 2.5 0 1 0 0-5a2.5 2.5 0 1 0 0 5M3 13.5c.5-2.5 2.5-3.5 5-3.5s4.5 1 5 3.5"></path></svg></span>
+          <span style="flex:1">Assignees</span>
+          <span style="display:flex;align-items:center;gap:6px">
+            <span style="display:flex;align-items:center;gap:6px;height:26px;padding:0 9px 0 3px;background:var(--fill);border-radius:13px;font-size:13px"><span style="width:20px;height:20px;border-radius:50%;background:#0a6cff;color:#fff;font-size:8px;font-weight:600;display:flex;align-items:center;justify-content:center">JT</span>João</span>
+            <button style="width:26px;height:26px;border:1px dashed var(--faint);background:transparent;border-radius:13px;color:var(--mut);cursor:pointer;font-size:14px;line-height:1">+</button>
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:0.5px solid var(--hair);font-size:14px">
+          <span style="width:26px;height:26px;border-radius:7px;background:#8e8e93;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2.5h5l6 6-5 5-6-6zM5.5 5.5h.01"></path></svg></span>
+          <span style="flex:none">Tags</span>
+          <span style="flex:1;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;align-items:center;padding:6px 0">
+            <sc-for list="{{ tags }}" as="t" hint-placeholder-count="0"><span onClick="{{ t.remove }}" style="height:24px;padding:0 9px;background:var(--fill);border-radius:12px;font-size:12px;display:flex;align-items:center;cursor:pointer">#{{ t.label }}</span></sc-for>
+            <input value="{{ tagDraft }}" onChange="{{ setTagDraft }}" onKeyDown="{{ tagKey }}" placeholder="Add tag" style="border:none;outline:none;font-size:13px;width:70px;text-align:right;color:var(--tx);background:transparent"></input>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:12px;color:var(--sub);padding-left:12px">Connections</div>
+      <div style="background:var(--card);border-radius:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;font-size:14px;cursor:pointer" style-hover="background:var(--hover)">
+          <span style="width:26px;height:26px;border-radius:7px;background:#8e8e93;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9a3 3 0 0 0 4 0l2-2a3 3 0 0 0-4-4l-1 1M9 7a3 3 0 0 0-4 0L3 9a3 3 0 0 0 4 4l1-1"></path></svg></span>
+          <span style="flex:1">Starts after</span><span style="color:var(--link);font-size:13px">Pick task</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:0.5px solid var(--hair);font-size:14px">
+          <span style="width:26px;height:26px;border-radius:7px;background:var(--icon-dark);display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v10M5 9c0-2 6-1 6-4M11 3.5v1.5"></path></svg></span>
+          <span style="flex:none">Issue / PR</span>
+          <input value="{{ issue }}" onChange="{{ setIssue }}" placeholder="Paste link" style="flex:1;min-width:0;border:none;outline:none;font-size:13px;text-align:right;background:transparent;color:var(--link)"></input>
+        </div>
+        <sc-if value="{{ hasIssue }}" hint-placeholder-val="{{ false }}"><div style="padding:0 12px 10px 48px;font-size:12px;color:var(--mut);line-height:1.4">Closing the issue completes this task, and vice versa.</div></sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--head);border-top:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:8px">
+    <button style="height:32px;padding:0 10px;border:none;background:transparent;border-radius:7px;color:var(--danger);font-size:13px;cursor:pointer" style-hover="background:var(--danger-tint)">Delete</button>
+    <span style="flex:1"></span>
+    <button onClick="{{ toggleFocus }}" style="{{ focusBtn }}">{{ focusLabel }}</button>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;min-width:0;background:var(--modal)">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--hair)">
+    <span style="font-size:14px;font-weight:600">Activity</span>
+    <button style="width:28px;height:28px;border:none;background:transparent;border-radius:7px;color:var(--sub);cursor:pointer" style-hover="background:var(--hair)">✕</button>
+  </div>
+  <div style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;gap:10px;font-size:13px;color:var(--mut);align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:var(--faint);margin:0 10px"></span>João created this task · 25 Oct</div>
+    <div style="display:flex;gap:10px">
+      <div style="width:26px;height:26px;border-radius:50%;background:#0a6cff;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">JT</div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:0"><div style="font-size:13px"><b style="font-weight:600">João Teixeira</b> <span style="color:var(--mut)">attached a file · 26 Oct</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--hair);border-radius:10px;max-width:360px">
+          <div style="width:26px;height:30px;border-radius:4px;background:var(--danger-tint);color:var(--danger);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">PDF</div>
+          <div style="min-width:0"><div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">JumpServer_Usage_Report___Dissertation___MICAC.pdf</div><div style="font-size:12px;color:var(--mut)">2.2 MB</div></div>
+        </div>
+      </div>
+    </div>
+    <sc-for list="{{ comments }}" as="c" hint-placeholder-count="0">
+      <div style="display:flex;gap:10px">
+        <div style="width:26px;height:26px;border-radius:50%;background:#0a6cff;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">JT</div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:13px"><b style="font-weight:600">João Teixeira</b> <span style="color:var(--mut)">now</span></div><div style="background:var(--bubble);border-radius:4px 12px 12px 12px;padding:8px 12px;font-size:14px;line-height:1.45">{{ c.text }}</div></div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="padding:12px 20px 16px;display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;gap:8px;align-items:flex-end;border:1px solid var(--input-line);background:var(--card);border-radius:12px;padding:8px 8px 8px 12px">
+      <textarea value="{{ draft }}" onChange="{{ setDraft }}" onKeyDown="{{ draftKey }}" placeholder="Comment, @mention, or drop files…" rows="2" style="flex:1;border:none;outline:none;resize:none;font-size:14px;line-height:1.45;padding:0;background:transparent;color:var(--tx)"></textarea>
+      <button onClick="{{ send }}" style="height:30px;padding:0 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:500;cursor:pointer">Send</button>
+    </div>
+    <div style="font-size:11px;color:var(--mut2);padding-left:4px">⌘↵ to send · Markdown supported</div>
+  </div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false}}'>
+class Component extends DCLogic {
+  state = { done:false, exam:false, priority:0, status:0, estimate:0, dueOff:-4, focus:false, tags:[], tagDraft:'', issue:'', draft:'', comments:[] };
+  renderVals(){
+    const s=this.state, d=s.dueOff;
+    const dk=this.props.dark;
+    const dark=dk===true||dk==='true';
+    const dt=new Date(2026,10,3+d), short=dt.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const late=d<0, soon=d>=0&&d<=1;
+    const dueText=late?`Overdue by ${-d} days`:d===0?'Due today':d===1?'Due tomorrow':`Due in ${d} days`;
+    const sc=['#aeaeb2','#ff9f0a','#34c759'];
+    const seg=(on,red)=>({border:'none',height:'24px',minWidth:'30px',padding:'0 7px',borderRadius:'5px',fontSize:'12px',fontWeight:600,cursor:'pointer',background:on?'var(--seg-on)':'transparent',boxShadow:on?'var(--seg-shadow)':'none',color:red&&on?'var(--danger)':'var(--tx)'});
+    const chip=on=>({display:'flex',alignItems:'center',gap:'5px',height:'26px',padding:'0 9px',borderRadius:'13px',fontSize:'12px',cursor:'pointer',border:on?'1px solid var(--chip-on)':'1px solid var(--chip-line)',background:on?'var(--chip-on)':'var(--chip-off)',color:on?'var(--chip-on-tx)':'var(--tx2)',fontWeight:on?600:400});
+    const send=()=>{ if(!s.draft.trim()) return; this.setState({comments:[...s.comments,{text:s.draft}],draft:''}); };
+    return {
+      themeClass: dark?'dark':'',
+      done:s.done, toggleDone:()=>this.setState({done:!s.done}),
+      checkStyle:{width:'24px',height:'24px',marginTop:'3px',borderRadius:'50%',border:s.done?'none':'1.5px solid var(--faint)',background:s.done?'#34c759':'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',padding:0,flex:'none'},
+      titleStyle:{fontSize:'21px',fontWeight:600,letterSpacing:'-0.01em',lineHeight:1.25,color:s.done?'var(--mut2)':'var(--tx)',textDecoration:s.done?'line-through':'none'},
+      dueText, dueShort:short,
+      dueBanner:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap',padding:'7px 8px 7px 10px',borderRadius:'9px',fontSize:'13px',background:late?'var(--late-bg)':soon?'var(--soon-bg)':'var(--later-bg)',color:late?'var(--late)':soon?'var(--soon)':'var(--later)'},
+      duePill:{padding:'3px 8px',borderRadius:'6px',background:late?'var(--late-bg)':'var(--fill)',color:late?'var(--late)':'var(--tx2)',fontWeight:late?600:400},
+      quick:[['Today',0],['Tomorrow',1],['Next week',7]].map(([l,o])=>({label:l,pick:()=>this.setState({dueOff:o})})),
+      statuses:['To do','Doing','Done'].map((l,i)=>({label:l,pick:()=>this.setState({status:i}),style:chip(s.status===i),dot:{width:'7px',height:'7px',borderRadius:'50%',background:sc[i]}})),
+      prio:['–','!','!!','!!!'].map((l,i)=>({label:l,pick:()=>this.setState({priority:i}),style:seg(s.priority===i,i>0)})),
+      estimates:['–','30m','1h','2h+'].map((l,i)=>({label:l,pick:()=>this.setState({estimate:i}),style:chip(s.estimate===i&&i>0)})),
+      toggleExam:()=>this.setState({exam:!s.exam}),
+      examTrack:{width:'40px',height:'24px',borderRadius:'12px',background:s.exam?'#34c759':'var(--switch-off)',position:'relative',transition:'background .15s',flex:'none'},
+      examKnob:{position:'absolute',top:'2px',left:s.exam?'18px':'2px',width:'20px',height:'20px',borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(0,0,0,.2)',transition:'left .15s'},
+      tags:s.tags.map((t,i)=>({label:t,remove:()=>this.setState({tags:s.tags.filter((_,j)=>j!==i)})})),
+      tagDraft:s.tagDraft, setTagDraft:e=>this.setState({tagDraft:e.target.value}),
+      tagKey:e=>{ if(e.key==='Enter'&&s.tagDraft.trim()) this.setState({tags:[...s.tags,s.tagDraft.trim().replace(/^#/,'')],tagDraft:''}); },
+      issue:s.issue, setIssue:e=>this.setState({issue:e.target.value}), hasIssue:!!s.issue.trim(),
+      toggleFocus:()=>this.setState({focus:!s.focus}), focusLabel:s.focus?'Focusing · 24:59':'Start focus',
+      focusBtn:{height:'32px',padding:'0 14px',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:600,cursor:'pointer',background:s.focus?'#ff9f0a':'var(--accent)',color:'#fff'},
+      comments:s.comments, draft:s.draft, setDraft:e=>this.setState({draft:e.target.value}), send,
+      draftKey:e=>{ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();send();} }
+    };
+  }
+}
+</script>
+</body>
+</html>

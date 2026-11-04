@@ -2,6 +2,8 @@
 @import "./dev-themes.css";
 /* Code highlighting colours. */
 @import "./syntax.css";
+/* Holiday themes: the sidebar and Home in a holiday's colours. */
+@import "./holiday.css";
 
 @tailwind base;
 @tailwind components;

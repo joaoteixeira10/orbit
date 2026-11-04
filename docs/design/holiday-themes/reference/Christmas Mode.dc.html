@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Christmas Mode</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#ececee;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;color:#1d1d1f}
+button,input{font-family:inherit}
+.xm{--bg:#0f1714;--side:#0b110e;--card:#15211b;--card-line:rgba(255,255,255,0.06);--row-line:rgba(255,255,255,0.05);--hover:rgba(255,255,255,0.04);--field:#1a2821;--tx:#f4efe4;--mut:#9aa89f;--faint:#5d6b63;--red:#f0525a;--red-deep:#a3192a;--gold:#e9b949;--green:#4fbf7a;--snow:#f4f7f5;--flake:#ffffff;--cap:#f4f7f5;--cap-line:rgba(0,0,0,0);--wire:#2c3a32;--check:#4a5a51;--switch-off:#33413a;--chip-tx:#7fd8a1;--glow:rgba(233,185,73,0.09);--tile-text:#f4efe4;color:var(--tx)}
+.xm.light{--bg:#fbf8f2;--side:#f2ede3;--card:#ffffff;--card-line:rgba(25,45,35,0.09);--row-line:rgba(25,45,35,0.07);--hover:rgba(25,45,35,0.04);--field:#e9e3d6;--tx:#1d2a23;--mut:#6b766f;--faint:#a9b2ac;--red:#c62a3a;--gold:#a8770f;--green:#1f8a4c;--flake:#9fb8c8;--cap:#ffffff;--cap-line:rgba(60,90,110,0.22);--wire:#8f8473;--check:#b7bfb9;--switch-off:#d6d0c3;--chip-tx:#1f7a44;--glow:rgba(198,42,58,0.06)}
+.xm input::placeholder{color:var(--mut)}
+@keyframes xfallL{from{transform:translate(0,0)}to{transform:translate(-50px,930px)}}
+@keyframes xfallR{from{transform:translate(0,0)}to{transform:translate(50px,930px)}}
+@keyframes xtw{from{opacity:1}to{opacity:.4}}
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;align-items:center;gap:10px"><span style="background:#a3192a;color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px">XM</span><span style="font-size:15px;font-weight:600">Christmas mode — Today</span><span style="font-size:14px;color:#6e6e73">Evergreen surfaces, cranberry + gold accents, string lights, snow on the cards, and a countdown by the greeting. Light and dark share one set of tokens. Snow and lights can be switched off.</span></div>
+
+  <sc-for list="{{ themes }}" as="th" hint-placeholder-count="2">
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:8px"><span style="{{ th.badge }}">{{ th.label }}</span></div>
+  <div class="{{ th.cls }}" style="width:1440px;height:900px;border-radius:12px;overflow:hidden;position:relative;display:grid;grid-template-columns:260px minmax(0,1fr);background:var(--bg);box-shadow:0 30px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.06)">
+
+    <!-- Sidebar -->
+    <div style="background:var(--side);border-right:1px solid var(--card-line);display:flex;flex-direction:column;min-height:0;padding:14px 10px 0">
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 6px 14px">
+        <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="13" cy="16" r="8" fill="#c62a3a"></circle><ellipse cx="13" cy="16.5" rx="12" ry="3.4" fill="none" stroke="#e9b949" stroke-width="1.6" transform="rotate(-18 13 16.5)"></ellipse><path d="M6.5 11.5c1-4.5 6-7.5 11.5-6.2l4.5 5.2c-5-1.8-11-1.3-16 1z" fill="#e5484d"></path><path d="M6 11.6c4.6-2.3 11-2.6 16.6-.9" stroke="#f4f7f5" stroke-width="2.4" stroke-linecap="round" fill="none"></path><circle cx="23" cy="10.6" r="2.4" fill="#f4f7f5" stroke="#cfc9bd" stroke-width="0.6"></circle></svg>
+        <span style="font-size:17px;font-weight:700;flex:1">Orbit</span>
+        <span style="position:relative;color:var(--mut);display:flex"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3zM6.5 14h3"></path></svg><span style="position:absolute;top:-7px;right:-9px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;box-sizing:border-box">11</span></span>
+        <span style="color:var(--mut);display:flex;margin-left:8px"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="3" width="11" height="10" rx="2"></rect><path d="M6 3v10"></path></svg></span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;background:var(--field);border-radius:9px;color:var(--mut);font-size:14px;margin-bottom:12px">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1">Search</span><span style="font-size:11px">⌘ K</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px">
+        <div style="position:relative;overflow:hidden;height:84px;border-radius:12px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(140deg,#d8343f,#9c1727);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08)">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.07) 0 7px,transparent 7px 14px)"></span>
+          <span style="position:relative;width:28px;height:28px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#c62a3a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.5L8 3l5.5 4.5V13h-11zM6.5 13V9.5h3V13"></path></svg></span>
+          <span style="position:relative;font-size:14px;font-weight:600;color:#fff">Today</span>
+        </div>
+        <div style="height:84px;border-radius:12px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:var(--card);border:1px solid var(--card-line)">
+          <span style="width:28px;height:28px;border-radius:8px;background:#1f7a4a;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3"></path></svg></span>
+          <span style="font-size:14px;font-weight:600">Calendar</span>
+        </div>
+      </div>
+
+      <sc-for list="{{ quick }}" as="q" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;height:46px;padding:0 12px 0 8px;border-radius:12px;background:var(--card);border:1px solid var(--card-line);margin-bottom:8px">
+          <span style="{{ q.iconStyle }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ q.d }}"></path></svg></span>
+          <span style="flex:1;font-size:14px;font-weight:600">{{ q.label }}</span>
+          <sc-if value="{{ q.plus }}" hint-placeholder-val="{{ true }}"><span style="color:var(--mut);font-size:18px;line-height:1">+</span></sc-if>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 8px 8px;font-size:12px;color:var(--mut)"><span>Workspaces</span><span style="font-size:16px">+</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:14px;font-weight:500">
+        <span style="color:var(--mut);font-size:10px">▾</span>
+        <span style="width:22px;height:22px;border-radius:6px;background:#1f7a4a;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8"></path></svg></span>Escola
+      </div>
+      <div style="flex:1;overflow:auto;min-height:0;padding:2px 0 8px">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="11">
+          <div style="display:flex;align-items:center;gap:10px;height:30px;padding:0 8px 0 30px;border-radius:7px;font-size:14px;cursor:pointer" style-hover="background:rgba(255,255,255,0.04)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="stroke:var(--gold)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.d }}"></path></svg>{{ n.label }}
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="border-top:1px solid var(--card-line);padding:10px 4px 12px;display:flex;flex-direction:column;gap:10px">
+        <div onClick="{{ toggleFx }}" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;background:var(--field);cursor:pointer;font-size:13px">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="stroke:var(--tx)" stroke-width="1.3" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5M6.5 2.5L8 4l1.5-1.5M6.5 13.5L8 12l1.5 1.5"></path></svg>
+          <span style="flex:1">Let it snow</span>
+          <span style="{{ fxTrack }}"><span style="{{ fxKnob }}"></span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:0 4px">
+          <span style="width:30px;height:30px;border-radius:50%;background:#1f7a4a;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--side),0 0 0 3.5px #e9b949">JT</span>
+          <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500">João Teixeira</span><span style="font-size:12px;color:var(--mut)">@admin</span></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="stroke:var(--mut)" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"></path></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:0 4px;font-size:12px;color:var(--mut)"><span style="width:7px;height:7px;border-radius:50%;background:var(--green)"></span><span style="flex:1">Up to date</span><span style="font-family:ui-monospace,Menlo,monospace">v0.3.0</span></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div style="position:relative;min-height:0;display:flex;flex-direction:column;padding:0 44px 28px;background:radial-gradient(ellipse 70% 40% at 45% -8%,var(--glow),transparent 70%),var(--bg)">
+      <sc-if value="{{ lightsOn }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;top:0;left:0;right:0;height:44px;pointer-events:none">
+          <svg width="100%" height="40" viewBox="{{ wireBox }}" preserveAspectRatio="none" style="position:absolute;top:0;left:0"><path d="{{ wire }}" fill="none" style="stroke:var(--wire)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg>
+          <sc-for list="{{ bulbs }}" as="b" hint-placeholder-count="24"><span style="{{ b.wrap }}"><span style="width:5px;height:4px;background:var(--wire);border-radius:1px"></span><span style="{{ b.glass }}"></span></span></sc-for>
+        </div>
+      </sc-if>
+
+      <div style="padding-top:58px;display:flex;flex-direction:column;gap:4px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;color:var(--gold)">WEDNESDAY 4 NOVEMBER</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="font-size:32px;font-weight:700;letter-spacing:-0.02em">Good evening, João</div>
+          <span style="display:flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 9px;border-radius:14px;background:rgba(79,191,122,0.12);color:var(--chip-tx);font-size:13px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(79,191,122,0.25)"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 1.5l3.6 5h-2l3.2 4.6H3.2l3.2-4.6h-2z" fill="#4fbf7a"></path><rect x="7" y="11.1" width="2" height="3" fill="#a0703a"></rect><circle cx="8" cy="1.6" r="1.2" fill="#e9b949"></circle></svg>51 days to Christmas</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;max-width:900px;display:flex;align-items:center;height:56px;padding:0 18px 0 22px;border-radius:14px;background:var(--card);border:1px solid var(--card-line);box-sizing:border-box">
+        <input placeholder="Jot something down… making a list, checking it twice" style="flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--tx)"></input>
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" style="stroke:var(--mut)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"></rect><path d="M5.5 8l1.8 1.8L10.8 6"></path></svg>
+      </div>
+
+      <div style="flex:1;min-height:0;margin-top:28px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+
+        <div style="position:relative;min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--card-line);border-radius:16px">
+          <svg viewBox="0 0 400 18" preserveAspectRatio="none" style="position:absolute;top:-7px;left:16px;width:calc(100% - 32px);height:14px;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.3))"><path d="M0,10 C30,2 60,4 90,6 S150,0 200,4 S270,2 320,5 S380,3 400,10 C380,14 360,11 340,13 S300,16 280,12 S240,15 220,12 S180,14 160,11 S120,15 100,12 S50,14 0,10 Z" style="fill:var(--cap);stroke:var(--cap-line)" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.95"></path></svg>
+          <div style="padding:22px 24px 6px;display:flex;align-items:baseline;gap:8px"><span style="font-size:24px;font-weight:700;color:var(--red)">Today</span><span style="font-size:17px;color:var(--mut);font-weight:600">18</span></div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:0 24px 16px">
+            <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+              <div style="font-size:13px;font-weight:600;color:var(--mut);padding:10px 0 4px">{{ g.label }}</div>
+              <sc-for list="{{ g.tasks }}" as="t" hint-placeholder-count="5">
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid var(--row-line)">
+                  <button onClick="{{ t.toggle }}" style="{{ t.check }}"><sc-if value="{{ t.done }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"></path></svg></sc-if></button>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <div style="{{ t.titleStyle }}"><sc-if value="{{ t.hasPrio }}" hint-placeholder-val="{{ false }}"><span style="{{ t.prioStyle }}">{{ t.prio }}</span></sc-if>{{ t.title }}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--mut)">
+                      <sc-if value="{{ t.issue }}" hint-placeholder-val="{{ false }}"><span style="color:var(--green)">◎ #1</span></sc-if>
+                      <span style="{{ t.dateStyle }}">{{ t.date }}</span>
+                      <sc-if value="{{ t.repeat }}" hint-placeholder-val="{{ false }}"><span>↻ Every week</span></sc-if>
+                      <span>{{ t.list }}</span>
+                      <sc-for list="{{ t.tags }}" as="tg" hint-placeholder-count="0"><span style="color:var(--gold)">#{{ tg }}</span></sc-for>
+                    </div>
+                  </div>
+                  <sc-if value="{{ t.flag }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:3px"><path d="M4 14V2.5h8l-1.6 3 1.6 3H4" style="fill:var(--gold);stroke:var(--gold)" stroke-width="1.2" stroke-linejoin="round"></path></svg></sc-if>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="position:relative;min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--card-line);border-radius:16px">
+          <svg viewBox="0 0 400 18" preserveAspectRatio="none" style="position:absolute;top:-7px;left:16px;width:calc(100% - 32px);height:14px;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.3))"><path d="M0,10 C40,3 70,6 110,4 S170,1 210,5 S260,1 300,4 S370,2 400,10 C370,14 350,11 320,13 S280,15 250,12 S200,15 180,12 S130,14 110,11 S60,15 0,10 Z" style="fill:var(--cap);stroke:var(--cap-line)" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0.95"></path></svg>
+          <div style="padding:22px 24px 6px"><span style="font-size:24px;font-weight:700;color:var(--gold)">Up Next</span></div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:0 24px 16px">
+            <sc-for list="{{ days }}" as="d" hint-placeholder-count="3">
+              <div style="font-size:13px;font-weight:600;color:var(--mut);padding:12px 0 6px">{{ d.label }}</div>
+              <sc-for list="{{ d.events }}" as="e" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;padding:6px 0">
+                  <span style="{{ e.bar }}"></span>
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <span style="font-size:15px;font-weight:500">{{ e.title }}</span>
+                    <span style="display:flex;gap:10px;font-size:13px;color:var(--mut)"><span>{{ e.time }}</span><sc-if value="{{ e.place }}" hint-placeholder-val="{{ false }}"><span>⌖ {{ e.place }}</span></sc-if><span>{{ e.list }}</span></span>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ snowOn }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5">
+        <sc-for list="{{ flakes }}" as="f" hint-placeholder-count="0"><span style="{{ f.style }}"></span></sc-for>
+      </div>
+    </sc-if>
+  </div>
+  </div>
+  </sc-for>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;width:1440px">
+    <sc-for list="{{ palette }}" as="p" hint-placeholder-count="8">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;background:#fff;border-radius:10px;box-shadow:0 0 0 1px rgba(0,0,0,0.06)">
+        <span style="{{ p.sw }}"></span>
+        <span style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600">{{ p.name }}</span><span style="font-size:12px;color:#6e6e73;font-family:ui-monospace,Menlo,monospace">{{ p.hex }}</span></span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"snow":{"editor":"boolean","default":true},"lights":{"editor":"boolean","default":true}}'>
+class Component extends DCLogic {
+  state = { done:{}, fx:null };
+  renderVals(){
+    const s=this.state, P=this.props;
+    const on=v=>!(v===false||v==='false');
+    const fx = s.fx===null ? on(P.snow) : s.fx;
+    const rnd=(i,k)=>{const x=Math.sin(i*12.9898+k*78.233)*43758.5453;return x-Math.floor(x);};
+
+    const N=24;
+    let wire='M0,4'; for(let i=0;i<N;i++){ wire+=` Q${i*10+5},22 ${i*10+10},4`; }
+    const cols=['#ff4d5e','#ffc94a','#4fd18b','#fff3d6'];
+    const bulbs=Array.from({length:N},(_,i)=>{const c=cols[i%4];return {
+      wrap:{position:'absolute',top:'12px',left:`calc(${((i+0.5)/N*100).toFixed(3)}% - 3px)`,display:'flex',flexDirection:'column',alignItems:'center',transform:`rotate(${i%2?9:-9}deg)`,transformOrigin:'top center'},
+      glass:{width:'8px',height:'12px',borderRadius:'50% 50% 50% 50% / 40% 40% 60% 60%',background:c,boxShadow:`0 0 10px 2px ${c}88, 0 0 2px ${c}`,animation:`xtw ${(1.8+rnd(i,2)*1.6).toFixed(2)}s ease-in-out ${(-rnd(i,3)*3).toFixed(2)}s infinite alternate`}
+    };});
+
+    const flakes=Array.from({length:80},(_,i)=>{const sz=2+Math.round(rnd(i,2)*3);return {style:{position:'absolute',top:'-10px',left:(rnd(i,1)*100).toFixed(2)+'%',width:sz+'px',height:sz+'px',borderRadius:'50%',background:'var(--flake)',opacity:(0.35+rnd(i,3)*0.5).toFixed(2),filter:sz>3?'blur(0.6px)':'none',animation:`${rnd(i,4)>.5?'xfallL':'xfallR'} ${(9+rnd(i,5)*11).toFixed(1)}s linear ${(-rnd(i,6)*20).toFixed(1)}s infinite`}};});
+
+    const prioCol={'!':'var(--green)','!!':'var(--gold)','!!!':'var(--red)'};
+    const mk=(id,title,date,list,o={})=>{const done=!!s.done[id];return {
+      title,date,list,tags:o.tags||[],flag:!!o.flag,repeat:!!o.repeat,issue:!!o.issue,done,
+      hasPrio:!!o.prio,prio:o.prio||'',prioStyle:{color:prioCol[o.prio]||'#e9b949',fontWeight:700,marginRight:'5px'},
+      dateStyle:{color:o.today?'var(--gold)':'var(--red)'},
+      titleStyle:{fontSize:'15px',lineHeight:1.35,color:done?'var(--faint)':'var(--tx)',textDecoration:done?'line-through':'none'},
+      check:{width:'22px',height:'22px',marginTop:'1px',borderRadius:'50%',border:done?'none':'1.5px solid var(--check)',background:done?'radial-gradient(circle at 35% 30%,#ff7a82,#c62a3a 70%)':'transparent',boxShadow:done?'0 0 8px rgba(240,82,90,0.5)':'none',display:'flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flex:'none'},
+      toggle:()=>this.setState({done:{...s.done,[id]:!s.done[id]}})
+    };};
+
+    const groups=[
+      {label:'Today',tasks:[
+        mk('g1','Buy Secret Santa gift for Rita','Today, 18:00','Personal',{tags:['christmas'],today:true}),
+        mk('g2','Book flights home for the holidays','Today','Personal',{prio:'!!',tags:['christmas'],today:true})
+      ]},
+      {label:'Overdue',tasks:[
+        mk('t1','Call the dentist','13 Oct, 10:30','Personal'),
+        mk('t2','Q4 planning deck','11 Oct – 14 Oct','Work',{prio:'!!'}),
+        mk('t3','Budget review','12 Oct – 15 Oct','Work',{prio:'!!!',tags:['q4'],flag:true}),
+        mk('t4','Weekly report','13 Oct – 16 Oct','Work',{repeat:true}),
+        mk('t5','Review the Q4 budget slides','16 Oct','Work',{prio:'!!'}),
+        mk('t6','Review onboarding flow','13 Oct – 17 Oct','Work'),
+        mk('t7','Newsletter','15 Oct – 17 Oct','Work'),
+        mk('t8','Client onboarding flow','14 Oct – 19 Oct','Work',{prio:'!'}),
+        mk('t9','Hero image is blurry on retina','19 Oct','Work',{issue:true,tags:['Doing','bug']}),
+        mk('t10','History essay: the Industrial Revolution','16 Oct – 22 Oct','Escola',{prio:'!!!',flag:true})
+      ]}
+    ];
+
+    const bar=c=>({width:'4px',borderRadius:'2px',flex:'none',alignSelf:'stretch',background:c});
+    const cane='repeating-linear-gradient(160deg,#f0525a 0 5px,#f4f7f5 5px 10px)';
+    const ev=(title,time,place,list,c)=>({title,time,place,list,bar:bar(c)});
+    const days=[
+      {label:'Today',events:[ev('Maths','9:30 – 11:00','Room 2.14','Escola','#f0525a'),ev('Team stand-up','10:15 – 10:30','','Work','#4fbf7a')]},
+      {label:'Tomorrow',events:[ev('Team stand-up','10:15 – 10:30','','Work','#4fbf7a'),ev('History','11:30 – 13:00','Room 1.03','Escola','#e9b949')]},
+      {label:'Friday',events:[ev('Team stand-up','10:15 – 10:30','','Work','#4fbf7a'),ev('Physics','14:30 – 16:00','Lab B','Escola','#c084fc')]},
+      {label:'Saturday',events:[ev('Christmas lights switch-on','18:00 – 20:00','Terreiro do Paço','Personal',cane)]},
+      {label:'Monday',events:[ev('Math','9:00 – 10:00','123','Escola','#e9b949'),ev('Maths','9:30 – 11:00','Room 2.14','Escola','#f0525a')]}
+    ];
+
+    const ic=(bg)=>({width:'30px',height:'30px',borderRadius:'8px',background:bg,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'});
+    const quick=[
+      {label:'Quick Notes',plus:true,d:'M4 2.5h8v11H4zM6 6h4M6 8.5h4M6 11h2',iconStyle:ic('#c9952b')},
+      {label:'Quick Draw',plus:true,d:'M3 13l2-.5 7.5-7.5-1.5-1.5L3.5 11z',iconStyle:ic('#c62a3a')},
+      {label:'My files',plus:false,d:'M2 4.5h4.5l1.5 1.5H14v7H2z',iconStyle:ic('#1f7a4a')}
+    ];
+    const nav=[
+      ['Calendar','M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3'],
+      ['Tasks','M2.5 4l1 1 2-2M7.5 4.5h6M2.5 9l1 1 2-2M7.5 9.5h6M7.5 13h6'],
+      ['Board','M2.5 3h11v10h-11zM6.2 3v10M9.8 3v10'],
+      ['Timeline','M3 2.5v11M5.5 4.5h5M5.5 8h7M5.5 11.5h4'],
+      ['Charts','M8 2.5a5.5 5.5 0 1 0 5.5 5.5H8zM10 2.7A5.5 5.5 0 0 1 13.3 6H10z'],
+      ['Notes','M4 2.5h5.5l3 3v8h-8.5zM9.5 2.5v3h3'],
+      ['Pages','M4 2.5h5.5l3 3v8h-8.5zM6 8h4.5M6 10.5h4.5'],
+      ['Whiteboards','M3 13l2-.5 7.5-7.5-1.5-1.5L3.5 11z'],
+      ['Courses','M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8'],
+      ['Grades','M8 2.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7M6 9l-1 4.5 3-1.5 3 1.5-1-4.5'],
+      ['Habits','M3 7V6a2 2 0 0 1 2-2h7l-2-2M13 9v1a2 2 0 0 1-2 2H4l2 2']
+    ].map(([label,d])=>({label,d}));
+
+    const palette=[['Evergreen','#0f1714'],['Pine (sidebar)','#0b110e'],['Card','#15211b'],['Cranberry','#f0525a'],['Holly red','#c62a3a'],['Gold','#e9b949'],['Fir green','#4fbf7a'],['Snow','#f4f7f5'],['Cream text','#f4efe4']]
+      .map(([name,hex])=>({name,hex,sw:{width:'28px',height:'28px',borderRadius:'7px',background:hex,boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.1)'}}));
+
+    const badge=(bg,fg)=>({background:bg,color:fg,fontSize:'12px',fontWeight:700,padding:'3px 8px',borderRadius:'6px',boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.08)'});
+    const themes=[
+      {label:'Light',cls:'xm light',badge:badge('#fbf8f2','#1d2a23')},
+      {label:'Dark',cls:'xm',badge:badge('#0f1714','#f4efe4')}
+    ];
+    return {
+      themes, quick, nav, groups, days, palette, flakes, bulbs,
+      wire, wireBox:`0 0 ${N*10} 40`,
+      snowOn:fx, lightsOn:on(P.lights),
+      toggleFx:()=>this.setState({fx:!fx}),
+      fxTrack:{width:'34px',height:'20px',borderRadius:'10px',background:fx?'#2f9a5c':'var(--switch-off)',position:'relative',transition:'background .15s',flex:'none'},
+      fxKnob:{position:'absolute',top:'2px',left:fx?'16px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'#fff',transition:'left .15s'}
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>More Holidays</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#ececee;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;color:#1d1d1f}
+button,input{font-family:inherit}
+.hm{--card-line:rgba(255,255,255,0.06);--row-line:rgba(255,255,255,0.05);color:var(--tx)}
+.hm.light{--card-line:rgba(25,25,40,0.09);--row-line:rgba(25,25,40,0.07)}
+.hm input::placeholder{color:var(--mut)}
+
+.hm.nye{--bg:#0c0e18;--side:#080a12;--card:#151927;--field:#1c2133;--tx:#f3efe6;--mut:#9aa0b5;--faint:#545a70;--a1:#f2c75c;--a2:#a9b8ff;--a3:#ff6fae;--late:#ff6363;--check:#464c62;--switch-off:#2c3145;--glow:rgba(242,199,92,0.09);--thread:rgba(242,199,92,0.45);--wire:#3a3f55;--chip-bg:rgba(242,199,92,0.12);--chip-tx:#f5d27e;--chip-line:rgba(242,199,92,0.3)}
+.hm.nye.light{--bg:#faf8f3;--side:#f1eee6;--card:#ffffff;--field:#e8e4da;--tx:#1b1d28;--mut:#6b6e7c;--faint:#b2b4bd;--a1:#a87a12;--a2:#4a5bd1;--a3:#c4337a;--late:#cf3434;--check:#c3c4cc;--switch-off:#d9d6cc;--glow:rgba(168,122,18,0.07);--thread:rgba(140,110,40,0.5);--wire:#a59f90;--chip-bg:rgba(168,122,18,0.1);--chip-tx:#8a630c;--chip-line:rgba(168,122,18,0.25)}
+
+.hm.eas{--bg:#14111c;--side:#0f0d16;--card:#1e1a29;--field:#262133;--tx:#f6f2fb;--mut:#a9a1b9;--faint:#5c556b;--a1:#c6a4ff;--a2:#7fe0b5;--a3:#ffd86b;--late:#ff7a7a;--check:#4a4359;--switch-off:#332d42;--glow:rgba(198,164,255,0.1);--thread:rgba(198,164,255,0.45);--wire:#463f57;--chip-bg:rgba(127,224,181,0.12);--chip-tx:#9be9c6;--chip-line:rgba(127,224,181,0.3)}
+.hm.eas.light{--bg:#fbf9f4;--side:#f2eff7;--card:#ffffff;--field:#e8e3ef;--tx:#231d2e;--mut:#6f6880;--faint:#b9b3c4;--a1:#7b4fd6;--a2:#1f9a6a;--a3:#a77b00;--late:#d1364a;--check:#cbc5d6;--switch-off:#dcd6e4;--glow:rgba(123,79,214,0.06);--thread:rgba(123,79,214,0.4);--wire:#b8b0c6;--chip-bg:rgba(31,154,106,0.1);--chip-tx:#17805a;--chip-line:rgba(31,154,106,0.25)}
+
+.hm.sp{--bg:#0d1320;--side:#090e18;--card:#151d2e;--field:#1c2639;--tx:#f4f1ea;--mut:#9ba6b8;--faint:#536075;--a1:#ffc233;--a2:#4cb8ff;--a3:#46d17a;--late:#ff5f57;--check:#435068;--switch-off:#2a3549;--glow:rgba(255,194,51,0.08);--thread:rgba(255,255,255,0.35);--wire:#5a6680;--chip-bg:rgba(255,194,51,0.12);--chip-tx:#ffd166;--chip-line:rgba(255,194,51,0.3)}
+.hm.sp.light{--bg:#fffaf0;--side:#f6efe0;--card:#ffffff;--field:#ede4d1;--tx:#1a2233;--mut:#667085;--faint:#b4bac6;--a1:#c98a00;--a2:#1a6fd1;--a3:#1f9a50;--late:#d8342c;--check:#c5c9d2;--switch-off:#dfd7c6;--glow:rgba(26,111,209,0.06);--thread:rgba(60,70,90,0.35);--wire:#8c94a3;--chip-bg:rgba(201,138,0,0.1);--chip-tx:#9a6a00;--chip-line:rgba(201,138,0,0.25)}
+
+.hm.lny{--bg:#160b0b;--side:#100707;--card:#231313;--field:#2c1919;--tx:#f8eee4;--mut:#b8a196;--faint:#66504a;--a1:#ff4d3d;--a2:#f5c04a;--a3:#ff8fb3;--late:#ff7a6b;--check:#54403b;--switch-off:#3b2724;--glow:rgba(245,192,74,0.09);--thread:rgba(245,192,74,0.5);--wire:#4d3632;--chip-bg:rgba(255,77,61,0.13);--chip-tx:#ff8a7d;--chip-line:rgba(255,77,61,0.32)}
+.hm.lny.light{--bg:#fff8f0;--side:#f8ecdf;--card:#ffffff;--field:#f0e2d2;--tx:#2a1612;--mut:#7d675e;--faint:#c4b3aa;--a1:#c8202a;--a2:#a47410;--a3:#c2416f;--late:#b8261f;--check:#dccbc2;--switch-off:#ead9ca;--glow:rgba(200,32,42,0.06);--thread:rgba(164,116,16,0.5);--wire:#c9b39a;--chip-bg:rgba(200,32,42,0.08);--chip-tx:#b01c25;--chip-line:rgba(200,32,42,0.22)}
+
+@keyframes pfallL{from{transform:translate(0,0)}to{transform:translate(-50px,940px)}}
+@keyframes pfallR{from{transform:translate(0,0)}to{transform:translate(50px,940px)}}
+@keyframes prise{from{transform:translate(0,940px)}to{transform:translate(40px,-60px)}}
+@keyframes pspin{from{transform:rotate3d(1,1,0.3,0deg)}to{transform:rotate3d(1,1,0.3,360deg)}}
+@keyframes psway{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+@keyframes pbob{from{transform:translateY(0)}to{transform:translateY(10px)}}
+</style>
+</helmet>
+
+<sc-for list="{{ holidays }}" as="h" hint-placeholder-count="4">
+<section style="padding:48px;display:flex;flex-direction:column;gap:20px;border-bottom:1px solid #d8d8dc">
+  <div style="display:flex;align-items:center;gap:10px"><span style="{{ h.tag }}">{{ h.code }}</span><span style="font-size:15px;font-weight:600">{{ h.name }}</span><span style="font-size:14px;color:#6e6e73">{{ h.blurb }}</span></div>
+
+  <div style="display:flex;gap:40px;align-items:flex-start">
+  <sc-for list="{{ h.modes }}" as="m" hint-placeholder-count="2">
+  <div style="display:flex;flex-direction:column;gap:10px">
+  <div style="display:flex"><span style="{{ m.badge }}">{{ m.label }}</span></div>
+  <div class="{{ m.cls }}" style="width:1440px;height:900px;border-radius:12px;overflow:hidden;position:relative;display:grid;grid-template-columns:260px minmax(0,1fr);background:var(--bg);box-shadow:0 30px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.06)">
+
+    <!-- Sidebar -->
+    <div style="background:var(--side);border-right:1px solid var(--card-line);display:flex;flex-direction:column;min-height:0;padding:14px 10px 0">
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 6px 14px">
+        <svg width="28" height="28" viewBox="0 0 28 28"><sc-for list="{{ h.logo }}" as="lp" hint-placeholder-count="0"><path d="{{ lp.d }}" fill="{{ lp.fill }}" stroke="{{ lp.stroke }}" stroke-width="{{ lp.sw }}" transform="{{ lp.tf }}"></path></sc-for></svg>
+        <span style="font-size:17px;font-weight:700;flex:1">Orbit</span>
+        <span style="position:relative;color:var(--mut);display:flex"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3zM6.5 14h3"></path></svg><span style="position:absolute;top:-7px;right:-9px;min-width:16px;height:16px;border-radius:8px;background:var(--a1);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;box-sizing:border-box">11</span></span>
+        <span style="color:var(--mut);display:flex;margin-left:8px"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="3" width="11" height="10" rx="2"></rect><path d="M6 3v10"></path></svg></span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;background:var(--field);border-radius:9px;color:var(--mut);font-size:14px;margin-bottom:12px">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1">Search</span><span style="font-size:11px">⌘ K</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px">
+        <div style="{{ h.tile }}">
+          <span style="{{ h.tileOverlay }}"></span>
+          <span style="position:relative;width:28px;height:28px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="{{ h.tileIcon }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.5L8 3l5.5 4.5V13h-11zM6.5 13V9.5h3V13"></path></svg></span>
+          <span style="position:relative;font-size:14px;font-weight:600;color:#fff">Today</span>
+        </div>
+        <div style="height:84px;border-radius:12px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:var(--card);border:1px solid var(--card-line)">
+          <span style="{{ h.calIcon }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3"></path></svg></span>
+          <span style="font-size:14px;font-weight:600">Calendar</span>
+        </div>
+      </div>
+
+      <sc-for list="{{ h.quick }}" as="q" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;height:46px;padding:0 12px 0 8px;border-radius:12px;background:var(--card);border:1px solid var(--card-line);margin-bottom:8px">
+          <span style="{{ q.iconStyle }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ q.d }}"></path></svg></span>
+          <span style="flex:1;font-size:14px;font-weight:600">{{ q.label }}</span>
+          <sc-if value="{{ q.plus }}" hint-placeholder-val="{{ true }}"><span style="color:var(--mut);font-size:18px;line-height:1">+</span></sc-if>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 8px 8px;font-size:12px;color:var(--mut)"><span>Workspaces</span><span style="font-size:16px">+</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:14px;font-weight:500">
+        <span style="color:var(--mut);font-size:10px">▾</span>
+        <span style="{{ h.wsIcon }}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8"></path></svg></span>Escola
+      </div>
+      <div style="flex:1;overflow:auto;min-height:0;padding:2px 0 8px">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="11">
+          <div style="display:flex;align-items:center;gap:10px;height:30px;padding:0 8px 0 30px;border-radius:7px;font-size:14px;cursor:pointer" style-hover="background:rgba(128,128,128,0.08)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="stroke:var(--a1)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.d }}"></path></svg>{{ n.label }}
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="border-top:1px solid var(--card-line);padding:10px 4px 12px;display:flex;flex-direction:column;gap:10px">
+        <div onClick="{{ h.toggleFx }}" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;background:var(--field);cursor:pointer;font-size:13px">
+          <svg width="16" height="16" viewBox="0 0 16 16"><sc-for list="{{ h.chipIcon }}" as="ci" hint-placeholder-count="0"><path d="{{ ci.d }}" fill="{{ ci.fill }}"></path></sc-for></svg>
+          <span style="flex:1">{{ h.fxLabel }}</span>
+          <span style="{{ h.fxTrack }}"><span style="{{ h.fxKnob }}"></span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:0 4px">
+          <span style="{{ h.avatar }}">JT</span>
+          <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500">João Teixeira</span><span style="font-size:12px;color:var(--mut)">@admin</span></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="stroke:var(--mut)" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"></path></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:0 4px;font-size:12px;color:var(--mut)"><span style="width:7px;height:7px;border-radius:50%;background:#34c759"></span><span style="flex:1">Up to date</span><span style="font-family:ui-monospace,Menlo,monospace">v0.3.0</span></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div style="position:relative;min-height:0;display:flex;flex-direction:column;padding:0 44px 28px;background:radial-gradient(ellipse 70% 40% at 45% -8%,var(--glow),transparent 70%),var(--bg)">
+      <sc-if value="{{ h.decorOn }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;top:0;left:0;right:0;height:0;z-index:2;pointer-events:none">
+          <sc-if value="{{ h.hasWire }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="40" viewBox="{{ h.wireBox }}" preserveAspectRatio="none" style="position:absolute;top:0;left:0"><path d="{{ h.wire }}" fill="none" style="stroke:var(--wire)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg></sc-if>
+          <sc-for list="{{ h.hang }}" as="hg" hint-placeholder-count="0">
+            <div style="{{ hg.wrap }}">
+              <span style="{{ hg.thread }}"></span>
+              <svg width="{{ hg.w }}" height="{{ hg.h }}" viewBox="{{ hg.vb }}" style="display:block"><sc-for list="{{ hg.parts }}" as="pp" hint-placeholder-count="0"><path d="{{ pp.d }}" fill="{{ pp.fill }}"></path></sc-for></svg>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="position:relative;padding-top:58px;display:flex;flex-direction:column;gap:4px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;color:var(--a1)">{{ h.date }}</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="font-size:32px;font-weight:700;letter-spacing:-0.02em">Good evening, João</div>
+          <span style="display:flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 9px;border-radius:14px;background:var(--chip-bg);color:var(--chip-tx);font-size:13px;font-weight:600;box-shadow:inset 0 0 0 1px var(--chip-line)"><svg width="15" height="15" viewBox="0 0 16 16"><sc-for list="{{ h.chipIcon }}" as="ci" hint-placeholder-count="0"><path d="{{ ci.d }}" fill="{{ ci.fill }}"></path></sc-for></svg>{{ h.chip }}</span>
+        </div>
+      </div>
+
+      <div style="position:relative;margin-top:20px;max-width:900px;display:flex;align-items:center;height:56px;padding:0 18px 0 22px;border-radius:14px;background:var(--card);border:1px solid var(--card-line);box-sizing:border-box">
+        <input placeholder="{{ h.placeholder }}" style="flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--tx)"></input>
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" style="stroke:var(--mut)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"></rect><path d="M5.5 8l1.8 1.8L10.8 6"></path></svg>
+      </div>
+
+      <div style="flex:1;min-height:0;margin-top:28px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+
+        <div style="position:relative;min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--card-line);border-radius:16px;overflow:hidden">
+          <svg width="40" height="40" viewBox="0 0 40 40" style="position:absolute;top:12px;right:14px;pointer-events:none"><sc-for list="{{ h.corner }}" as="cp" hint-placeholder-count="0"><path d="{{ cp.d }}" fill="{{ cp.fill }}"></path></sc-for></svg>
+          <div style="padding:22px 24px 6px;display:flex;align-items:baseline;gap:8px"><span style="font-size:24px;font-weight:700;color:var(--a1)">Today</span><span style="font-size:17px;color:var(--mut);font-weight:600">18</span></div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:0 24px 16px">
+            <sc-for list="{{ h.groups }}" as="g" hint-placeholder-count="2">
+              <div style="font-size:13px;font-weight:600;color:var(--mut);padding:10px 0 4px">{{ g.label }}</div>
+              <sc-for list="{{ g.tasks }}" as="t" hint-placeholder-count="5">
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid var(--row-line)">
+                  <button onClick="{{ t.toggle }}" style="{{ t.check }}"><sc-if value="{{ t.done }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"></path></svg></sc-if></button>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <div style="{{ t.titleStyle }}"><sc-if value="{{ t.hasPrio }}" hint-placeholder-val="{{ false }}"><span style="{{ t.prioStyle }}">{{ t.prio }}</span></sc-if>{{ t.title }}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--mut)">
+                      <sc-if value="{{ t.issue }}" hint-placeholder-val="{{ false }}"><span style="color:var(--a3)">◎ #1</span></sc-if>
+                      <span style="{{ t.dateStyle }}">{{ t.date }}</span>
+                      <sc-if value="{{ t.repeat }}" hint-placeholder-val="{{ false }}"><span>↻ Every week</span></sc-if>
+                      <span>{{ t.list }}</span>
+                      <sc-for list="{{ t.tags }}" as="tg" hint-placeholder-count="0"><span style="color:var(--a3)">#{{ tg }}</span></sc-for>
+                    </div>
+                  </div>
+                  <sc-if value="{{ t.flag }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:3px"><path d="M4 14V2.5h8l-1.6 3 1.6 3H4" style="fill:var(--a1);stroke:var(--a1)" stroke-width="1.2" stroke-linejoin="round"></path></svg></sc-if>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="position:relative;min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--card-line);border-radius:16px;overflow:hidden">
+          <div style="padding:22px 24px 6px"><span style="font-size:24px;font-weight:700;color:var(--a2)">Up Next</span></div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:0 24px 16px">
+            <sc-for list="{{ h.days }}" as="d" hint-placeholder-count="3">
+              <div style="font-size:13px;font-weight:600;color:var(--mut);padding:12px 0 6px">{{ d.label }}</div>
+              <sc-for list="{{ d.events }}" as="e" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;padding:6px 0">
+                  <span style="{{ e.bar }}"></span>
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <span style="font-size:15px;font-weight:500">{{ e.title }}</span>
+                    <span style="display:flex;gap:10px;font-size:13px;color:var(--mut)"><span>{{ e.time }}</span><sc-if value="{{ e.place }}" hint-placeholder-val="{{ false }}"><span>⌖ {{ e.place }}</span></sc-if><span>{{ e.list }}</span></span>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ h.fxOn }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5">
+        <sc-for list="{{ h.particles }}" as="pt" hint-placeholder-count="0"><span style="{{ pt.wrap }}"><svg width="{{ pt.w }}" height="{{ pt.w }}" viewBox="{{ pt.vb }}" style="{{ pt.svg }}"><path d="{{ pt.d }}" fill="{{ pt.fill }}"></path></svg></span></sc-for>
+      </div>
+    </sc-if>
+  </div>
+  </div>
+  </sc-for>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <sc-for list="{{ h.palette }}" as="p" hint-placeholder-count="8">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;background:#fff;border-radius:10px;box-shadow:0 0 0 1px rgba(0,0,0,0.06)">
+        <span style="{{ p.sw }}"></span>
+        <span style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600">{{ p.name }}</span><span style="font-size:12px;color:#6e6e73;font-family:ui-monospace,Menlo,monospace">{{ p.hex }}</span></span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+</sc-for>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"effects":{"editor":"boolean","default":true},"decorations":{"editor":"boolean","default":true}}'>
+class Component extends DCLogic {
+  state = { done:{}, fx:{} };
+  renderVals(){
+    const s=this.state, P=this.props;
+    const on=v=>!(v===false||v==='false');
+    const rnd=(i,k)=>{const x=Math.sin(i*12.9898+k*78.233)*43758.5453;return x-Math.floor(x);};
+    const circ=(cx,cy,r)=>`M${cx-r} ${cy}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0z`;
+    const part=(d,fill)=>({d,fill});
+    const lpart=(d,fill,stroke,sw,tf)=>({d,fill:fill||'none',stroke:stroke||'none',sw:String(sw||0),tf:tf||''});
+    const flower=(cx,cy,r,fill,mid)=>{const ps=[];for(let k=0;k<5;k++){const a=(k*72-90)*Math.PI/180;ps.push(part(circ(+(cx+Math.cos(a)*r*0.62).toFixed(2),+(cy+Math.sin(a)*r*0.62).toFixed(2),+(r*0.5).toFixed(2)),fill));}ps.push(part(circ(cx,cy,+(r*0.32).toFixed(2)),mid));return ps;};
+
+    const STAR='M10 1l2.6 5.6 6.1.7-4.5 4.2 1.2 6L10 14.6 4.6 17.5l1.2-6L1.3 7.3l6.1-.7z';
+    const HEART='M10 17s-8-5-8-10.5A4.5 4.5 0 0 1 10 4a4.5 4.5 0 0 1 8 2.5C18 12 10 17 10 17z';
+    const RECT='M0 2h10v6H0z';
+    const PETAL='M5 0C8.5 2 9.5 6 5 10C0.5 6 1.5 2 5 0z';
+
+    // ---------- holiday configs ----------
+    const H=[
+      {id:'nye',code:'NYE',name:'New Year’s Eve',tagBg:'#2f347a',
+       blurb:'Midnight navy with champagne gold, silver and a dash of magenta. Stars hang from gold threads and confetti falls all evening.',
+       date:'THURSDAY 31 DECEMBER',chip:'A few hours to 2027',placeholder:'Jot something down… resolutions welcome',fxLabel:'Confetti',
+       chipIcon:[part('M8 1l1.8 4.6L14.5 7l-4.7 1.6L8 13.5 6.2 8.6 1.5 7l4.7-1.4z','#f2c75c')],
+       logo:[lpart(circ(13,15,8),'#2f347a'),lpart('M1 15a12 3.3 0 1 0 24 0a12 3.3 0 1 0 -24 0','none','#f2c75c',1.5,'rotate(-16 13 15)'),lpart('M22 2l1.1 2.9L26 6l-2.9 1.1L22 10l-1.1-2.9L18 6l2.9-1.1z','#f2c75c')],
+       tile:['linear-gradient(150deg,#3a3f8f,#141638)','radial-gradient(circle,rgba(242,199,92,0.55) 1px,transparent 1.6px) 0 0/12px 12px'],tileIcon:'#2f347a',
+       icons:['#4a5bd1','#a87a12','#c4337a','#2f347a'],done:['#ffe08a','#c9971f','rgba(242,199,92,0.55)'],
+       bars:['#f2c75c','#a9b8ff','#ff6fae','#7d8cff'],festBar:'repeating-linear-gradient(160deg,#f2c75c 0 5px,#c9ccd8 5px 10px)',
+       corner:[part('M28 4l1.6 4.4L34 10l-4.4 1.6L28 16l-1.6-4.4L22 10l4.4-1.6z','#f2c75c'),part('M14 14l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z','#c9ccd8'),part('M34 24l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z','#f2c75c')],
+       today:[['Buy champagne and twelve grapes','Today, 17:00',{tags:['newyear']}],['Write 2027 resolutions','Today',{prio:'!'}]],
+       fest:{at:1,label:'Tonight',ev:['New Year’s Eve dinner','20:00 – 02:00','Bairro Alto','Personal']},
+       hang:{kind:'drop',vb:[20,20],items:[[57,22,0.8],[63,66,1.1],[69,38,0.7],[75,96,1.2],[81,50,0.8],[87,118,1.1],[92,30,0.7],[97,78,0.9]],parts:i=>[part(STAR,i%2?'#d9dde8':'#f2c75c')]},
+       fx:{kind:'fall',n:70,vb:'0 0 10 10',shapes:[RECT],colors:['#f2c75c','#d9dde8','#ff6fae','#7d8cff','#ffe9a8'],size:[6,11],spin:true,dur:[7,14]},
+       pal:[['Midnight','#0c0e18'],['Card','#151927'],['Champagne','#f2c75c'],['Silver blue','#a9b8ff'],['Magenta','#ff6fae'],['Light bg','#faf8f3'],['Gold (light)','#a87a12'],['Indigo (light)','#4a5bd1']]},
+
+      {id:'eas',code:'EAS',name:'Easter',tagBg:'#7b4fd6',
+       blurb:'Spring pastels: lilac, mint and butter yellow on twilight (or warm white by day). Painted eggs hang from the top, the logo grows bunny ears, blossom petals drift down.',
+       date:'THURSDAY 25 MARCH',chip:'3 days to Easter',placeholder:'Jot something down… before the egg hunt',fxLabel:'Spring petals',
+       chipIcon:[part('M8 1.5c2.9 0 5.2 4.6 5.2 8.2S10.9 14.5 8 14.5 2.8 13.3 2.8 9.7 5.1 1.5 8 1.5z','#ffd86b'),part('M3.2 8.2l1.6-1.1 1.6 1.1 1.6-1.1 1.6 1.1 1.6-1.1 1.6 1.1.4.3v1.3l-.4-.3-1.6-1.1-1.6 1.1-1.6-1.1-1.6 1.1-1.6-1.1-1.6 1.1-.4-.3V8.5z','#7b4fd6')],
+       logo:[lpart('M8.6 9.5C7 6 7 1.5 8.8 1.2s2.4 4.3 1.8 8.1z','#f3e9ff'),lpart('M15.4 9.3C15 5.5 16 1 17.8 1.4s1 4.8-.8 8.2z','#f3e9ff'),lpart('M9.1 8.5c-.8-2.4-.7-5.2.1-5.4s1 2.7.6 5.4zM16.2 8.4c0-2.6.6-5.3 1.3-5.2s.1 2.9-.6 5.4z','#ff9ec4'),lpart(circ(13,15,8),'#ffd86b'),lpart('M1 15a12 3.3 0 1 0 24 0a12 3.3 0 1 0 -24 0','none','#c6a4ff',1.5,'rotate(-16 13 15)')],
+       tile:['linear-gradient(150deg,#a57bff,#6a3fc9)','radial-gradient(circle,rgba(255,255,255,0.25) 1.6px,transparent 2.2px) 0 0/13px 13px'],tileIcon:'#6a3fc9',
+       icons:['#7b4fd6','#d9a400','#e2679c','#1f9a6a'],done:['#e3d1ff','#9b6cf0','rgba(198,164,255,0.6)'],
+       bars:['#c6a4ff','#7fe0b5','#ffd86b','#ff9ec4'],festBar:'repeating-linear-gradient(160deg,#c6a4ff 0 4px,#7fe0b5 4px 8px,#ffd86b 8px 12px,#ff9ec4 12px 16px)',
+       corner:[part('M10 21c2.6 0 4.6 4.2 4.6 7.6S12.6 34 10 34s-4.6-2-4.6-5.4S7.4 21 10 21z','#c6a4ff'),part('M5.6 27.5l1.5-1 1.5 1 1.5-1 1.5 1 1.5-1 1.5 1v1.3l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1z','#fff8e6'),part('M24 14c3.2 0 5.6 5 5.6 9.2S27.2 30 24 30s-5.6-2.6-5.6-6.8S20.8 14 24 14z','#ffd86b'),part(circ(22,21,1.1)+circ(26,21,1.1)+circ(24,25,1.1),'#ff9ec4'),part('M32 23c2.2 0 3.8 3.4 3.8 6.2S34.2 34 32 34s-3.8-2-3.8-4.8 1.6-6.2 3.8-6.2z','#7fe0b5'),part('M2 40c1-4 2-7 3-8l1 5 2-7 2 6 2-7 2 7 2-6 2 6 2-7 2 7 2-6 2 6 2-7 2 6 2-5 2 6 1-4 2 8z','#5cc98f')],
+       today:[['Buy folar and amêndoas','Today, 18:00',{tags:['easter']}],['Paint eggs for Sunday','Today',{prio:'!'}]],
+       fest:{at:2,label:'Sunday · Easter',ev:['Easter lunch with family','13:00 – 17:00','','Personal']},
+       hang:{kind:'drop',vb:[20,26],items:[[58,24,0.8],[65,72,1.05],[72,40,0.8],[79,100,1.15],[86,54,0.9],[92,118,1],[97,34,0.8]],parts:i=>{const c=['#c6a4ff','#7fe0b5','#ffd86b','#ff9ec4','#8fc8ff'][i%5];return [part('M10 1C15 1 19 9 19 15.5S15 25 10 25 1 22 1 15.5 5 1 10 1z',c),part('M1.4 12.2l3-2 3 2 2.6-2 2.6 2 3-2 3 2 .3.3v1.8l-.3-.3-3-2-3 2-2.6-2-2.6 2-3-2-3 2-.2-.1z','#fff8e6'),part(circ(6,19,1.2)+circ(10,20,1.2)+circ(14,19,1.2),'#fff8e6')];}},
+       fx:{kind:'fall',n:38,vb:'0 0 10 10',shapes:[PETAL],colors:['#f3e9ff','#ffd6e7','#fff3c2','#d4f5e6'],size:[7,12],spin:true,dur:[12,20],slowSpin:true},
+       pal:[['Twilight','#14111c'],['Card','#1e1a29'],['Lilac','#c6a4ff'],['Mint','#7fe0b5'],['Butter','#ffd86b'],['Light bg','#fbf9f4'],['Violet (light)','#7b4fd6'],['Green (light)','#1f9a6a']]},
+
+      {id:'sp',code:'SP',name:'Santos Populares',tagBg:'#1a6fd1',
+       blurb:'Lisbon in June: arraial bunting across the top, azulejo-blue Today tile, a manjerico in the corner and a sardine on the countdown.',
+       date:'THURSDAY 10 JUNE',chip:'2 days to Santo António',placeholder:'Jot something down… a quadra for the manjerico?',fxLabel:'Arraial confetti',
+       chipIcon:[part('M2 8c3-3.5 8-3.5 11 0-3 3.5-8 3.5-11 0z','#9fb3c8'),part('M12.6 8l2.9-2.8v5.6z','#9fb3c8'),part(circ(4.8,7.6,0.7),'#1a2233')],
+       logo:[lpart(circ(13,15,8),'#3fa9ff'),lpart('M1 15a12 3.3 0 1 0 24 0a12 3.3 0 1 0 -24 0','none','#ffc233',1.5,'rotate(-16 13 15)'),lpart('M20 2h6l-3 5z','#ff4d4d'),lpart('M14 3h5l-2.5 4z','#46d17a')],
+       tile:['linear-gradient(150deg,#2f6fd6,#163a86)','radial-gradient(circle at 50% 50%,transparent 3.5px,rgba(255,255,255,0.18) 4px,rgba(255,255,255,0.18) 5px,transparent 5.5px) 0 0/14px 14px,linear-gradient(rgba(255,255,255,0.1) 1px,transparent 1px) 0 0/14px 14px,linear-gradient(90deg,rgba(255,255,255,0.1) 1px,transparent 1px) 0 0/14px 14px'],tileIcon:'#1a6fd1',
+       icons:['#1a6fd1','#e0a100','#e0453c','#1f9a50'],done:['#7fc4ff','#1a6fd1','rgba(76,184,255,0.55)'],
+       bars:['#ffc233','#46d17a','#4cb8ff','#ff4d4d'],festBar:'repeating-linear-gradient(160deg,#ff4d4d 0 4px,#ffd23f 4px 8px,#3ccf6e 8px 12px,#3fa9ff 12px 16px)',
+       corner:[part('M18 24h16v3H18z','#d9784e'),part('M19.5 27h13l-2 10h-9z','#c8643b'),part('M26 25c-6 0-9-4-8-8 0-4 4-7 8-7s8 3 8 7c1 4-2 8-8 8z','#3caa55'),part('M24.6 2h.8v10h-.8z','#8a6a3a'),part('M25.4 2h7l-2 2 2 2h-7z','#3fa9ff'),part(circ(31,13,2.4),'#ff4d4d')],
+       today:[['Buy a manjerico','Today',{tags:['santos']}],['Get charcoal for the sardinhada','Today, 19:00',{prio:'!!',tags:['santos']}]],
+       fest:{at:2,label:'Saturday · Santo António',ev:['Arraial in Alfama','21:00 – late','Alfama','Personal']},
+       hang:{kind:'wire',N:6,Q:40,k:7,vb:[14,18],parts:i=>[part('M0 0h14L7 18z',['#ff4d4d','#ffd23f','#3ccf6e','#3fa9ff','#ff7ac6','#ff9f1c'][i%6])]},
+       fx:{kind:'fall',n:45,vb:'0 0 10 10',shapes:[RECT,'M0 0h8l-4 10z'],colors:['#ff4d4d','#ffd23f','#3ccf6e','#3fa9ff','#ff7ac6'],size:[5,9],spin:true,dur:[9,16]},
+       pal:[['Lisbon night','#0d1320'],['Card','#151d2e'],['Lantern yellow','#ffc233'],['Azulejo blue','#4cb8ff'],['Manjerico green','#46d17a'],['Light bg','#fffaf0'],['Blue (light)','#1a6fd1'],['Ochre (light)','#c98a00']]},
+
+      {id:'lny',code:'LNY',name:'Lunar New Year',tagBg:'#c8202a',
+       blurb:'Lacquer red and gold. Paper lanterns hang on gold cord, plum blossom grows in the card corner, petals fall.',
+       date:'THURSDAY 4 FEBRUARY',chip:'2 days to Lunar New Year',placeholder:'Jot something down… wishes for the new year',fxLabel:'Blossoms',
+       chipIcon:[part('M6 1.5h4V3H6z','#f5c04a'),part('M8 2.8c3.6 0 5.2 2.1 5.2 5.1s-1.6 5.1-5.2 5.1-5.2-2.1-5.2-5.1 1.6-5.1 5.2-5.1z','#e0322a'),part('M5.6 12.6h4.8v1.2H5.6z','#f5c04a'),part('M7.4 13.8h1.2v2H7.4z','#f5c04a')],
+       logo:[lpart(circ(13,15,8),'#e0322a'),lpart('M1 15a12 3.3 0 1 0 24 0a12 3.3 0 1 0 -24 0','none','#f5c04a',1.5,'rotate(-16 13 15)'),lpart('M11 6.5h4v1.5h-4z','#f5c04a')],
+       tile:['linear-gradient(150deg,#ec4436,#9e1018)','radial-gradient(circle,rgba(245,192,74,0.4) 1.2px,transparent 1.8px) 0 0/11px 11px'],tileIcon:'#c8202a',
+       icons:['#c8202a','#b8860b','#c2416f','#7a2e1f'],done:['#ff8a7d','#c8202a','rgba(255,77,61,0.55)'],
+       bars:['#ff4d3d','#f5c04a','#ff8fb3','#d4a017'],festBar:'repeating-linear-gradient(160deg,#e0322a 0 5px,#f5c04a 5px 10px)',
+       corner:[part('M4 38c8-6 14-12 20-23l1.2.7C19 27 13 33 5 39z','#7a4a35'),part('M17 26c3-1 6-1 9 0l-.3 1c-3-.8-5.6-.8-8.4 0z','#7a4a35')].concat(flower(26,13,7,'#ffb7c9','#f5c04a'),flower(14,25,5,'#ff8fb3','#f5c04a'),flower(33,24,4,'#ffd6df','#f5c04a')),
+       today:[['Prepare red envelopes','Today',{tags:['lunarnewyear']}],['Deep-clean the flat before New Year','Today',{prio:'!!'}]],
+       fest:{at:2,label:'Saturday · Lunar New Year',ev:['Lunar New Year dinner','19:30 – 23:00','Martim Moniz','Personal']},
+       hang:{kind:'drop',vb:[24,36],items:[[60,26,0.9],[69,76,1.15],[78,40,0.85],[87,104,1.25],[95,50,0.95]],parts:()=>[part('M8 1h8v3.5H8z','#f5c04a'),part('M12 3.5c7.5 0 10.5 4.2 10.5 10.3S19.5 24 12 24 1.5 19.9 1.5 13.8 4.5 3.5 12 3.5z','#e0322a'),part('M11.3 3.6c-3.2 2.3-3.2 18 0 20.3h1.4c3.2-2.3 3.2-18 0-20.3z','#c21d22'),part('M8 23h8v3.5H8z','#f5c04a'),part('M11 26.5h2v8.5h-2z','#f5c04a')]},
+       fx:{kind:'fall',n:40,vb:'0 0 10 10',shapes:[PETAL],colors:['#ffb7c9','#ff8fb3','#ffd6df'],size:[7,12],spin:true,dur:[12,20],slowSpin:true},
+       pal:[['Lacquer night','#160b0b'],['Card','#231313'],['Lantern red','#ff4d3d'],['Gold','#f5c04a'],['Plum blossom','#ff8fb3'],['Light bg','#fff8f0'],['Red (light)','#c8202a'],['Gold (light)','#a47410']]}
+    ];
+
+    // ---------- shared content ----------
+    const nav=[
+      ['Calendar','M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3'],['Tasks','M2.5 4l1 1 2-2M7.5 4.5h6M2.5 9l1 1 2-2M7.5 9.5h6M7.5 13h6'],
+      ['Board','M2.5 3h11v10h-11zM6.2 3v10M9.8 3v10'],['Timeline','M3 2.5v11M5.5 4.5h5M5.5 8h7M5.5 11.5h4'],
+      ['Charts','M8 2.5a5.5 5.5 0 1 0 5.5 5.5H8zM10 2.7A5.5 5.5 0 0 1 13.3 6H10z'],['Notes','M4 2.5h5.5l3 3v8h-8.5zM9.5 2.5v3h3'],
+      ['Pages','M4 2.5h5.5l3 3v8h-8.5zM6 8h4.5M6 10.5h4.5'],['Whiteboards','M3 13l2-.5 7.5-7.5-1.5-1.5L3.5 11z'],
+      ['Courses','M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8'],['Grades','M8 2.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7M6 9l-1 4.5 3-1.5 3 1.5-1-4.5'],
+      ['Habits','M3 7V6a2 2 0 0 1 2-2h7l-2-2M13 9v1a2 2 0 0 1-2 2H4l2 2']
+    ].map(([label,d])=>({label,d}));
+    const overdue=[
+      ['t1','Call the dentist','13 Oct, 10:30','Personal',{}],['t2','Q4 planning deck','11 Oct – 14 Oct','Work',{prio:'!!'}],
+      ['t3','Budget review','12 Oct – 15 Oct','Work',{prio:'!!!',tags:['q4'],flag:true}],['t4','Weekly report','13 Oct – 16 Oct','Work',{repeat:true}],
+      ['t5','Review the Q4 budget slides','16 Oct','Work',{prio:'!!'}],['t6','Review onboarding flow','13 Oct – 17 Oct','Work',{}],
+      ['t7','Newsletter','15 Oct – 17 Oct','Work',{}],['t8','Client onboarding flow','14 Oct – 19 Oct','Work',{prio:'!'}],
+      ['t9','Hero image is blurry on retina','19 Oct','Work',{issue:true,tags:['Doing','bug']}],['t10','History essay: the Industrial Revolution','16 Oct – 22 Oct','Escola',{prio:'!!!',flag:true}]
+    ];
+    const ic=(bg,sz)=>({width:sz+'px',height:sz+'px',borderRadius:(sz>24?8:6)+'px',background:bg,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'});
+    const fxTrackS=(f,c)=>({width:'34px',height:'20px',borderRadius:'10px',background:f?c:'var(--switch-off)',position:'relative',transition:'background .15s',flex:'none'});
+    const fxKnobS=f=>({position:'absolute',top:'2px',left:f?'16px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'#fff',transition:'left .15s'});
+    const badge=(bg,fg)=>({background:bg,color:fg,fontSize:'12px',fontWeight:700,padding:'3px 8px',borderRadius:'6px',boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.08)'});
+    const prioCol={'!':'var(--a3)','!!':'var(--a1)','!!!':'var(--late)'};
+
+    const holidays=H.map((h,hi)=>{
+      const fxOn = s.fx[h.id]===undefined ? on(P.effects) : s.fx[h.id];
+      const mk=(id,title,date,list,o,today)=>{const key=h.id+id, done=!!s.done[key];return {
+        title,date,list,tags:o.tags||[],flag:!!o.flag,repeat:!!o.repeat,issue:!!o.issue,done,
+        hasPrio:!!o.prio,prio:o.prio||'',prioStyle:{color:prioCol[o.prio],fontWeight:700,marginRight:'5px'},
+        dateStyle:{color:today?'var(--a1)':'var(--late)'},
+        titleStyle:{fontSize:'15px',lineHeight:1.35,color:done?'var(--faint)':'var(--tx)',textDecoration:done?'line-through':'none'},
+        check:{width:'22px',height:'22px',marginTop:'1px',borderRadius:'50%',border:done?'none':'1.5px solid var(--check)',background:done?`radial-gradient(circle at 35% 30%,${h.done[0]},${h.done[1]} 70%)`:'transparent',boxShadow:done?`0 0 10px ${h.done[2]}`:'none',display:'flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flex:'none'},
+        toggle:()=>this.setState({done:{...s.done,[key]:!s.done[key]}})
+      };};
+      const groups=[
+        {label:'Today',tasks:h.today.map((t,i)=>mk('f'+i,t[0],t[1],'Personal',t[2],true))},
+        {label:'Overdue',tasks:overdue.map(t=>mk(t[0],t[1],t[2],t[3],t[4],false))}
+      ];
+      const bar=c=>({width:'4px',borderRadius:'2px',flex:'none',alignSelf:'stretch',background:c});
+      const ev=(title,time,place,list,c)=>({title,time,place,list,bar:bar(c)});
+      const days=[
+        {label:'Today',events:[ev('Maths','9:30 – 11:00','Room 2.14','Escola',h.bars[0]),ev('Team stand-up','10:15 – 10:30','','Work',h.bars[1])]},
+        {label:'Tomorrow',events:[ev('Team stand-up','10:15 – 10:30','','Work',h.bars[1]),ev('History','11:30 – 13:00','Room 1.03','Escola',h.bars[2])]},
+        {label:'Monday',events:[ev('Math','9:00 – 10:00','123','Escola',h.bars[3]),ev('Maths','9:30 – 11:00','Room 2.14','Escola',h.bars[0])]}
+      ];
+      const fe=h.fest.ev; days.splice(h.fest.at,0,{label:h.fest.label,events:[ev(fe[0],fe[1],fe[2],fe[3],h.festBar)]});
+
+      // hanging decorations
+      let hang=[], hasWire=false, wire='', wireBox='0 0 10 40';
+      const hz=h.hang;
+      if(hz.kind==='drop'){
+        hang=hz.items.map(([x,len,sc],i)=>({
+          wrap:{position:'absolute',top:'-12px',left:x+'%',display:'flex',flexDirection:'column',alignItems:'center',animation:`pbob ${(2.4+rnd(i+hi*10,1)*1.6).toFixed(1)}s ease-in-out ${(-rnd(i+hi*10,2)*3).toFixed(1)}s infinite alternate`},
+          thread:{width:'1px',height:(len+12)+'px',background:'var(--thread)'},
+          w:String(Math.round(hz.vb[0]*sc*1.2)),h:String(Math.round(hz.vb[1]*sc*1.2)),vb:`0 0 ${hz.vb[0]} ${hz.vb[1]}`,parts:hz.parts(i)
+        }));
+      } else {
+        hasWire=true; const N=hz.N,Q=hz.Q; wireBox=`0 0 ${N*10} 40`; wire='M0,4';
+        for(let i=0;i<N;i++) wire+=` Q${i*10+5},${Q} ${i*10+10},4`;
+        let c=0;
+        for(let i=0;i<N;i++) for(let j=0;j<hz.k;j++){const t=(j+0.5)/hz.k, y=4+2*t*(1-t)*(Q-4), x=(i+t)/N*100;
+          hang.push({wrap:{position:'absolute',top:(y-1).toFixed(1)+'px',left:`calc(${x.toFixed(3)}% - ${hz.vb[0]/2}px)`,transformOrigin:'top center',animation:`psway ${(1.8+rnd(c,7)*1.4).toFixed(1)}s ease-in-out ${(-rnd(c,8)*2).toFixed(1)}s infinite alternate`},
+            thread:{display:'none'},w:String(hz.vb[0]),h:String(hz.vb[1]),vb:`0 0 ${hz.vb[0]} ${hz.vb[1]}`,parts:hz.parts(c)}); c++; }
+      }
+
+      // particles
+      const f=h.fx;
+      const particles=Array.from({length:f.n},(_,i)=>{const k=i+hi*100, sz=Math.round(f.size[0]+rnd(k,2)*(f.size[1]-f.size[0])), dur=(f.dur[0]+rnd(k,5)*(f.dur[1]-f.dur[0])).toFixed(1), del=(-rnd(k,6)*f.dur[1]).toFixed(1);
+        const anim=f.kind==='rise'?`prise ${dur}s linear ${del}s infinite`:`${rnd(k,4)>.5?'pfallL':'pfallR'} ${dur}s linear ${del}s infinite`;
+        return {w:String(sz),vb:f.vb,d:f.shapes[i%f.shapes.length],fill:f.colors[i%f.colors.length],
+          wrap:{position:'absolute',top:f.kind==='rise'?'0':'-20px',left:(rnd(k,1)*100).toFixed(2)+'%',opacity:f.kind==='rise'?(0.3+rnd(k,3)*0.4).toFixed(2):(0.6+rnd(k,3)*0.4).toFixed(2),animation:anim},
+          svg:{display:'block',animation:f.spin?`pspin ${(f.slowSpin?4+rnd(k,7)*4:1.2+rnd(k,7)*2).toFixed(1)}s linear infinite`:`psway ${(1.6+rnd(k,7)).toFixed(1)}s ease-in-out infinite alternate`}};
+      });
+
+      return {
+        id:h.id, code:h.code, name:h.name, blurb:h.blurb, date:h.date, chip:h.chip, placeholder:h.placeholder, fxLabel:h.fxLabel,
+        tag:{background:h.tagBg,color:'#fff',fontSize:'12px',fontWeight:700,padding:'3px 8px',borderRadius:'6px'},
+        modes:[{label:'Light',cls:`hm ${h.id} light`,badge:badge('#ffffff','#1d1d1f')},{label:'Dark',cls:`hm ${h.id}`,badge:badge('#1d1d1f','#ffffff')}],
+        logo:h.logo, chipIcon:h.chipIcon, corner:h.corner,
+        tile:{position:'relative',overflow:'hidden',height:'84px',borderRadius:'12px',padding:'10px',boxSizing:'border-box',display:'flex',flexDirection:'column',justifyContent:'space-between',background:h.tile[0],boxShadow:'inset 0 0 0 1px rgba(255,255,255,0.1)'},
+        tileOverlay:{position:'absolute',inset:0,background:h.tile[1]}, tileIcon:h.tileIcon,
+        calIcon:ic(h.icons[0],28), wsIcon:ic(h.icons[0],22),
+        avatar:{width:'30px',height:'30px',borderRadius:'50%',background:h.icons[0],color:'#fff',fontSize:'11px',fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 0 2px var(--side),0 0 0 3.5px var(--a1)'},
+        quick:[
+          {label:'Quick Notes',plus:true,d:'M4 2.5h8v11H4zM6 6h4M6 8.5h4M6 11h2',iconStyle:ic(h.icons[1],30)},
+          {label:'Quick Draw',plus:true,d:'M3 13l2-.5 7.5-7.5-1.5-1.5L3.5 11z',iconStyle:ic(h.icons[2],30)},
+          {label:'My files',plus:false,d:'M2 4.5h4.5l1.5 1.5H14v7H2z',iconStyle:ic(h.icons[3],30)}
+        ],
+        groups, days, hang, hasWire, wire, wireBox, particles,
+        decorOn:on(P.decorations), fxOn,
+        toggleFx:()=>this.setState({fx:{...s.fx,[h.id]:!fxOn}}),
+        fxTrack:fxTrackS(fxOn,h.icons[0]), fxKnob:fxKnobS(fxOn),
+        palette:h.pal.map(([name,hex])=>({name,hex,sw:{width:'28px',height:'28px',borderRadius:'7px',background:hex,boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.1)'}}))
+      };
+    });
+
+    return { holidays, nav };
+  }
+}
+</script>
+</body>
+</html>

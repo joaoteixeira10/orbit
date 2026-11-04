@@ -20,6 +20,7 @@ import { wireTasksLive } from '@/stores/tasks'
 import { wireNotesLive } from '@/stores/notes'
 import { wireInboxLive } from '@/stores/inbox'
 import { useFocusStore, wireFocusLive, clockOf } from '@/stores/focus'
+import { useHolidayStore } from '@/stores/holiday'
 import { drawingsApi } from '@/components/draw/drawing'
 import { emptySketch } from '@/lib/sketch'
 import { refreshPush } from '@/lib/push'
@@ -40,6 +41,15 @@ import WorkspaceSettingsSheet from '@/components/WorkspaceSettingsSheet.vue'
 const auth = useAuthStore()
 const prefs = usePrefsStore()
 const branding = useBrandingStore()
+// A holiday theme (the owner's): its colours on, re-checked every minute (a
+// season starts and ends; New Year's hours count down).
+const holiday = useHolidayStore()
+watch(() => [holiday.active?.id, holiday.mode], () => holiday.apply(), { immediate: true })
+const holidayClock = window.setInterval(() => holiday.tick(), 60_000)
+onUnmounted(() => {
+  window.clearInterval(holidayClock)
+  holiday.clear()
+})
 const toast = useToastStore()
 const wss = useWorkspacesStore()
 const focus = useFocusStore()
@@ -561,7 +571,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <button class="menu-item" @click="router.push({ name: 'ws-trash', params: { ws: wsMenu } }); wsMenu = ''"><Trash2 class="h-4 w-4 text-text-2" />{{ t('pages.trash') }}</button>
     </Popover>
 
-    <main class="main" :style="wsStyle">
+    <main class="main" :class="{ 'holiday-main': holiday.active && route.name === 'home' }" :style="wsStyle">
       <div v-if="auth.impersonator" class="imp-banner">
         <VenetianMask class="h-4 w-4" />
         <span>{{ t('impersonate.banner', { user: displayName, admin: auth.impersonator.username }) }}</span>

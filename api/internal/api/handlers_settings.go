@@ -29,6 +29,9 @@ const (
 	keyAssetSrcLogo      = "asset_source_logo"         // theme | keep
 	keyAssetSrcWordmark  = "asset_source_wordmark"     // theme | keep
 	keyAssetSrcFavicon   = "asset_source_favicon"      // theme | keep
+
+	// Holiday themes: off, auto (each in its season) or one shown now.
+	keyHolidayTheme = "holiday_theme"
 )
 
 // validDevTheme / validAssetSource clamp stored values to the closed sets.
@@ -38,6 +41,16 @@ func validDevTheme(s string) string {
 		return s
 	}
 	return "blue"
+}
+
+// validHolidayTheme clamps the holiday setting to the closed set (the
+// holidays of web/src/lib/holidayThemes.ts); anything else is off.
+func validHolidayTheme(s string) string {
+	switch s {
+	case "auto", "christmas", "halloween", "nye", "easter", "santos", "lunar":
+		return s
+	}
+	return "off"
 }
 
 func validAssetSource(s string) string {
@@ -67,6 +80,8 @@ type brandingResponse struct {
 	AssetSourceLogo         string `json:"asset_source_logo"`     // theme | keep
 	AssetSourceWordmark     string `json:"asset_source_wordmark"` // theme | keep
 	AssetSourceFavicon      string `json:"asset_source_favicon"`  // theme | keep
+	// HolidayTheme: off | auto | christmas | halloween | nye | easter | santos | lunar.
+	HolidayTheme string `json:"holiday_theme"`
 
 	DrawioURL string `json:"drawio_url"` // where Diagrams load the draw.io editor from
 	// PageVersionsKept: how many versions each page's history keeps.
@@ -88,6 +103,8 @@ type updateSettingsRequest struct {
 	AssetSourceLogo         *string `json:"asset_source_logo"`
 	AssetSourceWordmark     *string `json:"asset_source_wordmark"`
 	AssetSourceFavicon      *string `json:"asset_source_favicon"`
+	// HolidayTheme: off, auto (each holiday in its season) or one of them now.
+	HolidayTheme *string `json:"holiday_theme" binding:"omitempty,oneof=off auto christmas halloween nye easter santos lunar"`
 
 	DrawioURL *string `json:"drawio_url"` // "" goes back to DRAWIO_URL (or draw.io's own)
 	// PageVersionsKept: how many versions each page keeps (5–1000).
@@ -129,6 +146,7 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		AssetSourceLogo:         validAssetSource(m[keyAssetSrcLogo]),
 		AssetSourceWordmark:     validAssetSource(m[keyAssetSrcWordmark]),
 		AssetSourceFavicon:      validAssetSource(m[keyAssetSrcFavicon]),
+		HolidayTheme:            validHolidayTheme(m[keyHolidayTheme]),
 
 		DrawioURL:        h.refreshDrawio(),
 		PageVersionsKept: versionsKept(h.db),
@@ -227,6 +245,9 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 	}
 	if req.AssetSourceFavicon != nil {
 		h.setSetting(keyAssetSrcFavicon, validAssetSource(*req.AssetSourceFavicon))
+	}
+	if req.HolidayTheme != nil {
+		h.setSetting(keyHolidayTheme, validHolidayTheme(*req.HolidayTheme))
 	}
 	h.recordCtx(c, "settings.update", "settings", "branding", nil)
 	h.getBranding(c)

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halloween Mode</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#ececee;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;color:#1d1d1f}
+button,input{font-family:inherit}
+.hw{--bg:#121017;--side:#0c0a10;--card:#1a1621;--card-line:rgba(255,255,255,0.06);--row-line:rgba(255,255,255,0.05);--hover:rgba(255,255,255,0.04);--field:#221c2a;--tx:#f2ead8;--mut:#a59cb0;--faint:#5f5669;--orange:#ff7a1a;--purple:#b48cff;--green:#8bd450;--late:#ff5f57;--web:rgba(225,215,240,0.3);--thread:rgba(225,215,240,0.45);--spider:#8a77a3;--bat:#5d4d70;--moon:#f3e9c6;--moon-glow:rgba(243,233,198,0.16);--glow:rgba(255,122,26,0.08);--check:#4d4458;--switch-off:#352d3f;--chip-bg:rgba(255,122,26,0.12);--chip-tx:#ffa45c;--chip-line:rgba(255,122,26,0.3);color:var(--tx)}
+.hw.light{--bg:#f8f4ec;--side:#efe9df;--card:#ffffff;--card-line:rgba(40,25,50,0.09);--row-line:rgba(40,25,50,0.07);--hover:rgba(40,25,50,0.04);--field:#e6dfd3;--tx:#221a2a;--mut:#6f6678;--faint:#b0a8b8;--orange:#d45f08;--purple:#7440c9;--green:#4b8a1c;--late:#d1322e;--web:rgba(60,45,75,0.25);--thread:rgba(60,45,75,0.4);--spider:#2a2230;--bat:#2a2230;--moon:#f0dfa6;--moon-glow:rgba(240,200,120,0.3);--glow:rgba(212,95,8,0.07);--check:#bdb5c4;--switch-off:#d8d0c6;--chip-bg:rgba(212,95,8,0.1);--chip-tx:#b04e05;--chip-line:rgba(212,95,8,0.25)}
+.hw input::placeholder{color:var(--mut)}
+@keyframes hflyA{0%{transform:translate(-60px,0)}25%{transform:translate(360px,-28px)}50%{transform:translate(740px,12px)}75%{transform:translate(1120px,-22px)}100%{transform:translate(1520px,6px)}}
+@keyframes hflyB{0%{transform:translate(-60px,0)}30%{transform:translate(420px,22px)}55%{transform:translate(800px,-16px)}80%{transform:translate(1200px,18px)}100%{transform:translate(1520px,-8px)}}
+@keyframes hflap{from{transform:scaleY(1)}to{transform:scaleY(0.35)}}
+@keyframes hbob{from{transform:translateY(0)}to{transform:translateY(10px)}}
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;align-items:center;gap:10px"><span style="background:#d4550a;color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px">HW</span><span style="font-size:15px;font-weight:600">Halloween mode — Today</span><span style="font-size:14px;color:#6e6e73">Pumpkin orange, witch purple and slime green on midnight (or bone, in light). Bats fly across, spiders drop in, cobwebs gather in the card corners. Set the week of 31 October.</span></div>
+
+  <sc-for list="{{ themes }}" as="th" hint-placeholder-count="2">
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:8px"><span style="{{ th.badge }}">{{ th.label }}</span></div>
+  <div class="{{ th.cls }}" style="width:1440px;height:900px;border-radius:12px;overflow:hidden;position:relative;display:grid;grid-template-columns:260px minmax(0,1fr);background:var(--bg);box-shadow:0 30px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.06)">
+
+    <!-- Sidebar -->
+    <div style="background:var(--side);border-right:1px solid var(--card-line);display:flex;flex-direction:column;min-height:0;padding:14px 10px 0">
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 6px 14px">
+        <svg width="28" height="28" viewBox="0 0 28 28"><path d="M14 7.5c1-2.5 2.5-3.5 4-3.8" stroke="#4b8a1c" stroke-width="2" stroke-linecap="round" fill="none"></path><ellipse cx="14" cy="16" rx="10" ry="8.5" fill="#ff7a1a"></ellipse><path d="M14 7.6c-3 2-3 14.8 0 16.8M14 7.6c3 2 3 14.8 0 16.8M8 8.8c-3 3-3 11.4 0 14.4M20 8.8c3 3 3 11.4 0 14.4" stroke="#d4550a" stroke-width="1" fill="none"></path><ellipse cx="14" cy="16.5" rx="13.2" ry="3.2" fill="none" stroke="#9b6bff" stroke-width="1.5" transform="rotate(-16 14 16.5)"></ellipse><path d="M9 14l2-2 2 2zM15 14l2-2 2 2zM9.5 18.5c1.5 1.4 3 1.8 4.5 1.8s3-.4 4.5-1.8l-1.2.4-.8 1-.9-.9-1.6.6-1.6-.6-.9.9-.8-1z" fill="#2a1a10"></path></svg>
+        <span style="font-size:17px;font-weight:700;flex:1">Orbit</span>
+        <span style="position:relative;color:var(--mut);display:flex"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3zM6.5 14h3"></path></svg><span style="position:absolute;top:-7px;right:-9px;min-width:16px;height:16px;border-radius:8px;background:var(--orange);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;box-sizing:border-box">11</span></span>
+        <span style="color:var(--mut);display:flex;margin-left:8px"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="3" width="11" height="10" rx="2"></rect><path d="M6 3v10"></path></svg></span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;background:var(--field);border-radius:9px;color:var(--mut);font-size:14px;margin-bottom:12px">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1">Search</span><span style="font-size:11px">⌘ K</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px">
+        <div style="position:relative;overflow:hidden;height:84px;border-radius:12px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(150deg,#ff8f33,#cf500a);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1)">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(90,30,0,0.12) 0 2px,transparent 2px 18px)"></span>
+          <svg width="44" height="30" viewBox="0 0 44 30" style="position:absolute;right:8px;bottom:8px;opacity:0.35"><path d="M6 6l6-5 6 5zM26 6l6-5 6 5zM4 16c5 4 11 6 18 6s13-2 18-6l-4 2-3 3-3-2-4 3-4-3-4 3-4-3-3 2-3-3z" fill="#3a1500"></path></svg>
+          <span style="position:relative;width:28px;height:28px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#d4550a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.5L8 3l5.5 4.5V13h-11zM6.5 13V9.5h3V13"></path></svg></span>
+          <span style="position:relative;font-size:14px;font-weight:600;color:#fff">Today</span>
+        </div>
+        <div style="height:84px;border-radius:12px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:var(--card);border:1px solid var(--card-line)">
+          <span style="width:28px;height:28px;border-radius:8px;background:#6b3fc4;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3"></path></svg></span>
+          <span style="font-size:14px;font-weight:600">Calendar</span>
+        </div>
+      </div>
+
+      <sc-for list="{{ quick }}" as="q" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;height:46px;padding:0 12px 0 8px;border-radius:12px;background:var(--card);border:1px solid var(--card-line);margin-bottom:8px">
+          <span style="{{ q.iconStyle }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ q.d }}"></path></svg></span>
+          <span style="flex:1;font-size:14px;font-weight:600">{{ q.label }}</span>
+          <sc-if value="{{ q.plus }}" hint-placeholder-val="{{ true }}"><span style="color:var(--mut);font-size:18px;line-height:1">+</span></sc-if>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 8px 8px;font-size:12px;color:var(--mut)"><span>Workspaces</span><span style="font-size:16px">+</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:14px;font-weight:500">
+        <span style="color:var(--mut);font-size:10px">▾</span>
+        <span style="width:22px;height:22px;border-radius:6px;background:#6b3fc4;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8"></path></svg></span>Escola
+      </div>
+      <div style="flex:1;overflow:auto;min-height:0;padding:2px 0 8px">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="11">
+          <div style="display:flex;align-items:center;gap:10px;height:30px;padding:0 8px 0 30px;border-radius:7px;font-size:14px;cursor:pointer" style-hover="background:rgba(128,128,128,0.08)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="stroke:var(--orange)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.d }}"></path></svg>{{ n.label }}
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="border-top:1px solid var(--card-line);padding:10px 4px 12px;display:flex;flex-direction:column;gap:10px">
+        <div onClick="{{ toggleFx }}" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;background:var(--field);cursor:pointer;font-size:13px">
+          <svg width="16" height="10" viewBox="0 0 24 12" style="fill:var(--tx)"><path d="{{ batPath }}"></path></svg>
+          <span style="flex:1">Spooky effects</span>
+          <span style="{{ fxTrack }}"><span style="{{ fxKnob }}"></span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:0 4px">
+          <span style="width:30px;height:30px;border-radius:50%;background:#6b3fc4;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--side),0 0 0 3.5px var(--orange)">JT</span>
+          <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500">João Teixeira</span><span style="font-size:12px;color:var(--mut)">@admin</span></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="stroke:var(--mut)" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"></path></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:0 4px;font-size:12px;color:var(--mut)"><span style="width:7px;height:7px;border-radius:50%;background:var(--green)"></span><span style="flex:1">Up to date</span><span style="font-family:ui-monospace,Menlo,monospace">v0.3.0</span></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div style="position:relative;min-height:0;display:flex;flex-direction:column;padding:0 44px 28px;background:radial-gradient(ellipse 70% 40% at 45% -8%,var(--glow),transparent 70%),var(--bg)">
+      <div style="position:absolute;top:34px;right:120px;width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#fffaf0,var(--moon) 60%);box-shadow:0 0 50px 18px var(--moon-glow);pointer-events:none">
+        <span style="position:absolute;left:38px;top:16px;width:12px;height:12px;border-radius:50%;background:rgba(160,140,90,0.25)"></span>
+        <span style="position:absolute;left:18px;top:38px;width:8px;height:8px;border-radius:50%;background:rgba(160,140,90,0.22)"></span>
+        <span style="position:absolute;left:44px;top:44px;width:6px;height:6px;border-radius:50%;background:rgba(160,140,90,0.2)"></span>
+      </div>
+
+      <sc-if value="{{ spidersOn }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ spiders }}" as="sp" hint-placeholder-count="3">
+          <div style="{{ sp.wrap }}">
+            <span style="{{ sp.thread }}"></span>
+            <svg width="22" height="18" viewBox="0 0 20 16"><path d="M7 7L2 3M7 8L1 8M7 9L2 13M8 10L5 15M13 7L18 3M13 8L19 8M13 9L18 13M12 10L15 15" style="stroke:var(--spider)" stroke-width="1.2" stroke-linecap="round" fill="none"></path><ellipse cx="10" cy="9.5" rx="3.6" ry="4.2" style="fill:var(--spider)"></ellipse><circle cx="10" cy="4.6" r="2.3" style="fill:var(--spider)"></circle><circle cx="9.1" cy="4.4" r="0.6" fill="#ff7a1a"></circle><circle cx="10.9" cy="4.4" r="0.6" fill="#ff7a1a"></circle></svg>
+          </div>
+        </sc-for>
+      </sc-if>
+
+      <div style="position:relative;padding-top:58px;display:flex;flex-direction:column;gap:4px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;color:var(--orange)">WEDNESDAY 28 OCTOBER</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="font-size:32px;font-weight:700;letter-spacing:-0.02em">Good evening, João</div>
+          <span style="display:flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 9px;border-radius:14px;background:var(--chip-bg);color:var(--chip-tx);font-size:13px;font-weight:600;box-shadow:inset 0 0 0 1px var(--chip-line)"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 4.2c.4-1.4 1.2-2.2 2.2-2.5" stroke="#4b8a1c" stroke-width="1.4" stroke-linecap="round" fill="none"></path><ellipse cx="8" cy="9.3" rx="6.2" ry="5.2" fill="#ff7a1a"></ellipse><path d="M5 8l1.2-1.3L7.4 8zM8.6 8l1.2-1.3L11 8zM5 10.6c1 .9 2 1.2 3 1.2s2-.3 3-1.2l-.9.3-.6.6-.7-.5-.8.5-.8-.5-.7.5-.6-.6z" fill="#3a1500"></path></svg>3 days to Halloween</span>
+        </div>
+      </div>
+
+      <div style="position:relative;margin-top:20px;max-width:900px;display:flex;align-items:center;height:56px;padding:0 18px 0 22px;border-radius:14px;background:var(--card);border:1px solid var(--card-line);box-sizing:border-box">
+        <input placeholder="Jot something down… before it vanishes" style="flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--tx)"></input>
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" style="stroke:var(--mut)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"></rect><path d="M5.5 8l1.8 1.8L10.8 6"></path></svg>
+      </div>
+
+      <div style="flex:1;min-height:0;margin-top:28px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+
+        <div style="position:relative;min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--card-line);border-radius:16px;overflow:hidden">
+          <svg width="76" height="76" viewBox="0 0 64 64" style="position:absolute;top:0;right:0;pointer-events:none"><path d="{{ web }}" fill="none" style="stroke:var(--web)" stroke-width="0.8"></path></svg>
+          <div style="padding:22px 24px 6px;display:flex;align-items:baseline;gap:8px"><span style="font-size:24px;font-weight:700;color:var(--orange)">Today</span><span style="font-size:17px;color:var(--mut);font-weight:600">18</span></div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:0 24px 16px">
+            <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+              <div style="font-size:13px;font-weight:600;color:var(--mut);padding:10px 0 4px">{{ g.label }}</div>
+              <sc-for list="{{ g.tasks }}" as="t" hint-placeholder-count="5">
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid var(--row-line)">
+                  <button onClick="{{ t.toggle }}" style="{{ t.check }}"><sc-if value="{{ t.done }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"></path></svg></sc-if></button>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <div style="{{ t.titleStyle }}"><sc-if value="{{ t.hasPrio }}" hint-placeholder-val="{{ false }}"><span style="{{ t.prioStyle }}">{{ t.prio }}</span></sc-if>{{ t.title }}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--mut)">
+                      <sc-if value="{{ t.issue }}" hint-placeholder-val="{{ false }}"><span style="color:var(--green)">◎ #1</span></sc-if>
+                      <span style="{{ t.dateStyle }}">{{ t.date }}</span>
+                      <sc-if value="{{ t.repeat }}" hint-placeholder-val="{{ false }}"><span>↻ Every week</span></sc-if>
+                      <span>{{ t.list }}</span>
+                      <sc-for list="{{ t.tags }}" as="tg" hint-placeholder-count="0"><span style="color:var(--purple)">#{{ tg }}</span></sc-for>
+                    </div>
+                  </div>
+                  <sc-if value="{{ t.flag }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:3px"><path d="M4 14V2.5h8l-1.6 3 1.6 3H4" style="fill:var(--orange);stroke:var(--orange)" stroke-width="1.2" stroke-linejoin="round"></path></svg></sc-if>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="position:relative;min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--card-line);border-radius:16px;overflow:hidden">
+          <svg width="76" height="76" viewBox="0 0 64 64" style="position:absolute;top:0;right:0;pointer-events:none"><path d="{{ web }}" fill="none" style="stroke:var(--web)" stroke-width="0.8"></path></svg>
+          <div style="padding:22px 24px 6px"><span style="font-size:24px;font-weight:700;color:var(--purple)">Up Next</span></div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:0 24px 16px">
+            <sc-for list="{{ days }}" as="d" hint-placeholder-count="3">
+              <div style="font-size:13px;font-weight:600;color:var(--mut);padding:12px 0 6px">{{ d.label }}</div>
+              <sc-for list="{{ d.events }}" as="e" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;padding:6px 0">
+                  <span style="{{ e.bar }}"></span>
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <span style="font-size:15px;font-weight:500">{{ e.title }}</span>
+                    <span style="display:flex;gap:10px;font-size:13px;color:var(--mut)"><span>{{ e.time }}</span><sc-if value="{{ e.place }}" hint-placeholder-val="{{ false }}"><span>⌖ {{ e.place }}</span></sc-if><span>{{ e.list }}</span></span>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ batsOn }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5">
+        <sc-for list="{{ bats }}" as="b" hint-placeholder-count="0"><span style="{{ b.wrap }}"><svg width="{{ b.w }}" height="{{ b.h }}" viewBox="0 0 24 12" style="{{ b.svg }}"><path d="{{ batPath }}"></path></svg></span></sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;width:1440px">
+    <sc-for list="{{ th.palette }}" as="p" hint-placeholder-count="8">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;background:#fff;border-radius:10px;box-shadow:0 0 0 1px rgba(0,0,0,0.06)">
+        <span style="{{ p.sw }}"></span>
+        <span style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600">{{ p.name }}</span><span style="font-size:12px;color:#6e6e73;font-family:ui-monospace,Menlo,monospace">{{ p.hex }}</span></span>
+      </div>
+    </sc-for>
+  </div>
+  </div>
+  </sc-for>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"bats":{"editor":"boolean","default":true},"spiders":{"editor":"boolean","default":true}}'>
+class Component extends DCLogic {
+  state = { done:{}, fx:null };
+  renderVals(){
+    const s=this.state, P=this.props;
+    const on=v=>!(v===false||v==='false');
+    const fx = s.fx===null ? on(P.bats) : s.fx;
+    const rnd=(i,k)=>{const x=Math.sin(i*12.9898+k*78.233)*43758.5453;return x-Math.floor(x);};
+
+    const batPath='M12 2.6L11.1 0.8L12 1.8L12.9 0.8L12 2.6C13.4 2.6 14 4 14 4C16 1.5 20 1 24 3C21.5 3.5 20.5 5.5 20.5 7C19 5.8 17.5 6.2 16.5 7.5C15.5 6.2 14 6.5 12 9C10 6.5 8.5 6.2 7.5 7.5C6.5 6.2 5 5.8 3.5 7C3.5 5.5 2.5 3.5 0 3C4 1 8 1.5 10 4C10 4 10.6 2.6 12 2.6Z';
+    const bats=Array.from({length:7},(_,i)=>{const w=18+Math.round(rnd(i,2)*16);return {
+      w:String(w), h:String(Math.round(w/2)),
+      wrap:{position:'absolute',left:'0',top:(70+rnd(i,1)*700).toFixed(0)+'px',animation:`${i%2?'hflyA':'hflyB'} ${(14+rnd(i,3)*12).toFixed(1)}s linear ${(-rnd(i,4)*26).toFixed(1)}s infinite`,opacity:(0.55+rnd(i,5)*0.4).toFixed(2)},
+      svg:{display:'block',fill:'var(--bat)',transformOrigin:'center 35%',animation:`hflap ${(0.14+rnd(i,6)*0.1).toFixed(2)}s ease-in-out infinite alternate`}
+    };});
+
+    const spiders=[[64,34],[86,104],[95,60]].map(([x,len],i)=>({
+      wrap:{position:'absolute',top:'-12px',left:x+'%',display:'flex',flexDirection:'column',alignItems:'center',zIndex:2,pointerEvents:'none',animation:`hbob ${(2.6+i*0.7).toFixed(1)}s ease-in-out ${(-i*0.9).toFixed(1)}s infinite alternate`},
+      thread:{width:'1px',height:(len+12)+'px',background:'var(--thread)'}
+    }));
+
+    // cobweb anchored at the card's top-right corner (64,0)
+    const C=[64,0], tips=[[0,0],[8,22],[24,42],[42,58],[64,64]];
+    const dirs=tips.map(([x,y])=>{const dx=x-C[0],dy=y-C[1],l=Math.hypot(dx,dy);return [dx/l,dy/l];});
+    let web=''; dirs.forEach(([dx,dy],k)=>{const t=tips[k]; web+=`M64,0L${t[0]},${t[1]}`;});
+    [14,28,44,58].forEach(r=>{
+      const pts=dirs.map(([dx,dy])=>[C[0]+dx*r,C[1]+dy*r]);
+      web+=`M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+      for(let j=1;j<pts.length;j++){const a=pts[j-1],b=pts[j];const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;const cx=mx+(C[0]-mx)*0.18,cy=my+(C[1]-my)*0.18;web+=`Q${cx.toFixed(1)},${cy.toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`;}
+    });
+
+    const prioCol={'!':'var(--green)','!!':'var(--orange)','!!!':'var(--late)'};
+    const mk=(id,title,date,list,o={})=>{const done=!!s.done[id];return {
+      title,date,list,tags:o.tags||[],flag:!!o.flag,repeat:!!o.repeat,issue:!!o.issue,done,
+      hasPrio:!!o.prio,prio:o.prio||'',prioStyle:{color:prioCol[o.prio],fontWeight:700,marginRight:'5px'},
+      dateStyle:{color:o.today?'var(--orange)':'var(--late)'},
+      titleStyle:{fontSize:'15px',lineHeight:1.35,color:done?'var(--faint)':'var(--tx)',textDecoration:done?'line-through':'none'},
+      check:{width:'22px',height:'22px',marginTop:'1px',borderRadius:'50%',border:done?'none':'1.5px solid var(--check)',background:done?'radial-gradient(circle at 35% 30%,#ffb066,#e5620d 70%)':'transparent',boxShadow:done?'0 0 10px rgba(255,122,26,0.55)':'none',display:'flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flex:'none'},
+      toggle:()=>this.setState({done:{...s.done,[id]:!s.done[id]}})
+    };};
+
+    const groups=[
+      {label:'Today',tasks:[
+        mk('h1','Carve pumpkins with Rita','Today, 17:00','Personal',{tags:['halloween'],today:true}),
+        mk('h2','Finish the vampire cape','Today','Personal',{prio:'!!',tags:['halloween'],today:true})
+      ]},
+      {label:'Overdue',tasks:[
+        mk('t1','Call the dentist','13 Oct, 10:30','Personal'),
+        mk('t2','Q4 planning deck','11 Oct – 14 Oct','Work',{prio:'!!'}),
+        mk('t3','Budget review','12 Oct – 15 Oct','Work',{prio:'!!!',tags:['q4'],flag:true}),
+        mk('t4','Weekly report','13 Oct – 16 Oct','Work',{repeat:true}),
+        mk('t5','Review the Q4 budget slides','16 Oct','Work',{prio:'!!'}),
+        mk('t6','Review onboarding flow','13 Oct – 17 Oct','Work'),
+        mk('t7','Newsletter','15 Oct – 17 Oct','Work'),
+        mk('t8','Client onboarding flow','14 Oct – 19 Oct','Work',{prio:'!'}),
+        mk('t9','Hero image is blurry on retina','19 Oct','Work',{issue:true,tags:['Doing','bug']}),
+        mk('t10','History essay: the Industrial Revolution','16 Oct – 22 Oct','Escola',{prio:'!!!',flag:true})
+      ]}
+    ];
+
+    const bar=c=>({width:'4px',borderRadius:'2px',flex:'none',alignSelf:'stretch',background:c});
+    const stripes='repeating-linear-gradient(160deg,#ff7a1a 0 5px,#2a1f33 5px 10px)';
+    const ev=(title,time,place,list,c)=>({title,time,place,list,bar:bar(c)});
+    const days=[
+      {label:'Today',events:[ev('Maths','9:30 – 11:00','Room 2.14','Escola','#ff7a1a'),ev('Team stand-up','10:15 – 10:30','','Work','#8bd450')]},
+      {label:'Tomorrow',events:[ev('Team stand-up','10:15 – 10:30','','Work','#8bd450'),ev('History','11:30 – 13:00','Room 1.03','Escola','#9b6bff')]},
+      {label:'Friday',events:[ev('Team stand-up','10:15 – 10:30','','Work','#8bd450'),ev('Physics','14:30 – 16:00','Lab B','Escola','#ff5f57')]},
+      {label:'Saturday · Halloween',events:[ev('Halloween party at Rita’s','21:00 – late','Alfama','Personal',stripes)]},
+      {label:'Monday',events:[ev('Math','9:00 – 10:00','123','Escola','#9b6bff'),ev('Maths','9:30 – 11:00','Room 2.14','Escola','#ff7a1a')]}
+    ];
+
+    const ic=(bg)=>({width:'30px',height:'30px',borderRadius:'8px',background:bg,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'});
+    const quick=[
+      {label:'Quick Notes',plus:true,d:'M4 2.5h8v11H4zM6 6h4M6 8.5h4M6 11h2',iconStyle:ic('#6b3fc4')},
+      {label:'Quick Draw',plus:true,d:'M3 13l2-.5 7.5-7.5-1.5-1.5L3.5 11z',iconStyle:ic('#d4550a')},
+      {label:'My files',plus:false,d:'M2 4.5h4.5l1.5 1.5H14v7H2z',iconStyle:ic('#4b8a1c')}
+    ];
+    const nav=[
+      ['Calendar','M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3'],
+      ['Tasks','M2.5 4l1 1 2-2M7.5 4.5h6M2.5 9l1 1 2-2M7.5 9.5h6M7.5 13h6'],
+      ['Board','M2.5 3h11v10h-11zM6.2 3v10M9.8 3v10'],
+      ['Timeline','M3 2.5v11M5.5 4.5h5M5.5 8h7M5.5 11.5h4'],
+      ['Charts','M8 2.5a5.5 5.5 0 1 0 5.5 5.5H8zM10 2.7A5.5 5.5 0 0 1 13.3 6H10z'],
+      ['Notes','M4 2.5h5.5l3 3v8h-8.5zM9.5 2.5v3h3'],
+      ['Pages','M4 2.5h5.5l3 3v8h-8.5zM6 8h4.5M6 10.5h4.5'],
+      ['Whiteboards','M3 13l2-.5 7.5-7.5-1.5-1.5L3.5 11z'],
+      ['Courses','M1.5 6.5L8 3.5l6.5 3L8 9.5zM4.5 8v3c1 1 2 1.5 3.5 1.5s2.5-.5 3.5-1.5V8'],
+      ['Grades','M8 2.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7M6 9l-1 4.5 3-1.5 3 1.5-1-4.5'],
+      ['Habits','M3 7V6a2 2 0 0 1 2-2h7l-2-2M13 9v1a2 2 0 0 1-2 2H4l2 2']
+    ].map(([label,d])=>({label,d}));
+
+    const pal=list=>list.map(([name,hex])=>({name,hex,sw:{width:'28px',height:'28px',borderRadius:'7px',background:hex,boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.1)'}}));
+    const badge=(bg,fg)=>({background:bg,color:fg,fontSize:'12px',fontWeight:700,padding:'3px 8px',borderRadius:'6px',boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.08)'});
+    const themes=[
+      {label:'Light',cls:'hw light',badge:badge('#f8f4ec','#221a2a'),palette:pal([['Bone','#f8f4ec'],['Parchment (sidebar)','#efe9df'],['Card','#ffffff'],['Ink text','#221a2a'],['Pumpkin','#d45f08'],['Witch purple','#7440c9'],['Slime green','#4b8a1c'],['Blood red','#d1322e']])},
+      {label:'Dark',cls:'hw',badge:badge('#121017','#f2ead8'),palette:pal([['Midnight','#121017'],['Crypt (sidebar)','#0c0a10'],['Card','#1a1621'],['Bone text','#f2ead8'],['Pumpkin','#ff7a1a'],['Witch purple','#b48cff'],['Slime green','#8bd450'],['Blood red','#ff5f57']])}
+    ];
+
+    return {
+      themes, quick, nav, groups, days, bats, spiders, web, batPath,
+      batsOn:fx, spidersOn:on(P.spiders),
+      toggleFx:()=>this.setState({fx:!fx}),
+      fxTrack:{width:'34px',height:'20px',borderRadius:'10px',background:fx?'#e5620d':'var(--switch-off)',position:'relative',transition:'background .15s',flex:'none'},
+      fxKnob:{position:'absolute',top:'2px',left:fx?'16px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'#fff',transition:'left .15s'}
+    };
+  }
+}
+</script>
+</body>
+</html>

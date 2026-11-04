@@ -11583,6 +11583,10 @@ const docTemplate = `{
                     "description": "hide the password form on /login (when SSO is available)",
                     "type": "boolean"
                 },
+                "holiday_theme": {
+                    "description": "HolidayTheme: off | auto | christmas | halloween | nye | easter | santos | lunar.",
+                    "type": "string"
+                },
                 "login_message": {
                     "type": "string"
                 },
@@ -15749,6 +15753,20 @@ const docTemplate = `{
                 },
                 "favicon_data_url": {
                     "type": "string"
+                },
+                "holiday_theme": {
+                    "description": "HolidayTheme: off, auto (each holiday in its season) or one of them now.",
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "auto",
+                        "christmas",
+                        "halloween",
+                        "nye",
+                        "easter",
+                        "santos",
+                        "lunar"
+                    ]
                 },
                 "login_message": {
                     "type": "string"

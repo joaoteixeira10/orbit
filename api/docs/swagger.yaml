@@ -282,6 +282,10 @@ definitions:
       hide_local_login:
         description: hide the password form on /login (when SSO is available)
         type: boolean
+      holiday_theme:
+        description: 'HolidayTheme: off | auto | christmas | halloween | nye | easter
+          | santos | lunar.'
+        type: string
       login_message:
         type: string
       logo_data_url:
@@ -3216,6 +3220,19 @@ definitions:
         description: '"" goes back to DRAWIO_URL (or draw.io''s own)'
         type: string
       favicon_data_url:
+        type: string
+      holiday_theme:
+        description: 'HolidayTheme: off, auto (each holiday in its season) or one
+          of them now.'
+        enum:
+        - "off"
+        - auto
+        - christmas
+        - halloween
+        - nye
+        - easter
+        - santos
+        - lunar
         type: string
       login_message:
         type: string

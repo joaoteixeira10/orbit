@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-04
+
 ### Added
 
 - **Archive a list** — a finished project's list put away, its tasks kept:

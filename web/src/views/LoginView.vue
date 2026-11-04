@@ -6,6 +6,7 @@ import { KeyRound, ArrowLeft, Fingerprint, LogIn } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
 import { webauthnSupported, webauthnAutofillSupported, cancelWebauthnCeremony } from '@/api/webauthn'
+import { bioKind, deviceBio } from '@/lib/biometric'
 import CodeInput from '@/components/ui/CodeInput.vue'
 
 const auth = useAuthStore()
@@ -34,6 +35,18 @@ const showLocal = computed(() => !(branding.hideLocalLogin && branding.oidcEnabl
 const autoLoginAllowed = computed(() => route.query.local !== '1')
 // Passwordless passkey button: needs browser support + the admin toggle.
 const showPasskey = computed(() => webauthnSupported() && branding.passwordlessEnabled)
+// Face ID: on a device where it was turned on (Settings), while the owner
+// allows it — a button of its own, and asked for at once on arrival.
+const showBio = computed(() => webauthnSupported() && branding.biometricEnabled && !!deviceBio())
+const bioName = computed(() => t(`bio.kind.${bioKind()}`))
+// After a password or SSO sign-in, the app offers Face ID once (BioOffer).
+function offerBio() {
+  try {
+    sessionStorage.setItem('orbit_bio_offer', '1')
+  } catch {
+    /* no storage */
+  }
+}
 
 const ssoErrors: Record<string, string> = {
   disabled: t('acct.signin.ssoDisabled'),
@@ -105,6 +118,7 @@ onMounted(async () => {
     loading.value = true
     try {
       await auth.exchangeSSO(code)
+      offerBio()
       done()
     } catch (e: any) {
       error.value = e?.message || t('acct.signin.ssoFailed')
@@ -113,6 +127,13 @@ onMounted(async () => {
       loading.value = false
     }
     return
+  }
+  // Face ID set up on this device: asked for first. Cancelled → on as before
+  // (auto-SSO too); refused at once (a browser wanting a tap first) → the
+  // page, with its button.
+  if (autoLoginAllowed.value && showBio.value) {
+    const r = await signInWithBio(true)
+    if (r !== 'cancelled') return
   }
   // Auto-login (unless ?local=1): start SSO (a full-page redirect). On failure
   // the user is bounced back with ?sso_error, so this doesn't re-fire.
@@ -135,6 +156,7 @@ async function attempt(code?: string) {
       useRecovery.value = false
       return
     }
+    offerBio()
     done()
   } catch (e: any) {
     error.value = e?.message || t('acct.signin.failed')
@@ -170,6 +192,31 @@ async function signInWithPasskey() {
   }
 }
 
+// Face ID (this device's own lock). auto: asked for on arrival — then a
+// refusal stays quiet ('refused': the browser wanted a tap; 'cancelled': the
+// person said no, after the prompt showed).
+async function signInWithBio(auto = false): Promise<'ok' | 'cancelled' | 'refused' | 'failed'> {
+  cancelAutofill()
+  error.value = ''
+  loading.value = true
+  const t0 = Date.now()
+  try {
+    await auth.loginWithBiometric()
+    done()
+    return 'ok'
+  } catch (e: any) {
+    if (e?.name === 'NotAllowedError') {
+      const shown = Date.now() - t0 > 1000
+      if (!auto) error.value = t('bio.cancelled', { kind: bioName.value })
+      return shown ? 'cancelled' : 'refused'
+    }
+    error.value = t('bio.failed', { kind: bioName.value, error: e?.message ?? '' })
+    return 'failed'
+  } finally {
+    loading.value = false
+  }
+}
+
 // Passkey as the second factor after a password login.
 async function usedSecondFactorPasskey() {
   if (!passkeyChallenge.value) return
@@ -177,6 +224,7 @@ async function usedSecondFactorPasskey() {
   loading.value = true
   try {
     await auth.completeWithPasskey(passkeyChallenge.value.sessionId, passkeyChallenge.value.options)
+    offerBio()
     done()
   } catch (e: any) {
     error.value = e?.name === 'NotAllowedError' ? t('acct.signin.secondPasskeyCancelled') : e?.message || t('acct.signin.secondPasskeyFailed')
@@ -231,10 +279,13 @@ function backToCredentials() {
             <button type="submit" :disabled="loading" class="primary">{{ loading ? t('login.signingIn') : t('login.signIn') }}</button>
           </template>
 
-          <template v-if="showPasskey || branding.oidcEnabled">
+          <template v-if="showBio || showPasskey || branding.oidcEnabled">
             <div v-if="showLocal" class="or"><span />{{ t('login.or') }}<span /></div>
+            <button v-if="showBio" type="button" :disabled="loading" class="alt" data-testid="bio-signin" @click="signInWithBio()">
+              <Fingerprint :size="16" /> {{ t('bio.signIn', { kind: bioName }) }}
+            </button>
             <button v-if="showPasskey" type="button" :disabled="loading" class="alt" @click="signInWithPasskey">
-              <Fingerprint :size="16" /> {{ t('login.withPasskey') }}
+              <KeyRound :size="16" /> {{ t('login.withPasskey') }}
             </button>
             <button v-if="branding.oidcEnabled" type="button" :disabled="loading" class="alt" @click="signInWithSSO">
               <LogIn :size="16" /> {{ t('login.withSSO') }}

@@ -60,6 +60,11 @@ type brandingResponse struct {
 	HideLocalLogin      bool   `json:"hide_local_login"`     // hide the password form on /login (when SSO is available)
 	PasswordlessEnabled bool   `json:"passwordless_enabled"` // SPA shows the "Sign in with a passkey" button
 	AutoSSO             bool   `json:"auto_sso"`             // login page auto-starts SSO (unless ?local=1)
+	// Face ID & co. allowed; the lock's limit (minutes, 0 none) and whether
+	// a device with Face ID must lock.
+	BiometricEnabled      bool `json:"biometric_enabled"`
+	BiometricLockMax      int  `json:"biometric_lock_max"`
+	BiometricLockRequired bool `json:"biometric_lock_required"`
 
 	DeveloperThemesEnabled  bool   `json:"developer_themes_enabled"`
 	DeveloperTheme          string `json:"developer_theme"` // blue | gold | red | ink | green
@@ -122,6 +127,10 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		HideLocalLogin:      h.hideLocalLogin(),
 		PasswordlessEnabled: h.passwordlessEnabled(),
 		AutoSSO:             h.autoSSO(),
+
+		BiometricEnabled:      h.biometricEnabled(),
+		BiometricLockMax:      h.bioLockMax(),
+		BiometricLockRequired: h.bioLockRequired(),
 
 		DeveloperThemesEnabled:  m[keyDevThemesEnabled] == "true",
 		DeveloperTheme:          validDevTheme(m[keyDevTheme]),

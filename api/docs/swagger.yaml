@@ -267,6 +267,15 @@ definitions:
       auto_sso:
         description: login page auto-starts SSO (unless ?local=1)
         type: boolean
+      biometric_enabled:
+        description: |-
+          Face ID & co. allowed; the lock's limit (minutes, 0 none) and whether
+          a device with Face ID must lock.
+        type: boolean
+      biometric_lock_max:
+        type: integer
+      biometric_lock_required:
+        type: boolean
       developer_theme:
         description: blue | gold | red | ink | green
         type: string
@@ -2624,6 +2633,17 @@ definitions:
     properties:
       auto_sso:
         type: boolean
+      biometric_enabled:
+        description: |-
+          Face ID & co.: allowed at all; the lock's limit (minutes, 0 = none);
+          the lock required on every device with Face ID.
+        type: boolean
+      biometric_lock_max:
+        maximum: 1440
+        minimum: 0
+        type: integer
+      biometric_lock_required:
+        type: boolean
       hide_local_login:
         type: boolean
       otp_enforced:
@@ -4198,6 +4218,12 @@ definitions:
         type: boolean
       backup_eligible:
         type: boolean
+      biometric:
+        description: |-
+          Biometric: made as a device's own lock (Face ID, Touch ID, Windows
+          Hello, a fingerprint) — "Use Face ID" in Settings — not a passkey kept
+          elsewhere (a key, another phone, a password manager).
+        type: boolean
       created_at:
         type: string
       id:
@@ -4720,6 +4746,15 @@ paths:
       - auth
   /auth/step-up/webauthn/begin:
     post:
+      parameters:
+      - description: '1: with this device''s Face ID / Touch ID / Windows Hello'
+        in: query
+        name: biometric
+        type: string
+      - description: That device's credential id (base64url)
+        in: query
+        name: cred
+        type: string
       responses: {}
       security:
       - BearerAuth: []
@@ -4740,6 +4775,15 @@ paths:
       - auth
   /auth/webauthn/login/begin:
     post:
+      parameters:
+      - description: '1: with this device''s Face ID / Touch ID / Windows Hello'
+        in: query
+        name: biometric
+        type: string
+      - description: That device's credential id (base64url)
+        in: query
+        name: cred
+        type: string
       produces:
       - application/json
       responses:
@@ -7637,6 +7681,11 @@ paths:
       - auth
   /me/webauthn/register/begin:
     post:
+      parameters:
+      - description: '1: this device''s Face ID / Touch ID / Windows Hello'
+        in: query
+        name: biometric
+        type: string
       produces:
       - application/json
       responses:

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -67,11 +68,14 @@ func (h *Handlers) stepUp(c *gin.Context) {
 }
 
 // stepUpWebAuthnBegin starts a passkey assertion for the current user to
-// confirm a step-up action.
+// confirm a step-up action — or, ?biometric=1&cred=, to unlock Orbit with
+// this device's own lock (Face ID…).
 //
 //	@Summary	Step-up re-authentication (passkey, begin)
 //	@Tags		auth
 //	@Security	BearerAuth
+//	@Param		biometric	query	string	false	"1: with this device's Face ID / Touch ID / Windows Hello"
+//	@Param		cred		query	string	false	"That device's credential id (base64url)"
 //	@Router		/auth/step-up/webauthn/begin [post]
 func (h *Handlers) stepUpWebAuthnBegin(c *gin.Context) {
 	if !h.webauthnEnabled(c) {
@@ -82,7 +86,17 @@ func (h *Handlers) stepUpWebAuthnBegin(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "account no longer exists"})
 		return
 	}
-	opts, sid, err := h.webauthn.BeginLogin(&user)
+	// ?biometric=1&cred=: unlocking Orbit with this device's own lock.
+	begin := func() (any, string, error) { return h.webauthn.BeginLogin(&user) }
+	if c.Query("biometric") == "1" {
+		if !h.biometricEnabled() {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Face ID is turned off on this server"})
+			return
+		}
+		cred, _ := base64.RawURLEncoding.DecodeString(c.Query("cred"))
+		begin = func() (any, string, error) { return h.webauthn.BeginBiometricUnlock(&user, cred) }
+	}
+	opts, sid, err := begin()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no passkey registered"})
 		return

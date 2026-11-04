@@ -6,6 +6,16 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Added
+
+- **Face ID, Touch ID, Windows Hello, a fingerprint** — when the owner allows
+  it (Owner → Security), each person turns on their device's own lock: Orbit
+  offers it after a password or SSO sign-in, and Settings → Face ID and lock
+  has the switch. Then that device signs in with it (asked at once, and a
+  button of its own on the sign-in page), and can **lock Orbit** after a
+  while idle until Face ID. The owner may cap the lock's wait or require it.
+  Passkeys underneath, made on the device and verified.
+
 ### Fixed
 
 - **A task's details in dark mode** — one dark grey for the whole sheet with

@@ -100,6 +100,14 @@ the next sign-in.
   (owner can turn passwordless off). Challenges are single-use, bound to the
   user who started the ceremony, and expire after 3 minutes. A passkey counts
   as two-factor. Passkeys need `WEBAUTHN_RP_ID`.
+- **Face ID / Touch ID / Windows Hello** (owner's switch, off by default): a
+  passkey made on the device itself (platform authenticator) with user
+  verification required, marked biometric on the server. Signing in with it
+  asks for that one credential and refuses any other, or one that didn't
+  verify the person — so it works with passkey sign-in off. **The lock** (after
+  idle, or on coming back) is a cover in the browser: unlocking re-verifies
+  with that credential (a step-up), but the session itself isn't ended, so it
+  guards a device left unattended, not a stolen session.
 - Two-factor can be required for **everyone** (`otp_enforced`, owner) or **per
   user** (Admin → Users). Until they enrol, such users can only enrol.
 

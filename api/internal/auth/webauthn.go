@@ -19,6 +19,10 @@ import (
 // ErrWebAuthnDisabled is returned when passkeys are not configured (no RP ID).
 var ErrWebAuthnDisabled = errors.New("webauthn is not enabled")
 
+// ErrNotVerified is returned when a device's own lock (Face ID…) was asked
+// for and the credential isn't one, or didn't verify the person.
+var ErrNotVerified = errors.New("not verified with this device's own lock")
+
 // ErrChallengeExpired is returned when a ceremony's session id is unknown/expired.
 var ErrChallengeExpired = errors.New("challenge expired or not found")
 
@@ -72,6 +76,18 @@ func (m *Manager) userHasPasskey(uid string) bool { return UserHasPasskey(m.db, 
 
 // BeginRegistration starts enrolling a new passkey for an authenticated user.
 func (w *WebAuthn) BeginRegistration(u *models.User) (*protocol.PublicKeyCredentialCreationOptions, string, error) {
+	return w.beginRegistration(u, false)
+}
+
+// BeginBiometricRegistration starts enrolling this device's own lock (Face
+// ID, Touch ID, Windows Hello, a fingerprint): a platform authenticator that
+// must verify the person, so the browser goes straight to that prompt
+// instead of asking where to keep a passkey.
+func (w *WebAuthn) BeginBiometricRegistration(u *models.User) (*protocol.PublicKeyCredentialCreationOptions, string, error) {
+	return w.beginRegistration(u, true)
+}
+
+func (w *WebAuthn) beginRegistration(u *models.User, biometric bool) (*protocol.PublicKeyCredentialCreationOptions, string, error) {
 	if !w.Enabled() {
 		return nil, "", ErrWebAuthnDisabled
 	}
@@ -83,21 +99,30 @@ func (w *WebAuthn) BeginRegistration(u *models.User) (*protocol.PublicKeyCredent
 	for _, c := range wu.creds {
 		exclusions = append(exclusions, c.Descriptor())
 	}
-	opts, session, err := w.wa.BeginRegistration(wu,
-		webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
-			ResidentKey:      protocol.ResidentKeyRequirementPreferred,
-			UserVerification: protocol.VerificationPreferred,
-		}),
-		webauthn.WithExclusions(exclusions),
-	)
+	sel := protocol.AuthenticatorSelection{
+		ResidentKey:      protocol.ResidentKeyRequirementPreferred,
+		UserVerification: protocol.VerificationPreferred,
+	}
+	opts := []webauthn.RegistrationOption{webauthn.WithExclusions(exclusions)}
+	if biometric {
+		sel = protocol.AuthenticatorSelection{
+			AuthenticatorAttachment: protocol.Platform,
+			ResidentKey:             protocol.ResidentKeyRequirementRequired,
+			RequireResidentKey:      protocol.ResidentKeyRequired(),
+			UserVerification:        protocol.VerificationRequired,
+		}
+		opts = append(opts, webauthn.WithPublicKeyCredentialHints([]protocol.PublicKeyCredentialHints{protocol.PublicKeyCredentialHintClientDevice}))
+	}
+	opts = append(opts, webauthn.WithAuthenticatorSelection(sel))
+	creation, session, err := w.wa.BeginRegistration(wu, opts...)
 	if err != nil {
 		return nil, "", err
 	}
-	sid, err := w.putChallenge(challengeEntry{Data: *session, UserID: u.ID})
+	sid, err := w.putChallenge(challengeEntry{Data: *session, UserID: u.ID, Biometric: biometric})
 	if err != nil {
 		return nil, "", err
 	}
-	return &opts.Response, sid, nil
+	return &creation.Response, sid, nil
 }
 
 // FinishRegistration verifies the attestation and persists the new credential.
@@ -116,8 +141,13 @@ func (w *WebAuthn) FinishRegistration(u *models.User, name, sid string, r *http.
 	if err != nil {
 		return nil, err
 	}
+	// A device's own lock must have checked the person (Face ID, a finger…).
+	if entry.Biometric && !cred.Flags.UserVerified {
+		return nil, ErrNotVerified
+	}
 	row := fromWebauthnCredential(cred, u.ID)
 	row.Name = name
+	row.Biometric = entry.Biometric
 	if err := w.db.Create(&row).Error; err != nil {
 		return nil, err
 	}
@@ -142,6 +172,52 @@ func (w *WebAuthn) BeginLogin(u *models.User) (*protocol.PublicKeyCredentialRequ
 	return &opts.Response, sid, nil
 }
 
+// BeginBiometricLogin starts a passwordless sign-in with a device's own lock:
+// the person must be verified (Face ID, a finger…), and — given this
+// device's credential id — only that credential is asked for, so the
+// browser goes straight to its prompt.
+func (w *WebAuthn) BeginBiometricLogin(credID []byte) (*protocol.PublicKeyCredentialRequestOptions, string, error) {
+	if !w.Enabled() {
+		return nil, "", ErrWebAuthnDisabled
+	}
+	opts := []webauthn.LoginOption{webauthn.WithUserVerification(protocol.VerificationRequired)}
+	if len(credID) > 0 {
+		opts = append(opts, webauthn.WithAllowedCredentials([]protocol.CredentialDescriptor{{Type: protocol.PublicKeyCredentialType, CredentialID: credID}}))
+	}
+	req, session, err := w.wa.BeginDiscoverableLogin(opts...)
+	if err != nil {
+		return nil, "", err
+	}
+	sid, err := w.putChallenge(challengeEntry{Data: *session, Discoverable: true, Biometric: true})
+	if err != nil {
+		return nil, "", err
+	}
+	return &req.Response, sid, nil
+}
+
+// BeginBiometricUnlock asks a signed-in person for this device's own lock
+// again (Orbit locked after a while idle): their own credential only, and
+// verified.
+func (w *WebAuthn) BeginBiometricUnlock(u *models.User, credID []byte) (*protocol.PublicKeyCredentialRequestOptions, string, error) {
+	if !w.Enabled() {
+		return nil, "", ErrWebAuthnDisabled
+	}
+	wu := w.adapt(u)
+	opts := []webauthn.LoginOption{webauthn.WithUserVerification(protocol.VerificationRequired)}
+	if len(credID) > 0 {
+		opts = append(opts, webauthn.WithAllowedCredentials([]protocol.CredentialDescriptor{{Type: protocol.PublicKeyCredentialType, CredentialID: credID}}))
+	}
+	req, session, err := w.wa.BeginLogin(wu, opts...)
+	if err != nil {
+		return nil, "", err
+	}
+	sid, err := w.putChallenge(challengeEntry{Data: *session, UserID: u.ID, Biometric: true})
+	if err != nil {
+		return nil, "", err
+	}
+	return &req.Response, sid, nil
+}
+
 // BeginDiscoverableLogin starts a passwordless assertion (no user known yet).
 func (w *WebAuthn) BeginDiscoverableLogin() (*protocol.PublicKeyCredentialRequestOptions, string, error) {
 	if !w.Enabled() {
@@ -161,13 +237,26 @@ func (w *WebAuthn) BeginDiscoverableLogin() (*protocol.PublicKeyCredentialReques
 // FinishLogin completes either ceremony (discoverable or 2FA) keyed by the
 // session id, returns the authenticated user, and updates the credential's
 // sign count / backup state / last-used. The raw assertion JSON is the body.
+// A biometric ceremony (BeginBiometricLogin / BeginBiometricUnlock) only
+// passes with a credential made as a device's own lock, verified.
 func (w *WebAuthn) FinishLogin(sid string, r *http.Request) (*models.User, error) {
+	u, _, err := w.FinishLoginDetail(sid, r)
+	return u, err
+}
+
+// Assertion says how a sign-in was made.
+type Assertion struct {
+	Biometric bool // with a device's own lock (Face ID…), verified
+}
+
+// FinishLoginDetail is FinishLogin, saying how it was made.
+func (w *WebAuthn) FinishLoginDetail(sid string, r *http.Request) (*models.User, Assertion, error) {
 	if !w.Enabled() {
-		return nil, ErrWebAuthnDisabled
+		return nil, Assertion{}, ErrWebAuthnDisabled
 	}
 	entry, ok := w.takeChallenge(sid)
 	if !ok {
-		return nil, ErrChallengeExpired
+		return nil, Assertion{}, ErrChallengeExpired
 	}
 
 	var user models.User
@@ -188,19 +277,25 @@ func (w *WebAuthn) FinishLogin(sid string, r *http.Request) (*models.User, error
 		}, entry.Data, r)
 	} else {
 		if e := w.db.First(&user, "id = ?", entry.UserID).Error; e != nil {
-			return nil, e
+			return nil, Assertion{}, e
 		}
 		if user.Disabled {
-			return nil, ErrUserDisabled
+			return nil, Assertion{}, ErrUserDisabled
 		}
 		cred, err = w.wa.FinishLogin(w.adapt(&user), entry.Data, r)
 	}
 	if err != nil {
-		return nil, err
+		return nil, Assertion{}, err
+	}
+	var row models.WebAuthnCredential
+	w.db.Select("biometric").Where("credential_id = ?", cred.ID).First(&row)
+	a := Assertion{Biometric: row.Biometric && cred.Flags.UserVerified}
+	if entry.Biometric && !a.Biometric {
+		return nil, Assertion{}, ErrNotVerified
 	}
 
 	w.touchCredential(cred)
-	return &user, nil
+	return &user, a, nil
 }
 
 // touchCredential persists the post-assertion state of the matched credential.
@@ -311,6 +406,7 @@ type challengeEntry struct {
 	Data         webauthn.SessionData `json:"data"`
 	UserID       string               `json:"user_id,omitempty"` // pinned user (registration / 2FA)
 	Discoverable bool                 `json:"discoverable,omitempty"`
+	Biometric    bool                 `json:"biometric,omitempty"` // a device's own lock, verified
 }
 
 // putChallenge stores a ceremony under a fresh opaque, single-use id.

@@ -3407,6 +3407,67 @@ test('a workspace calendar: each list a calendar in its colour, mine to change; 
   await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
 })
 
+test('Face ID: offered after signing in, signs in with it, locks Orbit until it, turned off again', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const allow = await request.put('/api/v1/security/config', { headers: H, data: { biometric_enabled: true } })
+  test.skip(allow.status() === 400, 'passkeys are off on this test server (WEBAUTHN_RP_ID)')
+  expect(allow.ok()).toBeTruthy()
+
+  // This device's own lock: Chrome's virtual authenticator (built in, verifies the person).
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('WebAuthn.enable')
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
+  })
+  const verified = (on: boolean) => cdp.send('WebAuthn.setUserVerified', { authenticatorId, isUserVerified: on })
+
+  // Signing in with the password: Orbit asks once.
+  await signIn(page, NEW_PASSWORD)
+  await page.getByTestId('bio-offer-yes').click()
+  await expect(page.getByTestId('bio-offer')).toHaveCount(0)
+  const creds = (await (await request.get('/api/v1/me/webauthn', { headers: H })).json()) as { biometric: boolean }[]
+  expect(creds.some((c) => c.biometric)).toBe(true)
+  // Settings shows it on, with the lock.
+  await page.goto('/settings')
+  await expect(page.getByTestId('bio-toggle')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('bio-lock').selectOption('0') // "when I come back"
+
+  // Coming back (a reload): locked, until the device verifies the person.
+  await verified(false)
+  await page.reload()
+  await expect(page.getByTestId('bio-lock-screen')).toBeVisible()
+  await expect(page.getByTestId('bio-unlock')).toBeEnabled() // its own first try is over
+  await verified(true)
+  await page.getByTestId('bio-unlock').click()
+  await expect(page.getByTestId('bio-lock-screen')).toHaveCount(0)
+  await page.getByTestId('bio-lock').selectOption('-1') // never
+
+  // Signed out (the session cookie gone; this device keeps its Face ID): the
+  // sign-in page asks for Face ID at once…
+  await page.context().clearCookies()
+  await page.goto('/login')
+  await expect(page.getByTestId('bio-signin')).toBeVisible()
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+  await expect(page.locator('#sidebar')).toBeVisible()
+  // …and, the person not verified, shows its button instead.
+  await page.context().clearCookies()
+  await verified(false)
+  await page.goto('/login')
+  await expect(page.getByTestId('bio-signin')).toBeEnabled() // its own first try is over
+  await verified(true)
+  await page.getByTestId('bio-signin').click()
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+
+  // Turned off: its passkey goes, and the sign-in page has no Face ID button.
+  await page.goto('/settings')
+  await page.getByTestId('bio-toggle').click()
+  await expect(page.getByTestId('bio-toggle')).toHaveAttribute('aria-checked', 'false')
+  const after = (await (await request.get('/api/v1/me/webauthn', { headers: H })).json()) as { biometric: boolean }[]
+  expect(after.some((c) => c.biometric)).toBe(false)
+  await request.put('/api/v1/security/config', { headers: H, data: { biometric_enabled: false } })
+})
+
 test('task sheet: how its date stands, a status from its menu, any estimate, a file dropped in the activity, Start focus', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

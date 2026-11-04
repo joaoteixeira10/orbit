@@ -297,20 +297,24 @@ func orEmptyList(s string) string {
 // so MySQL uses an indexable varbinary(255).
 type WebAuthnCredential struct {
 	Base
-	UserID          string     `gorm:"index;size:36;not null" json:"user_id"`
-	Name            string     `gorm:"size:128" json:"name"` // user-given label
-	CredentialID    []byte     `gorm:"size:255;uniqueIndex" json:"-"`
-	PublicKey       []byte     `json:"-"` // COSE public key
-	AttestationType string     `gorm:"size:32" json:"-"`
-	AAGUID          []byte     `json:"-"`
-	SignCount       uint32     `gorm:"not null;default:0" json:"-"`
-	CloneWarning    bool       `gorm:"not null;default:false" json:"-"`
-	Transports      string     `gorm:"type:text" json:"-"` // JSON []string of AuthenticatorTransport
-	BackupEligible  bool       `gorm:"not null;default:false" json:"backup_eligible"`
-	BackupState     bool       `gorm:"not null;default:false" json:"backed_up"`
-	UserPresent     bool       `gorm:"not null;default:false" json:"-"`
-	UserVerified    bool       `gorm:"not null;default:false" json:"-"`
-	LastUsedAt      *time.Time `json:"last_used_at,omitempty"`
+	UserID          string `gorm:"index;size:36;not null" json:"user_id"`
+	Name            string `gorm:"size:128" json:"name"` // user-given label
+	CredentialID    []byte `gorm:"size:255;uniqueIndex" json:"-"`
+	PublicKey       []byte `json:"-"` // COSE public key
+	AttestationType string `gorm:"size:32" json:"-"`
+	AAGUID          []byte `json:"-"`
+	SignCount       uint32 `gorm:"not null;default:0" json:"-"`
+	CloneWarning    bool   `gorm:"not null;default:false" json:"-"`
+	Transports      string `gorm:"type:text" json:"-"` // JSON []string of AuthenticatorTransport
+	BackupEligible  bool   `gorm:"not null;default:false" json:"backup_eligible"`
+	BackupState     bool   `gorm:"not null;default:false" json:"backed_up"`
+	UserPresent     bool   `gorm:"not null;default:false" json:"-"`
+	UserVerified    bool   `gorm:"not null;default:false" json:"-"`
+	// Biometric: made as a device's own lock (Face ID, Touch ID, Windows
+	// Hello, a fingerprint) — "Use Face ID" in Settings — not a passkey kept
+	// elsewhere (a key, another phone, a password manager).
+	Biometric  bool       `gorm:"not null;default:false" json:"biometric"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 }
 
 // Setting is a global key/value (JSON) store: branding (logo, favicon,

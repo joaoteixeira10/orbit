@@ -586,6 +586,9 @@ const otpEnforced = ref(false)
 const hideLocalLogin = ref(false)
 const passwordlessEnabled = ref(true)
 const autoSso = ref(false)
+const biometric = ref(false)
+const bioLockMax = ref(0)
+const bioLockRequired = ref(false)
 const secLoaded = ref(false)
 async function loadSecurity() {
   const c = await securityApi.get()
@@ -593,6 +596,9 @@ async function loadSecurity() {
   hideLocalLogin.value = c.hide_local_login
   passwordlessEnabled.value = c.passwordless_enabled
   autoSso.value = c.auto_sso
+  biometric.value = c.biometric_enabled
+  bioLockMax.value = c.biometric_lock_max
+  bioLockRequired.value = c.biometric_lock_required
   secLoaded.value = true
 }
 async function setEnforce(v: boolean) {
@@ -622,6 +628,21 @@ async function setPasswordless(v: boolean) {
 async function setAutoSso(v: boolean) {
   try {
     autoSso.value = (await securityApi.update({ auto_sso: v })).auto_sso
+    toast.success(t('common.saved'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+// Face ID & co.: allowed, and the owner's rule for the lock.
+async function setBiometric(patch: Partial<{ biometric_enabled: boolean; biometric_lock_max: number; biometric_lock_required: boolean }>) {
+  try {
+    const c = await securityApi.update(patch)
+    biometric.value = c.biometric_enabled
+    bioLockMax.value = c.biometric_lock_max
+    bioLockRequired.value = c.biometric_lock_required
+    branding.biometricEnabled = c.biometric_enabled
+    branding.bioLockMax = c.biometric_lock_max
+    branding.bioLockRequired = c.biometric_lock_required
     toast.success(t('common.saved'))
   } catch (e: any) {
     toast.error(e.message)
@@ -1384,6 +1405,33 @@ function switchTab(t: Tab) {
           </div>
           <Toggle :model-value="passwordlessEnabled" @update:model-value="setPasswordless" />
         </div>
+
+        <div class="flex items-center justify-between gap-4 p-5" data-testid="sec-biometric">
+          <div>
+            <div class="text-[13px] font-semibold">{{ t('adm.security.biometric') }}</div>
+            <div class="text-[12px] text-text-3">{{ t('adm.security.biometricHint') }}</div>
+          </div>
+          <Toggle :model-value="biometric" :aria-label="t('adm.security.biometric')" @update:model-value="(v) => setBiometric({ biometric_enabled: v })" />
+        </div>
+        <template v-if="biometric">
+          <div class="flex items-center justify-between gap-4 p-5 pl-10">
+            <div>
+              <div class="text-[13px] font-semibold">{{ t('adm.security.bioLockMax') }}</div>
+              <div class="text-[12px] text-text-3">{{ t('adm.security.bioLockMaxHint') }}</div>
+            </div>
+            <select class="input !w-auto !py-1 text-[13px]" :value="bioLockMax" :aria-label="t('adm.security.bioLockMax')" data-testid="sec-bio-max" @change="setBiometric({ biometric_lock_max: Number(($event.target as HTMLSelectElement).value) })">
+              <option :value="0">{{ t('adm.security.bioLockNone') }}</option>
+              <option v-for="n in [1, 5, 15, 60]" :key="n" :value="n">{{ n === 60 ? t('bio.lockHour') : t('bio.lockMin', { n }, n) }}</option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between gap-4 p-5 pl-10">
+            <div>
+              <div class="text-[13px] font-semibold">{{ t('adm.security.bioLockRequired') }}</div>
+              <div class="text-[12px] text-text-3">{{ t('adm.security.bioLockRequiredHint') }}</div>
+            </div>
+            <Toggle :model-value="bioLockRequired" :aria-label="t('adm.security.bioLockRequired')" @update:model-value="(v) => setBiometric({ biometric_lock_required: v })" />
+          </div>
+        </template>
 
       </div>
     </section>

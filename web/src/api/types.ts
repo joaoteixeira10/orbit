@@ -62,6 +62,7 @@ export interface WebAuthnCredential {
   name: string
   backup_eligible: boolean
   backed_up: boolean
+  biometric?: boolean // this device's own lock ("Use Face ID")
   last_used_at?: string | null
 }
 
@@ -91,6 +92,10 @@ export interface Branding {
   hide_local_login: boolean
   passwordless_enabled: boolean
   auto_sso: boolean
+  // Face ID & co.: allowed; the lock's limit (minutes, 0 none); required.
+  biometric_enabled?: boolean
+  biometric_lock_max?: number
+  biometric_lock_required?: boolean
   // Developer themes (owner): a curated accent + UBonito crest / wordmark / favicon.
   developer_themes_enabled?: boolean
   developer_theme?: 'blue' | 'gold' | 'red' | 'ink' | 'green'

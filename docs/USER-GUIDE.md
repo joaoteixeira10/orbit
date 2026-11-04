@@ -113,6 +113,28 @@ offer your passkey as soon as you click the **Username** field.
 
 You add passkeys in **Settings → Passkeys** first.
 
+### With Face ID (Touch ID, Windows Hello, a fingerprint)
+
+If the owner allows it, each device can use its own lock. After you sign in
+with your password or SSO on a phone, tablet or computer that has one, Orbit
+asks once: **Sign in with Face ID next time?** (**Not now** isn't asked again
+on that device). It's also **Settings → Face ID and lock → Use Face ID** — the
+name is the device's: Touch ID on a Mac, Windows Hello on Windows,
+Fingerprint on Android.
+
+Once on, opening the sign-in page on that device asks for Face ID straight
+away; cancel it and the page is there as usual (or SSO, if it starts on its
+own). The card also has a button of its own, with a fingerprint: **Sign in
+with Face ID**. It's this device only — turn it on on each one. Turning it off
+removes it.
+
+**Lock with Face ID** (same place, once Face ID is on): Orbit covers itself
+after a while without use — **When I come back to it**, or after 1, 5 or 15
+minutes or an hour — until you use Face ID; **Sign out** is the other way.
+It's a cover for prying eyes: what you were doing is still there. The owner
+may set the longest it can wait, or ask for the lock on every device with
+Face ID.
+
 ### With single sign-on (SSO)
 
 If the owner set up SSO, the card shows **Sign in with SSO**. It takes you to
@@ -1640,6 +1662,7 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
   Outlook (*Add calendar → Subscribe from web*). Anyone with the address sees
   those events: revoke a feed (bin icon) to stop it.
 - **Password**, **Two-factor** (authenticator app, recovery codes),
+  **Face ID and lock** (see [With Face ID](#with-face-id-touch-id-windows-hello-a-fingerprint)),
   **Passkeys**, **API tokens**, and **Active sessions** when the owner turned
   them on.
 
@@ -1894,6 +1917,9 @@ Reminders). Click **Save**.
 | **Hide password login** | Hides the user name and password form when SSO is on. It is always back at `/login?local=1`. |
 | **Auto-start SSO sign-in** | Opening the sign-in page goes straight to the SSO provider. Skipped at `/login?local=1`. Needs SSO on. |
 | **Allow passwordless passkey sign-in** | Shows **Sign in with a passkey**. Passkeys as a second factor work either way. |
+| **Face ID / Touch ID** | People may turn on their device's own lock (Face ID, Touch ID, Windows Hello, a fingerprint) in Settings, to sign in on that device without a password and to lock Orbit when idle. Off by default; needs passkeys (`WEBAUTHN_RP_ID`), and works even with passkey sign-in off. |
+| **Longest the lock may wait** | Caps each person's lock (1, 5 or 15 minutes, an hour; or no limit). |
+| **Lock required** | Everyone with Face ID on a device must use the lock (**Never** isn't offered); without a limit it locks after 5 minutes. |
 
 > Before you hide the password form or auto-start SSO, test an SSO sign-in in
 > a private window, and bookmark `/login?local=1`.

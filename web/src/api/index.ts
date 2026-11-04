@@ -154,6 +154,9 @@ export interface SecurityConfig {
   hide_local_login: boolean
   passwordless_enabled: boolean
   auto_sso: boolean
+  biometric_enabled: boolean
+  biometric_lock_max: number
+  biometric_lock_required: boolean
 }
 export const securityApi = {
   get: () => api<SecurityConfig>('/security/config'),

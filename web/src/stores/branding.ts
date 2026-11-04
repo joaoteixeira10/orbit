@@ -54,6 +54,11 @@ export const useBrandingStore = defineStore('branding', {
     hideLocalLogin: false,
     passwordlessEnabled: true,
     autoSso: false,
+    // Face ID & co. (each person turns it on for their device), and the
+    // owner's rule for the lock.
+    biometricEnabled: false,
+    bioLockMax: 0,
+    bioLockRequired: false,
     // Developer themes
     devThemesEnabled: false,
     devTheme: 'blue' as DevThemeId,
@@ -129,6 +134,9 @@ export const useBrandingStore = defineStore('branding', {
       this.hideLocalLogin = b.hide_local_login
       this.passwordlessEnabled = b.passwordless_enabled
       this.autoSso = b.auto_sso
+      this.biometricEnabled = !!b.biometric_enabled
+      this.bioLockMax = b.biometric_lock_max ?? 0
+      this.bioLockRequired = !!b.biometric_lock_required
       this.devThemesEnabled = !!b.developer_themes_enabled
       this.devTheme = b.developer_theme || 'blue'
       this.assetSourceLogo = b.asset_source_logo || 'theme'

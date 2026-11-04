@@ -8,6 +8,8 @@ import {
   PanelRight, FolderOpen,
 } from 'lucide-vue-next'
 import SideRail from '@/components/SideRail.vue'
+import BioLock from '@/components/bio/BioLock.vue'
+import BioOffer from '@/components/bio/BioOffer.vue'
 import { rail, railFocus, setRailOpen } from '@/lib/rail'
 import { useAuthStore } from '@/stores/auth'
 import { usePrefsStore } from '@/stores/prefs'
@@ -335,6 +337,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 
 <template>
   <div class="app" :class="{ 'side-hidden': sideHidden && !narrow, 'rail-on': rail.open && railWide && railHere }">
+    <!-- Face ID: the lock, and the offer after signing in with a password -->
+    <BioLock />
+    <BioOffer />
     <div v-if="drawerOpen" class="side-backdrop" aria-hidden="true" @click="drawerOpen = false" />
     <aside id="sidebar" class="side material" :class="{ open: drawerOpen }" :inert="(narrow && !drawerOpen) || undefined">
       <div class="side-top">

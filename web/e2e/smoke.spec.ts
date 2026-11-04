@@ -3668,3 +3668,80 @@ test('documentation: Orbit’s guides in one place — read, follow a link betwe
   await expect(page).toHaveURL(/\/docs\/[a-z-]+#/)
   await expect(guide).toBeVisible()
 })
+
+test('holiday themes: the owner picks one; Home and the sidebar dress up, the decorations never take a click; Effects off and on; off is Orbit as always', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Season', kind: 'personal', modules: ['home', 'tasks'], starter: false } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Gifts' } })).json()
+  const d = new Date()
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Wrap the presents', list_id: list.id, due: today } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  // The owner picks Christmas in Branding (saved at once).
+  await page.goto('/owner')
+  await page.locator('.subtab', { hasText: 'Branding' }).click()
+  await page.getByTestId('holiday-christmas').click()
+  await expect(page.getByText('Holiday theme saved')).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-holiday', 'christmas')
+
+  // Home: the logo, the countdown, the capture box's line, snow on both cards.
+  await page.goto('/')
+  await expect(page.getByTestId('holiday-logo')).toBeVisible()
+  await expect(page.getByTestId('holiday-chip')).toHaveText(/\d+ days? to Christmas|Merry Christmas/)
+  await expect(page.getByText('Jot something down… making a list, checking it twice')).toBeVisible()
+  await expect(page.getByTestId('holiday-corner')).toHaveCount(2)
+  // What hangs and what falls: hidden from screen readers, never a click.
+  const hang = page.getByTestId('holiday-hang')
+  await expect(hang).toHaveAttribute('aria-hidden', 'true')
+  await expect(hang).toHaveCSS('pointer-events', 'none')
+  const fx = page.getByTestId('holiday-fx')
+  await expect(fx).toHaveAttribute('aria-hidden', 'true')
+  await expect(fx).toHaveCSS('pointer-events', 'none')
+  expect(await fx.locator('.h-flake').count()).toBeGreaterThan(10)
+  // Through the snow, the task is ticked (Playwright refuses a click another element would take).
+  const check = page.getByRole('checkbox', { name: 'Wrap the presents' })
+  await check.click()
+  await expect(check).toHaveAttribute('aria-checked', 'true')
+  await page.getByRole('link', { name: 'Calendar' }).first().click()
+  await expect(page).toHaveURL(/\/calendar/)
+  await page.goto('/')
+
+  // Effects off in the sidebar: the snow goes (the theme stays), and stays gone after a reload.
+  await page.getByTestId('holiday-effects-toggle').click()
+  await expect(fx).toHaveCount(0)
+  await expect.poll(async () => (await (await request.get('/api/v1/me/prefs', { headers: H })).json()).holiday_effects).toBe(false)
+  await page.reload()
+  await expect(hang).toBeAttached()
+  await expect(fx).toHaveCount(0)
+  // On again from Settings → Appearance.
+  await page.goto('/settings')
+  await page.getByTestId('holiday-effects').click()
+  await expect.poll(async () => (await (await request.get('/api/v1/me/prefs', { headers: H })).json()).holiday_effects).toBe(true)
+  await page.goto('/')
+  await expect(fx).toBeAttached()
+
+  // Reduced motion: the art stays, nothing falls.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.reload()
+  await expect(hang).toBeAttached()
+  await expect(fx).toHaveCount(0)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+
+  // A workspace's own Home isn't dressed.
+  await page.goto(`/w/${ws.id}`)
+  await expect(page.getByRole('heading', { name: 'Season' })).toBeVisible()
+  await expect(page.locator('main.holiday-main')).toHaveCount(0)
+  await expect(page.getByTestId('holiday-chip')).toHaveCount(0)
+
+  // Off: Orbit as always.
+  await request.put('/api/v1/settings', { headers: H, data: { holiday_theme: 'off' } })
+  await page.goto('/')
+  await expect(page.getByText('Jot something down…', { exact: true })).toBeVisible()
+  await expect(page.locator('html')).not.toHaveClass(/holiday/)
+  await expect(page.getByTestId('holiday-chip')).toHaveCount(0)
+  await expect(page.getByTestId('holiday-effects-row')).toHaveCount(0)
+  await expect(page.getByTestId('holiday-logo')).toHaveCount(0)
+})

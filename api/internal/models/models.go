@@ -210,6 +210,9 @@ type UserPrefs struct {
 	QuietFrom      string `gorm:"size:5" json:"quiet_from"`
 	QuietTo        string `gorm:"size:5" json:"quiet_to"`
 	QuietReminders bool   `gorm:"not null;default:false" json:"quiet_reminders"`
+	// HolidayEffectsOff: no falling snow, bats, confetti… in a holiday theme
+	// (its colours and art stay — the owner's).
+	HolidayEffectsOff bool `gorm:"not null;default:false" json:"-"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.

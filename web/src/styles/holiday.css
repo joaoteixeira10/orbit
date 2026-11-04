@@ -33,3 +33,68 @@ html.holiday .side .badge {
 html.holiday .side .search-btn {
   background: var(--h-field);
 }
+
+/* ---- Decorations (components/holiday): keyframes from the handoff's
+   holiday-themes.css. Falls go the window's height, and bats fly its width
+   (the handoff's note: its distances assume 1440 × 900). Only transform and
+   opacity move. ---- */
+@keyframes h-fallL {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-50px, calc(100vh + 40px)); }
+}
+@keyframes h-fallR {
+  from { transform: translate(0, 0); }
+  to { transform: translate(50px, calc(100vh + 40px)); }
+}
+@keyframes h-rise {
+  from { transform: translate(0, calc(100vh + 40px)); }
+  to { transform: translate(40px, -60px); }
+}
+@keyframes h-spin3d {
+  from { transform: rotate3d(1, 1, 0.3, 0deg); }
+  to { transform: rotate3d(1, 1, 0.3, 360deg); }
+}
+@keyframes h-flyA {
+  0% { transform: translate(-60px, 0); }
+  25% { transform: translate(25vw, -28px); }
+  50% { transform: translate(51.4vw, 12px); }
+  75% { transform: translate(77.8vw, -22px); }
+  100% { transform: translate(calc(100vw + 80px), 6px); }
+}
+@keyframes h-flyB {
+  0% { transform: translate(-60px, 0); }
+  30% { transform: translate(29.2vw, 22px); }
+  55% { transform: translate(55.6vw, -16px); }
+  80% { transform: translate(83.3vw, 18px); }
+  100% { transform: translate(calc(100vw + 80px), -8px); }
+}
+@keyframes h-flap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.35); }
+}
+@keyframes h-twinkle {
+  from { opacity: 1; }
+  to { opacity: 0.4; }
+}
+@keyframes h-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(10px); }
+}
+@keyframes h-sway {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(6deg); }
+}
+/* The window hidden: everything holds still. */
+html.holiday-paused .holiday-hang *,
+html.holiday-paused .holiday-fx * {
+  animation-play-state: paused !important;
+}
+/* Reduced motion: the still art stays; nothing moves for ever. */
+@media (prefers-reduced-motion: reduce) {
+  .holiday-fx {
+    display: none;
+  }
+  .holiday-hang * {
+    animation: none !important;
+  }
+}

@@ -2437,6 +2437,11 @@ definitions:
         items:
           type: integer
         type: array
+      holiday_effects:
+        description: |-
+          HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
+          unless turned off; the theme itself is the owner's).
+        type: boolean
       locale:
         type: string
       notify_channels:
@@ -3130,6 +3135,9 @@ definitions:
           type: integer
         maxItems: 8
         type: array
+      holiday_effects:
+        description: A holiday theme's falling snow, bats, confetti… on or off.
+        type: boolean
       locale:
         maxLength: 8
         type: string

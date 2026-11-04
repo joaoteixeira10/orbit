@@ -35,6 +35,7 @@ interface ServerPrefs {
   editor_themes?: EditorThemes
   calendar_colors?: Record<string, string>
   focus_lengths?: number[] // own focus timer lengths, minutes
+  holiday_effects?: boolean // a holiday theme's falling snow, bats, confetti…
 }
 
 function browserTZ(): string {
@@ -90,6 +91,8 @@ export const usePrefsStore = defineStore('prefs', {
     calendarColors: {} as Record<string, string>,
     // Own lengths for the focus timer (minutes), besides 15, 25 and 50.
     focusLengths: [] as number[],
+    // A holiday theme's falling snow, bats, confetti… (the theme is the owner's).
+    holidayEffects: true,
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
@@ -137,6 +140,7 @@ export const usePrefsStore = defineStore('prefs', {
       this.editorThemes = p.editor_themes ?? {}
       this.calendarColors = p.calendar_colors ?? {}
       this.focusLengths = p.focus_lengths ?? []
+      this.holidayEffects = p.holiday_effects !== false
       localStorage.setItem('orbit_editor_themes', JSON.stringify(this.editorThemes))
       mediaPrefs.remoteImages = this.remoteImages
       localStorage.setItem('orbit_remote_images', this.remoteImages)
@@ -218,6 +222,10 @@ export const usePrefsStore = defineStore('prefs', {
       await this.persist({ calendar_colors: { [key]: color } })
     },
     // Their own lengths for the focus timer.
+    async setHolidayEffects(on: boolean) {
+      this.holidayEffects = on
+      await this.persist({ holiday_effects: on })
+    },
     async setFocusLengths(lengths: number[]) {
       this.focusLengths = lengths
       await this.persist({ focus_lengths: lengths })

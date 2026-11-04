@@ -40,6 +40,9 @@ type prefsResponse struct {
 	QuietTo        string `json:"quiet_to"`
 	QuietReminders bool   `json:"quiet_reminders"`
 	Quiet          bool   `json:"quiet"` // it's quiet now
+	// HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
+	// unless turned off; the theme itself is the owner's).
+	HolidayEffects bool `json:"holiday_effects"`
 }
 
 // editorKinds are the editors that may keep their own theme.
@@ -90,6 +93,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		QuietTo:        p.QuietTo,
 		QuietReminders: p.QuietReminders,
 		Quiet:          inbox.Quiet(p, time.Now()),
+		HolidayEffects: !p.HolidayEffectsOff,
 	}
 }
 
@@ -270,6 +274,9 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	}
 	if req.QuietReminders != nil {
 		updates["quiet_reminders"] = *req.QuietReminders
+	}
+	if req.HolidayEffects != nil {
+		updates["holiday_effects_off"] = !*req.HolidayEffects
 	}
 	if req.DevTheme != nil {
 		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {

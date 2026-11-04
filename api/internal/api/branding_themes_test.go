@@ -77,3 +77,24 @@ func TestHolidayTheme(t *testing.T) {
 		t.Errorf("an unknown holiday was accepted: %d", w.Code)
 	}
 }
+
+// TestHolidayEffects: each person's effects are on until they turn them off.
+func TestHolidayEffects(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p prefsResponse
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if !p.HolidayEffects {
+		t.Fatal("effects are on by default")
+	}
+	authdo(r, "PUT", "/api/v1/me/prefs", `{"holiday_effects":false}`, owner)
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.HolidayEffects {
+		t.Error("effects stayed on")
+	}
+	authdo(r, "PUT", "/api/v1/me/prefs", `{"holiday_effects":true}`, owner)
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if !p.HolidayEffects {
+		t.Error("effects stayed off")
+	}
+}

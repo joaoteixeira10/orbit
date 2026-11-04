@@ -105,4 +105,6 @@ type updatePrefsRequest struct {
 	QuietFrom      *string `json:"quiet_from"`
 	QuietTo        *string `json:"quiet_to"`
 	QuietReminders *bool   `json:"quiet_reminders"`
+	// A holiday theme's falling snow, bats, confetti… on or off.
+	HolidayEffects *bool `json:"holiday_effects"`
 }

@@ -14664,6 +14664,10 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "holiday_effects": {
+                    "description": "HolidayEffects: a holiday theme's falling snow, bats, confetti… (on\nunless turned off; the theme itself is the owner's).",
+                    "type": "boolean"
+                },
                 "locale": {
                     "type": "string"
                 },
@@ -15623,6 +15627,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "holiday_effects": {
+                    "description": "A holiday theme's falling snow, bats, confetti… on or off.",
+                    "type": "boolean"
                 },
                 "locale": {
                     "type": "string",

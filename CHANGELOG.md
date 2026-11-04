@@ -6,6 +6,13 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Removed
+
+- **Face ID / Touch ID / Windows Hello sign-in and the lock** (from 0.3.0) —
+  on a phone it was a passkey under another name, so passkeys alone it
+  is. A device that had it turned on keeps it as an ordinary passkey (Settings
+  → Passkeys, where it can be renamed or removed).
+
 ## [0.3.0] - 2026-11-04
 
 ### Added

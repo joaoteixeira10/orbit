@@ -64,9 +64,6 @@ jobs:
           # Every test signs in; keep the sign-in rate limit out of the way.
           AUTH_RATE_BURST: "50"
           AUTH_RATE_PER_MINUTE: "600"
-          # Passkeys on (Face ID is tested with Chrome's virtual authenticator).
-          WEBAUTHN_RP_ID: localhost
-          WEBAUTHN_RP_ORIGINS: http://localhost:8080
           E2E_BASE_URL: http://localhost:8080
           E2E_CALDAV_URL: http://radicale:5232
         run: |

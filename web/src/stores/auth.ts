@@ -111,13 +111,6 @@ export const useAuthStore = defineStore('auth', {
       await this.adopt(res.access_token)
     },
 
-    // loginWithBiometric signs in with this device's Face ID / Touch ID /
-    // Windows Hello (set up in Settings).
-    async loginWithBiometric(): Promise<void> {
-      const { bioApi } = await import('@/lib/biometric')
-      await this.adopt(await bioApi.signIn())
-    },
-
     // loginWithPasskeyAutofill arms conditional UI (passkey autofill on the
     // username field); resolves once the user picks a credential.
     async loginWithPasskeyAutofill(): Promise<void> {

@@ -553,20 +553,6 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Step-up re-authentication (passkey, begin)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "1: with this device's Face ID / Touch ID / Windows Hello",
-                        "name": "biometric",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "That device's credential id (base64url)",
-                        "name": "cred",
-                        "in": "query"
-                    }
-                ],
                 "responses": {}
             }
         },
@@ -600,20 +586,6 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Begin passwordless passkey login",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "1: with this device's Face ID / Touch ID / Windows Hello",
-                        "name": "biometric",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "That device's credential id (base64url)",
-                        "name": "cred",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5284,14 +5256,6 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Begin passkey registration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "1: this device's Face ID / Touch ID / Windows Hello",
-                        "name": "biometric",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -11598,16 +11562,6 @@ const docTemplate = `{
                     "description": "login page auto-starts SSO (unless ?local=1)",
                     "type": "boolean"
                 },
-                "biometric_enabled": {
-                    "description": "Face ID \u0026 co. allowed; the lock's limit (minutes, 0 none) and whether\na device with Face ID must lock.",
-                    "type": "boolean"
-                },
-                "biometric_lock_max": {
-                    "type": "integer"
-                },
-                "biometric_lock_required": {
-                    "type": "boolean"
-                },
                 "developer_theme": {
                     "description": "blue | gold | red | ink | green",
                     "type": "string"
@@ -14979,18 +14933,6 @@ const docTemplate = `{
                 "auto_sso": {
                     "type": "boolean"
                 },
-                "biometric_enabled": {
-                    "description": "Face ID \u0026 co.: allowed at all; the lock's limit (minutes, 0 = none);\nthe lock required on every device with Face ID.",
-                    "type": "boolean"
-                },
-                "biometric_lock_max": {
-                    "type": "integer",
-                    "maximum": 1440,
-                    "minimum": 0
-                },
-                "biometric_lock_required": {
-                    "type": "boolean"
-                },
                 "hide_local_login": {
                     "type": "boolean"
                 },
@@ -17142,10 +17084,6 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "backup_eligible": {
-                    "type": "boolean"
-                },
-                "biometric": {
-                    "description": "Biometric: made as a device's own lock (Face ID, Touch ID, Windows\nHello, a fingerprint) — \"Use Face ID\" in Settings — not a passkey kept\nelsewhere (a key, another phone, a password manager).",
                     "type": "boolean"
                 },
                 "created_at": {

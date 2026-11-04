@@ -21,8 +21,6 @@ import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import Toggle from '@/components/ui/Toggle.vue'
-import { bioApi, bioAvailable, bioKind, deviceBio, forgetDeviceBio, lockAfter, lockChoice, lockChoices, markActive, setLockChoice } from '@/lib/biometric'
 import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { calendarApi, type Feed } from '@/api/planner'
@@ -277,54 +275,6 @@ async function loadPasskeys() {
   } catch {
     /* ignore */
   }
-  syncBio()
-}
-
-// ---- Face ID (this device's own lock): on or off here, and the lock ----
-const bioOk = ref(false)
-void bioAvailable().then((v) => (bioOk.value = v))
-const bioShown = computed(() => branding.biometricEnabled && passkeysAvailable.value && bioOk.value && !auth.impersonator)
-const kind = computed(() => t(`bio.kind.${bioKind()}`))
-const bioOn = ref(false)
-const bioBusy = ref(false)
-// On when this device keeps one for this person and the server still has it.
-function syncBio() {
-  const d = deviceBio()
-  if (!d || d.user !== auth.user?.id) return (bioOn.value = false)
-  bioOn.value = passkeys.value.some((p) => String(p.id) === d.id)
-  if (!bioOn.value) forgetDeviceBio()
-}
-async function setBio(on: boolean) {
-  bioBusy.value = true
-  try {
-    if (on) await bioApi.turnOn(auth.user!.id, `${kind.value} · ${parseUA(navigator.userAgent).os}`)
-    else await bioApi.turnOff()
-    await loadPasskeys()
-    await auth.fetchMe()
-    toast.success(t(on ? 'bio.turnedOn' : 'bio.turnedOff', { kind: kind.value }))
-    markActive()
-  } catch (e: any) {
-    const name = e?.name
-    toast.error(name === 'NotAllowedError' ? t('bio.cancelled', { kind: kind.value }) : name === 'InvalidStateError' ? t('bio.already', { kind: kind.value }) : t('bio.failed', { kind: kind.value, error: e?.message ?? '' }))
-  } finally {
-    bioBusy.value = false
-    syncBio()
-  }
-}
-const lockSel = ref(lockChoice())
-const lockOptions = computed(() => lockChoices(branding.bioLockMax, branding.bioLockRequired))
-const lockNow = computed(() => lockAfter(lockSel.value, branding.bioLockMax, branding.bioLockRequired))
-function lockLabel(n: number) {
-  if (n < 0) return t('bio.lockNever')
-  if (n === 0) return t('bio.lockNow')
-  if (n === 60) return t('bio.lockHour')
-  return t('bio.lockMin', { n }, n)
-}
-function setLock(n: number) {
-  setLockChoice(n)
-  lockSel.value = n
-  markActive()
-  window.dispatchEvent(new Event('orbit:bio-lock'))
 }
 function openAddPasskey() {
   pkName.value = ''
@@ -749,33 +699,6 @@ onMounted(loadSessions)
                 </div>
               </div>
             </template>
-          </div>
-        </section>
-
-        <!-- Face ID: this device's own lock -->
-        <section v-if="bioShown" id="faceid" class="card overflow-hidden scroll-mt-4" data-testid="bio-settings">
-          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Fingerprint class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('bio.title') }}</h2></div>
-          <div class="flex flex-col gap-4 p-5">
-            <div class="flex items-center justify-between gap-4">
-              <div>
-                <div class="text-[13px] font-semibold">{{ t('bio.use', { kind }) }}</div>
-                <div class="text-[12px] text-text-3">{{ t('bio.useHint', { kind }) }}</div>
-              </div>
-              <Toggle :model-value="bioOn" :disabled="bioBusy" :aria-label="t('bio.use', { kind })" data-testid="bio-toggle" @update:model-value="setBio" />
-            </div>
-            <div v-if="bioOn" class="flex items-center justify-between gap-4">
-              <div>
-                <div class="text-[13px] font-semibold">{{ t('bio.lock', { kind }) }}</div>
-                <div class="text-[12px] text-text-3">
-                  {{ t('bio.lockHint', { kind }) }}
-                  <template v-if="branding.bioLockRequired"> {{ t('bio.lockRequired', { kind }) }}</template>
-                  <template v-if="branding.bioLockMax"> {{ t('bio.lockMax', { n: branding.bioLockMax }) }}</template>
-                </div>
-              </div>
-              <select class="input !w-auto !py-1 text-[13px]" :value="lockNow" :aria-label="t('bio.lock', { kind })" data-testid="bio-lock" @change="setLock(Number(($event.target as HTMLSelectElement).value))">
-                <option v-for="n in lockOptions" :key="n" :value="n">{{ lockLabel(n) }}</option>
-              </select>
-            </div>
           </div>
         </section>
 

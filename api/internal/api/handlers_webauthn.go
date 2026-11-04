@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -22,16 +21,13 @@ func (h *Handlers) webauthnEnabled(c *gin.Context) bool {
 	return true
 }
 
-// webauthnRegisterBegin starts enrolling a new passkey for the current user;
-// ?biometric=1: this device's own lock ("Use Face ID"), straight to its
-// prompt — while the owner allows it.
+// webauthnRegisterBegin starts enrolling a new passkey for the current user.
 //
 //	@Summary	Begin passkey registration
 //	@Tags		auth
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		biometric	query		string	false	"1: this device's Face ID / Touch ID / Windows Hello"
-//	@Success	200			{object}	map[string]any
+//	@Success	200	{object}	map[string]any
 //	@Router		/me/webauthn/register/begin [post]
 func (h *Handlers) webauthnRegisterBegin(c *gin.Context) {
 	if !h.webauthnEnabled(c) {
@@ -42,15 +38,7 @@ func (h *Handlers) webauthnRegisterBegin(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
-	begin := h.webauthn.BeginRegistration
-	if c.Query("biometric") == "1" {
-		if !h.biometricEnabled() {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Face ID sign-in is turned off on this server"})
-			return
-		}
-		begin = h.webauthn.BeginBiometricRegistration
-	}
-	opts, sid, err := begin(&user)
+	opts, sid, err := h.webauthn.BeginRegistration(&user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not start registration"})
 		return
@@ -87,7 +75,7 @@ func (h *Handlers) webauthnRegisterFinish(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "registration failed: " + err.Error()})
 		return
 	}
-	h.audit.Record(user.ID, "auth.webauthn_register", "user", user.ID, c.ClientIP(), map[string]any{"biometric": cred.Biometric})
+	h.audit.Record(user.ID, "auth.webauthn_register", "user", user.ID, c.ClientIP(), nil)
 	c.JSON(http.StatusOK, cred)
 }
 
@@ -156,34 +144,15 @@ func (h *Handlers) deleteWebAuthnCredential(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// webauthnLoginBegin starts a passwordless (discoverable) assertion;
-// ?biometric=1 with a device's own lock (Face ID…; &cred= its credential id,
-// base64url, to ask for it alone) — allowed while the owner allows Face ID,
-// even with passkey sign-in off.
+// webauthnLoginBegin starts a passwordless (discoverable) assertion.
 //
 //	@Summary	Begin passwordless passkey login
 //	@Tags		auth
 //	@Produce	json
-//	@Param		biometric	query		string	false	"1: with this device's Face ID / Touch ID / Windows Hello"
-//	@Param		cred		query		string	false	"That device's credential id (base64url)"
-//	@Success	200			{object}	map[string]any
+//	@Success	200	{object}	map[string]any
 //	@Router		/auth/webauthn/login/begin [post]
 func (h *Handlers) webauthnLoginBegin(c *gin.Context) {
 	if !h.webauthnEnabled(c) {
-		return
-	}
-	if c.Query("biometric") == "1" {
-		if !h.biometricEnabled() {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Face ID sign-in is turned off on this server"})
-			return
-		}
-		cred, _ := base64.RawURLEncoding.DecodeString(c.Query("cred"))
-		opts, sid, err := h.webauthn.BeginBiometricLogin(cred)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not start login"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"session_id": sid, "options": opts})
 		return
 	}
 	if !h.passwordlessEnabled() {
@@ -214,7 +183,7 @@ func (h *Handlers) webauthnLoginFinish(c *gin.Context) {
 		return
 	}
 	now := time.Now()
-	user, how, err := h.webauthn.FinishLoginDetail(c.Query("sid"), c.Request)
+	user, err := h.webauthn.FinishLogin(c.Query("sid"), c.Request)
 	if err != nil {
 		metrics.Login("passkey", "failure")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "passkey authentication failed"})
@@ -233,7 +202,7 @@ func (h *Handlers) webauthnLoginFinish(c *gin.Context) {
 	}
 	metrics.Login("passkey", "success")
 	h.auth.RecordLoginSuccess(user)
-	h.audit.Record(user.ID, "auth.webauthn_login", "user", user.ID, c.ClientIP(), map[string]any{"biometric": how.Biometric})
+	h.audit.Record(user.ID, "auth.webauthn_login", "user", user.ID, c.ClientIP(), nil)
 	c.JSON(http.StatusOK, resp)
 }
 

@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-04
+
 ### Added
 
 - **Face ID, Touch ID, Windows Hello, a fingerprint** — when the owner allows

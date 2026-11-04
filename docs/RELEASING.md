@@ -5,7 +5,7 @@ the image, then tag and publish the release. Read it before your first
 release and every time you're unsure. Every step is **manual**: nothing builds,
 pushes, tags or publishes on a push or a merge.
 
-> **Status:** the latest release is v0.2.0 (2026-11-04; the first was v0.1.0,
+> **Status:** the latest release is v0.3.0 (2026-11-04; the first was v0.1.0,
 > 2026-10-31). The next one starts at step 0 with the next version.
 
 ## TL;DR

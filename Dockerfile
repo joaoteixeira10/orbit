@@ -47,7 +47,7 @@ RUN VP=gitea.ubonito.org/jteixeira/orbit/api/internal/version; \
 RUN mkdir -p /out/data
 
 # ---------- Stage 3: minimal runtime ----------
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=api /out/orbit /orbit
 COPY --from=api --chown=65532:65532 /out/data /data
 EXPOSE 8080

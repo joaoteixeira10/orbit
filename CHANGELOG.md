@@ -97,6 +97,17 @@ merge, not at release time.
 - **Quick Draw's own colours were lost on reload** — they're sent with the
   sign-in again (and so are the new editor looks and calendar colours).
 
+### Security
+
+- The runtime image is now **distroless Debian 13** (Debian 12's had
+  outdated ca-certificates and tzdata); the image scans clean (Trivy).
+- **go-jose 4.1.6** (used by SSO sign-in): three denial-of-service
+  advisories fixed (one high).
+- **golang.org/x/net 0.62** (two HTML-parsing advisories) and
+  **golang.org/x/crypto** without its unmaintained `openpgp` package.
+- **KaTeX 0.18.11** (in Mermaid diagrams): a prototype-pollution advisory
+  fixed. `govulncheck` and `npm audit` report nothing.
+
 ## [0.1.0] - 2026-10-31
 
 ### Security

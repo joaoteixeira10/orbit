@@ -3468,6 +3468,30 @@ test('Face ID: offered after signing in, signs in with it, locks Orbit until it,
   await request.put('/api/v1/security/config', { headers: H, data: { biometric_enabled: false } })
 })
 
+test('workspace modules: the owner drags one to a new place, and the sidebar follows', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'In order', kind: 'work', starter: false, modules: ['home', 'tasks', 'calendar', 'notes'] } })).json()
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.evaluate((id) => window.dispatchEvent(new CustomEvent('orbit:settings', { detail: { ws: id, tab: 'modules' } })), ws.id)
+  const rows = page.locator('.group-row[data-id]')
+  await expect(rows.first()).toBeVisible()
+  // Notes, by its grip, above Tasks.
+  const a = (await page.locator('.group-row[data-id="notes"] .drag').boundingBox())!
+  const b = (await page.locator('.group-row[data-id="tasks"]').boundingBox())!
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(a.x + a.width / 2, a.y - 10, { steps: 5 })
+  await page.mouse.move(b.x + 20, b.y + 4, { steps: 15 })
+  await page.waitForTimeout(150)
+  await page.mouse.move(b.x + 22, b.y + 3, { steps: 2 })
+  await page.waitForTimeout(150)
+  await page.mouse.up()
+  const order = async () => ((await (await request.get('/api/v1/workspaces', { headers: H })).json()) as { id: string; modules: string[] }[]).find((w) => w.id === ws.id)?.modules
+  await expect.poll(order).toEqual(['home', 'notes', 'tasks', 'calendar'])
+})
+
 test('task sheet: how its date stands, a status from its menu, any estimate, a file dropped in the activity, Start focus', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

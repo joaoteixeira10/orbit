@@ -482,7 +482,7 @@ watch(
   background: linear-gradient(160deg, #fff7c7, #ffe98a);
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 6px 18px rgba(255, 204, 0, 0.25);
 }
-:global(html.dark) .empty-icon {
+html.dark .empty-icon {
   color: #ffd60a;
   background: linear-gradient(160deg, #4f4622, #3d3518);
   box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);

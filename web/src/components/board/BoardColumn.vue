@@ -267,7 +267,7 @@ function onComposerBlur() {
   background: var(--fill-2);
   scroll-snap-align: start;
 }
-:global(html.dark) .col {
+html.dark .col {
   background: rgba(118, 118, 128, 0.12);
 }
 @media (max-width: 639px) {

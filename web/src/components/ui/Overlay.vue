@@ -99,7 +99,7 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
     padding-bottom: 0;
   }
 }
-:global(html.dark) .sheet {
+html.dark .sheet {
   background: #2c2c2e;
 }
 </style>

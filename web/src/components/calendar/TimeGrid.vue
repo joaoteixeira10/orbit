@@ -604,7 +604,7 @@ const selLabel = computed(() => {
   filter: brightness(0.97);
   z-index: 2;
 }
-:global(html.dark) .tg-ev:hover {
+html.dark .tg-ev:hover {
   filter: brightness(1.15);
 }
 .tg-ev.ext {

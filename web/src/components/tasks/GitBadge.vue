@@ -48,15 +48,15 @@ const label = computed(() => {
   font-variant-numeric: tabular-nums;
   color: #248a3d;
 }
-:global(html.dark) .git-badge {
+html.dark .git-badge {
   color: #30d158;
 }
 .git-badge.closed,
 .git-badge.merged {
   color: #8944ab;
 }
-:global(html.dark) .git-badge.closed,
-:global(html.dark) .git-badge.merged {
+html.dark .git-badge.closed,
+html.dark .git-badge.merged {
   color: #bf5af2;
 }
 .git-badge:hover {

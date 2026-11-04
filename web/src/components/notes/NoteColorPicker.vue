@@ -58,7 +58,7 @@ const label = (c: NoteColor) => t(`notes.colors.${c || 'plain'}`)
   color: var(--text);
   box-shadow: inset 0 0 0 0.5px var(--border-2), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent);
 }
-:global(html.dark) .swatch.on {
+html.dark .swatch.on {
   box-shadow: inset 0 0 0 0.5px var(--border-2), 0 0 0 2px #2c2c2e, 0 0 0 3.5px var(--accent);
 }
 </style>

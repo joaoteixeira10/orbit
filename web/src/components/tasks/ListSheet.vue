@@ -521,7 +521,7 @@ async function destroy() {
   min-height: 44px;
   background: var(--surface);
 }
-:global(html.dark) .col-row {
+html.dark .col-row {
   background: #2c2c2e;
 }
 .done-pill {

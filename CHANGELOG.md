@@ -6,6 +6,15 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A task's details in dark mode** — one dark grey for the whole sheet with
+  the cards a step lighter (the fields sat on black).
+- **Dark-mode touches that never applied** — board columns and lanes, cards'
+  hover, git badges, notes' capture box and colours, the calendar's events on
+  hover, list columns and sheets: their dark styles were lost (and leaked
+  onto the page) through a selector the style compiler rewrote.
+
 ## [0.2.0] - 2026-11-04
 
 ### Added

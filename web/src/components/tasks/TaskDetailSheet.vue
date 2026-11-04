@@ -764,8 +764,15 @@ async function startFocus() {
   padding: 18px 22px 14px;
   background: var(--surface);
 }
-:global(html.dark) .t-head {
-  background: #2c2c2e;
+/* Dark: one dark grey for the whole sheet (the grouped black was too dark),
+   the cards a step lighter on it. */
+html.dark .tsheet,
+html.dark .t-scroll,
+html.dark .t-head,
+html.dark .t-body,
+html.dark .t-foot,
+html.dark .t-side {
+  background: #1c1c1e;
 }
 .t-body {
   padding: 2px 18px 22px;
@@ -781,9 +788,6 @@ async function startFocus() {
   padding: 12px 18px;
   border-top: 0.5px solid var(--border);
   background: var(--surface);
-}
-:global(html.dark) .t-foot {
-  background: #2c2c2e;
 }
 .t-side {
   border-top: 0.5px solid var(--border);

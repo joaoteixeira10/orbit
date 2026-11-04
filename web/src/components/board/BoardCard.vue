@@ -73,7 +73,7 @@ const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props
     transform: translateY(-1px);
     box-shadow: 0 0 0 0.5px var(--border), 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
   }
-  :global(html.dark) .board-card:hover {
+  html.dark .board-card:hover {
     box-shadow: 0 0 0 0.5px var(--border-2), 0 6px 18px rgba(0, 0, 0, 0.4);
   }
 }

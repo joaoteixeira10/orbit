@@ -130,13 +130,13 @@ defineExpose({ start })
   box-shadow: 0 0 0 0.5px var(--border), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
   transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
-:global(html.dark) .capture {
+html.dark .capture {
   box-shadow: 0 0 0 0.5px var(--border), 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 .capture.open {
   box-shadow: 0 0 0 0.5px var(--border), 0 2px 6px rgba(0, 0, 0, 0.05), 0 12px 36px rgba(0, 0, 0, 0.12);
 }
-:global(html.dark) .capture.open {
+html.dark .capture.open {
   box-shadow: 0 0 0 0.5px var(--border-2), 0 12px 36px rgba(0, 0, 0, 0.45);
 }
 .cap-prompt {

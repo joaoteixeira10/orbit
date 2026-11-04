@@ -230,8 +230,8 @@ const over = (c: Column) => !!c.limit && (props.totals[c.id] ?? 0) > c.limit
   border-radius: 12px;
   background: var(--fill-2);
 }
-:global(html.dark) .cell,
-:global(html.dark) .lane-col-head {
+html.dark .cell,
+html.dark .lane-col-head {
   background: rgba(118, 118, 128, 0.12);
 }
 .cell-cards {

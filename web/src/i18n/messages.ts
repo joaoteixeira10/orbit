@@ -23,6 +23,7 @@ import { accountUiEn, accountUiPt } from './accountui'
 import { adminUiEn, adminUiPt } from './adminui'
 import { lifeEn, lifePt } from './life'
 import { embedsEn, embedsPt } from './embeds'
+import { holidayEn, holidayPt } from './holiday'
 
 export const SUPPORTED_LOCALES = [
   { code: 'en', label: 'English' },
@@ -51,6 +52,7 @@ const en = {
   ...adminUiEn,
   ...lifeEn,
   ...embedsEn,
+  ...holidayEn,
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -337,6 +339,7 @@ const pt: typeof en = {
   ...adminUiPt,
   ...lifePt,
   ...embedsPt,
+  ...holidayPt,
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',

@@ -378,7 +378,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           <!-- Mark: a developer theme's crest, an uploaded logo, else Orbit's icon.
                Hidden by the "Show logo" toggle (not a theme's). -->
           <template v-if="branding.showMark">
-            <img v-if="branding.logoMode === 'theme'" :src="branding.crestUrl" :alt="t('acct.logo')" class="logo" />
+            <!-- A holiday theme's own mark, for its season. -->
+            <span v-if="holiday.active" class="h-logo" aria-hidden="true" data-testid="holiday-logo" v-html="holiday.active.art.logo" />
+            <img v-else-if="branding.logoMode === 'theme'" :src="branding.crestUrl" :alt="t('acct.logo')" class="logo" />
             <img v-else-if="branding.logoMode === 'upload'" :src="branding.logoDataURL" :alt="t('acct.logo')" class="brand-logo" />
             <img v-else :src="DEFAULT_MARK" alt="" class="logo" aria-hidden="true" />
           </template>
@@ -399,17 +401,18 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 
       <nav class="side-scroll" :aria-label="t('acct.mainNav')">
         <div class="smart">
-          <RouterLink :to="{ name: 'home' }" class="smart-tile" :class="{ on: route.name === 'home' }">
+          <RouterLink :to="{ name: 'home' }" class="smart-tile today-tile" :class="{ on: route.name === 'home' }">
+            <span v-if="holiday.active && route.name === 'home'" class="h-tile-overlay" aria-hidden="true" />
             <span class="tile h-7 w-7" style="--tile: #007aff"><House class="h-4 w-4" :stroke-width="2.4" /></span>
             <span>{{ t('nav.today') }}</span>
           </RouterLink>
           <RouterLink :to="{ name: 'calendar' }" class="smart-tile" :class="{ on: route.name === 'calendar' }">
-            <span class="tile h-7 w-7" style="--tile: #ff3b30"><CalendarDays class="h-4 w-4" :stroke-width="2.4" /></span>
+            <span class="tile box-calendar h-7 w-7" style="--tile: #ff3b30"><CalendarDays class="h-4 w-4" :stroke-width="2.4" /></span>
             <span>{{ t('nav.calendar') }}</span>
           </RouterLink>
           <div class="smart-tile wide" :class="{ on: route.name === 'my-notes' }">
             <RouterLink :to="{ name: 'my-notes' }" class="flex min-w-0 flex-1 items-center gap-2.5">
-              <span class="tile h-7 w-7" style="--tile: #ffcc00"><NotebookPen class="h-4 w-4" :stroke-width="2.4" /></span>
+              <span class="tile box-quickNotes h-7 w-7" style="--tile: #ffcc00"><NotebookPen class="h-4 w-4" :stroke-width="2.4" /></span>
               <span class="truncate">{{ t('notes.mine.title') }}</span>
             </RouterLink>
             <button class="jot" :title="t('notes.mine.action') + (isMac ? ' (⌥N)' : ' (Alt+N)')" :aria-label="t('notes.mine.action')" @click="quickNoteOpen = true">
@@ -418,7 +421,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           </div>
           <div class="smart-tile wide" :class="{ on: route.name === 'my-drawings' || route.name === 'my-drawing' }">
             <RouterLink :to="{ name: 'my-drawings' }" class="flex min-w-0 flex-1 items-center gap-2.5" data-testid="quick-draw">
-              <span class="tile h-7 w-7" style="--tile: #ff9500"><Brush class="h-4 w-4" :stroke-width="2.4" /></span>
+              <span class="tile box-quickDraw h-7 w-7" style="--tile: #ff9500"><Brush class="h-4 w-4" :stroke-width="2.4" /></span>
               <span class="truncate">{{ t('draw.quick') }}</span>
             </RouterLink>
             <button class="jot" :title="t('draw.newSketch')" :aria-label="t('draw.newSketch')" data-testid="quick-draw-new" @click="newSketch">
@@ -427,7 +430,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           </div>
           <div class="smart-tile wide" :class="{ on: route.name === 'my-files' }">
             <RouterLink :to="{ name: 'my-files' }" class="flex min-w-0 flex-1 items-center gap-2.5" data-testid="my-files">
-              <span class="tile h-7 w-7" style="--tile: #5ac8fa"><FolderOpen class="h-4 w-4" :stroke-width="2.4" /></span>
+              <span class="tile box-myFiles h-7 w-7" style="--tile: #5ac8fa"><FolderOpen class="h-4 w-4" :stroke-width="2.4" /></span>
               <span class="truncate">{{ t('myFiles.title') }}</span>
             </RouterLink>
           </div>
@@ -529,7 +532,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 
       <div class="side-foot">
         <button ref="userAnchor" class="user-btn" :aria-expanded="userMenu" @click="userMenu = !userMenu">
-          <Avatar :name="displayName" :src="auth.user?.avatar_url" :size="28" />
+          <Avatar :name="displayName" :src="auth.user?.avatar_url" :size="28" class="me-avatar" />
           <span class="min-w-0 flex-1 text-left">
             <span class="block truncate text-[13px] font-medium">{{ displayName }}</span>
             <span class="block truncate text-[11px] text-text-3">@{{ auth.user?.username }}</span>
@@ -725,6 +728,12 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   line-height: 1;
   letter-spacing: 0.01em;
 }
+.h-logo {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
 .brand-logo {
   height: 24px;
   max-width: 150px;
@@ -814,6 +823,52 @@ html.dark .smart-tile.on {
 .smart-tile.on .tile {
   --tile: var(--accent-fg, #fff) !important;
   color: var(--accent);
+}
+/* A holiday theme (styles/holiday.css): the Today tile in its colours (with
+   its pattern when it's the page you're on), the other tiles, the
+   workspaces' badges and the avatar in its icon colours. */
+html.holiday .smart-tile {
+  background: var(--h-card);
+}
+html.holiday .today-tile .tile {
+  background-image: var(--h-tile-bg);
+}
+html.holiday .today-tile.on {
+  position: relative;
+  overflow: hidden;
+  background: var(--h-tile-bg);
+  color: #fff;
+}
+html.holiday .today-tile.on > :not(.h-tile-overlay) {
+  position: relative;
+}
+html.holiday .today-tile.on .tile {
+  background: #fff;
+  color: var(--h-tile-icon);
+}
+.h-tile-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--h-tile-overlay);
+  pointer-events: none;
+}
+html.holiday .box-calendar {
+  --tile: var(--h-box-calendar) !important;
+}
+html.holiday .box-quickNotes {
+  --tile: var(--h-box-quickNotes) !important;
+}
+html.holiday .box-quickDraw {
+  --tile: var(--h-box-quickDraw) !important;
+}
+html.holiday .box-myFiles {
+  --tile: var(--h-box-myFiles) !important;
+}
+html.holiday .ws-row .tile {
+  --tile: var(--h-box-workspace) !important;
+}
+html.holiday span.me-avatar {
+  background: var(--h-box-avatar) !important;
 }
 .sec-title {
   padding: 16px 8px 5px;

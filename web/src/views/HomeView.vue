@@ -22,6 +22,9 @@ import type { Note, NoteInput } from '@/api/planner'
 import { orderedItems } from '@/components/notes/noteModel'
 import { todayStr, dateStr, startOfDay, addDays, fmtDate, fmtTime, relDay, sameDay, allDayDate, parseDate, countdown, dueLabel } from '@/lib/dates'
 import WorkspaceFeed from '@/components/WorkspaceFeed.vue'
+import HolidayChip from '@/components/holiday/HolidayChip.vue'
+import HolidayCorner from '@/components/holiday/HolidayCorner.vue'
+import { useHolidayStore } from '@/stores/holiday'
 
 // Home. At / it is Today across every workspace: what's late and due, the
 // week's events, recently edited pages and pinned notes. At /w/:ws it is
@@ -36,6 +39,9 @@ const { t } = useI18n()
 
 const wsId = computed(() => (typeof route.params.ws === 'string' ? route.params.ws : ''))
 const workspace = computed(() => wss.byId(wsId.value))
+// A holiday theme dresses my own Home (not a workspace's).
+const holiday = useHolidayStore()
+const themed = computed(() => !wsId.value && !!holiday.active)
 const data = ref<Home | null>(null)
 const loading = ref(true)
 
@@ -119,6 +125,20 @@ const upcomingByDay = computed(() => {
   return [...groups]
 })
 
+// An event's bar: its calendar's colour — in a holiday theme, the theme's
+// colours in turn (one per calendar colour, as they come), and the festive
+// stripes for public holidays.
+const barColors = computed(() => {
+  const m = new Map<string, string>()
+  const bars = holiday.active?.art.bars ?? []
+  for (const e of data.value?.events ?? []) if (e.kind !== 'holiday' && !m.has(e.color)) m.set(e.color, bars[m.size % bars.length])
+  return m
+})
+function barOf(e: Occurrence): string {
+  if (!themed.value) return e.color
+  return e.kind === 'holiday' ? 'var(--h-festive)' : barColors.value.get(e.color) || e.color
+}
+
 // ---- Events, grouped by day ----
 const eventsByDay = computed(() => {
   const days: { day: Date; items: Occurrence[] }[] = []
@@ -190,10 +210,18 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </div>
     </header>
     <header v-else class="mb-6">
-      <p class="text-[13px] font-semibold uppercase tracking-wide text-text-3">{{ dateLine }}</p>
-      <h1 class="large-title mt-1">{{ greeting }}</h1>
+      <p class="eyebrow text-[13px] font-semibold uppercase tracking-wide text-text-3">{{ dateLine }}</p>
+      <div class="mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-2">
+        <h1 class="large-title">{{ greeting }}</h1>
+        <HolidayChip v-if="themed" />
+      </div>
     </header>
-    <NoteCapture v-if="!workspace && !auth.privileges.read_only" class="jot-box mb-8" :placeholder="t('notes.mine.capture')" @create="jot" />
+    <NoteCapture
+      v-if="!workspace && !auth.privileges.read_only"
+      class="jot-box mb-8"
+      :placeholder="themed ? t(`holiday.placeholder.${holiday.active!.id}`) : t('notes.mine.capture')"
+      @create="jot"
+    />
 
     <p v-if="workspace?.archived_at" class="mb-6 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
 
@@ -218,8 +246,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
     <template v-else-if="data">
     <div class="widgets">
       <!-- Today -->
-      <section class="widget card p-5">
-        <h2 class="widget-title" style="color: var(--accent-text)">{{ t('home.today') }}<span class="count">{{ data.overdue.length + data.today.length || '' }}</span></h2>
+      <section class="widget card relative p-5">
+        <HolidayCorner v-if="themed" :card="0" />
+        <h2 class="widget-title w-today" style="color: var(--accent-text)">{{ t('home.today') }}<span class="count">{{ data.overdue.length + data.today.length || '' }}</span></h2>
         <template v-if="data.overdue.length">
           <h3 class="sub text-crit-text">{{ t('tasks.overdue') }}</h3>
           <TaskRow
@@ -269,8 +298,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
         </div>
       </section>
       <!-- Up next: events -->
-      <section class="widget card p-5">
-        <h2 class="widget-title" style="color: #ff3b30">{{ t('home.upNext') }}</h2>
+      <section class="widget card relative p-5">
+        <HolidayCorner v-if="themed" :card="1" />
+        <h2 class="widget-title w-next" style="color: #ff3b30">{{ t('home.upNext') }}</h2>
         <div v-for="g in eventsByDay" :key="dateStr(g.day)" class="mb-3">
           <h3 class="sub">{{ relDay(dateStr(g.day)) }}</h3>
           <RouterLink
@@ -280,7 +310,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
             class="event"
             :class="{ now: isNow(e) }"
           >
-            <span class="bar" :style="{ background: e.color }" />
+            <span class="bar" :style="{ background: barOf(e) }" />
             <span class="min-w-0 flex-1">
               <span class="block truncate text-[14px] font-medium">{{ e.title }}</span>
               <span class="flex items-center gap-2 text-[12px] text-text-3">
@@ -448,6 +478,19 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 }
 .event.now {
   background: var(--crit-bg);
+}
+/* A holiday theme (styles/holiday.css): its headings, date line and late. */
+.holiday-main .w-today {
+  color: var(--h-primary) !important;
+}
+.holiday-main .w-next {
+  color: var(--h-secondary) !important;
+}
+.holiday-main .eyebrow {
+  color: var(--h-icon);
+}
+.holiday-main .sub.text-crit-text {
+  color: var(--h-late);
 }
 /* The jot box sits under the greeting, as wide as a widget. */
 .jot-box {

@@ -6,7 +6,7 @@ import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'
 import type { Task, Member, TaskInput } from '@/api/planner'
-import { countdown, dueLabel, isOverdue, repeatLabel, relDay } from '@/lib/dates'
+import { countdown, dueLabel, isOverdue, repeatLabel, relDay, todayStr } from '@/lib/dates'
 import { firstLine } from '@/lib/markdown'
 import { estimateText } from '@/lib/weekPlan'
 
@@ -45,6 +45,8 @@ const due = computed(() => {
   return d ? `${relDay(s)} – ${d}` : `${t('tasks.startsOn')} ${relDay(s)}`
 })
 const prio = computed(() => '!'.repeat(props.task.priority))
+// Due today (not late): a holiday theme shows it in its own colour.
+const dueToday = computed(() => !overdue.value && !props.task.done && props.task.due === todayStr())
 </script>
 
 <template>
@@ -63,19 +65,19 @@ const prio = computed(() => '!'.repeat(props.task.priority))
     </button>
     <button type="button" class="main min-w-0 flex-1 text-left" :title="t('tasks.details')" @click.stop="emit('open')">
       <div class="title">
-        <span v-if="prio" class="prio-mark mr-1 font-semibold" :style="{ color }">{{ prio }}</span>{{ task.title }}
+        <span v-if="prio" class="prio-mark mr-1 font-semibold" :data-p="task.priority" :style="{ color }">{{ prio }}</span>{{ task.title }}
       </div>
       <div v-if="!compact || due || task.git_number" class="meta">
         <GitBadge :task="task" />
         <span v-if="task.git_milestone" class="milestone" :title="t('git.task.milestone')"><Milestone class="h-3 w-3" />{{ task.git_milestone }}</span>
         <span v-if="task.kind === 'exam'" class="exam">{{ t('school.exam') }}<template v-if="task.due && !task.done"> · {{ countdown(task.due) }}</template></span>
-        <span v-if="due" class="due-meta" :class="{ 'text-crit-text': overdue }">{{ due }}</span>
+        <span v-if="due" class="due-meta" :class="{ 'text-crit-text': overdue, today: dueToday }">{{ due }}</span>
         <span v-if="task.repeat" class="inline-flex items-center gap-0.5" :title="repeatLabel(task.repeat)"><Repeat class="h-3 w-3" />{{ repeatLabel(task.repeat) }}</span>
         <span v-if="task.estimate" class="inline-flex items-center gap-0.5" :title="t('tasks.estimate')"><Hourglass class="h-3 w-3" />{{ estimateText(task.estimate) }}</span>
         <span v-if="listName">{{ listName }}</span>
         <span v-if="workspaceName">{{ workspaceName }}</span>
         <span v-if="task.comment_count" class="inline-flex items-center gap-0.5" :title="t('comments.count', { n: task.comment_count }, task.comment_count)"><MessageSquare class="h-3 w-3" />{{ task.comment_count }}</span>
-        <span v-for="tag in task.tags" :key="tag" class="text-accent-text">#{{ tag }}</span>
+        <span v-for="tag in task.tags" :key="tag" class="tag text-accent-text">#{{ tag }}</span>
         <span v-if="task.notes && !compact" class="truncate">{{ firstLine(task.notes) }}</span>
       </div>
     </button>
@@ -100,6 +102,38 @@ const prio = computed(() => '!'.repeat(props.task.priority))
 </template>
 
 <style scoped>
+/* A holiday theme on Home (styles/holiday.css): its check, marks and dates. */
+.holiday-main .check {
+  width: 22px;
+  height: 22px;
+}
+.holiday-main .check:not(.on) {
+  border-color: var(--h-check);
+}
+.holiday-main .check.on {
+  border: none;
+  background: radial-gradient(circle at 35% 30%, var(--h-done-in), var(--h-done-out) 70%);
+  box-shadow: 0 0 10px var(--h-done-glow);
+}
+.holiday-main .prio-mark[data-p='1'] {
+  color: var(--h-prio1) !important;
+}
+.holiday-main .prio-mark[data-p='2'] {
+  color: var(--h-prio2) !important;
+}
+.holiday-main .prio-mark[data-p='3'] {
+  color: var(--h-prio3) !important;
+}
+.holiday-main .tag {
+  color: var(--h-tag);
+}
+.holiday-main .due-meta.today,
+.holiday-main .row-flag {
+  color: var(--h-icon);
+}
+.holiday-main .due-meta.text-crit-text {
+  color: var(--h-late);
+}
 .task-row {
   display: flex;
   align-items: flex-start;

@@ -59,6 +59,10 @@ html.dark .git-badge.closed,
 html.dark .git-badge.merged {
   color: #bf5af2;
 }
+/* A holiday theme on Home: an open issue in its colour (closed stays purple). */
+.holiday-main .git-badge.open {
+  color: var(--h-issue);
+}
 .git-badge:hover {
   text-decoration: underline;
 }

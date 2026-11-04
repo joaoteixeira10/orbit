@@ -23,3 +23,13 @@ html.holiday .holiday-main {
   --bg: var(--h-bg);
   background: radial-gradient(ellipse 70% 40% at 45% -8%, var(--h-glow), transparent 70%), var(--h-bg);
 }
+/* The sidebar's icons and the inbox's count in the holiday's colours. */
+html.holiday .side .side-item svg {
+  color: var(--h-icon);
+}
+html.holiday .side .badge {
+  background: var(--h-primary);
+}
+html.holiday .side .search-btn {
+  background: var(--h-field);
+}

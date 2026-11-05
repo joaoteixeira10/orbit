@@ -29,7 +29,7 @@ type fileResponse struct {
 func (h *Handlers) filesOf(c *gin.Context, wsID string, trash bool) []fileResponse {
 	q := h.db.Where("replaced_at IS NULL")
 	if wsID == "" {
-		q = q.Where("workspace_id = '' AND owner_id = ?", auth.UserID(c))
+		q = q.Where("workspace_id = '' AND owner_id = ? AND target <> ?", auth.UserID(c), uploads.Chat)
 	} else {
 		q = q.Where("workspace_id = ?", wsID)
 	}

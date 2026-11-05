@@ -47,6 +47,7 @@ export function fmtWhen(iso: string): string {
 // fmtTook is a length of time to the second: "4.2 s", "42 s", "2 min 37 s".
 export function fmtTook(ms: number): string {
   const s = ms / 1000
+  if (s < 0.1) return `< ${(0.1).toLocaleString(locale())} s`
   if (s < 10) return `${s.toLocaleString(locale(), { maximumFractionDigits: 1 })} s`
   if (s < 60) return `${Math.floor(s)} s`
   return `${Math.floor(s / 60)} min ${Math.floor(s % 60)} s`

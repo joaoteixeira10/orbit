@@ -14,6 +14,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 
 	"github.com/anthropics/anthropic-sdk-go/v2"
 	"github.com/gin-gonic/gin"
@@ -257,6 +258,7 @@ func (h *Handlers) deleteAssistantChat(c *gin.Context) {
 		return
 	}
 	h.db.Delete(&ch)
+	_ = uploads.Delete(h.db, "target = ? AND target_id = ? AND owner_id = ?", uploads.Chat, ch.ID, ch.UserID)
 	c.Status(http.StatusNoContent)
 }
 
@@ -269,6 +271,7 @@ func (h *Handlers) deleteAssistantChat(c *gin.Context) {
 //	@Router		/assistant/chats [delete]
 func (h *Handlers) deleteAssistantChats(c *gin.Context) {
 	h.db.Where("user_id = ?", auth.UserID(c)).Delete(&models.AssistantChat{})
+	_ = uploads.Delete(h.db, "target = ? AND owner_id = ?", uploads.Chat, auth.UserID(c))
 	c.Status(http.StatusNoContent)
 }
 
@@ -289,6 +292,8 @@ type assistantChatRequest struct {
 	// Mode: ask (reads only, the default) or agent (also lines up changes
 	// for the person to approve).
 	Mode string `json:"mode" binding:"omitempty,oneof=ask agent"`
+	// Files: ids of files attached for this message (POST /assistant/files).
+	Files []string `json:"files" binding:"max=10,dive,max=36"`
 }
 
 // assistantEvent is a line of the answer's stream: a step (a tool it used),
@@ -368,7 +373,12 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		}).Create(&models.AssistantUsage{UserID: uid, Day: today(), Count: 1})
 
 		asked := time.Now()
-		turns := append(chatTurns(ch), assistant.Turn{Role: "user", Text: req.Message, At: asked.UTC().Format(time.RFC3339), Mode: req.Mode})
+		files, ok := h.attachTo(uid, ch.ID, req.Files)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no such attached file"})
+			return
+		}
+		turns := append(chatTurns(ch), assistant.Turn{Role: "user", Text: req.Message, At: asked.UTC().Format(time.RFC3339), Mode: req.Mode, Files: files})
 		history := turns
 		if len(history) > assistantHistory {
 			history = history[len(history)-assistantHistory:]
@@ -384,8 +394,20 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		call := &mcpCall{c: c, api: api, client: "assistant"}
 		allowed := map[string]*mcpTool{}
 		var tools []assistant.Tool
+		offered := make([]*mcpTool, 0, len(mcpTools)+len(attachmentTools))
 		for i := range mcpTools {
-			t := &mcpTools[i]
+			offered = append(offered, &mcpTools[i])
+		}
+		// The tools for attached files, once there are some.
+		for _, t := range turns {
+			if len(t.Files) > 0 {
+				for i := range attachmentTools {
+					offered = append(offered, &attachmentTools[i])
+				}
+				break
+			}
+		}
+		for _, t := range offered {
 			switch {
 			case t.ReadOnly:
 				tools = append(tools, assistant.Tool{Name: t.Name, Description: t.Description, Schema: t.schema()})
@@ -432,7 +454,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			defer close(events)
 			ask := assistant.Request{
 				System:  fmt.Sprintf(assistantRules, name, user.Username, modeRules) + mcpInstructions,
-				Context: assistantSituation(req.Context, run) + h.keptOut(uid, req.Context.WorkspaceID) + theirWorkspaces(mine) + earlierChanges(history),
+				Context: assistantSituation(req.Context, run) + h.keptOut(uid, req.Context.WorkspaceID) + theirWorkspaces(mine) + h.theirFiles(turns) + earlierChanges(history),
 				History: history,
 				Tools:   tools,
 				Step: func(s assistant.Step) {
@@ -504,6 +526,9 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		if err := h.db.Save(&ch).Error; err != nil {
 			send(assistantEvent{Type: "error", Error: "the conversation couldn't be kept"})
 			return
+		}
+		if len(files) > 0 { // the files are the conversation's now
+			h.db.Model(&models.Upload{}).Where("id IN ? AND target = ? AND owner_id = ?", req.Files, uploads.Chat, uid).Update("target_id", ch.ID)
 		}
 		send(assistantEvent{Type: "done", ChatID: ch.ID})
 	}

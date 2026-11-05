@@ -91,8 +91,13 @@ func (s *Scheduler) emptyTrash() {
 	s.log.Info("emptied old trash", zap.Int64("pages", res.RowsAffected))
 }
 
-// emptyFileTrash deletes files in the trash for uploads.TrashDays.
+// emptyFileTrash deletes files in the trash for uploads.TrashDays, and
+// those attached for the assistant but never sent (after a day).
 func (s *Scheduler) emptyFileTrash() {
+	// Files attached for the assistant but never sent.
+	if err := uploads.Delete(s.db, "target = ? AND target_id = '' AND created_at < ?", uploads.Chat, time.Now().Add(-24*time.Hour)); err != nil {
+		s.log.Warn("could not delete unsent attachments", zap.Error(err))
+	}
 	if err := uploads.EmptyTrash(s.db, time.Now().AddDate(0, 0, -uploads.TrashDays)); err != nil {
 		s.log.Warn("emptying the files' trash failed", zap.Error(err))
 	}

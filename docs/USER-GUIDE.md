@@ -1697,6 +1697,26 @@ Below the box you type in, **Ask** or **Agent** (remembered):
   page's history shows **via the assistant**, and the audit log has an
   `assistant.apply` entry.
 
+**Files.** **📎** in the box (or dropping files on the window) attaches up
+to 10 files to your next message; they stay with the conversation, yours
+alone (click one in your message to download it). The assistant reads what
+they say — text and Markdown, Word, PowerPoint, Excel and OpenDocument
+files, and a PDF's text (read in your browser, as Files does; a scanned PDF
+has none) — a short one at once, a long one a part at a time. Ask it to sum
+one up or answer from it. In Agent mode it can also line up, on the same
+card:
+
+- **Put a file in Files** — the file itself goes into a workspace's Files
+  (a folder, if you say), whatever it is: "put these three draw.io files in
+  Escola". It never passes through the model.
+- **Make a page from a file** — a page with the file's text as it is
+  (Markdown kept; a PDF's or a document's text as paragraphs), however long.
+  For something rewritten — summed up, or one page per chapter — ask for
+  that: it reads the file and writes the pages (better with a large model,
+  or for short files).
+
+Deleting the conversation deletes its files (what was put in Files stays).
+
 A workspace's owners may keep the assistant out of it, or give it
 instructions for it, in its settings (General → **Assistant**).
 

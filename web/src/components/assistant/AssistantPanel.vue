@@ -2,19 +2,21 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, ArrowUp, Check, History, Maximize2, Minimize2, Plus, Sparkles, Square, Trash2, X } from 'lucide-vue-next'
+import { ArrowLeft, ArrowUp, Check, FileText, History, Loader2, Maximize2, Minimize2, Paperclip, Plus, Sparkles, Square, Trash2, TriangleAlert, X } from 'lucide-vue-next'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import AssistantPlan from './AssistantPlan.vue'
-import { useAssistantStore } from '@/stores/assistant'
+import { MAX_FILES, useAssistantStore } from '@/stores/assistant'
+import { useToastStore } from '@/stores/toast'
+import { downloadUpload, fileSize } from '@/lib/uploads'
 import { fmtTook, fmtWhen, relTime } from '@/lib/format'
-import type { AssistantStep } from '@/api/assistant'
+import type { AssistantFile, AssistantStep } from '@/api/assistant'
 
 // The assistant's chat window, floating at the bottom right — or large in the
 // middle of the screen (expand); the whole screen on a phone. Closed, a round
 // button in that corner opens it (on a computer): a conversation in bubbles (the person's, its answers with the
-// tools it used above them), the box to ask in, and the list of past
-// conversations. Ask mode reads; Agent mode also lines up changes, shown in
+// tools it used above them), the box to ask in (📎 or a drop attaches
+// files), and the list of past conversations. Ask mode reads; Agent mode also lines up changes, shown in
 // one card to approve. ⌘J / Ctrl+J opens and closes it.
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -29,7 +31,7 @@ function stepText(s: AssistantStep) {
   const key = `assistant.step.${s.tool}`
   if (s.tool === 'search' && !s.hint) return t('assistant.step.list_pages')
   // A change (Agent mode) is only lined up; the card says what it is.
-  if (/^(create|update|delete|trash|move|complete|comment)_/.test(s.tool)) return t('assistant.step.change')
+  if (/^(create|update|delete|trash|move|complete|comment|save|page_from)_/.test(s.tool)) return t('assistant.step.change')
   return t(key) === key ? t('assistant.step.other', { tool: s.tool }) : t(key, { hint: s.hint ?? '' })
 }
 
@@ -45,9 +47,32 @@ function context() {
   }
 }
 
+// Files: from 📎 or dropped on the window, for the next message.
+const toast = useToastStore()
+const picker = ref<HTMLInputElement | null>(null)
+const dropping = ref(false)
+function addFiles(list: FileList | null | undefined) {
+  const files = Array.from(list ?? [])
+  if (store.attached.length + files.length > MAX_FILES) toast.error(t('assistant.tooMany', { n: MAX_FILES }))
+  for (const f of files.slice(0, Math.max(0, MAX_FILES - store.attached.length))) void store.attach(f)
+  if (picker.value) picker.value.value = ''
+  view.value = 'chat'
+}
+function onDrop(e: DragEvent) {
+  dropping.value = false
+  addFiles(e.dataTransfer?.files)
+}
+function onDrag(e: DragEvent) {
+  if (e.dataTransfer?.types.includes('Files')) dropping.value = true
+}
+const uploading = computed(() => store.attached.some((a) => a.busy))
+function download(f: AssistantFile) {
+  void downloadUpload(f.url || `/api/v1/uploads/${f.id}/${encodeURIComponent(f.name)}`, f.name).catch((e) => toast.error(e.message))
+}
+
 async function send(text = draft.value) {
   const msg = text.trim()
-  if (!msg || store.sending) return
+  if (!msg || store.sending || uploading.value) return
   draft.value = ''
   view.value = 'chat'
   await store.send(msg, context())
@@ -138,7 +163,17 @@ onUnmounted(() => clearInterval(tick))
     <Sparkles class="h-[22px] w-[22px]" />
   </button>
   <Transition name="ai-pop">
-  <aside v-if="store.open && store.enabled" class="ai-panel" :class="{ big: store.big }" :aria-label="t('assistant.title')" data-testid="assistant-panel">
+  <aside
+    v-if="store.open && store.enabled"
+    class="ai-panel"
+    :class="{ big: store.big }"
+    :aria-label="t('assistant.title')"
+    data-testid="assistant-panel"
+    @dragover.prevent="onDrag"
+    @dragleave.self="dropping = false"
+    @drop.prevent="onDrop"
+  >
+    <div v-if="dropping" class="ai-drop"><Paperclip class="h-6 w-6" />{{ t('assistant.attachDrop') }}</div>
     <header class="ai-head">
       <button v-if="view === 'history'" class="icon-btn h-8 w-8" :title="t('assistant.back')" :aria-label="t('assistant.back')" @click="view = 'chat'"><ArrowLeft class="h-4 w-4" /></button>
       <Sparkles v-else class="h-[18px] w-[18px] text-accent" />
@@ -182,6 +217,11 @@ onUnmounted(() => clearInterval(tick))
       <template v-for="(m, i) in store.turns" :key="i">
         <div v-if="m.role === 'user'" class="ai-q">
           <div class="ai-user" data-testid="assistant-user">{{ m.text }}</div>
+          <div v-if="m.files?.length" class="ai-sent-files">
+            <button v-for="f in m.files" :key="f.id" class="ai-file" :title="f.name" data-testid="assistant-sent-file" @click="download(f)">
+              <FileText class="h-3.5 w-3.5 flex-none" /><span class="truncate">{{ f.name }}</span>
+            </button>
+          </div>
           <div v-if="m.at" class="ai-meta" data-testid="assistant-asked">{{ fmtWhen(m.at) }}</div>
         </div>
         <div v-else class="ai-answer" data-testid="assistant-answer">
@@ -207,7 +247,19 @@ onUnmounted(() => clearInterval(tick))
     </div>
 
     <footer v-if="view === 'chat'" class="ai-foot">
+      <div v-if="store.attached.length" class="ai-files">
+        <span v-for="a in store.attached" :key="a.key" class="ai-file" :class="{ bad: a.error }" :title="a.error || a.name" data-testid="assistant-attached">
+          <Loader2 v-if="a.busy" class="h-3.5 w-3.5 flex-none animate-spin" />
+          <TriangleAlert v-else-if="a.error" class="h-3.5 w-3.5 flex-none" />
+          <FileText v-else class="h-3.5 w-3.5 flex-none" />
+          <span class="truncate">{{ a.name }}</span>
+          <span class="flex-none text-text-3">{{ fileSize(a.size) }}</span>
+          <button class="ai-file-x" :aria-label="t('assistant.removeFile', { name: a.name })" @click="store.detach(a.key)"><X class="h-3 w-3" /></button>
+        </span>
+      </div>
       <div class="ai-box">
+        <button class="ai-clip" :title="t('assistant.attach')" :aria-label="t('assistant.attach')" data-testid="assistant-attach" @click="picker?.click()"><Paperclip class="h-4 w-4" /></button>
+        <input ref="picker" type="file" multiple hidden data-testid="assistant-file-input" @change="addFiles(($event.target as HTMLInputElement).files)" />
         <textarea
           ref="input"
           v-model="draft"
@@ -218,7 +270,7 @@ onUnmounted(() => clearInterval(tick))
           @keydown="onKey"
         />
         <button v-if="store.sending" class="ai-send" :title="t('assistant.stop')" :aria-label="t('assistant.stop')" @click="store.stop()"><Square class="h-3.5 w-3.5" fill="currentColor" /></button>
-        <button v-else class="ai-send" :disabled="!draft.trim() || left === 0" :title="t('assistant.send')" :aria-label="t('assistant.send')" data-testid="assistant-send" @click="send()"><ArrowUp class="h-4 w-4" :stroke-width="2.6" /></button>
+        <button v-else class="ai-send" :disabled="!draft.trim() || left === 0 || uploading" :title="t('assistant.send')" :aria-label="t('assistant.send')" data-testid="assistant-send" @click="send()"><ArrowUp class="h-4 w-4" :stroke-width="2.6" /></button>
       </div>
       <div class="mt-1.5 flex items-center justify-between px-1 text-[11px] text-text-3">
         <div class="ai-mode" role="radiogroup" :aria-label="t('assistant.mode.label')">
@@ -515,7 +567,7 @@ onUnmounted(() => clearInterval(tick))
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 6px 6px 6px 12px;
+  padding: 6px 6px 6px 6px;
   border-radius: 18px;
   background: var(--fill-2);
   box-shadow: inset 0 0 0 0.5px var(--border);
@@ -542,6 +594,84 @@ onUnmounted(() => clearInterval(tick))
   font-size: 14px;
   line-height: 1.45;
   padding: 3px 0;
+}
+/* 📎, at the box's start. */
+.ai-clip {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--text-2);
+}
+.ai-clip:hover {
+  background: var(--fill);
+  color: var(--text);
+}
+/* Files: those for the next message, above the box; those sent, under the
+   message. */
+.ai-files,
+.ai-sent-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ai-files {
+  margin-bottom: 8px;
+}
+.ai-sent-files {
+  justify-content: flex-end;
+  max-width: 80%;
+  margin-top: 4px;
+}
+.ai-file {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px 4px 8px;
+  border-radius: 10px;
+  background: var(--fill-2);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  font-size: 12px;
+  color: var(--text);
+}
+button.ai-file:hover {
+  background: var(--fill);
+}
+.ai-file.bad {
+  color: var(--crit-text);
+}
+.ai-file-x {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--text-3);
+}
+.ai-file-x:hover {
+  background: var(--fill);
+  color: var(--text);
+}
+/* Dragging files over the window. */
+.ai-drop {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed var(--accent);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent);
+  font-size: 13.5px;
+  font-weight: 600;
+  pointer-events: none;
 }
 .ai-send {
   display: grid;

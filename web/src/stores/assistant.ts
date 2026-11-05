@@ -1,5 +1,20 @@
 import { defineStore } from 'pinia'
-import { assistantApi, type AssistantChatSummary, type AssistantContext, type AssistantMode, type AssistantStatus, type AssistantStep, type AssistantTurn } from '@/api/assistant'
+import { assistantApi, type AssistantChatSummary, type AssistantFile, type AssistantContext, type AssistantMode, type AssistantStatus, type AssistantStep, type AssistantTurn } from '@/api/assistant'
+
+// MAX_FILES is how many files go with one message (as the server allows).
+export const MAX_FILES = 10
+
+// A file being attached for the next message: sent once it's up (and, a
+// PDF, its text read here).
+export interface Attaching {
+  key: number
+  name: string
+  size: number
+  file?: AssistantFile
+  busy: boolean
+  error: string
+}
+let seq = 0
 
 const MODE_KEY = 'orbit.assistant.mode'
 const BIG_KEY = 'orbit.assistant.big'
@@ -36,6 +51,7 @@ export const useAssistantStore = defineStore('assistant', {
     })(), // in the middle of the screen, large, rather than in the corner
     applying: -1, // the turn whose changes are being made
     askedAt: 0, // when the answer on its way was asked for (ms)
+    attached: [] as Attaching[], // for the next message
   }),
   getters: {
     enabled: (s) => !!s.status?.enabled,
@@ -104,24 +120,56 @@ export const useAssistantStore = defineStore('assistant', {
         this.applying = -1
       }
     },
+    // attach uploads a file for the next message; a PDF's text is read here
+    // (pdf.js), for the model.
+    async attach(file: File) {
+      this.attached.push({ key: ++seq, name: file.name, size: file.size, busy: true, error: '' })
+      const it = this.attached[this.attached.length - 1]
+      try {
+        it.file = await assistantApi.attach(file)
+        if (it.file.type === 'application/pdf') {
+          try {
+            const { pdfText } = await import('@/lib/fileView')
+            const text = await pdfText(new Uint8Array(await file.arrayBuffer()))
+            if (text.trim()) {
+              await assistantApi.setFileText(it.file.id, text)
+              it.file.readable = true
+            }
+          } catch {
+            /* a scan, or one pdf.js can't read: it can still go in Files */
+          }
+        }
+      } catch (e: any) {
+        it.error = e?.message || String(e)
+      } finally {
+        it.busy = false
+      }
+    },
+    detach(key: number) {
+      const it = this.attached.find((a) => a.key === key)
+      this.attached = this.attached.filter((a) => a.key !== key)
+      if (it?.file) void assistantApi.dropFile(it.file.id).catch(() => {})
+    },
     stop() {
       this.controller?.abort()
       this.controller = null
     },
     async send(message: string, context: AssistantContext) {
-      if (this.sending || !message.trim()) return
+      if (this.sending || !message.trim() || this.attached.some((a) => a.busy)) return
       this.sending = true
       this.error = ''
       this.steps = []
       this.draft = ''
       const mode = this.mode
       this.askedAt = Date.now()
-      this.turns.push({ role: 'user', text: message, mode, at: new Date().toISOString() })
+      const files = this.attached.filter((a) => a.file).map((a) => a.file!)
+      this.attached = []
+      this.turns.push({ role: 'user', text: message, mode, at: new Date().toISOString(), files: files.length ? files : undefined })
       const ctl = new AbortController()
       this.controller = ctl
       const got: { answer?: AssistantTurn } = {}
       try {
-        await assistantApi.ask({ chat_id: this.chatId || undefined, message, context, mode }, (e) => {
+        await assistantApi.ask({ chat_id: this.chatId || undefined, message, context, mode, files: files.map((f) => f.id) }, (e) => {
           if (e.type === 'step') {
             this.steps.push({ tool: e.tool, hint: e.hint })
             this.draft = ''

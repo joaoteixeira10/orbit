@@ -26,6 +26,10 @@ const (
 	Page = "page"
 	Task = "task"
 	Note = "note"
+	// Chat: a file added to a conversation with the assistant — its owner's
+	// alone (no workspace), on the conversation (TargetID; "" until the
+	// message goes).
+	Chat = "chat"
 )
 
 // ErrQuota: the instance's uploads are full.

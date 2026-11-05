@@ -359,6 +359,227 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/files": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Attach a file for the assistant",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "The file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.attachmentResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/files/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "An attached file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.attachmentResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Remove an attached file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/assistant/files/{id}/save": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Put an attached file in Files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Where",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.saveAttachmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.uploadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/files/{id}/text": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "What an attached file says",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Where to start, in characters",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "All of it",
+                        "name": "whole",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.attachmentTextResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "An attached PDF's text",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Its text",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.attachmentTextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/audit": {
             "get": {
                 "security": [
@@ -11690,6 +11911,14 @@ const docTemplate = `{
                 "context": {
                     "$ref": "#/definitions/api.assistantContext"
                 },
+                "files": {
+                    "description": "Files: ids of files attached for this message (POST /assistant/files).",
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "message": {
                     "type": "string",
                     "maxLength": 8000
@@ -11946,6 +12175,61 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "used_today": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.attachmentResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "readable": {
+                    "description": "the model can read what it says",
+                    "type": "boolean"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.attachmentTextRequest": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "maxLength": 2000000
+                }
+            }
+        },
+        "api.attachmentTextResponse": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "description": "where this part starts, in characters",
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "next": {
+                    "description": "where the next part starts (0: none)",
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "total": {
                     "type": "integer"
                 }
             }
@@ -15505,6 +15789,22 @@ const docTemplate = `{
                 }
             }
         },
+        "api.saveAttachmentRequest": {
+            "type": "object",
+            "required": [
+                "workspace_id"
+            ],
+            "properties": {
+                "folder_id": {
+                    "type": "string",
+                    "maxLength": 36
+                },
+                "workspace_id": {
+                    "type": "string",
+                    "maxLength": 36
+                }
+            }
+        },
         "api.searchHit": {
             "type": "object",
             "properties": {
@@ -16827,6 +17127,23 @@ const docTemplate = `{
                 }
             }
         },
+        "assistant.File": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "assistant.Step": {
             "type": "object",
             "properties": {
@@ -16850,6 +17167,13 @@ const docTemplate = `{
                 },
                 "at": {
                     "type": "string"
+                },
+                "files": {
+                    "description": "Files: the person's, attached to this message.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/assistant.File"
+                    }
                 },
                 "mode": {
                     "description": "Mode the person asked in: \"\" (ask) or \"agent\".",

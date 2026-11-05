@@ -37,6 +37,16 @@ type Turn struct {
 	// Actions: in Agent mode, the changes the answer lined up for the person
 	// to approve, and what became of each.
 	Actions []Action `json:"actions,omitempty"`
+	// Files: the person's, attached to this message.
+	Files []File `json:"files,omitempty"`
+}
+
+// File is a file attached to a message (an upload of the person's).
+type File struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Size int64  `json:"size"`
 }
 
 // Action is a change the assistant lined up in Agent mode. It's made only

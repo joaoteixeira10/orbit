@@ -45,7 +45,8 @@ export async function pdfText(bytes: Uint8Array, max = 200_000): Promise<string>
   for (let i = 1; i <= doc.numPages && out.length < max; i++) {
     const page = await doc.getPage(i)
     const tc = await page.getTextContent()
-    out += tc.items.map((x) => ('str' in x ? x.str : '')).join(' ') + '\n'
+    // Its lines kept (a page's end a blank line), so its paragraphs can be found.
+    out += tc.items.map((x) => ('str' in x ? x.str + (x.hasEOL ? '\n' : ' ') : '')).join('').replace(/ +\n/g, '\n') + '\n\n'
   }
   await doc.loadingTask.destroy()
   return out.slice(0, max)

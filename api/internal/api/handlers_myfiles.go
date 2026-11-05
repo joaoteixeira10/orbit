@@ -178,6 +178,6 @@ func (h *Handlers) listMyFiles(c *gin.Context) {
 func (h *Handlers) myFilesUsage(c *gin.Context) {
 	uid := auth.UserID(c)
 	var n int64
-	h.db.Model(&models.Upload{}).Where("workspace_id = '' AND owner_id = ? AND "+uploads.Shown, uid).Count(&n)
+	h.db.Model(&models.Upload{}).Where("workspace_id = '' AND owner_id = ? AND target <> ? AND "+uploads.Shown, uid, uploads.Chat).Count(&n)
 	c.JSON(http.StatusOK, fileUsage{Used: uploads.Used(h.db, "workspace_id = '' AND owner_id = ?", uid), Files: n, Quota: h.cfg.UploadQuotaBytes, All: uploads.Used(h.db, "")})
 }

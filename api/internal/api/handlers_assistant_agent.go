@@ -235,7 +235,7 @@ func (h *Handlers) applyAssistantPlan(api http.Handler) gin.HandlerFunc {
 		var log []gin.H
 		for i := range turn.Actions {
 			a := &turn.Actions[i]
-			t := mcpToolByName(a.Tool)
+			t := toolByName(a.Tool)
 			switch {
 			case !ticked[a.N]:
 				a.State, a.Result = assistant.Skipped, "not approved"

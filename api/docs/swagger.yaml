@@ -124,6 +124,12 @@ definitions:
         type: string
       context:
         $ref: '#/definitions/api.assistantContext'
+      files:
+        description: 'Files: ids of files attached for this message (POST /assistant/files).'
+        items:
+          type: string
+        maxItems: 10
+        type: array
       message:
         maxLength: 8000
         type: string
@@ -313,6 +319,43 @@ definitions:
       provider:
         type: string
       used_today:
+        type: integer
+    type: object
+  api.attachmentResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      readable:
+        description: the model can read what it says
+        type: boolean
+      size:
+        type: integer
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  api.attachmentTextRequest:
+    properties:
+      text:
+        maxLength: 2000000
+        type: string
+    type: object
+  api.attachmentTextResponse:
+    properties:
+      from:
+        description: where this part starts, in characters
+        type: integer
+      name:
+        type: string
+      next:
+        description: 'where the next part starts (0: none)'
+        type: integer
+      text:
+        type: string
+      total:
         type: integer
     type: object
   api.backlinkTask:
@@ -2808,6 +2851,17 @@ definitions:
       superuser:
         type: boolean
     type: object
+  api.saveAttachmentRequest:
+    properties:
+      folder_id:
+        maxLength: 36
+        type: string
+      workspace_id:
+        maxLength: 36
+        type: string
+    required:
+    - workspace_id
+    type: object
   api.searchHit:
     properties:
       done:
@@ -3778,6 +3832,17 @@ definitions:
       tool:
         type: string
     type: object
+  assistant.File:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      size:
+        type: integer
+      type:
+        type: string
+    type: object
   assistant.Step:
     properties:
       hint:
@@ -3796,6 +3861,11 @@ definitions:
         type: array
       at:
         type: string
+      files:
+        description: 'Files: the person''s, attached to this message.'
+        items:
+          $ref: '#/definitions/assistant.File'
+        type: array
       mode:
         description: 'Mode the person asked in: "" (ask) or "agent".'
         type: string
@@ -4922,6 +4992,142 @@ paths:
       security:
       - BearerAuth: []
       summary: Set up the assistant
+      tags:
+      - assistant
+  /assistant/files:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: The file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.attachmentResponse'
+      security:
+      - BearerAuth: []
+      summary: Attach a file for the assistant
+      tags:
+      - assistant
+  /assistant/files/{id}:
+    delete:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove an attached file
+      tags:
+      - assistant
+    get:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.attachmentResponse'
+      security:
+      - BearerAuth: []
+      summary: An attached file
+      tags:
+      - assistant
+  /assistant/files/{id}/save:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Where
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.saveAttachmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.uploadResponse'
+      security:
+      - BearerAuth: []
+      summary: Put an attached file in Files
+      tags:
+      - assistant
+  /assistant/files/{id}/text:
+    get:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Where to start, in characters
+        in: query
+        name: from
+        type: integer
+      - description: All of it
+        in: query
+        name: whole
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.attachmentTextResponse'
+      security:
+      - BearerAuth: []
+      summary: What an attached file says
+      tags:
+      - assistant
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Its text
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.attachmentTextRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: An attached PDF's text
       tags:
       - assistant
   /audit:

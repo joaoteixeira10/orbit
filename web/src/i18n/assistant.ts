@@ -24,6 +24,10 @@ export const assistantEn = {
     thinking: 'Thinking…',
     took: 'took {d}',
     tookFor: 'Took {d} to answer',
+    attach: 'Attach files',
+    attachDrop: 'Drop files to attach them',
+    removeFile: 'Remove {name}',
+    tooMany: 'At most {n} files with one message',
     mode: {
       label: 'Mode',
       ask: 'Ask',
@@ -65,6 +69,7 @@ export const assistantEn = {
       workspace_graph: 'Looked at how things connect',
       other: 'Used {tool}',
       change: 'Lined up a change',
+      read_attachment: 'Read an attached file',
     },
     // Owner → Assistant
     admin: {
@@ -126,6 +131,10 @@ export const assistantPt = {
     thinking: 'A pensar…',
     took: 'demorou {d}',
     tookFor: 'Demorou {d} a responder',
+    attach: 'Anexar ficheiros',
+    attachDrop: 'Largue os ficheiros para os anexar',
+    removeFile: 'Remover {name}',
+    tooMany: 'No máximo {n} ficheiros por mensagem',
     mode: {
       label: 'Modo',
       ask: 'Perguntar',
@@ -167,6 +176,7 @@ export const assistantPt = {
       workspace_graph: 'Viu como as coisas se ligam',
       other: 'Usou {tool}',
       change: 'Preparou uma alteração',
+      read_attachment: 'Leu um ficheiro anexado',
     },
     admin: {
       title: 'Assistente',

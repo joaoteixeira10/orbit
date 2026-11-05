@@ -59,6 +59,16 @@ export interface AssistantAction {
   made_id?: string
 }
 
+// A file attached to a message: the person's alone, kept with the conversation.
+export interface AssistantFile {
+  id: string
+  name: string
+  type: string
+  size: number
+  url?: string
+  readable?: boolean // the model can read what it says
+}
+
 export interface AssistantTurn {
   role: 'user' | 'assistant'
   text: string
@@ -67,6 +77,7 @@ export interface AssistantTurn {
   took_ms?: number // an answer: how long it took
   mode?: AssistantMode
   actions?: AssistantAction[]
+  files?: AssistantFile[]
 }
 
 export interface AssistantChatSummary {
@@ -107,6 +118,14 @@ export const assistantApi = {
   own: () => api<AssistantOwn>('/me/assistant'),
   setOwn: (b: { use: boolean; provider: AssistantProvider; model: string; url: string; key?: string; clear_key?: boolean; context?: number }) =>
     api<AssistantOwn>('/me/assistant', { method: 'PUT', body: j(b) }),
+  attach: (file: File) => {
+    const form = new FormData()
+    form.append('file', file, file.name || 'file')
+    return api<AssistantFile>('/assistant/files', { method: 'POST', body: form })
+  },
+  // A PDF's text, read here (pdf.js), for the model to read.
+  setFileText: (id: string, text: string) => api<void>(`/assistant/files/${id}/text`, { method: 'PUT', body: j({ text }) }),
+  dropFile: (id: string) => api<void>(`/assistant/files/${id}`, { method: 'DELETE' }),
   chats: () => api<AssistantChatSummary[]>('/assistant/chats'),
   chat: (id: string) => api<AssistantChat>(`/assistant/chats/${id}`),
   removeChat: (id: string) => api<void>(`/assistant/chats/${id}`, { method: 'DELETE' }),
@@ -116,7 +135,7 @@ export const assistantApi = {
     api<AssistantTurn>(`/assistant/chats/${chatId}/apply`, { method: 'POST', body: j({ turn, approve }) }),
 
   // ask sends a message and calls onEvent for each event of the answer.
-  async ask(b: { chat_id?: string; message: string; context: AssistantContext; mode?: AssistantMode }, onEvent: (e: AssistantEvent) => void, signal?: AbortSignal) {
+  async ask(b: { chat_id?: string; message: string; context: AssistantContext; mode?: AssistantMode; files?: string[] }, onEvent: (e: AssistantEvent) => void, signal?: AbortSignal) {
     const res = await apiStream('/assistant/chat', { method: 'POST', body: j(b), signal })
     const reader = res.body!.getReader()
     const dec = new TextDecoder()

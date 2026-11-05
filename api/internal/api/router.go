@@ -125,7 +125,7 @@ func New(d Deps) *gin.Engine {
 	// Uploads have their own, larger limit (UPLOAD_MAX_MB, in the handler).
 	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool {
 		// These keep their own, larger caps (files; drawings with their images).
-		return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" ||
+		return p == "/api/v1/uploads" || p == "/api/v1/workspaces/import" || p == "/api/v1/assistant/files" ||
 			strings.HasPrefix(p, "/api/v1/drawings/") || strings.HasSuffix(p, "/drawings") ||
 			strings.HasPrefix(p, "/api/v1/sheets/") || strings.HasSuffix(p, "/sheets") ||
 			strings.HasPrefix(p, "/api/v1/diagrams/") || strings.HasSuffix(p, "/diagrams")
@@ -347,6 +347,12 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/assistant/chats/:id", h.deleteAssistantChat)
 			authed.DELETE("/assistant/chats", h.deleteAssistantChats)
 			authed.POST("/assistant/chats/:id/apply", notImpersonating(), h.applyAssistantPlan(r))
+			authed.POST("/assistant/files", notImpersonating(), h.attachFile)
+			authed.GET("/assistant/files/:id", h.getAttachment)
+			authed.DELETE("/assistant/files/:id", h.dropAttachment)
+			authed.GET("/assistant/files/:id/text", h.getAttachmentText)
+			authed.PUT("/assistant/files/:id/text", h.setAttachmentText)
+			authed.POST("/assistant/files/:id/save", h.saveAttachment)
 			authed.POST("/workspaces/:ws/google/start", notImpersonating(), h.startGoogle)
 			authed.GET("/workspaces/:ws/google/calendars", h.googleCalendars)
 			authed.POST("/workspaces/:ws/google/link", h.linkGoogle)

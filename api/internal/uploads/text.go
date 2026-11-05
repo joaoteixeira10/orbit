@@ -25,28 +25,43 @@ import (
 const MaxText = 200_000
 
 // TextOf reads what a file says ("" when it can't, or isn't one it reads).
-func TextOf(name, typ string, data []byte) string {
+func TextOf(name, typ string, data []byte) string { return clip(rawText(name, typ, data)) }
+
+// Lines is what a file says with its lines kept — a text file as it is, a
+// document a paragraph a line — at most MaxText.
+func Lines(name, typ string, data []byte) string {
+	s := rawText(name, typ, data)
+	if len(s) > MaxText {
+		s = s[:MaxText]
+		for !utf8.ValidString(s) {
+			s = s[:len(s)-1]
+		}
+	}
+	return strings.TrimSpace(strings.ReplaceAll(s, "\r\n", "\n"))
+}
+
+func rawText(name, typ string, data []byte) string {
 	ext := strings.ToLower(path.Ext(name))
 	switch ext {
 	case ".docx", ".docm", ".dotx":
-		return clip(zipText(data, func(n string) bool {
+		return zipText(data, func(n string) bool {
 			return n == "word/document.xml" || strings.HasPrefix(n, "word/header") || strings.HasPrefix(n, "word/footer")
-		}, "t", "p"))
+		}, "t", "p")
 	case ".pptx", ".pptm", ".ppsx":
-		return clip(zipText(data, func(n string) bool { return strings.HasPrefix(n, "ppt/slides/slide") && strings.HasSuffix(n, ".xml") }, "t", "p"))
+		return zipText(data, func(n string) bool { return strings.HasPrefix(n, "ppt/slides/slide") && strings.HasSuffix(n, ".xml") }, "t", "p")
 	case ".xlsx", ".xlsm":
-		return clip(zipText(data, func(n string) bool {
+		return zipText(data, func(n string) bool {
 			return n == "xl/sharedStrings.xml" || (strings.HasPrefix(n, "xl/worksheets/sheet") && strings.HasSuffix(n, ".xml"))
-		}, "t", "si"))
+		}, "t", "si")
 	case ".odt", ".ods", ".odp":
-		return clip(zipText(data, func(n string) bool { return n == "content.xml" }, "", "p"))
+		return zipText(data, func(n string) bool { return n == "content.xml" }, "", "p")
 	case ".txt", ".md", ".markdown", ".csv", ".tsv", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml", ".ini", ".rtf":
 		if utf8.Valid(data) {
-			return clip(string(data))
+			return string(data)
 		}
 	}
 	if strings.HasPrefix(typ, "text/") && utf8.Valid(data) {
-		return clip(string(data))
+		return string(data)
 	}
 	return ""
 }

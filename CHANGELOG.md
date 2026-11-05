@@ -19,6 +19,9 @@ merge, not at release time.
   history and in the audit log.
   A workspace's owners may keep the assistant out of it (it can't see it
   at all) or give it instructions for it (workspace settings → Assistant).
+  📎 attaches files to a message (up to 10): the assistant reads what they
+  say (text, Office and OpenDocument files, a PDF's text), and in Agent mode
+  can put them in a workspace's Files or make a page of one, as it is.
   The owner may let people use their own model (Settings → Assistant: their
   Claude or OpenAI key, their Ollama; no daily limit); a server on the
   local network for that is listed in `AI_SERVERS`.

@@ -341,8 +341,8 @@ func (h *Handlers) searchIndex(c *gin.Context, q string, wsIDs []string) []searc
 		var rows []models.Upload
 		h.db.Where("id IN ? AND "+uploads.Shown, l).Find(&rows)
 		for _, r := range rows {
-			if r.WorkspaceID == "" && r.OwnerID != uid {
-				continue
+			if (r.WorkspaceID == "" && r.OwnerID != uid) || r.Target == uploads.Chat {
+				continue // someone else's, or attached for the assistant
 			}
 			if r.Target == uploads.Page && !gate.sees(r.TargetID) {
 				continue // on a page the caller can't see

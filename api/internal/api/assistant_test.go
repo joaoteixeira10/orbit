@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -55,6 +57,21 @@ func (f *fakeModel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		for i, fn := range calls {
 			chunk(fmt.Sprintf(`{"tool_calls":[{"index":%d,"id":"p%d","type":"function","function":%s}]}`, i, i, fn), "")
+		}
+		chunk(`{}`, "tool_calls")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		return
+	}
+	// "files:<workspace id>:<file id>": put the file in Files, and make a
+	// page of it.
+	if rest, ok := strings.CutPrefix(fmt.Sprint(last["content"]), "files:"); ok && last["role"] == "user" {
+		ws, id, _ := strings.Cut(rest, ":")
+		calls := []string{
+			`{"name":"save_attachment","arguments":` + jsonString(`{"file_id":"`+id+`","workspace_id":"`+ws+`","summary":"Put it in Files"}`) + `}`,
+			`{"name":"page_from_attachment","arguments":` + jsonString(`{"file_id":"`+id+`","workspace_id":"`+ws+`","summary":"Make a page of it"}`) + `}`,
+		}
+		for i, fn := range calls {
+			chunk(fmt.Sprintf(`{"tool_calls":[{"index":%d,"id":"f%d","type":"function","function":%s}]}`, i, i, fn), "")
 		}
 		chunk(`{}`, "tool_calls")
 		_, _ = io.WriteString(w, "data: [DONE]\n\n")
@@ -535,4 +552,120 @@ func TestAssistantOwn(t *testing.T) {
 		t.Errorf("stopped: %+v", st)
 	}
 	expect(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi"}`, owner), http.StatusForbidden, "no model")
+}
+
+// TestAssistantAttachments: files attached to a message are the person's
+// alone; the model gets what a short one says and reads the rest; in Agent
+// mode it can put one in Files and make a page of one, once approved; they
+// go with the conversation.
+func TestAssistantAttachments(t *testing.T) {
+	r, db := newTestRouterDB(t, false)
+	fake := &fakeModel{}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	old := assistantHTTP
+	assistantHTTP = func() *http.Client { return srv.Client() }
+	defer func() { assistantHTTP = old }()
+
+	owner := loginTok(t, r, "admin", "adminpass")
+	attach := func(tok, name, body string) *httptest.ResponseRecorder {
+		var buf bytes.Buffer
+		mw := multipart.NewWriter(&buf)
+		fw, _ := mw.CreateFormFile("file", name)
+		_, _ = io.WriteString(fw, body)
+		_ = mw.Close()
+		req := httptest.NewRequest("POST", "/api/v1/assistant/files", &buf)
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		req.Header.Set("Authorization", "Bearer "+tok)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		return w
+	}
+	expect(t, attach(owner, "plan.md", "# Plan"), http.StatusForbidden, "assistant off")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"openai","url":"`+srv.URL+`/v1","model":"llama3.1"}`, owner), http.StatusOK, "set up")
+	ws := createWS(t, r, owner, `{"name":"Work","kind":"personal"}`)
+
+	w := attach(owner, "plan.md", "# The plan\n\nStep one: book the room.\n\n- invites\n")
+	expect(t, w, http.StatusCreated, "attach")
+	var f attachmentResponse
+	decode(t, w, &f)
+	if !f.Readable || f.Name != "plan.md" {
+		t.Fatalf("attached: %+v", f)
+	}
+
+	// Someone else can't see it, nor send it.
+	createUserVia(t, r, owner, `{"username":"bea","email":"bea@example.org","password":"beapassword","role_ids":[]}`)
+	bea := loginTok(t, r, "bea", "beapassword")
+	expect(t, authdo(r, "GET", "/api/v1/uploads/"+f.ID+"/plan.md", "", bea), http.StatusNotFound, "someone else's")
+	expect(t, authdo(r, "GET", "/api/v1/assistant/files/"+f.ID+"/text", "", bea), http.StatusNotFound, "someone else's text")
+	expect(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi","files":["`+f.ID+`"]}`, bea), http.StatusBadRequest, "someone else's file")
+
+	// Sent with a message: the model is told what it says.
+	w = authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"files:`+ws.ID+`:`+f.ID+`","files":["`+f.ID+`"]}`, owner)
+	expect(t, w, http.StatusOK, "ask")
+	sent := string(mustJSON(fake.asked[len(fake.asked)-1]))
+	if !strings.Contains(sent, "Step one: book the room.") || !strings.Contains(sent, "page_from_attachment") {
+		t.Errorf("told: %s", sent)
+	}
+	var chatID string
+	var acts []assistant.Action
+	for _, e := range sseEvents(t, w.Body.String()) {
+		if e.Type == "done" {
+			chatID = e.ChatID
+		}
+		if e.Type == "answer" {
+			acts = e.Actions
+		}
+	}
+	if len(acts) != 2 || acts[0].Title != "Put a file in Files" {
+		t.Fatalf("lined up: %+v", acts)
+	}
+	var chat assistantChatResponse
+	decode(t, authdo(r, "GET", "/api/v1/assistant/chats/"+chatID, "", owner), &chat)
+	if len(chat.Turns[0].Files) != 1 || chat.Turns[0].Files[0].ID != f.ID {
+		t.Fatalf("kept: %+v", chat.Turns[0])
+	}
+
+	// Approved: the file in Files, and a page of it.
+	var turn assistant.Turn
+	decode(t, authdo(r, "POST", "/api/v1/assistant/chats/"+chatID+"/apply", `{"turn":1,"approve":[1,2]}`, owner), &turn)
+	if turn.Actions[0].State != "done" || turn.Actions[1].State != "done" {
+		t.Fatalf("made: %+v", turn.Actions)
+	}
+	var files []fileResponse
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/files", "", owner), &files)
+	if len(files) != 1 || files[0].Name != "plan.md" {
+		t.Errorf("in Files: %+v", files)
+	}
+	var page struct{ Title, Content string }
+	decode(t, authdo(r, "GET", "/api/v1/pages/"+turn.Actions[1].MadeID, "", owner), &page)
+	if page.Title != "plan" || !strings.Contains(page.Content, "Step one: book the room.") || !strings.Contains(page.Content, "# The plan") {
+		t.Errorf("page: %+v", page)
+	}
+
+	// Not among their own files; gone with the conversation (the copy in
+	// Files stays).
+	var mineFiles []fileResponse
+	decode(t, authdo(r, "GET", "/api/v1/me/files", "", owner), &mineFiles)
+	if len(mineFiles) != 0 {
+		t.Errorf("my files: %+v", mineFiles)
+	}
+	expect(t, authdo(r, "DELETE", "/api/v1/assistant/chats/"+chatID, "", owner), http.StatusNoContent, "delete")
+	var n int64
+	db.Model(&models.Upload{}).Where("id = ?", f.ID).Count(&n)
+	if n != 0 {
+		t.Error("attachment kept")
+	}
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/files", "", owner), &files)
+	if len(files) != 1 {
+		t.Error("the copy in Files went too")
+	}
+}
+
+func TestPdfParagraphs(t *testing.T) {
+	in := "Introduction\nThis is a long line of text that goes on and on across the page width\nand continues here with a hyphen-\nated word at the end.\nShort one.\n\nNext page text."
+	want := "Introduction\n\nThis is a long line of text that goes on and on across the page width and continues here with a hyphenated word at the end.\n\nShort one.\n\nNext page text."
+	if got := pdfParagraphs(in); got != want {
+		t.Errorf("got %q", got)
+	}
 }

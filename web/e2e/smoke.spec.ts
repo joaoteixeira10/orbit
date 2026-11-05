@@ -3772,7 +3772,18 @@ async function fakeModel(): Promise<{ url: string; close: () => void }> {
       const chunk = (delta: object, finish: string | null = null) => res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`)
       const end = () => res.end('data: [DONE]\n\n')
       const plan = last?.role === 'user' && String(last.content).startsWith('plan:') ? String(last.content).slice(5) : ''
-      if (plan) {
+      const filesTo = last?.role === 'user' && String(last.content).startsWith('files:') ? String(last.content).slice(6) : ''
+      if (filesTo) {
+        // The file attached, as the model is told it: "- <id>: name, …".
+        const id = /- ([0-9a-f-]{36}): notes\.md/.exec(JSON.stringify(body))?.[1] ?? 'none'
+        const calls = [
+          ['save_attachment', { file_id: id, workspace_id: filesTo, summary: 'Put notes.md in Files' }],
+          ['page_from_attachment', { file_id: id, workspace_id: filesTo, summary: 'Make a page of notes.md' }],
+        ] as const
+        calls.forEach(([name, args], index) => chunk({ tool_calls: [{ index, id: `f${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }))
+        chunk({}, 'tool_calls')
+        end()
+      } else if (plan) {
         const calls = [
           ['create_task_list', { workspace_id: plan, name: 'Launch', summary: 'Make the Launch list' }],
           ['create_task', { workspace_id: plan, list_id: 'new:1', title: 'Book the room', summary: 'Add “Book the room” to it' }],
@@ -3915,6 +3926,25 @@ test('the assistant in Agent mode: it lines changes up in one card; the ticked o
     const tasks = ((await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { title: string }[]).map((x) => x.title)
     expect(tasks).toContain('Book the room')
     expect(tasks).not.toContain('Unwanted')
+
+    // A file attached (📎) goes with the message; the changes for it are
+    // lined up like any other.
+    await panel.getByTestId('assistant-file-input').setInputFiles({ name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n\nFirst point.\n') })
+    await expect(panel.getByTestId('assistant-attached')).toContainText('notes.md')
+    await expect(panel.getByTestId('assistant-attached').locator('.animate-spin')).toHaveCount(0)
+    await panel.getByTestId('assistant-input').fill(`files:${ws.id}`)
+    await panel.getByTestId('assistant-input').press('Enter')
+    await expect(panel.getByTestId('assistant-attached')).toHaveCount(0)
+    await expect(panel.getByTestId('assistant-sent-file')).toHaveText('notes.md')
+    const plan2 = panel.getByTestId('assistant-plan').last()
+    await expect(plan2).toContainText('2 changes to approve')
+    await expect(plan2.getByTestId('assistant-change').first()).toContainText('Put notes.md in Files')
+    await plan2.getByTestId('assistant-approve').click()
+    await expect(plan2).toContainText('2 changes made')
+    const wsFiles = ((await (await request.get(`/api/v1/workspaces/${ws.id}/files`, { headers: H })).json()) as { name: string }[]).map((x) => x.name)
+    expect(wsFiles).toContain('notes.md')
+    const pages = ((await (await request.get(`/api/v1/workspaces/${ws.id}/pages`, { headers: H })).json()) as { title: string }[]).map((x) => x.title)
+    expect(pages).toContain('notes')
 
     // The choice of mode is remembered.
     await page.reload()

@@ -1677,7 +1677,8 @@ this page", "what did we decide about the logo?" — and it looks it up with
 Orbit's own tools, as you (it sees only what you can see), showing what it
 looked at ("Searched for "logo"", "Read a page") above its answer, which
 appears as it's written; links in the answer open the page or list. It knows
-the page you're on ("this page").
+the page you're on ("this page"). Under each message is when it was sent, and
+under each answer how long it took (while it works, a count of the seconds).
 
 Below the box you type in, **Ask** or **Agent** (remembered):
 

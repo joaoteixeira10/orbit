@@ -30,6 +30,28 @@ export function fmtDate(iso?: string | null): string {
   }
 }
 
+// fmtWhen is when something was said: the time if today, else the day too.
+export function fmtWhen(iso: string): string {
+  const prefs = usePrefsStore()
+  const d = new Date(iso)
+  const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: prefs.timeFormat === '12h' }
+  if (prefs.timezone && prefs.timezone !== 'local') opts.timeZone = prefs.timezone
+  if (d.toDateString() !== new Date().toDateString()) Object.assign(opts, { day: 'numeric', month: 'short' })
+  try {
+    return new Intl.DateTimeFormat(locale(), opts).format(d)
+  } catch {
+    return d.toLocaleString()
+  }
+}
+
+// fmtTook is a length of time to the second: "4.2 s", "42 s", "2 min 37 s".
+export function fmtTook(ms: number): string {
+  const s = ms / 1000
+  if (s < 10) return `${s.toLocaleString(locale(), { maximumFractionDigits: 1 })} s`
+  if (s < 60) return `${Math.floor(s)} s`
+  return `${Math.floor(s / 60)} min ${Math.floor(s % 60)} s`
+}
+
 // expiryTone classifies remaining lifetime for color coding.
 export function expiryTone(iso: string): 'ok' | 'warn' | 'crit' {
   const d = daysUntil(iso)

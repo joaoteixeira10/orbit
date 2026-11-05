@@ -22,6 +22,8 @@ export const assistantEn = {
     send: 'Send',
     stop: 'Stop',
     thinking: 'Thinking…',
+    took: 'took {d}',
+    tookFor: 'Took {d} to answer',
     mode: {
       label: 'Mode',
       ask: 'Ask',
@@ -110,6 +112,8 @@ export const assistantPt = {
     send: 'Enviar',
     stop: 'Parar',
     thinking: 'A pensar…',
+    took: 'demorou {d}',
+    tookFor: 'Demorou {d} a responder',
     mode: {
       label: 'Modo',
       ask: 'Perguntar',

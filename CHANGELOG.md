@@ -11,7 +11,8 @@ merge, not at release time.
 - **An assistant built in** — ✦ beside the inbox (or ⌘J): a chat window that
   answers questions about your own Orbit ("what's due this week?", "sum up
   this page") with Orbit's own tools, as you — it sees only what you can see
-  — and shows what it looked at, its answer appearing as it's written. Ask
+  — and shows what it looked at, its answer appearing as it's written, when
+  each message was sent and how long each answer took. Ask
   mode reads only; in Agent mode it can make changes ("make a Launch list
   with tasks for…"), lined up in one card — untick what you don't want,
   approve once — and made as you, marked "via the assistant" in a page's

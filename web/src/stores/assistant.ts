@@ -35,6 +35,7 @@ export const useAssistantStore = defineStore('assistant', {
       }
     })(), // in the middle of the screen, large, rather than in the corner
     applying: -1, // the turn whose changes are being made
+    askedAt: 0, // when the answer on its way was asked for (ms)
   }),
   getters: {
     enabled: (s) => !!s.status?.enabled,
@@ -114,7 +115,8 @@ export const useAssistantStore = defineStore('assistant', {
       this.steps = []
       this.draft = ''
       const mode = this.mode
-      this.turns.push({ role: 'user', text: message, mode })
+      this.askedAt = Date.now()
+      this.turns.push({ role: 'user', text: message, mode, at: new Date().toISOString() })
       const ctl = new AbortController()
       this.controller = ctl
       const got: { answer?: AssistantTurn } = {}
@@ -125,7 +127,7 @@ export const useAssistantStore = defineStore('assistant', {
             this.draft = ''
           } else if (e.type === 'delta') this.draft += e.text
           else if (e.type === 'restart') this.draft = ''
-          else if (e.type === 'answer') got.answer = { role: 'assistant', text: e.text, steps: [...this.steps], mode, actions: e.actions }
+          else if (e.type === 'answer') got.answer = { role: 'assistant', text: e.text, steps: [...this.steps], mode, actions: e.actions, at: new Date().toISOString(), took_ms: e.took_ms }
           else if (e.type === 'error') this.error = e.error
           else if (e.type === 'done') this.chatId = e.chat_id
         }, ctl.signal)

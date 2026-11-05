@@ -16699,6 +16699,10 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string"
+                },
+                "took_ms": {
+                    "description": "TookMs: for an answer, how long it took, from the question.",
+                    "type": "integer"
                 }
             }
         },

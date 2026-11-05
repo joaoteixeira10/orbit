@@ -7,7 +7,7 @@ import MarkdownView from '@/components/editor/MarkdownView.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import AssistantPlan from './AssistantPlan.vue'
 import { useAssistantStore } from '@/stores/assistant'
-import { relTime } from '@/lib/format'
+import { fmtTook, fmtWhen, relTime } from '@/lib/format'
 import type { AssistantStep } from '@/api/assistant'
 
 // The assistant's chat window, floating at the bottom right — or large in the
@@ -114,6 +114,20 @@ onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onUnmounted(() => window.removeEventListener('keydown', onGlobalKey))
 
 const left = computed(() => store.left)
+
+// While an answer is on its way, how long it's been (a slow model can take
+// minutes).
+const now = ref(Date.now())
+let tick: number | undefined
+watch(
+  () => store.sending,
+  (on) => {
+    clearInterval(tick)
+    now.value = Date.now()
+    if (on) tick = window.setInterval(() => (now.value = Date.now()), 1000)
+  },
+)
+onUnmounted(() => clearInterval(tick))
 </script>
 
 <template>
@@ -166,12 +180,18 @@ const left = computed(() => store.left)
         </div>
       </div>
       <template v-for="(m, i) in store.turns" :key="i">
-        <div v-if="m.role === 'user'" class="ai-user" data-testid="assistant-user">{{ m.text }}</div>
+        <div v-if="m.role === 'user'" class="ai-q">
+          <div class="ai-user" data-testid="assistant-user">{{ m.text }}</div>
+          <div v-if="m.at" class="ai-meta" data-testid="assistant-asked">{{ fmtWhen(m.at) }}</div>
+        </div>
         <div v-else class="ai-answer" data-testid="assistant-answer">
           <ul v-if="m.steps?.length" class="ai-steps">
             <li v-for="(s, k) in m.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
           </ul>
           <div class="ai-bubble"><MarkdownView :content="m.text" :editable="false" plain class="ai-md" /></div>
+          <div v-if="m.at" class="ai-meta" data-testid="assistant-took">
+            {{ fmtWhen(m.at) }}<template v-if="m.took_ms"> · <span :title="t('assistant.tookFor', { d: fmtTook(m.took_ms) })">{{ t('assistant.took', { d: fmtTook(m.took_ms) }) }}</span></template>
+          </div>
           <AssistantPlan v-if="m.actions?.length" :actions="m.actions" :busy="store.applying === i" @apply="store.apply(i, $event)" />
         </div>
       </template>
@@ -181,6 +201,7 @@ const left = computed(() => store.left)
         </ul>
         <div v-if="store.draft" class="ai-bubble"><MarkdownView :content="store.draft" :editable="false" plain class="ai-md" /></div>
         <div v-else class="ai-bubble ai-typing" role="status" :aria-label="t('assistant.thinking')"><span /><span /><span /></div>
+        <div class="ai-meta" data-testid="assistant-elapsed">{{ fmtTook(Math.max(0, now - store.askedAt)) }}</div>
       </div>
       <p v-if="store.error" class="ai-error" role="alert" data-testid="assistant-error">{{ store.error }}</p>
     </div>
@@ -370,8 +391,13 @@ const left = computed(() => store.left)
 .ai-suggest:hover {
   background: var(--fill);
 }
+.ai-q {
+  display: flex;
+  margin-bottom: 12px;
+  flex-direction: column;
+  align-items: flex-end;
+}
 .ai-user {
-  margin: 0 0 12px auto;
   max-width: 80%;
   width: fit-content;
   padding: 8px 12px;
@@ -386,6 +412,14 @@ const left = computed(() => store.left)
   margin-bottom: 12px;
   max-width: 88%;
   font-size: 14px;
+}
+/* When it was asked or answered, and how long the answer took. */
+.ai-meta {
+  margin-top: 3px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
 }
 .ai-bubble {
   width: fit-content;

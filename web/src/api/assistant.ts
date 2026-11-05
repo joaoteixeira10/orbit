@@ -48,6 +48,7 @@ export interface AssistantTurn {
   text: string
   steps?: AssistantStep[]
   at?: string
+  took_ms?: number // an answer: how long it took
   mode?: AssistantMode
   actions?: AssistantAction[]
 }
@@ -76,7 +77,7 @@ export type AssistantEvent =
   | { type: 'step'; tool: string; hint?: string }
   | { type: 'delta'; text: string }
   | { type: 'restart' }
-  | { type: 'answer'; text: string; actions?: AssistantAction[] }
+  | { type: 'answer'; text: string; actions?: AssistantAction[]; took_ms?: number }
   | { type: 'done'; chat_id: string }
   | { type: 'error'; error: string }
 

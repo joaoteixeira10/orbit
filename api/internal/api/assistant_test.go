@@ -218,7 +218,7 @@ func TestAssistantAsk(t *testing.T) {
 	}
 	var chat assistantChatResponse
 	decode(t, authdo(r, "GET", "/api/v1/assistant/chats/"+chatID, "", bea), &chat)
-	if len(chat.Turns) != 4 || chat.Title != "What workspaces do I have?" || len(chat.Turns[1].Steps) != 1 {
+	if len(chat.Turns) != 4 || chat.Title != "What workspaces do I have?" || len(chat.Turns[1].Steps) != 1 || chat.Turns[0].At == "" || chat.Turns[1].At == "" {
 		t.Fatalf("kept: %+v", chat)
 	}
 	expect(t, authdo(r, "GET", "/api/v1/assistant/chats/"+chatID, "", owner), http.StatusNotFound, "someone else's conversation")

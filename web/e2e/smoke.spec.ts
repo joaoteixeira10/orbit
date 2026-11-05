@@ -3828,7 +3828,11 @@ test('the assistant: the owner sets up a model; a person asks, sees what it look
     // Its words show as they're written, before the answer is done.
     await expect(panel.getByTestId('assistant-working')).toContainText('All clear this week')
     await expect(panel.getByTestId('assistant-working')).not.toContainText('nothing due')
+    await expect(panel.getByTestId('assistant-elapsed')).toHaveText(/\d s$/)
     await expect(panel.getByTestId('assistant-answer')).toContainText('Looked at your day')
+    // When it was asked and answered, and how long that took.
+    await expect(panel.getByTestId('assistant-asked')).toHaveText(/\d:\d\d/)
+    await expect(panel.getByTestId('assistant-took')).toHaveText(/\d:\d\d · took [\d.]+ s/)
     await expect(panel.getByTestId('assistant-answer').locator('strong')).toHaveText('All clear')
     await expect(panel).toContainText('4 messages left today')
 

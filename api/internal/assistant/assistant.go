@@ -30,6 +30,8 @@ type Turn struct {
 	// Steps: the tools the assistant used for this answer, in order.
 	Steps []Step `json:"steps,omitempty"`
 	At    string `json:"at,omitempty"`
+	// TookMs: for an answer, how long it took, from the question.
+	TookMs int64 `json:"took_ms,omitempty"`
 	// Mode the person asked in: "" (ask) or "agent".
 	Mode string `json:"mode,omitempty"`
 	// Actions: in Agent mode, the changes the answer lined up for the person

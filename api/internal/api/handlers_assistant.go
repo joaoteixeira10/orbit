@@ -296,6 +296,7 @@ type assistantEvent struct {
 	Hint    string             `json:"hint,omitempty"`
 	Text    string             `json:"text,omitempty"`
 	Actions []assistant.Action `json:"actions,omitempty"`
+	TookMs  int64              `json:"took_ms,omitempty"` // answer: how long it took
 	ChatID  string             `json:"chat_id,omitempty"`
 	Error   string             `json:"error,omitempty"`
 }
@@ -356,7 +357,8 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			DoUpdates: clause.Assignments(map[string]any{"count": gorm.Expr("assistant_usages.count + 1")}),
 		}).Create(&models.AssistantUsage{UserID: uid, Day: today(), Count: 1})
 
-		turns := append(chatTurns(ch), assistant.Turn{Role: "user", Text: req.Message, At: time.Now().UTC().Format(time.RFC3339), Mode: req.Mode})
+		asked := time.Now()
+		turns := append(chatTurns(ch), assistant.Turn{Role: "user", Text: req.Message, At: asked.UTC().Format(time.RFC3339), Mode: req.Mode})
 		history := turns
 		if len(history) > assistantHistory {
 			history = history[len(history)-assistantHistory:]
@@ -445,7 +447,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				events <- assistantEvent{Type: "error", Error: h.assistantError(err)}
 				return
 			}
-			events <- assistantEvent{Type: "answer", Text: text, Actions: actions}
+			events <- assistantEvent{Type: "answer", Text: text, Actions: actions, TookMs: time.Since(asked).Milliseconds()}
 		}()
 
 		hdr := c.Writer.Header()
@@ -461,6 +463,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		beat := time.NewTicker(sseHeartbeat)
 		defer beat.Stop()
 		var answer string
+		var took int64
 		failed := false
 	loop:
 		for {
@@ -471,7 +474,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				}
 				switch e.Type {
 				case "answer":
-					answer = e.Text
+					answer, took = e.Text, e.TookMs
 				case "error":
 					failed = true
 				}
@@ -484,7 +487,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		// The person's line is kept even when the model failed, so it can be
 		// asked again; the answer only when there is one.
 		if !failed {
-			turns = append(turns, assistant.Turn{Role: "assistant", Text: answer, Steps: steps, At: time.Now().UTC().Format(time.RFC3339), Mode: req.Mode, Actions: actions})
+			turns = append(turns, assistant.Turn{Role: "assistant", Text: answer, Steps: steps, At: time.Now().UTC().Format(time.RFC3339), TookMs: took, Mode: req.Mode, Actions: actions})
 		}
 		b, _ := json.Marshal(turns)
 		ch.Turns = models.JSONText(b)

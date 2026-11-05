@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { assistantApi, type AssistantChatSummary, type AssistantContext, type AssistantMode, type AssistantStatus, type AssistantStep, type AssistantTurn } from '@/api/assistant'
 
 const MODE_KEY = 'orbit.assistant.mode'
+const BIG_KEY = 'orbit.assistant.big'
 function savedMode(): AssistantMode {
   try {
     return localStorage.getItem(MODE_KEY) === 'agent' ? 'agent' : 'ask'
@@ -26,6 +27,13 @@ export const useAssistantStore = defineStore('assistant', {
     error: '',
     controller: null as AbortController | null,
     mode: savedMode(), // ask, or agent: it lines up changes to approve
+    big: (() => {
+      try {
+        return localStorage.getItem(BIG_KEY) === '1'
+      } catch {
+        return false
+      }
+    })(), // in the middle of the screen, large, rather than in the corner
     applying: -1, // the turn whose changes are being made
   }),
   getters: {
@@ -65,6 +73,14 @@ export const useAssistantStore = defineStore('assistant', {
       await assistantApi.removeAll()
       this.chats = []
       this.newChat()
+    },
+    setBig(on: boolean) {
+      this.big = on
+      try {
+        localStorage.setItem(BIG_KEY, on ? '1' : '')
+      } catch {
+        /* the choice just isn't remembered */
+      }
     },
     setMode(m: AssistantMode) {
       this.mode = m

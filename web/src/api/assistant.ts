@@ -20,6 +20,7 @@ export interface AssistantConfig {
   url: string
   has_key: boolean
   daily_limit: number
+  context: number // Ollama: how much the model reads, in tokens (0: 16384)
 }
 
 export interface AssistantStep {

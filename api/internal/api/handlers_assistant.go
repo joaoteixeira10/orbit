@@ -81,6 +81,7 @@ type assistantConfigResponse struct {
 	URL        string `json:"url"`
 	HasKey     bool   `json:"has_key"` // the key itself is never sent back
 	DailyLimit int    `json:"daily_limit"`
+	Context    int    `json:"context"` // Ollama: how much the model reads, in tokens
 }
 
 type assistantConfigRequest struct {
@@ -91,6 +92,9 @@ type assistantConfigRequest struct {
 	Key        string `json:"key" binding:"max=500"` // "" keeps the one there is
 	ClearKey   bool   `json:"clear_key"`
 	DailyLimit int    `json:"daily_limit" binding:"min=0,max=100000"`
+	// Context: for Ollama, how much the model reads of a request (tokens;
+	// 0: 16384).
+	Context int `json:"context" binding:"omitempty,min=2048,max=1048576"`
 }
 
 // getAssistantConfig returns the instance's assistant (owner).
@@ -105,7 +109,7 @@ func (h *Handlers) getAssistantConfig(c *gin.Context) {
 	cfg := assistant.Load(h.db, h.sealer)
 	c.JSON(http.StatusOK, assistantConfigResponse{
 		Enabled: cfg.Enabled, Provider: cfg.Provider, Model: cfg.Model, URL: cfg.URL,
-		HasKey: cfg.Key != "", DailyLimit: cfg.DailyLimit,
+		HasKey: cfg.Key != "", DailyLimit: cfg.DailyLimit, Context: cfg.Context,
 	})
 }
 
@@ -126,7 +130,7 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 		return
 	}
 	old := assistant.Load(h.db, h.sealer)
-	cfg := assistant.Config{Enabled: req.Enabled, Provider: req.Provider, Model: strings.TrimSpace(req.Model), URL: strings.TrimSpace(req.URL), Key: req.Key, DailyLimit: req.DailyLimit}
+	cfg := assistant.Config{Enabled: req.Enabled, Provider: req.Provider, Model: strings.TrimSpace(req.Model), URL: strings.TrimSpace(req.URL), Key: req.Key, DailyLimit: req.DailyLimit, Context: req.Context}
 	if cfg.Provider == "" {
 		cfg.Provider = assistant.Anthropic
 	}
@@ -139,7 +143,7 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 			return
 		}
 		if cfg.Provider == assistant.Ollama {
-			cfg.URL = assistant.OllamaBase(cfg.URL)
+			cfg.URL = assistant.OllamaRoot(cfg.URL)
 		}
 	}
 	if cfg.Model == "" {

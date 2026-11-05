@@ -3812,7 +3812,7 @@ test('the assistant: the owner sets up a model; a person asks, sees what it look
     await page.locator('.subtab', { hasText: 'Owner' }).click()
     const card = page.getByTestId('assistant-admin')
     await card.getByTestId('assistant-enabled').click()
-    await card.getByTestId('assistant-provider').selectOption('ollama')
+    await card.getByTestId('assistant-provider').selectOption('openai')
     await card.getByTestId('assistant-model').fill('fake-model')
     await card.getByTestId('assistant-url').fill(model.url)
     await card.getByTestId('assistant-limit').fill('5')
@@ -3837,9 +3837,19 @@ test('the assistant: the owner sets up a model; a person asks, sees what it look
     await panel.getByTestId('assistant-input').press('Enter')
     await expect(panel.getByTestId('assistant-answer')).toHaveCount(2)
 
-    // Kept: closed with Escape, ⌘J opens it again; the conversation is in the list.
+    // Expanded to the middle of the screen; Escape brings it back to the corner.
+    await panel.getByTestId('assistant-grow').click()
+    await expect(panel).toHaveClass(/big/)
+    await page.keyboard.press('Escape')
+    await expect(panel).not.toHaveClass(/big/)
+
+    // Kept: closed with Escape, the round button (or ⌘J) opens it again; the
+    // conversation is in the list.
     await page.keyboard.press('Escape')
     await expect(panel).toHaveCount(0)
+    await page.getByTestId('assistant-fab').click()
+    await expect(panel).toBeVisible()
+    await page.keyboard.press('Escape')
     await page.keyboard.press('ControlOrMeta+j')
     await panel.getByTestId('assistant-new').click()
     await expect(panel.getByTestId('assistant-user')).toHaveCount(0)
@@ -3866,7 +3876,7 @@ test('the assistant in Agent mode: it lines changes up in one card; the ticked o
     await page.goto('/owner')
     await page.locator('.subtab', { hasText: 'Owner' }).click()
     const card = page.getByTestId('assistant-admin')
-    await card.getByTestId('assistant-provider').selectOption('ollama')
+    await card.getByTestId('assistant-provider').selectOption('openai')
     await card.getByTestId('assistant-model').fill('fake-model')
     await card.getByTestId('assistant-url').fill(model.url)
     await card.getByTestId('assistant-limit').fill('0')

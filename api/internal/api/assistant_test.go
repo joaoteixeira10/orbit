@@ -132,6 +132,14 @@ func TestAssistantConfig(t *testing.T) {
 		t.Fatalf("cleared: %+v", cfg)
 	}
 	expect(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi"}`, ana), http.StatusForbidden, "asking while off")
+
+	// Ollama: its address kept bare (an OpenAI-style …/v1 too), and how much
+	// the model reads.
+	decode(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"http://10.0.0.5:11434/v1/","model":"qwen3","context":32768}`, owner), &cfg)
+	if cfg.URL != "http://10.0.0.5:11434" || cfg.Context != 32768 {
+		t.Fatalf("ollama: %+v", cfg)
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"http://10.0.0.5:11434","model":"qwen3","context":100}`, owner), http.StatusBadRequest, "a tiny context")
 }
 
 // TestAssistantAsk: a message is answered with the tools that read, run as
@@ -147,7 +155,7 @@ func TestAssistantAsk(t *testing.T) {
 	defer func() { assistantHTTP = old }()
 
 	owner := loginTok(t, r, "admin", "adminpass")
-	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"`+srv.URL+`/v1","model":"llama3.1","daily_limit":3}`, owner), http.StatusOK, "set up")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"openai","url":"`+srv.URL+`/v1","model":"llama3.1","daily_limit":3}`, owner), http.StatusOK, "set up")
 	hol := createWS(t, r, owner, `{"name":"Holiday plans","kind":"personal"}`)
 	createUserVia(t, r, owner, `{"username":"bea","email":"bea@example.org","password":"beapassword","role_ids":[]}`)
 	bea := loginTok(t, r, "bea", "beapassword")
@@ -255,7 +263,7 @@ func TestAssistantAgent(t *testing.T) {
 	defer func() { assistantHTTP = old }()
 
 	owner := loginTok(t, r, "admin", "adminpass")
-	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"`+srv.URL+`/v1","model":"llama3.1"}`, owner), http.StatusOK, "set up")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"openai","url":"`+srv.URL+`/v1","model":"llama3.1"}`, owner), http.StatusOK, "set up")
 	ws := createWS(t, r, owner, `{"name":"Work","kind":"personal"}`)
 	lists := func() string {
 		text, _ := mcpToolCall(t, r, owner, "list_task_lists", map[string]any{"workspace_id": ws.ID})

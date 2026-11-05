@@ -11681,6 +11681,12 @@ const docTemplate = `{
                 "clear_key": {
                     "type": "boolean"
                 },
+                "context": {
+                    "description": "Context: for Ollama, how much the model reads of a request (tokens;\n0: 16384).",
+                    "type": "integer",
+                    "maximum": 1048576,
+                    "minimum": 2048
+                },
                 "daily_limit": {
                     "type": "integer",
                     "maximum": 100000,
@@ -11715,6 +11721,10 @@ const docTemplate = `{
         "api.assistantConfigResponse": {
             "type": "object",
             "properties": {
+                "context": {
+                    "description": "Ollama: how much the model reads, in tokens",
+                    "type": "integer"
+                },
                 "daily_limit": {
                     "type": "integer"
                 },

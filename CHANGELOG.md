@@ -18,8 +18,10 @@ merge, not at release time.
   history and in the audit log.
   Conversations are kept for you (open, carry on, delete). The owner sets up
   the model (Owner → Assistant): Claude with an API key, OpenAI or a server
-  speaking its API, or Ollama on your own network; and a daily limit per
-  person.
+  speaking its API, or Ollama on your own network (through its own API, with
+  a context size — 16k by default — so the model reads all of Orbit's
+  instructions); and a daily limit per person. A round ✦ button in the
+  corner opens it; it can be expanded to the middle of the screen.
 
 ## [0.4.0] - 2026-11-05
 

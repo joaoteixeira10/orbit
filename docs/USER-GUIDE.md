@@ -1670,8 +1670,9 @@ it there to cut it off. An assistant that takes a header can use an API
 token instead (`Authorization: Bearer orb_…`).
 
 **The assistant (built in)**: when the owner set one up, **✦** beside the
-inbox (or ⌘J / Ctrl+J) opens a chat window at the bottom right (the whole
-screen on a phone). Ask about your Orbit — "what's due this week?", "sum up
+inbox, the round ✦ button in the bottom-right corner, or ⌘J / Ctrl+J opens a
+chat window in that corner (the whole screen on a phone); **expand** puts it
+large in the middle of the screen (Esc brings it back). Ask about your Orbit — "what's due this week?", "sum up
 this page", "what did we decide about the logo?" — and it looks it up with
 Orbit's own tools, as you (it sees only what you can see), showing what it
 looked at ("Searched for "logo"", "Read a page") above its answer, which
@@ -1810,8 +1811,11 @@ stop at their next run).
 **Claude (Anthropic)** with an API key (the model starts as
 `claude-opus-5-5`), **OpenAI, or a server that speaks its API** (OpenAI's,
 LM Studio, vLLM… — its address ending in `/v1`, a key if it needs one), or
-**Ollama** (its address, e.g. `http://ollama.lan:11434/v1`, and the model's
-name, e.g. `llama3.1`). **Messages per person a day** (0: no limit) — with
+**Ollama** (its address, e.g. `http://ollama.lan:11434`, the model's name,
+e.g. `qwen3.6:35b-a3b`, and the **context size** — how much of each request
+the model reads, 16384 tokens unless you say; Orbit's instructions and tools
+alone are some 7,000, and with less the model misses them). For Agent mode,
+pick a model good at using tools. **Messages per person a day** (0: no limit) — with
 your key, that's what you pay for. The key is sealed with the master key and
 never shown again (**Remove the key**); saving asks for your password again
 when step-up is on. What the assistant reads to answer is sent to that

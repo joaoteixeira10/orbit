@@ -116,15 +116,15 @@ func stop(reason string) string {
 	return `{"type":"message_delta","delta":{"stop_reason":"` + reason + `"},"usage":{"output_tokens":1}}`
 }
 
-func TestOllamaBase(t *testing.T) {
+func TestOllamaRoot(t *testing.T) {
 	for in, want := range map[string]string{
-		"http://10.0.0.5:11434":     "http://10.0.0.5:11434/v1",
-		"http://10.0.0.5:11434/":    "http://10.0.0.5:11434/v1",
-		"http://10.0.0.5:11434/v1":  "http://10.0.0.5:11434/v1",
-		"https://ai.lan/ollama/v1/": "https://ai.lan/ollama/v1",
+		"http://10.0.0.5:11434":     "http://10.0.0.5:11434",
+		"http://10.0.0.5:11434/":    "http://10.0.0.5:11434",
+		"http://10.0.0.5:11434/v1":  "http://10.0.0.5:11434",
+		"https://ai.lan/ollama/v1/": "https://ai.lan/ollama",
 	} {
-		if got := OllamaBase(in); got != want {
-			t.Errorf("OllamaBase(%q) = %q, want %q", in, got, want)
+		if got := OllamaRoot(in); got != want {
+			t.Errorf("OllamaRoot(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
@@ -140,5 +140,48 @@ func TestOpenAIWhole(t *testing.T) {
 	text, err := p.Answer(context.Background(), Request{System: "r", History: []Turn{{Role: "user", Text: "hi"}}})
 	if err != nil || text != "Hello." {
 		t.Fatalf("answer %q err %v", text, err)
+	}
+}
+
+// TestOllamaLoop: through Ollama's own API (a JSON object a line), with the
+// context asked for; a tool's answer goes back named; the text comes in
+// pieces.
+func TestOllamaLoop(t *testing.T) {
+	var bodies []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/chat" {
+			http.NotFound(w, r)
+			return
+		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		bodies = append(bodies, body)
+		msgs := body["messages"].([]any)
+		if msgs[len(msgs)-1].(map[string]any)["role"] == "tool" {
+			_, _ = io.WriteString(w, `{"message":{"role":"assistant","content":"Two "},"done":false}`+"\n"+`{"message":{"role":"assistant","content":"workspaces."},"done":false}`+"\n"+`{"message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}`+"\n")
+			return
+		}
+		_, _ = io.WriteString(w, `{"message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"list_workspaces","arguments":{"query":"all"}}}]},"done":false}`+"\n"+`{"message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}`+"\n")
+	}))
+	defer srv.Close()
+	p, _ := Config{Provider: Ollama, Model: "qwen", URL: srv.URL + "/v1/"}.New(srv.Client())
+	var words []string
+	text, err := p.Answer(context.Background(), Request{
+		System: "rules", History: []Turn{{Role: "user", Text: "how many?"}},
+		Tools: []Tool{{Name: "list_workspaces", Description: "d", Schema: map[string]any{"type": "object"}}},
+		Delta: func(s string) { words = append(words, s) },
+		Call: func(_ context.Context, name string, args map[string]any) (string, bool) {
+			return name + ":" + args["query"].(string), false
+		},
+	})
+	if err != nil || text != "Two workspaces." || strings.Join(words, "|") != "Two |workspaces." {
+		t.Fatalf("answer %q err %v words %q", text, err, words)
+	}
+	if ctx := bodies[0]["options"].(map[string]any)["num_ctx"]; ctx != float64(DefaultContext) {
+		t.Errorf("num_ctx %v", ctx)
+	}
+	last := bodies[1]["messages"].([]any)[3].(map[string]any)
+	if last["role"] != "tool" || last["tool_name"] != "list_workspaces" || last["content"] != "list_workspaces:all" {
+		t.Errorf("tool answer sent: %v", last)
 	}
 }

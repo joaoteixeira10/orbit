@@ -162,6 +162,13 @@ definitions:
     properties:
       clear_key:
         type: boolean
+      context:
+        description: |-
+          Context: for Ollama, how much the model reads of a request (tokens;
+          0: 16384).
+        maximum: 1048576
+        minimum: 2048
+        type: integer
       daily_limit:
         maximum: 100000
         minimum: 0
@@ -187,6 +194,9 @@ definitions:
     type: object
   api.assistantConfigResponse:
     properties:
+      context:
+        description: 'Ollama: how much the model reads, in tokens'
+        type: integer
       daily_limit:
         type: integer
       enabled:

@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -123,27 +122,27 @@ func (c Config) New(client *http.Client) (Provider, error) {
 		if c.URL == "" || c.Model == "" {
 			return nil, ErrNoConfig
 		}
-		base := strings.TrimRight(c.URL, "/")
 		if c.Provider == Ollama {
-			base = OllamaBase(base)
+			n := c.Context
+			if n <= 0 {
+				n = DefaultContext
+			}
+			return &ollama{root: OllamaRoot(c.URL), key: c.Key, model: c.Model, ctx: n, http: client}, nil
 		}
-		return &openAI{base: base, key: c.Key, model: c.Model, http: client}, nil
+		return &openAI{base: strings.TrimRight(c.URL, "/"), key: c.Key, model: c.Model, http: client}, nil
 	}
 	return nil, ErrNoConfig
 }
 
-// OllamaBase gives Ollama's OpenAI-style API for its bare address:
-// http://host:11434 → http://host:11434/v1. An address with a path is kept.
-func OllamaBase(addr string) string {
-	addr = strings.TrimRight(addr, "/")
-	if u, err := url.Parse(addr); err == nil && u.Host != "" && u.Path == "" {
-		return addr + "/v1"
-	}
-	return addr
+// OllamaRoot is an Ollama server's address, as given — bare, or its
+// OpenAI-style …/v1: http://host:11434/v1/ → http://host:11434.
+func OllamaRoot(addr string) string {
+	return strings.TrimSuffix(strings.TrimRight(addr, "/"), "/v1")
 }
 
-// Timeout is how long one call to a model may take (thinking included).
-const Timeout = 5 * time.Minute
+// Timeout is how long one call to a model may take (thinking included; a
+// model on a CPU reads a long request slowly).
+const Timeout = 10 * time.Minute
 
 func clipResult(s string) string {
 	if r := []rune(s); len(r) > maxResult {

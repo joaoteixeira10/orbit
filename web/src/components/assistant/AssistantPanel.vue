@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, ArrowUp, Check, History, Plus, Sparkles, Square, Trash2, X } from 'lucide-vue-next'
+import { ArrowLeft, ArrowUp, Check, History, Maximize2, Minimize2, Plus, Sparkles, Square, Trash2, X } from 'lucide-vue-next'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import AssistantPlan from './AssistantPlan.vue'
@@ -10,8 +10,9 @@ import { useAssistantStore } from '@/stores/assistant'
 import { relTime } from '@/lib/format'
 import type { AssistantStep } from '@/api/assistant'
 
-// The assistant's chat window, floating at the bottom right (the whole screen
-// on a phone): a conversation in bubbles (the person's, its answers with the
+// The assistant's chat window, floating at the bottom right — or large in the
+// middle of the screen (expand); the whole screen on a phone. Closed, a round
+// button in that corner opens it (on a computer): a conversation in bubbles (the person's, its answers with the
 // tools it used above them), the box to ask in, and the list of past
 // conversations. Ask mode reads; Agent mode also lines up changes, shown in
 // one card to approve. ⌘J / Ctrl+J opens and closes it.
@@ -105,7 +106,8 @@ function onGlobalKey(e: KeyboardEvent) {
     e.preventDefault()
     store.open = !store.open
   } else if (e.key === 'Escape' && store.open) {
-    store.open = false
+    if (store.big) store.setBig(false)
+    else store.open = false
   }
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
@@ -115,8 +117,14 @@ const left = computed(() => store.left)
 </script>
 
 <template>
+  <Transition name="ai-fade">
+    <div v-if="store.open && store.enabled && store.big" class="ai-backdrop" aria-hidden="true" @click="store.setBig(false)" />
+  </Transition>
+  <button v-if="store.enabled && !store.open" class="ai-fab" :title="`${t('assistant.open')} (⌘J)`" :aria-label="t('assistant.open')" data-testid="assistant-fab" @click="store.open = true">
+    <Sparkles class="h-[22px] w-[22px]" />
+  </button>
   <Transition name="ai-pop">
-  <aside v-if="store.open && store.enabled" class="ai-panel" :aria-label="t('assistant.title')" data-testid="assistant-panel">
+  <aside v-if="store.open && store.enabled" class="ai-panel" :class="{ big: store.big }" :aria-label="t('assistant.title')" data-testid="assistant-panel">
     <header class="ai-head">
       <button v-if="view === 'history'" class="icon-btn h-8 w-8" :title="t('assistant.back')" :aria-label="t('assistant.back')" @click="view = 'chat'"><ArrowLeft class="h-4 w-4" /></button>
       <Sparkles v-else class="h-[18px] w-[18px] text-accent" />
@@ -126,6 +134,9 @@ const left = computed(() => store.left)
       </div>
       <button v-if="view === 'chat'" class="icon-btn h-8 w-8" :title="t('assistant.history')" :aria-label="t('assistant.history')" data-testid="assistant-history" @click="showHistory"><History class="h-4 w-4" /></button>
       <button class="icon-btn h-8 w-8" :title="t('assistant.newChat')" :aria-label="t('assistant.newChat')" data-testid="assistant-new" @click="fresh"><Plus class="h-4 w-4" /></button>
+      <button class="icon-btn ai-grow h-8 w-8" :title="store.big ? t('assistant.shrink') : t('assistant.grow')" :aria-label="store.big ? t('assistant.shrink') : t('assistant.grow')" data-testid="assistant-grow" @click="store.setBig(!store.big)">
+        <Minimize2 v-if="store.big" class="h-4 w-4" /><Maximize2 v-else class="h-4 w-4" />
+      </button>
       <button class="icon-btn h-8 w-8" :title="t('assistant.close')" :aria-label="t('assistant.close')" @click="store.open = false"><X class="h-4 w-4" /></button>
     </header>
 
@@ -239,13 +250,69 @@ const left = computed(() => store.left)
     0 4px 12px rgba(0, 0, 0, 0.08);
   transform-origin: bottom right;
 }
-/* A phone gets the whole screen. */
+/* Expanded: large, in the middle, over a dimmed page. */
+.ai-panel.big {
+  inset: 0;
+  width: min(780px, calc(100vw - 48px));
+  height: min(860px, calc(100dvh - 64px));
+  margin: auto;
+  transform-origin: center;
+}
+.ai-panel.big .ai-body {
+  padding: 20px 28px;
+}
+.ai-panel.big .ai-foot {
+  padding: 10px 24px 14px;
+}
+.ai-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(0, 0, 0, 0.32);
+}
+.ai-fade-enter-active,
+.ai-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.ai-fade-enter-from,
+.ai-fade-leave-to {
+  opacity: 0;
+}
+/* Closed: a round button in the corner it opens in. */
+.ai-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.18),
+    0 1px 4px rgba(0, 0, 0, 0.1);
+  transition: transform var(--speed);
+}
+.ai-fab:hover {
+  transform: scale(1.06);
+}
+/* A phone gets the whole screen, and opens it from the top bar. */
 @media (max-width: 639px) {
-  .ai-panel {
+  .ai-panel,
+  .ai-panel.big {
     inset: 0;
     width: auto;
     height: auto;
+    margin: 0;
     border-radius: 0;
+  }
+  .ai-fab,
+  .ai-grow,
+  .ai-backdrop {
+    display: none;
   }
   .ai-head {
     padding-top: calc(10px + env(safe-area-inset-top));

@@ -106,8 +106,8 @@ func TestAssistantAsk(t *testing.T) {
 	defer func() { assistantHTTP = old }()
 
 	owner := loginTok(t, r, "admin", "adminpass")
-	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"`+srv.URL+`/v1","model":"llama3.1","daily_limit":2}`, owner), http.StatusOK, "set up")
-	createWS(t, r, owner, `{"name":"Holiday plans","kind":"personal"}`)
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"`+srv.URL+`/v1","model":"llama3.1","daily_limit":3}`, owner), http.StatusOK, "set up")
+	hol := createWS(t, r, owner, `{"name":"Holiday plans","kind":"personal"}`)
 	createUserVia(t, r, owner, `{"username":"bea","email":"bea@example.org","password":"beapassword","role_ids":[]}`)
 	bea := loginTok(t, r, "bea", "beapassword")
 
@@ -156,18 +156,35 @@ func TestAssistantAsk(t *testing.T) {
 		t.Errorf("owner's answer: %+v", ev)
 	}
 
-	// Two a day: the third waits for tomorrow.
+	// The page on screen goes along — its id and what it says, read as the
+	// one asking: Bea, who can't open the owner's page, gets neither content.
+	text, _ := mcpToolCall(t, r, owner, "create_page", map[string]any{"workspace_id": hol.ID, "title": "Packing", "content": "Sunscreen and a hat"})
+	var pg struct{ ID string }
+	_ = json.Unmarshal([]byte(text), &pg)
+	onPage := `{"message":"Sum up this page","context":{"path":"/w/` + hol.ID + `/p/` + pg.ID + `"}}`
+	sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", onPage, owner).Body.String())
+	sys = fake.asked[len(fake.asked)-2]["messages"].([]any)[0].(map[string]any)["content"].(string)
+	if !strings.Contains(sys, "the page") || !strings.Contains(sys, "page_id "+pg.ID) || !strings.Contains(sys, "Sunscreen and a hat") {
+		t.Errorf("page on screen: %s", sys)
+	}
+	sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", onPage, bea).Body.String())
+	sys = fake.asked[len(fake.asked)-2]["messages"].([]any)[0].(map[string]any)["content"].(string)
+	if strings.Contains(sys, "Sunscreen") {
+		t.Errorf("Bea was shown the owner's page: %s", sys)
+	}
+
+	// Three a day: the fourth waits for tomorrow.
 	expect(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"Once more"}`, bea), http.StatusTooManyRequests, "over the limit")
 	var st assistantStatusResponse
 	decode(t, authdo(r, "GET", "/api/v1/assistant", "", bea), &st)
-	if st.UsedToday != 2 || st.DailyLimit != 2 {
+	if st.UsedToday != 3 || st.DailyLimit != 3 {
 		t.Errorf("status: %+v", st)
 	}
 
 	expect(t, authdo(r, "DELETE", "/api/v1/assistant/chats/"+chatID, "", bea), http.StatusNoContent, "delete")
 	var list []assistantChatSummary
 	decode(t, authdo(r, "GET", "/api/v1/assistant/chats", "", bea), &list)
-	if len(list) != 0 {
+	if len(list) != 1 || list[0].Title != "Sum up this page" {
 		t.Errorf("left: %+v", list)
 	}
 }

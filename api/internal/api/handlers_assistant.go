@@ -289,9 +289,10 @@ type assistantEvent struct {
 	Error  string `json:"error,omitempty"`
 }
 
-const assistantRules = `You are the assistant built into Orbit, a planner, talking with %s (@%s) in a panel beside what they're looking at. You work with their Orbit through the tools below; they act as this person, so you see exactly what they can see.
+const assistantRules = `You are the assistant built into Orbit, a planner, talking with %s (@%s) in a chat window over what they're looking at. You work with their Orbit through the tools below; they act as this person, so you see exactly what they can see.
 This is Ask mode: you can look things up, sum up and explain, but you cannot change anything. If asked to change something, say what you would change, and that you can't make changes in Ask mode.
 Answer in the language they write in. Keep answers short and to the point; use Markdown (short lists, bold, small tables) where it helps. When you mention a page, task list, sheet, diagram or event, link it the way Orbit writes links (below) so they can open it. Don't invent: if the tools don't show something, say so.
+What's on their screen is described at the end, with its ids (and a page's, sheet's or diagram's content): "this", "here" and "this page" mean that. Use it; never ask them for an id or a title.
 
 `
 
@@ -365,35 +366,37 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			}
 		}
 
+		run := func(tool string, args map[string]any) (string, bool) {
+			t := allowed[tool]
+			if t == nil {
+				return "there's no such tool here: " + tool, true
+			}
+			for _, k := range t.Required {
+				if v, ok := args[k]; !ok || v == nil || v == "" {
+					return "missing argument: " + k, true
+				}
+			}
+			out, err := t.Run(call, mcpArgs(args))
+			if err != nil {
+				return err.Error(), true
+			}
+			return toolText(out), false
+		}
+
 		events := make(chan assistantEvent, 64)
 		var steps []assistant.Step
 		go func() {
 			defer close(events)
 			text, err := model.Answer(c.Request.Context(), assistant.Request{
 				System:  fmt.Sprintf(assistantRules, name, user.Username) + mcpInstructions,
-				Context: assistantSituation(req.Context),
+				Context: assistantSituation(req.Context, run),
 				History: history,
 				Tools:   tools,
 				Step: func(s assistant.Step) {
 					steps = append(steps, s)
 					events <- assistantEvent{Type: "step", Tool: s.Tool, Hint: s.Hint}
 				},
-				Call: func(_ context.Context, tool string, args map[string]any) (string, bool) {
-					t := allowed[tool]
-					if t == nil {
-						return "there's no such tool here: " + tool, true
-					}
-					for _, k := range t.Required {
-						if v, ok := args[k]; !ok || v == nil || v == "" {
-							return "missing argument: " + k, true
-						}
-					}
-					out, err := t.Run(call, mcpArgs(args))
-					if err != nil {
-						return err.Error(), true
-					}
-					return toolText(out), false
-				},
+				Call: func(_ context.Context, tool string, args map[string]any) (string, bool) { return run(tool, args) },
 			})
 			if err != nil {
 				events <- assistantEvent{Type: "error", Error: h.assistantError(err)}
@@ -450,9 +453,27 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 	}
 }
 
+// assistantScreens: the workspace screens that show one thing, by the
+// address's segment — what it is, its id's name in the tools, and the tool
+// that reads it (whose content then goes along, so "sum up this page" needs
+// no looking up, even for a small model).
+var assistantScreens = map[string]struct{ kind, idArg, read string }{
+	"p":           {"page", "page_id", "read_page"},
+	"s":           {"sheet", "sheet_id", "read_sheet"},
+	"d":           {"diagram", "diagram_id", "read_diagram"},
+	"tasks":       {"task list", "list_id", ""},
+	"board":       {"task list (as a board)", "list_id", ""},
+	"f":           {"file", "file_id", ""},
+	"whiteboards": {"whiteboard", "whiteboard_id", ""},
+	"forms":       {"form", "form_id", ""},
+}
+
+// assistantShown caps what goes along of the thing on screen.
+const assistantShown = 16000
+
 // assistantSituation is what changes with each message: when it is, and
-// what's on the person's screen.
-func assistantSituation(x assistantContext) string {
+// what's on the person's screen — read with the tools, as them.
+func assistantSituation(x assistantContext, read func(tool string, args map[string]any) (string, bool)) string {
 	var b strings.Builder
 	if x.Now != "" {
 		fmt.Fprintf(&b, "Now, for them: %s", x.Now)
@@ -463,13 +484,36 @@ func assistantSituation(x assistantContext) string {
 	} else {
 		fmt.Fprintf(&b, "Now: %s.\n", time.Now().UTC().Format("Monday 2006-01-02 15:04 UTC"))
 	}
-	if x.Path != "" {
-		fmt.Fprintf(&b, "On their screen: %q at %s", x.Title, x.Path)
-		if x.WorkspaceID != "" {
-			fmt.Fprintf(&b, " (workspace_id %s)", x.WorkspaceID)
-		}
-		b.WriteString(". \"This\" or \"here\" means that.\n")
+	if x.Path == "" {
+		return b.String()
 	}
+	path, _, _ := strings.Cut(x.Path, "?")
+	seg := strings.Split(strings.Trim(path, "/"), "/")
+	if len(seg) >= 4 && seg[0] == "w" {
+		if sc, ok := assistantScreens[seg[2]]; ok && seg[3] != "" {
+			fmt.Fprintf(&b, "On their screen: the %s", sc.kind)
+			if x.Title != "" {
+				fmt.Fprintf(&b, " %q", x.Title)
+			}
+			fmt.Fprintf(&b, " (%s %s, workspace_id %s).\n", sc.idArg, seg[3], seg[1])
+			if sc.read != "" {
+				if text, bad := read(sc.read, map[string]any{sc.idArg: seg[3]}); !bad {
+					if r := []rune(text); len(r) > assistantShown {
+						text = string(r[:assistantShown]) + "\n…(cut short)"
+					}
+					fmt.Fprintf(&b, "Its content, as they see it:\n<%s>\n%s\n</%s>\n", seg[2], text, seg[2])
+				}
+			}
+			return b.String()
+		}
+	}
+	fmt.Fprintf(&b, "On their screen: %q at %s", x.Title, x.Path)
+	if len(seg) >= 2 && seg[0] == "w" {
+		fmt.Fprintf(&b, " (workspace_id %s)", seg[1])
+	} else if x.WorkspaceID != "" {
+		fmt.Fprintf(&b, " (workspace_id %s)", x.WorkspaceID)
+	}
+	b.WriteString(".\n")
 	return b.String()
 }
 

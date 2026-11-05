@@ -419,8 +419,8 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			defer close(events)
 			text, err := model.Answer(c.Request.Context(), assistant.Request{
 				System:  fmt.Sprintf(assistantRules, name, user.Username, modeRules) + mcpInstructions,
-				Context: assistantSituation(req.Context, run) + theirWorkspaces(mine),
-				History: withOutcomes(history),
+				Context: assistantSituation(req.Context, run) + theirWorkspaces(mine) + earlierChanges(history),
+				History: history,
 				Tools:   tools,
 				Step: func(s assistant.Step) {
 					steps = append(steps, s)

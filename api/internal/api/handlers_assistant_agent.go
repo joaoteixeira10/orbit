@@ -26,7 +26,8 @@ const assistantAgentRules = `This is Agent mode: besides looking things up, you 
 - Look up what you need first (their workspaces are listed at the end, by name and id), then line up every change the request needs, then answer in a sentence or two saying what you've lined up for them to approve. Never say it's done, and don't ask them to confirm: the approval is how they confirm.
 - Give each change a "summary" in their language that names the thing, e.g. Move "Book the room" to Friday.
 - A change that makes something (a task list, a page, a task…) gives back an id like new:1; use it in later changes that need it (tasks in the new list, say). It can't be read before it's made.
-- Line up only what they asked for.`
+- Line up only what they asked for.
+- A task, note or event can't move to another workspace. To move one, line up making it anew there (with its details) and deleting the old one, and say that's how.`
 
 // agentSummary is the argument each change carries in Agent mode: what it
 // does, in words, for the card.
@@ -93,20 +94,21 @@ func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any, mine 
 	return fmt.Sprintf(`{"status":"lined up","change":%d,"id":"new:%d","next":"Nothing more to do for this one: they approve all the changes together after your answer. Line up any other changes the request needs, then tell them in a sentence what you've lined up."}`, n, n), false
 }
 
-// withOutcomes gives the model the conversation with what became of the
-// changes lined up earlier, so it knows what was made and what wasn't.
-func withOutcomes(turns []assistant.Turn) []assistant.Turn {
-	out := make([]assistant.Turn, len(turns))
+// earlierChanges tells the model what became of the changes lined up
+// earlier in the conversation (made, not approved…), apart from its answers
+// — told within them, a model takes it for a way to answer and copies it.
+func earlierChanges(turns []assistant.Turn) string {
+	var b strings.Builder
 	for i, t := range turns {
-		out[i] = t
 		if len(t.Actions) == 0 {
 			continue
 		}
-		var b strings.Builder
-		b.WriteString(t.Text)
-		b.WriteString("\n\n[The changes lined up:")
+		if b.Len() == 0 {
+			b.WriteString("For you, not to repeat to them — the changes you lined up earlier in this conversation, and what became of them:")
+		}
+		fmt.Fprintf(&b, "\nIn your answer %d:", i/2+1)
 		for _, a := range t.Actions {
-			fmt.Fprintf(&b, "\n%d. %s — %s: ", a.N, a.Title, a.Summary)
+			fmt.Fprintf(&b, "\n- %s — %s: ", a.Title, a.Summary)
 			switch a.State {
 			case assistant.Done:
 				b.WriteString("made")
@@ -118,13 +120,14 @@ func withOutcomes(turns []assistant.Turn) []assistant.Turn {
 			case assistant.Skipped:
 				b.WriteString("not made (" + a.Result + ")")
 			default:
-				b.WriteString("waiting for their approval")
+				b.WriteString("still waiting for their approval")
 			}
 		}
-		b.WriteString("]")
-		out[i].Text = b.String()
 	}
-	return out
+	if b.Len() > 0 {
+		b.WriteString("\n")
+	}
+	return b.String()
 }
 
 var newRef = regexp.MustCompile(`new:(\d+)`)

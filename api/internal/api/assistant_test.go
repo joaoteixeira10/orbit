@@ -323,8 +323,14 @@ func TestAssistantAgent(t *testing.T) {
 	// The next message carries what became of them.
 	sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"chat_id":"`+chatID+`","message":"Thanks"}`, owner).Body.String())
 	msgs := string(mustJSON(fake.asked[len(fake.asked)-2]["messages"]))
-	if !strings.Contains(msgs, "made (id "+a[0].MadeID+")") || !strings.Contains(msgs, "not made (not approved)") {
-		t.Errorf("outcomes not told: %s", msgs)
+	// …told apart from its answers, which stay as they were (a model told
+	// it in them copies it into its next answer).
+	sent := fake.asked[len(fake.asked)-2]["messages"].([]any)
+	if sys := sent[0].(map[string]any)["content"].(string); !strings.Contains(sys, "made (id "+a[0].MadeID+")") || !strings.Contains(sys, "not made (not approved)") {
+		t.Errorf("outcomes not told: %s", sys)
+	}
+	if strings.Contains(sent[2].(map[string]any)["content"].(string), "made (id") {
+		t.Errorf("outcomes in its answer: %s", msgs)
 	}
 
 	// Approving the task alone: it needs the list, which isn't made.

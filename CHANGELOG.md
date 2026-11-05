@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-05
+
 ### Added
 
 - **Holiday themes** — Christmas, Halloween, New Year's Eve, Easter, Santos

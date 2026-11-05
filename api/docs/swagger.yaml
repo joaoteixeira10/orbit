@@ -4421,7 +4421,7 @@ info:
   contact: {}
   description: 'Workspaces for school, work and life: pages, tasks, boards and calendars.'
   title: Orbit API
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /about:
     get:

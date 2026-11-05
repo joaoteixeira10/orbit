@@ -31,8 +31,14 @@ const assistantHistory = 20
 
 // assistantHTTP makes the calls to the model: guarded (the owner's address
 // may be on the local network, never loopback or the cloud's metadata).
+// A model sends nothing until it has answered, so it gets the whole Timeout
+// to start replying, not the guarded client's few seconds.
 // Tests swap it for one that reaches their stand-in server.
-var assistantHTTP = func() *http.Client { return safedial.GuardedClient(assistant.Timeout) }
+var assistantHTTP = func() *http.Client {
+	c := safedial.GuardedClient(assistant.Timeout)
+	c.Transport.(*http.Transport).ResponseHeaderTimeout = assistant.Timeout
+	return c
+}
 
 type assistantStatusResponse struct {
 	Enabled    bool   `json:"enabled"` // on and set up

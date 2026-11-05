@@ -23,7 +23,7 @@ import (
 const assistantAskRules = `This is Ask mode: you can look things up, sum up and explain, but you cannot change anything. If asked to change something, say what you would change, and that they can switch to Agent mode (below the box they type in) for you to do it.`
 
 const assistantAgentRules = `This is Agent mode: besides looking things up, you can change their Orbit with the tools that change things. Those changes aren't made as you call them: each is lined up, and once you've answered they see the whole list, tick what they want and approve it in one go. So:
-- Look up what you need first, then line up every change the request needs, then answer in a sentence or two saying what you've lined up for them to approve. Never say it's done.
+- Look up what you need first (their workspaces are listed at the end, by name and id), then line up every change the request needs, then answer in a sentence or two saying what you've lined up for them to approve. Never say it's done, and don't ask them to confirm: the approval is how they confirm.
 - Give each change a "summary" in their language that names the thing, e.g. Move "Book the room" to Friday.
 - A change that makes something (a task list, a page, a task…) gives back an id like new:1; use it in later changes that need it (tasks in the new list, say). It can't be read before it's made.
 - Line up only what they asked for.`
@@ -41,8 +41,43 @@ func agentSchema(t *mcpTool) map[string]any {
 	return s
 }
 
-// propose lines a change up and tells the model so.
-func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any) string {
+// myWorkspace is one of the person's workspaces, as the model is told them.
+type myWorkspace struct {
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	ArchivedAt *string `json:"archived_at"`
+}
+
+// theirWorkspaces lists the person's workspaces for the model.
+func theirWorkspaces(ws []myWorkspace) string {
+	var b strings.Builder
+	for _, w := range ws {
+		if w.ArchivedAt != nil {
+			continue
+		}
+		if b.Len() == 0 {
+			b.WriteString("Their workspaces (name: workspace_id):")
+		}
+		fmt.Fprintf(&b, "\n- %s: %s", w.Name, w.ID)
+	}
+	if b.Len() > 0 {
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+// propose lines a change up and tells the model so — or, when it names a
+// workspace they don't have, says so at once, for the model to put right.
+func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any, mine []myWorkspace) (string, bool) {
+	if id, ok := args["workspace_id"].(string); ok && !newRef.MatchString(id) {
+		known := false
+		for _, w := range mine {
+			known = known || w.ID == id
+		}
+		if !known {
+			return "not lined up: there's no workspace with id " + id + ". " + strings.TrimSpace(theirWorkspaces(mine)), true
+		}
+	}
 	n := len(*actions) + 1
 	summary, _ := args[agentSummary].(string)
 	rest := make(map[string]any, len(args))
@@ -55,7 +90,7 @@ func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any) strin
 		N: n, Tool: t.Name, Title: t.Title, Summary: strings.TrimSpace(summary),
 		Destructive: t.Destructive, Args: rest, State: assistant.Proposed,
 	})
-	return fmt.Sprintf("Lined up as change %d, for them to approve (not made yet). If it makes something, its id is new:%d.", n, n)
+	return fmt.Sprintf(`{"status":"lined up","change":%d,"id":"new:%d","next":"Nothing more to do for this one: they approve all the changes together after your answer. Line up any other changes the request needs, then tell them in a sentence what you've lined up."}`, n, n), false
 }
 
 // withOutcomes gives the model the conversation with what became of the

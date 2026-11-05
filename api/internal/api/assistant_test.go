@@ -277,7 +277,7 @@ func TestAssistantAgent(t *testing.T) {
 	}
 	first := fake.asked[0]
 	sys := first["messages"].([]any)[0].(map[string]any)["content"].(string)
-	if !strings.Contains(sys, "Agent mode") {
+	if !strings.Contains(sys, "Agent mode") || !strings.Contains(sys, "- Work: "+ws.ID) {
 		t.Errorf("system: %s", sys)
 	}
 	for _, x := range first["tools"].([]any) {
@@ -324,6 +324,13 @@ func TestAssistantAgent(t *testing.T) {
 	decode(t, authdo(r, "POST", "/api/v1/assistant/chats/"+ev[4].ChatID+"/apply", `{"turn":1,"approve":[2]}`, owner), &turn)
 	if turn.Actions[1].State != "skipped" || !strings.Contains(turn.Actions[1].Result, "needs change 1") {
 		t.Errorf("dependent: %+v", turn.Actions[1])
+	}
+
+	// A workspace they don't have isn't lined up: the model is told at once,
+	// with theirs.
+	ev = sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"plan:nope"}`, owner).Body.String())
+	if len(ev) != 5 || len(ev[3].Actions) != 0 || !strings.Contains(ev[3].Text, "no workspace with id nope") || !strings.Contains(ev[3].Text, ws.ID) {
+		t.Errorf("unknown workspace: %+v", ev)
 	}
 
 	// Ask mode offers nothing that changes.

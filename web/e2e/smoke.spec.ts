@@ -3781,7 +3781,7 @@ async function fakeModel(): Promise<{ url: string; close: () => void }> {
         calls.forEach(([name, args], index) => chunk({ tool_calls: [{ index, id: `p${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }))
         chunk({}, 'tool_calls')
         end()
-      } else if (last?.role === 'tool' && String(last.content).startsWith('Lined up')) {
+      } else if (last?.role === 'tool' && String(last.content).includes('"lined up"')) {
         chunk({ role: 'assistant', content: 'I’ve lined up three changes for you to approve.' }, 'stop')
         end()
       } else if (last?.role === 'tool') {

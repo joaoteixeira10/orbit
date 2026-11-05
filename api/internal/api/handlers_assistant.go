@@ -380,6 +380,10 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			allowed[t.Name] = t
 		}
 		var actions []assistant.Action
+		// Their workspaces go along by name, so "on Escola" needs no looking
+		// up (and a change can't name one they don't have).
+		var mine []myWorkspace
+		_ = call.do("GET", "/workspaces", nil, nil, &mine)
 		modeRules := assistantAskRules
 		if agent {
 			modeRules = assistantAgentRules
@@ -396,7 +400,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				}
 			}
 			if !t.ReadOnly {
-				return propose(&actions, t, args), false
+				return propose(&actions, t, args, mine)
 			}
 			out, err := t.Run(call, mcpArgs(args))
 			if err != nil {
@@ -411,7 +415,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			defer close(events)
 			text, err := model.Answer(c.Request.Context(), assistant.Request{
 				System:  fmt.Sprintf(assistantRules, name, user.Username, modeRules) + mcpInstructions,
-				Context: assistantSituation(req.Context, run),
+				Context: assistantSituation(req.Context, run) + theirWorkspaces(mine),
 				History: withOutcomes(history),
 				Tools:   tools,
 				Step: func(s assistant.Step) {

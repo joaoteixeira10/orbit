@@ -8,7 +8,7 @@ merge, not at release time.
 
 ### Added
 
-- **An assistant built in** — ✦ beside the inbox (or ⌘J): a chat panel that
+- **An assistant built in** — ✦ beside the inbox (or ⌘J): a chat window that
   answers questions about your own Orbit ("what's due this week?", "sum up
   this page") with Orbit's own tools, as you — it sees only what you can see
   — and shows what it looked at. Ask mode: it reads, never changes anything.

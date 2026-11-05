@@ -2,16 +2,17 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, ArrowUp, Check, History, Loader2, Plus, Sparkles, Square, Trash2, X } from 'lucide-vue-next'
+import { ArrowLeft, ArrowUp, Check, History, Plus, Sparkles, Square, Trash2, X } from 'lucide-vue-next'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import { relTime } from '@/lib/format'
 import type { AssistantStep } from '@/api/assistant'
 
-// The assistant's panel, at the right of the window: a conversation (the
-// person's lines, its answers with the tools it used), the box to ask in, and
-// the list of past conversations. ⌘J / Ctrl+J opens and closes it.
+// The assistant's chat window, floating at the bottom right (the whole screen
+// on a phone): a conversation in bubbles (the person's, its answers with the
+// tools it used above them), the box to ask in, and the list of past
+// conversations. ⌘J / Ctrl+J opens and closes it.
 const { t, locale } = useI18n()
 const route = useRoute()
 const store = useAssistantStore()
@@ -78,7 +79,7 @@ watch(draft, () =>
     const el = input.value
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }),
 )
 watch(
@@ -101,6 +102,7 @@ const left = computed(() => store.left)
 </script>
 
 <template>
+  <Transition name="ai-pop">
   <aside v-if="store.open && store.enabled" class="ai-panel" :aria-label="t('assistant.title')" data-testid="assistant-panel">
     <header class="ai-head">
       <button v-if="view === 'history'" class="icon-btn h-8 w-8" :title="t('assistant.back')" :aria-label="t('assistant.back')" @click="view = 'chat'"><ArrowLeft class="h-4 w-4" /></button>
@@ -145,14 +147,14 @@ const left = computed(() => store.left)
           <ul v-if="m.steps?.length" class="ai-steps">
             <li v-for="(s, k) in m.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
           </ul>
-          <MarkdownView :content="m.text" :editable="false" plain class="ai-md" />
+          <div class="ai-bubble"><MarkdownView :content="m.text" :editable="false" plain class="ai-md" /></div>
         </div>
       </template>
       <div v-if="store.sending" class="ai-answer" data-testid="assistant-working">
-        <ul class="ai-steps">
+        <ul v-if="store.steps.length" class="ai-steps">
           <li v-for="(s, k) in store.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
-          <li class="ai-thinking"><Loader2 class="h-3 w-3 animate-spin" />{{ t('assistant.thinking') }}</li>
         </ul>
+        <div class="ai-bubble ai-typing" role="status" :aria-label="t('assistant.thinking')"><span /><span /><span /></div>
       </div>
       <p v-if="store.error" class="ai-error" role="alert" data-testid="assistant-error">{{ store.error }}</p>
     </div>
@@ -187,37 +189,79 @@ const left = computed(() => store.left)
       @close="confirmAll = false"
     />
   </aside>
+  </Transition>
 </template>
 
 <style scoped>
 .ai-panel {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  right: 20px;
+  bottom: 20px;
   z-index: 46;
   display: flex;
-  width: min(420px, 100vw);
+  width: 380px;
+  height: min(600px, calc(100dvh - 40px));
   flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
   background: var(--surface);
-  border-left: 0.5px solid var(--border);
-  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 0 0 0.5px var(--border),
+    0 16px 48px rgba(0, 0, 0, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  transform-origin: bottom right;
+}
+/* A phone gets the whole screen. */
+@media (max-width: 639px) {
+  .ai-panel {
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+  }
+  .ai-head {
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+  .ai-foot {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+.ai-pop-enter-active,
+.ai-pop-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.ai-pop-enter-from,
+.ai-pop-leave-to {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-pop-enter-active,
+  .ai-pop-leave-active {
+    transition: opacity 0.12s ease;
+  }
+  .ai-pop-enter-from,
+  .ai-pop-leave-to {
+    transform: none;
+  }
 }
 .ai-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: calc(10px + env(safe-area-inset-top)) 10px 10px 16px;
+  padding: 10px 10px 10px 16px;
   border-bottom: 0.5px solid var(--border);
 }
 .ai-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 14px;
 }
 .ai-empty {
-  margin: 32px 8px;
+  margin: 24px 8px;
   text-align: center;
 }
 .ai-suggest {
@@ -232,11 +276,11 @@ const left = computed(() => store.left)
   background: var(--fill);
 }
 .ai-user {
-  margin: 0 0 14px auto;
-  max-width: 85%;
+  margin: 0 0 12px auto;
+  max-width: 80%;
   width: fit-content;
   padding: 8px 12px;
-  border-radius: 16px 16px 4px 16px;
+  border-radius: 18px 18px 4px 18px;
   background: var(--accent);
   color: var(--accent-fg);
   font-size: 14px;
@@ -244,15 +288,24 @@ const left = computed(() => store.left)
   word-break: break-word;
 }
 .ai-answer {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  max-width: 88%;
   font-size: 14px;
+}
+.ai-bubble {
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 18px 18px 18px 4px;
+  background: var(--fill-2);
+  word-break: break-word;
 }
 .ai-steps {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  margin-bottom: 6px;
-  font-size: 12px;
+  margin: 0 0 6px 4px;
+  font-size: 11.5px;
   color: var(--text-3);
 }
 .ai-steps li {
@@ -260,8 +313,54 @@ const left = computed(() => store.left)
   align-items: center;
   gap: 6px;
 }
+/* The page reader's size and spacing, made a message's. */
+.ai-bubble .ai-md {
+  padding-bottom: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
 .ai-md :deep(p) {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
+}
+.ai-md :deep(> :last-child) {
+  margin-bottom: 0;
+}
+/* Three dots while it works. */
+.ai-typing {
+  display: flex;
+  gap: 4px;
+  padding: 12px 14px;
+}
+.ai-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--text-3);
+  animation: ai-dot 1.2s infinite ease-in-out;
+}
+.ai-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ai-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ai-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-typing span {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 .ai-error {
   margin-top: 4px;
@@ -280,7 +379,7 @@ const left = computed(() => store.left)
   background: var(--fill-2);
 }
 .ai-foot {
-  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  padding: 8px 10px 10px;
   border-top: 0.5px solid var(--border);
 }
 .ai-box {
@@ -305,7 +404,7 @@ const left = computed(() => store.left)
 .ai-box textarea {
   flex: 1;
   min-height: 24px;
-  max-height: 160px;
+  max-height: 120px;
   resize: none;
   border: 0;
   outline: 0;

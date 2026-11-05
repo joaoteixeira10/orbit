@@ -1670,7 +1670,7 @@ it there to cut it off. An assistant that takes a header can use an API
 token instead (`Authorization: Bearer orb_…`).
 
 **The assistant (built in)**: when the owner set one up, **✦** beside the
-inbox (or ⌘J / Ctrl+J) opens a chat panel at the right. Ask about your Orbit
+inbox (or ⌘J / Ctrl+J) opens a chat window at the bottom right (the whole screen on a phone). Ask about your Orbit
 — "what's due this week?", "sum up this page", "what did we decide about the
 logo?" — and it looks it up with Orbit's own tools, as you (it sees only what
 you can see), showing what it looked at ("Searched for "logo"", "Read a page")

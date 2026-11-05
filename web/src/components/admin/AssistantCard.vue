@@ -68,7 +68,7 @@ async function save() {
       </label>
       <label v-if="form.provider !== 'anthropic'" class="flex flex-col gap-1.5">
         <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.url') }}</span>
-        <input v-model="form.url" class="input" spellcheck="false" autocomplete="off" placeholder="http://ollama.lan:11434/v1" data-testid="assistant-url" />
+        <input v-model="form.url" class="input" spellcheck="false" autocomplete="off" :placeholder="form.provider === 'ollama' ? 'http://ollama.lan:11434' : 'https://api.openai.com/v1'" data-testid="assistant-url" />
         <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.urlHint') }}</span>
       </label>
       <label v-if="form.provider !== 'ollama'" class="flex flex-col gap-1.5">

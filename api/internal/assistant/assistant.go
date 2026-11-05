@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -92,9 +93,23 @@ func (c Config) New(client *http.Client) (Provider, error) {
 		if c.URL == "" || c.Model == "" {
 			return nil, ErrNoConfig
 		}
-		return &openAI{base: strings.TrimRight(c.URL, "/"), key: c.Key, model: c.Model, http: client}, nil
+		base := strings.TrimRight(c.URL, "/")
+		if c.Provider == Ollama {
+			base = OllamaBase(base)
+		}
+		return &openAI{base: base, key: c.Key, model: c.Model, http: client}, nil
 	}
 	return nil, ErrNoConfig
+}
+
+// OllamaBase gives Ollama's OpenAI-style API for its bare address:
+// http://host:11434 → http://host:11434/v1. An address with a path is kept.
+func OllamaBase(addr string) string {
+	addr = strings.TrimRight(addr, "/")
+	if u, err := url.Parse(addr); err == nil && u.Host != "" && u.Path == "" {
+		return addr + "/v1"
+	}
+	return addr
 }
 
 // Timeout is how long one call to a model may take (thinking included).

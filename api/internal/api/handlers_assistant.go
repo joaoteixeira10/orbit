@@ -132,6 +132,9 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "the address must be an http(s) address, with no query"})
 			return
 		}
+		if cfg.Provider == assistant.Ollama {
+			cfg.URL = assistant.OllamaBase(cfg.URL)
+		}
 	}
 	if cfg.Model == "" {
 		cfg.Model = assistant.DefaultModel(cfg.Provider)

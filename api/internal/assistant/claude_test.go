@@ -79,3 +79,16 @@ func TestClaudeLoop(t *testing.T) {
 }
 
 func mustJSON(v any) string { b, _ := json.Marshal(v); return string(b) }
+
+func TestOllamaBase(t *testing.T) {
+	for in, want := range map[string]string{
+		"http://10.0.0.5:11434":     "http://10.0.0.5:11434/v1",
+		"http://10.0.0.5:11434/":    "http://10.0.0.5:11434/v1",
+		"http://10.0.0.5:11434/v1":  "http://10.0.0.5:11434/v1",
+		"https://ai.lan/ollama/v1/": "https://ai.lan/ollama/v1",
+	} {
+		if got := OllamaBase(in); got != want {
+			t.Errorf("OllamaBase(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

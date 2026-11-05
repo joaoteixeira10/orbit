@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -214,6 +215,17 @@ type mcpCall struct {
 	client string
 }
 
+// viaKey marks a request Orbit's own tools make for someone — "mcp" (an app
+// through the MCP server) or "assistant" — so what it changes can say so.
+// Unlike the X-Orbit-Client header, nothing outside can set it.
+type viaKey struct{}
+
+// viaOf is what made the request for its person: "mcp", "assistant" or "".
+func viaOf(c *gin.Context) string {
+	v, _ := c.Request.Context().Value(viaKey{}).(string)
+	return v
+}
+
 // bufWriter is a ResponseWriter that keeps the answer.
 type bufWriter struct {
 	head http.Header
@@ -253,6 +265,7 @@ func (m *mcpCall) do(method, path string, q url.Values, body any, into any) erro
 		client = "mcp"
 	}
 	req.Header.Set("X-Orbit-Client", client)
+	req = req.WithContext(context.WithValue(req.Context(), viaKey{}, client))
 	req.RemoteAddr = m.c.Request.RemoteAddr
 	w := &bufWriter{head: http.Header{}, code: http.StatusOK}
 	m.api.ServeHTTP(w, req)

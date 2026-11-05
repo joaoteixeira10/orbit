@@ -33,10 +33,10 @@ func versionsKept(db *gorm.DB) int {
 	return defaultVersionsKept
 }
 
-// recordVersion keeps p as it is now, saved by uid (a version per save). prev is the page before
-// the save: with no history yet, it's kept first (what the page was before
-// history began).
-func recordVersion(db *gorm.DB, p models.Page, uid string, prev *models.Page, restored int) {
+// recordVersion keeps p as it is now, saved by uid (a version per save) —
+// via the assistant or MCP, or "". prev is the page before the save: with no
+// history yet, it's kept first (what the page was before history began).
+func recordVersion(db *gorm.DB, p models.Page, uid, via string, prev *models.Page, restored int) {
 	var last models.PageVersion
 	found := db.Where("page_id = ?", p.ID).Order("created_at DESC").Limit(1).Find(&last).RowsAffected == 1
 	if !found && prev != nil && (prev.Content != "" || prev.Title != "") && (prev.Content != p.Content || prev.Title != p.Title) {
@@ -46,7 +46,7 @@ func recordVersion(db *gorm.DB, p models.Page, uid string, prev *models.Page, re
 	if found && last.Title == p.Title && last.Content == p.Content && restored == 0 {
 		return // nothing new (a save of the icon, say)
 	}
-	db.Create(&models.PageVersion{PageID: p.ID, WorkspaceID: p.WorkspaceID, Version: p.Version, Title: p.Title, Content: p.Content, UserID: uid, Restored: restored})
+	db.Create(&models.PageVersion{PageID: p.ID, WorkspaceID: p.WorkspaceID, Version: p.Version, Title: p.Title, Content: p.Content, UserID: uid, Restored: restored, Via: via})
 	// The oldest go beyond what's kept.
 	n := versionsKept(db)
 	var keep []string
@@ -153,7 +153,7 @@ func (h *Handlers) restorePageVersion(c *gin.Context) {
 		return
 	}
 	p = reloadPage(h, p.ID)
-	recordVersion(h.db, p, uid, &prev, v.Version)
+	recordVersion(h.db, p, uid, viaOf(c), &prev, v.Version)
 	h.collabSaved(c, "page:"+p.ID, p.Version)
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.JSON(http.StatusOK, pageOut(p, false, true))

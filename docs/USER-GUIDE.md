@@ -1670,16 +1670,29 @@ it there to cut it off. An assistant that takes a header can use an API
 token instead (`Authorization: Bearer orb_…`).
 
 **The assistant (built in)**: when the owner set one up, **✦** beside the
-inbox (or ⌘J / Ctrl+J) opens a chat window at the bottom right (the whole screen on a phone). Ask about your Orbit
-— "what's due this week?", "sum up this page", "what did we decide about the
-logo?" — and it looks it up with Orbit's own tools, as you (it sees only what
-you can see), showing what it looked at ("Searched for "logo"", "Read a page")
-above its answer; links in the answer open the page or list. It knows the page
-you're on ("this page"). It's in **Ask mode**: it reads, it never changes
-anything. Your conversations are kept for you: the clock icon lists them —
-open one to carry on, delete one, or **Delete all**; **+** starts a new one.
-The owner may set a daily number of messages (the panel says how many are
-left).
+inbox (or ⌘J / Ctrl+J) opens a chat window at the bottom right (the whole
+screen on a phone). Ask about your Orbit — "what's due this week?", "sum up
+this page", "what did we decide about the logo?" — and it looks it up with
+Orbit's own tools, as you (it sees only what you can see), showing what it
+looked at ("Searched for "logo"", "Read a page") above its answer, which
+appears as it's written; links in the answer open the page or list. It knows
+the page you're on ("this page").
+
+Below the box you type in, **Ask** or **Agent** (remembered):
+
+- **Ask** — it reads and answers; it never changes anything.
+- **Agent** — it can also make changes: "make a Launch list with tasks for
+  the venue and the invites", "move everything due today to Friday". Nothing
+  changes as it works: it lines the changes up and shows them in one card,
+  each ticked. Untick what you don't want and **Approve** (or **Discard**
+  them all); the ticked ones are made, as you, and the card then shows what
+  was made. A change that deletes is in red. What it changes says so: a
+  page's history shows **via the assistant**, and the audit log has an
+  `assistant.apply` entry.
+
+Your conversations are kept for you: the clock icon lists them — open one to
+carry on, delete one, or **Delete all**; **+** starts a new one. The owner may
+set a daily number of messages (the window says how many are left).
 
 ## 25. Administration
 

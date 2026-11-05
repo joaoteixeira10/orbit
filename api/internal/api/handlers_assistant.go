@@ -276,21 +276,27 @@ type assistantChatRequest struct {
 	ChatID  string           `json:"chat_id" binding:"max=36"`
 	Message string           `json:"message" binding:"required,max=8000"`
 	Context assistantContext `json:"context"`
+	// Mode: ask (reads only, the default) or agent (also lines up changes
+	// for the person to approve).
+	Mode string `json:"mode" binding:"omitempty,oneof=ask agent"`
 }
 
 // assistantEvent is a line of the answer's stream: a step (a tool it used),
-// the answer, done (with the conversation's id) or an error.
+// a piece of the answer as it's written (delta), the answer — with, in Agent
+// mode, the changes it lined up — done (with the conversation's id) or an
+// error.
 type assistantEvent struct {
-	Type   string `json:"type"` // step | delta | answer | done | error
-	Tool   string `json:"tool,omitempty"`
-	Hint   string `json:"hint,omitempty"`
-	Text   string `json:"text,omitempty"`
-	ChatID string `json:"chat_id,omitempty"`
-	Error  string `json:"error,omitempty"`
+	Type    string             `json:"type"` // step | delta | answer | done | error
+	Tool    string             `json:"tool,omitempty"`
+	Hint    string             `json:"hint,omitempty"`
+	Text    string             `json:"text,omitempty"`
+	Actions []assistant.Action `json:"actions,omitempty"`
+	ChatID  string             `json:"chat_id,omitempty"`
+	Error   string             `json:"error,omitempty"`
 }
 
 const assistantRules = `You are the assistant built into Orbit, a planner, talking with %s (@%s) in a chat window over what they're looking at. You work with their Orbit through the tools below; they act as this person, so you see exactly what they can see.
-This is Ask mode: you can look things up, sum up and explain, but you cannot change anything. If asked to change something, say what you would change, and that you can't make changes in Ask mode.
+%s
 Answer in the language they write in. Keep answers short and to the point; use Markdown (short lists, bold, small tables) where it helps. When you mention a page, task list, sheet, diagram or event, link it the way Orbit writes links (below) so they can open it. Don't invent: if the tools don't show something, say so.
 What's on their screen is described at the end, with its ids (and a page's, sheet's or diagram's content): "this", "here" and "this page" mean that. Use it; never ask them for an id or a title.
 
@@ -345,7 +351,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			DoUpdates: clause.Assignments(map[string]any{"count": gorm.Expr("assistant_usages.count + 1")}),
 		}).Create(&models.AssistantUsage{UserID: uid, Day: today(), Count: 1})
 
-		turns := append(chatTurns(ch), assistant.Turn{Role: "user", Text: req.Message, At: time.Now().UTC().Format(time.RFC3339)})
+		turns := append(chatTurns(ch), assistant.Turn{Role: "user", Text: req.Message, At: time.Now().UTC().Format(time.RFC3339), Mode: req.Mode})
 		history := turns
 		if len(history) > assistantHistory {
 			history = history[len(history)-assistantHistory:]
@@ -355,15 +361,28 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			name = user.Username
 		}
 
-		// Ask mode: the tools that read.
+		// Ask mode: the tools that read. Agent mode: those that change things
+		// too, which only line the change up (propose).
+		agent := req.Mode == "agent"
 		call := &mcpCall{c: c, api: api, client: "assistant"}
 		allowed := map[string]*mcpTool{}
 		var tools []assistant.Tool
 		for i := range mcpTools {
-			if t := &mcpTools[i]; t.ReadOnly {
-				allowed[t.Name] = t
+			t := &mcpTools[i]
+			switch {
+			case t.ReadOnly:
 				tools = append(tools, assistant.Tool{Name: t.Name, Description: t.Description, Schema: t.schema()})
+			case agent:
+				tools = append(tools, assistant.Tool{Name: t.Name, Description: t.Description, Schema: agentSchema(t)})
+			default:
+				continue
 			}
+			allowed[t.Name] = t
+		}
+		var actions []assistant.Action
+		modeRules := assistantAskRules
+		if agent {
+			modeRules = assistantAgentRules
 		}
 
 		run := func(tool string, args map[string]any) (string, bool) {
@@ -375,6 +394,9 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				if v, ok := args[k]; !ok || v == nil || v == "" {
 					return "missing argument: " + k, true
 				}
+			}
+			if !t.ReadOnly {
+				return propose(&actions, t, args), false
 			}
 			out, err := t.Run(call, mcpArgs(args))
 			if err != nil {
@@ -388,9 +410,9 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		go func() {
 			defer close(events)
 			text, err := model.Answer(c.Request.Context(), assistant.Request{
-				System:  fmt.Sprintf(assistantRules, name, user.Username) + mcpInstructions,
+				System:  fmt.Sprintf(assistantRules, name, user.Username, modeRules) + mcpInstructions,
 				Context: assistantSituation(req.Context, run),
-				History: history,
+				History: withOutcomes(history),
 				Tools:   tools,
 				Step: func(s assistant.Step) {
 					steps = append(steps, s)
@@ -403,7 +425,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				events <- assistantEvent{Type: "error", Error: h.assistantError(err)}
 				return
 			}
-			events <- assistantEvent{Type: "answer", Text: text}
+			events <- assistantEvent{Type: "answer", Text: text, Actions: actions}
 		}()
 
 		hdr := c.Writer.Header()
@@ -442,7 +464,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		// The person's line is kept even when the model failed, so it can be
 		// asked again; the answer only when there is one.
 		if !failed {
-			turns = append(turns, assistant.Turn{Role: "assistant", Text: answer, Steps: steps, At: time.Now().UTC().Format(time.RFC3339)})
+			turns = append(turns, assistant.Turn{Role: "assistant", Text: answer, Steps: steps, At: time.Now().UTC().Format(time.RFC3339), Mode: req.Mode, Actions: actions})
 		}
 		b, _ := json.Marshal(turns)
 		ch.Turns = models.JSONText(b)

@@ -2,12 +2,16 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
+
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 )
 
 // fakeModel is a stand-in for an OpenAI-style server: asked first, it calls
@@ -39,6 +43,21 @@ func (f *fakeModel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fin = `"` + finish + `"`
 		}
 		_, _ = io.WriteString(w, `data: {"choices":[{"index":0,"delta":`+delta+`,"finish_reason":`+fin+`}]}`+"\n\n")
+	}
+	// "plan:<workspace id>" asks for changes: a list, a task in it (by the
+	// list's new:1), and one more task.
+	if ws, ok := strings.CutPrefix(fmt.Sprint(last["content"]), "plan:"); ok && last["role"] == "user" {
+		calls := []string{
+			`{"name":"create_task_list","arguments":` + jsonString(`{"workspace_id":"`+ws+`","name":"Launch","summary":"Make the Launch list"}`) + `}`,
+			`{"name":"create_task","arguments":` + jsonString(`{"workspace_id":"`+ws+`","list_id":"new:1","title":"Book the room","summary":"Add Book the room to it"}`) + `}`,
+			`{"name":"create_task","arguments":` + jsonString(`{"workspace_id":"`+ws+`","title":"Unwanted","summary":"Add Unwanted"}`) + `}`,
+		}
+		for i, fn := range calls {
+			chunk(fmt.Sprintf(`{"tool_calls":[{"index":%d,"id":"p%d","type":"function","function":%s}]}`, i, i, fn), "")
+		}
+		chunk(`{}`, "tool_calls")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		return
 	}
 	if last["role"] == "tool" {
 		chunk(`{"role":"assistant","content":"You have: "}`, "")
@@ -218,5 +237,109 @@ func TestAssistantAsk(t *testing.T) {
 	decode(t, authdo(r, "GET", "/api/v1/assistant/chats", "", bea), &list)
 	if len(list) != 1 || list[0].Title != "Sum up this page" {
 		t.Errorf("left: %+v", list)
+	}
+}
+
+// TestAssistantAgent: in Agent mode the changes the model calls for are only
+// lined up; approved, the ticked ones are made as the person, in order (a
+// task lands in the list made just before it), marked "via assistant"; the
+// rest aren't; a decided list can't be approved again; the next message
+// tells the model what became of them.
+func TestAssistantAgent(t *testing.T) {
+	r, db := newTestRouterDB(t, false)
+	fake := &fakeModel{}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	old := assistantHTTP
+	assistantHTTP = func() *http.Client { return srv.Client() }
+	defer func() { assistantHTTP = old }()
+
+	owner := loginTok(t, r, "admin", "adminpass")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"`+srv.URL+`/v1","model":"llama3.1"}`, owner), http.StatusOK, "set up")
+	ws := createWS(t, r, owner, `{"name":"Work","kind":"personal"}`)
+	lists := func() string {
+		text, _ := mcpToolCall(t, r, owner, "list_task_lists", map[string]any{"workspace_id": ws.ID})
+		return text
+	}
+
+	w := authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"plan:`+ws.ID+`"}`, owner)
+	expect(t, w, http.StatusOK, "ask")
+	ev := sseEvents(t, w.Body.String())
+	if len(ev) != 5 || ev[3].Type != "answer" || len(ev[3].Actions) != 3 {
+		t.Fatalf("events: %+v", ev)
+	}
+	acts := ev[3].Actions
+	if acts[0].Title != "Create a task list" || acts[0].Summary != "Make the Launch list" || acts[0].State != "proposed" || acts[0].Args["summary"] != nil {
+		t.Errorf("lined up: %+v", acts[0])
+	}
+	if strings.Contains(lists(), "Launch") {
+		t.Fatal("made before it was approved")
+	}
+	first := fake.asked[0]
+	sys := first["messages"].([]any)[0].(map[string]any)["content"].(string)
+	if !strings.Contains(sys, "Agent mode") {
+		t.Errorf("system: %s", sys)
+	}
+	for _, x := range first["tools"].([]any) {
+		fn := x.(map[string]any)["function"].(map[string]any)
+		if fn["name"] == "create_task" && !strings.Contains(string(mustJSON(fn["parameters"])), `"summary"`) {
+			t.Errorf("create_task without a summary: %v", fn["parameters"])
+		}
+	}
+
+	chatID := ev[4].ChatID
+	createUserVia(t, r, owner, `{"username":"cy","email":"cy@example.org","password":"cypassword","role_ids":[]}`)
+	cy := loginTok(t, r, "cy", "cypassword")
+	expect(t, authdo(r, "POST", "/api/v1/assistant/chats/"+chatID+"/apply", `{"turn":1,"approve":[1,2,3]}`, cy), http.StatusNotFound, "someone else's")
+
+	var turn assistant.Turn
+	decode(t, authdo(r, "POST", "/api/v1/assistant/chats/"+chatID+"/apply", `{"turn":1,"approve":[1,2]}`, owner), &turn)
+	a := turn.Actions
+	if a[0].State != "done" || a[0].MadeID == "" || a[1].State != "done" || a[2].State != "skipped" {
+		t.Fatalf("outcome: %+v", a)
+	}
+	if !strings.Contains(lists(), "Launch") {
+		t.Fatal("the list wasn't made")
+	}
+	tasks, _ := mcpToolCall(t, r, owner, "list_tasks", map[string]any{"workspace_id": ws.ID, "list_id": a[0].MadeID})
+	if !strings.Contains(tasks, "Book the room") || strings.Contains(tasks, "Unwanted") {
+		t.Errorf("tasks: %s", tasks)
+	}
+	expect(t, authdo(r, "POST", "/api/v1/assistant/chats/"+chatID+"/apply", `{"turn":1,"approve":[3]}`, owner), http.StatusConflict, "again")
+	var n int64
+	db.Model(&models.AuditLog{}).Where("action = ?", "assistant.apply").Count(&n)
+	if n != 1 {
+		t.Errorf("audit: %d", n)
+	}
+
+	// The next message carries what became of them.
+	sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"chat_id":"`+chatID+`","message":"Thanks"}`, owner).Body.String())
+	msgs := string(mustJSON(fake.asked[len(fake.asked)-2]["messages"]))
+	if !strings.Contains(msgs, "made (id "+a[0].MadeID+")") || !strings.Contains(msgs, "not made (not approved)") {
+		t.Errorf("outcomes not told: %s", msgs)
+	}
+
+	// Approving the task alone: it needs the list, which isn't made.
+	ev = sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"plan:`+ws.ID+`"}`, owner).Body.String())
+	decode(t, authdo(r, "POST", "/api/v1/assistant/chats/"+ev[4].ChatID+"/apply", `{"turn":1,"approve":[2]}`, owner), &turn)
+	if turn.Actions[1].State != "skipped" || !strings.Contains(turn.Actions[1].Result, "needs change 1") {
+		t.Errorf("dependent: %+v", turn.Actions[1])
+	}
+
+	// Ask mode offers nothing that changes.
+	sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi"}`, owner).Body.String())
+	if strings.Contains(string(mustJSON(fake.asked[len(fake.asked)-1]["tools"])), "create_task") {
+		t.Error("Ask mode offered create_task")
+	}
+
+	// A page saved through MCP says so in its history (the assistant's
+	// changes go the same way, marked "assistant").
+	text, _ := mcpToolCall(t, r, owner, "create_page", map[string]any{"workspace_id": ws.ID, "title": "Notes", "content": "First thoughts"})
+	var pg struct{ ID string }
+	_ = json.Unmarshal([]byte(text), &pg)
+	var v models.PageVersion
+	db.Where("page_id = ?", pg.ID).First(&v)
+	if v.Via != "mcp" {
+		t.Errorf("via: %q", v.Via)
 	}
 }

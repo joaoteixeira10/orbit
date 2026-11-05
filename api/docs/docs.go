@@ -254,6 +254,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/chats/{id}/apply": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Approve the assistant's changes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Which answer, and the changes ticked",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantApplyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/assistant.Turn"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/config": {
             "get": {
                 "security": [
@@ -11554,6 +11599,24 @@ const docTemplate = `{
                 }
             }
         },
+        "api.assistantApplyRequest": {
+            "type": "object",
+            "properties": {
+                "approve": {
+                    "description": "the changes ticked (N); the rest aren't made",
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "turn": {
+                    "description": "the answer's place in the conversation",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
         "api.assistantChatRequest": {
             "type": "object",
             "required": [
@@ -11570,6 +11633,14 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "maxLength": 8000
+                },
+                "mode": {
+                    "description": "Mode: ask (reads only, the default) or agent (also lines up changes\nfor the person to approve).",
+                    "type": "string",
+                    "enum": [
+                        "ask",
+                        "agent"
+                    ]
                 }
             }
         },
@@ -16539,6 +16610,44 @@ const docTemplate = `{
                 }
             }
         },
+        "assistant.Action": {
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "destructive": {
+                    "type": "boolean"
+                },
+                "made_id": {
+                    "type": "string"
+                },
+                "n": {
+                    "description": "1, 2…: what it makes is new:N to later ones",
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "why it failed or was skipped",
+                    "type": "string"
+                },
+                "state": {
+                    "description": "proposed | done | skipped | failed",
+                    "type": "string"
+                },
+                "summary": {
+                    "description": "this one, in the model's words",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "the kind of change: \"Create a task\"",
+                    "type": "string"
+                },
+                "tool": {
+                    "type": "string"
+                }
+            }
+        },
         "assistant.Step": {
             "type": "object",
             "properties": {
@@ -16553,7 +16662,18 @@ const docTemplate = `{
         "assistant.Turn": {
             "type": "object",
             "properties": {
+                "actions": {
+                    "description": "Actions: in Agent mode, the changes the answer lined up for the person\nto approve, and what became of each.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/assistant.Action"
+                    }
+                },
                 "at": {
+                    "type": "string"
+                },
+                "mode": {
+                    "description": "Mode the person asked in: \"\" (ask) or \"agent\".",
                     "type": "string"
                 },
                 "role": {
@@ -17259,6 +17379,10 @@ const docTemplate = `{
                 "version": {
                     "description": "the page's version it is",
                     "type": "integer"
+                },
+                "via": {
+                    "description": "Via: saved for them by the assistant (\"assistant\") or an app through\nMCP (\"mcp\"); \"\" when they saved it themselves.",
+                    "type": "string"
                 },
                 "workspace_id": {
                     "type": "string"

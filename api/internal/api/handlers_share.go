@@ -407,7 +407,7 @@ func (h *Handlers) guestEdit(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "someone else saved this page since you opened it", "page": toGuestPage(p, true)})
 		return
 	}
-	recordVersion(h.db, p, "", &prev, 0)
+	recordVersion(h.db, p, "", "", &prev, 0)
 	h.collabSaved(c, "page:"+p.ID, p.Version)
 	h.publishWS(c, p.WorkspaceID, "pages")
 	c.JSON(http.StatusOK, toGuestPage(p, true))

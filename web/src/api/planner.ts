@@ -98,6 +98,7 @@ export interface PageVersion {
   content?: string
   user_id: string
   restored?: number // the version it put back
+  via?: 'assistant' | 'mcp' // saved for them by the assistant, or an app through MCP
   created_at: string
   updated_at: string
   chars?: number

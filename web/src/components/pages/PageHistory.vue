@@ -200,7 +200,7 @@ watch(
                       <span v-if="v === versions[0]" class="badge">{{ t('history.current') }}</span>
                       <span v-else-if="v.restored" class="badge">{{ t('history.restoredFrom', { n: v.restored }) }}</span>
                     </div>
-                    <div class="truncate text-[12px] text-text-3">{{ who(v.user_id) }}</div>
+                    <div class="truncate text-[12px] text-text-3">{{ who(v.user_id) }}<template v-if="v.via"> · {{ t(`history.via.${v.via}`) }}</template></div>
                   </div>
                 </div>
               </template>

@@ -27,11 +27,28 @@ export interface AssistantStep {
   hint?: string
 }
 
+export type AssistantMode = 'ask' | 'agent'
+
+// A change the assistant lined up in Agent mode, made only once approved.
+export interface AssistantAction {
+  n: number
+  tool: string
+  title: string
+  summary: string
+  destructive?: boolean
+  args: Record<string, unknown>
+  state: 'proposed' | 'done' | 'skipped' | 'failed'
+  result?: string
+  made_id?: string
+}
+
 export interface AssistantTurn {
   role: 'user' | 'assistant'
   text: string
   steps?: AssistantStep[]
   at?: string
+  mode?: AssistantMode
+  actions?: AssistantAction[]
 }
 
 export interface AssistantChatSummary {
@@ -57,7 +74,7 @@ export interface AssistantContext {
 export type AssistantEvent =
   | { type: 'step'; tool: string; hint?: string }
   | { type: 'delta'; text: string }
-  | { type: 'answer'; text: string }
+  | { type: 'answer'; text: string; actions?: AssistantAction[] }
   | { type: 'done'; chat_id: string }
   | { type: 'error'; error: string }
 
@@ -72,9 +89,12 @@ export const assistantApi = {
   chat: (id: string) => api<AssistantChat>(`/assistant/chats/${id}`),
   removeChat: (id: string) => api<void>(`/assistant/chats/${id}`, { method: 'DELETE' }),
   removeAll: () => api<void>('/assistant/chats', { method: 'DELETE' }),
+  // apply makes the changes ticked (by n) of the answer at turn; the rest aren't made.
+  apply: (chatId: string, turn: number, approve: number[]) =>
+    api<AssistantTurn>(`/assistant/chats/${chatId}/apply`, { method: 'POST', body: j({ turn, approve }) }),
 
   // ask sends a message and calls onEvent for each event of the answer.
-  async ask(b: { chat_id?: string; message: string; context: AssistantContext }, onEvent: (e: AssistantEvent) => void, signal?: AbortSignal) {
+  async ask(b: { chat_id?: string; message: string; context: AssistantContext; mode?: AssistantMode }, onEvent: (e: AssistantEvent) => void, signal?: AbortSignal) {
     const res = await apiStream('/assistant/chat', { method: 'POST', body: j(b), signal })
     const reader = res.body!.getReader()
     const dec = new TextDecoder()

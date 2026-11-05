@@ -199,7 +199,7 @@ func (h *Handlers) undoPageChange(c *gin.Context) {
 	case "rename":
 		prev := p
 		h.db.Model(&models.Page{}).Where("id = ?", p.ID).Updates(map[string]any{"title": before.Title, "updated_by": uid})
-		recordVersion(h.db, reloadPage(h, p.ID), uid, &prev, 0)
+		recordVersion(h.db, reloadPage(h, p.ID), uid, viaOf(c), &prev, 0)
 	case "trash":
 		h.untrash(p)
 	}

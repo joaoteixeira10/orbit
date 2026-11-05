@@ -1,5 +1,14 @@
 import { defineStore } from 'pinia'
-import { assistantApi, type AssistantChatSummary, type AssistantContext, type AssistantStatus, type AssistantStep, type AssistantTurn } from '@/api/assistant'
+import { assistantApi, type AssistantChatSummary, type AssistantContext, type AssistantMode, type AssistantStatus, type AssistantStep, type AssistantTurn } from '@/api/assistant'
+
+const MODE_KEY = 'orbit.assistant.mode'
+function savedMode(): AssistantMode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'agent' ? 'agent' : 'ask'
+  } catch {
+    return 'ask'
+  }
+}
 
 // The assistant's panel: whether it's open, the conversation in it (and the
 // list of mine), and the answer being worked out (the tools it uses as it goes,
@@ -16,6 +25,8 @@ export const useAssistantStore = defineStore('assistant', {
     draft: '', // its words so far (those before a tool runs aren't the answer)
     error: '',
     controller: null as AbortController | null,
+    mode: savedMode(), // ask, or agent: it lines up changes to approve
+    applying: -1, // the turn whose changes are being made
   }),
   getters: {
     enabled: (s) => !!s.status?.enabled,
@@ -55,6 +66,27 @@ export const useAssistantStore = defineStore('assistant', {
       this.chats = []
       this.newChat()
     },
+    setMode(m: AssistantMode) {
+      this.mode = m
+      try {
+        localStorage.setItem(MODE_KEY, m)
+      } catch {
+        /* the choice just isn't remembered */
+      }
+    },
+    // apply makes the ticked changes of the answer at turn i.
+    async apply(i: number, approve: number[]) {
+      if (!this.chatId || this.applying >= 0) return
+      this.applying = i
+      this.error = ''
+      try {
+        this.turns[i] = await assistantApi.apply(this.chatId, i, approve)
+      } catch (e: any) {
+        this.error = e?.message || String(e)
+      } finally {
+        this.applying = -1
+      }
+    },
     stop() {
       this.controller?.abort()
       this.controller = null
@@ -65,17 +97,18 @@ export const useAssistantStore = defineStore('assistant', {
       this.error = ''
       this.steps = []
       this.draft = ''
-      this.turns.push({ role: 'user', text: message })
+      const mode = this.mode
+      this.turns.push({ role: 'user', text: message, mode })
       const ctl = new AbortController()
       this.controller = ctl
       const got: { answer?: AssistantTurn } = {}
       try {
-        await assistantApi.ask({ chat_id: this.chatId || undefined, message, context }, (e) => {
+        await assistantApi.ask({ chat_id: this.chatId || undefined, message, context, mode }, (e) => {
           if (e.type === 'step') {
             this.steps.push({ tool: e.tool, hint: e.hint })
             this.draft = ''
           } else if (e.type === 'delta') this.draft += e.text
-          else if (e.type === 'answer') got.answer = { role: 'assistant', text: e.text, steps: [...this.steps] }
+          else if (e.type === 'answer') got.answer = { role: 'assistant', text: e.text, steps: [...this.steps], mode, actions: e.actions }
           else if (e.type === 'error') this.error = e.error
           else if (e.type === 'done') this.chatId = e.chat_id
         }, ctl.signal)

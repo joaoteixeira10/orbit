@@ -108,6 +108,9 @@ type PageVersion struct {
 	Content     string `gorm:"type:text" json:"content,omitempty"`
 	UserID      string `gorm:"size:36" json:"user_id"`
 	Restored    int    `gorm:"not null;default:0" json:"restored,omitempty"`
+	// Via: saved for them by the assistant ("assistant") or an app through
+	// MCP ("mcp"); "" when they saved it themselves.
+	Via string `gorm:"size:16" json:"via,omitempty"`
 }
 
 // ShareLink opens a page — and, with Subpages, the pages under it — to

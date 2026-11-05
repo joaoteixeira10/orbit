@@ -31,7 +31,34 @@ type Turn struct {
 	// Steps: the tools the assistant used for this answer, in order.
 	Steps []Step `json:"steps,omitempty"`
 	At    string `json:"at,omitempty"`
+	// Mode the person asked in: "" (ask) or "agent".
+	Mode string `json:"mode,omitempty"`
+	// Actions: in Agent mode, the changes the answer lined up for the person
+	// to approve, and what became of each.
+	Actions []Action `json:"actions,omitempty"`
 }
+
+// Action is a change the assistant lined up in Agent mode. It's made only
+// when the person approves it, as them.
+type Action struct {
+	N           int            `json:"n"` // 1, 2…: what it makes is new:N to later ones
+	Tool        string         `json:"tool"`
+	Title       string         `json:"title"`   // the kind of change: "Create a task"
+	Summary     string         `json:"summary"` // this one, in the model's words
+	Destructive bool           `json:"destructive,omitempty"`
+	Args        map[string]any `json:"args"`
+	State       string         `json:"state"`            // proposed | done | skipped | failed
+	Result      string         `json:"result,omitempty"` // why it failed or was skipped
+	MadeID      string         `json:"made_id,omitempty"`
+}
+
+// Action states.
+const (
+	Proposed = "proposed"
+	Done     = "done"
+	Skipped  = "skipped"
+	Failed   = "failed"
+)
 
 // Step is a tool the assistant used: its name and the gist of what for.
 type Step struct {

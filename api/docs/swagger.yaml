@@ -104,6 +104,19 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  api.assistantApplyRequest:
+    properties:
+      approve:
+        description: the changes ticked (N); the rest aren't made
+        items:
+          type: integer
+        maxItems: 50
+        type: array
+      turn:
+        description: the answer's place in the conversation
+        minimum: 0
+        type: integer
+    type: object
   api.assistantChatRequest:
     properties:
       chat_id:
@@ -113,6 +126,14 @@ definitions:
         $ref: '#/definitions/api.assistantContext'
       message:
         maxLength: 8000
+        type: string
+      mode:
+        description: |-
+          Mode: ask (reads only, the default) or agent (also lines up changes
+          for the person to approve).
+        enum:
+        - ask
+        - agent
         type: string
     required:
     - message
@@ -3636,6 +3657,33 @@ definitions:
       workspace_id:
         type: string
     type: object
+  assistant.Action:
+    properties:
+      args:
+        additionalProperties: {}
+        type: object
+      destructive:
+        type: boolean
+      made_id:
+        type: string
+      "n":
+        description: '1, 2…: what it makes is new:N to later ones'
+        type: integer
+      result:
+        description: why it failed or was skipped
+        type: string
+      state:
+        description: proposed | done | skipped | failed
+        type: string
+      summary:
+        description: this one, in the model's words
+        type: string
+      title:
+        description: 'the kind of change: "Create a task"'
+        type: string
+      tool:
+        type: string
+    type: object
   assistant.Step:
     properties:
       hint:
@@ -3645,7 +3693,17 @@ definitions:
     type: object
   assistant.Turn:
     properties:
+      actions:
+        description: |-
+          Actions: in Agent mode, the changes the answer lined up for the person
+          to approve, and what became of each.
+        items:
+          $ref: '#/definitions/assistant.Action'
+        type: array
       at:
+        type: string
+      mode:
+        description: 'Mode the person asked in: "" (ask) or "agent".'
         type: string
       role:
         description: user | assistant
@@ -4124,6 +4182,11 @@ definitions:
       version:
         description: the page's version it is
         type: integer
+      via:
+        description: |-
+          Via: saved for them by the assistant ("assistant") or an app through
+          MCP ("mcp"); "" when they saved it themselves.
+        type: string
       workspace_id:
         type: string
     type: object
@@ -4698,6 +4761,34 @@ paths:
       security:
       - BearerAuth: []
       summary: A conversation with the assistant
+      tags:
+      - assistant
+  /assistant/chats/{id}/apply:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Conversation id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Which answer, and the changes ticked
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.assistantApplyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/assistant.Turn'
+      security:
+      - BearerAuth: []
+      summary: Approve the assistant's changes
       tags:
       - assistant
   /assistant/config:

@@ -1,0 +1,228 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+)
+
+// Agent mode: the assistant may change things, but nothing is changed as it
+// asks. Each change it calls for is lined up (an Action); once it has
+// answered, the person sees them all in one card, unticks what they don't
+// want and approves once. The changes are then made as them, through the
+// same tools, marked "via assistant".
+
+const assistantAskRules = `This is Ask mode: you can look things up, sum up and explain, but you cannot change anything. If asked to change something, say what you would change, and that they can switch to Agent mode (below the box they type in) for you to do it.`
+
+const assistantAgentRules = `This is Agent mode: besides looking things up, you can change their Orbit with the tools that change things. Those changes aren't made as you call them: each is lined up, and once you've answered they see the whole list, tick what they want and approve it in one go. So:
+- Look up what you need first, then line up every change the request needs, then answer in a sentence or two saying what you've lined up for them to approve. Never say it's done.
+- Give each change a "summary" in their language that names the thing, e.g. Move "Book the room" to Friday.
+- A change that makes something (a task list, a page, a task…) gives back an id like new:1; use it in later changes that need it (tasks in the new list, say). It can't be read before it's made.
+- Line up only what they asked for.`
+
+// agentSummary is the argument each change carries in Agent mode: what it
+// does, in words, for the card.
+const agentSummary = "summary"
+
+// agentSchema is a changing tool's schema with the summary added.
+func agentSchema(t *mcpTool) map[string]any {
+	s := t.schema()
+	props := s["properties"].(map[string]any)
+	props[agentSummary] = map[string]any{"type": "string", "description": "For the person approving it: what this change does, in a few words naming the thing (in their language)."}
+	s["required"] = append(append([]string{}, t.Required...), agentSummary)
+	return s
+}
+
+// propose lines a change up and tells the model so.
+func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any) string {
+	n := len(*actions) + 1
+	summary, _ := args[agentSummary].(string)
+	rest := make(map[string]any, len(args))
+	for k, v := range args {
+		if k != agentSummary {
+			rest[k] = v
+		}
+	}
+	*actions = append(*actions, assistant.Action{
+		N: n, Tool: t.Name, Title: t.Title, Summary: strings.TrimSpace(summary),
+		Destructive: t.Destructive, Args: rest, State: assistant.Proposed,
+	})
+	return fmt.Sprintf("Lined up as change %d, for them to approve (not made yet). If it makes something, its id is new:%d.", n, n)
+}
+
+// withOutcomes gives the model the conversation with what became of the
+// changes lined up earlier, so it knows what was made and what wasn't.
+func withOutcomes(turns []assistant.Turn) []assistant.Turn {
+	out := make([]assistant.Turn, len(turns))
+	for i, t := range turns {
+		out[i] = t
+		if len(t.Actions) == 0 {
+			continue
+		}
+		var b strings.Builder
+		b.WriteString(t.Text)
+		b.WriteString("\n\n[The changes lined up:")
+		for _, a := range t.Actions {
+			fmt.Fprintf(&b, "\n%d. %s — %s: ", a.N, a.Title, a.Summary)
+			switch a.State {
+			case assistant.Done:
+				b.WriteString("made")
+				if a.MadeID != "" {
+					fmt.Fprintf(&b, " (id %s)", a.MadeID)
+				}
+			case assistant.Failed:
+				b.WriteString("failed: " + a.Result)
+			case assistant.Skipped:
+				b.WriteString("not made (" + a.Result + ")")
+			default:
+				b.WriteString("waiting for their approval")
+			}
+		}
+		b.WriteString("]")
+		out[i].Text = b.String()
+	}
+	return out
+}
+
+var newRef = regexp.MustCompile(`new:(\d+)`)
+
+// fillRefs puts what earlier changes made in place of their new:N; it says
+// which change a value waits on when that one wasn't made.
+func fillRefs(v any, made map[int]string) (any, int) {
+	switch x := v.(type) {
+	case string:
+		missing := 0
+		s := newRef.ReplaceAllStringFunc(x, func(m string) string {
+			n, _ := strconv.Atoi(m[4:])
+			if id, ok := made[n]; ok {
+				return id
+			}
+			missing = n
+			return m
+		})
+		return s, missing
+	case []any:
+		out := make([]any, len(x))
+		for i, e := range x {
+			var miss int
+			if out[i], miss = fillRefs(e, made); miss != 0 {
+				return nil, miss
+			}
+		}
+		return out, 0
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, e := range x {
+			var miss int
+			if out[k], miss = fillRefs(e, made); miss != 0 {
+				return nil, miss
+			}
+		}
+		return out, 0
+	}
+	return v, 0
+}
+
+type assistantApplyRequest struct {
+	Turn    int   `json:"turn" binding:"min=0"`     // the answer's place in the conversation
+	Approve []int `json:"approve" binding:"max=50"` // the changes ticked (N); the rest aren't made
+}
+
+// applyAssistantPlan makes the changes an answer lined up that the person
+// ticked, in order and as them; the others are left unmade. Once decided,
+// a list can't be approved again.
+//
+//	@Summary	Approve the assistant's changes
+//	@Tags		assistant
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		string					true	"Conversation id"
+//	@Param		body	body		assistantApplyRequest	true	"Which answer, and the changes ticked"
+//	@Success	200		{object}	assistant.Turn
+//	@Router		/assistant/chats/{id}/apply [post]
+func (h *Handlers) applyAssistantPlan(api http.Handler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req assistantApplyRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+		ch, ok := h.myChat(c)
+		if !ok {
+			return
+		}
+		turns := chatTurns(ch)
+		if req.Turn >= len(turns) || len(turns[req.Turn].Actions) == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "that answer has no changes to approve"})
+			return
+		}
+		turn := &turns[req.Turn]
+		for _, a := range turn.Actions {
+			if a.State != assistant.Proposed {
+				c.JSON(http.StatusConflict, gin.H{"error": "these changes were already decided"})
+				return
+			}
+		}
+		ticked := map[int]bool{}
+		for _, n := range req.Approve {
+			ticked[n] = true
+		}
+
+		call := &mcpCall{c: c, api: api, client: "assistant"}
+		made := map[int]string{}
+		var log []gin.H
+		for i := range turn.Actions {
+			a := &turn.Actions[i]
+			t := mcpToolByName(a.Tool)
+			switch {
+			case !ticked[a.N]:
+				a.State, a.Result = assistant.Skipped, "not approved"
+				continue
+			case t == nil || t.ReadOnly:
+				a.State, a.Result = assistant.Failed, "there's no such change"
+				continue
+			}
+			args, miss := fillRefs(a.Args, made)
+			if miss != 0 {
+				a.State, a.Result = assistant.Skipped, fmt.Sprintf("needs change %d, which wasn't made", miss)
+				continue
+			}
+			out, err := t.Run(call, mcpArgs(args.(map[string]any)))
+			if err != nil {
+				a.State, a.Result = assistant.Failed, err.Error()
+				log = append(log, gin.H{"tool": a.Tool, "failed": true})
+				continue
+			}
+			a.State = assistant.Done
+			var got struct {
+				ID string `json:"id"`
+			}
+			if json.Unmarshal([]byte(toolText(out)), &got) == nil && got.ID != "" {
+				a.MadeID = got.ID
+				made[a.N] = got.ID
+			} else {
+				made[a.N] = ""
+			}
+			log = append(log, gin.H{"tool": a.Tool, "id": a.MadeID})
+		}
+
+		b, _ := json.Marshal(turns)
+		ch.Turns = models.JSONText(b)
+		if err := h.db.Save(&ch).Error; err != nil {
+			h.internalError(c, err, "could not keep the outcome")
+			return
+		}
+		if len(log) > 0 {
+			h.recordCtx(c, "assistant.apply", "assistant_chat", ch.ID, gin.H{"changes": log})
+		}
+		c.JSON(http.StatusOK, turn)
+	}
+}

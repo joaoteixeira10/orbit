@@ -342,7 +342,7 @@ func (h *Handlers) createPage(c *gin.Context) {
 		return
 	}
 	if p.Content != "" {
-		recordVersion(h.db, p, auth.UserID(c), nil, 0)
+		recordVersion(h.db, p, auth.UserID(c), viaOf(c), nil, 0)
 	}
 	h.recordChange(auth.UserID(c), p, "create", pageState{}, pageState{Title: p.Title, Version: p.Version})
 	h.publishWS(c, ws.ID, "pages")
@@ -509,7 +509,7 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		h.collabSaved(c, "page:"+p.ID, p.Version) // editing together: in step, or starts over
 	}
 	if req.Content != nil || req.Title != nil {
-		recordVersion(h.db, p, auth.UserID(c), &prev, 0)
+		recordVersion(h.db, p, auth.UserID(c), viaOf(c), &prev, 0)
 	}
 	if req.Title != nil && p.Title != prev.Title {
 		h.recordChange(auth.UserID(c), p, "rename", pageState{Title: prev.Title}, pageState{Title: p.Title})

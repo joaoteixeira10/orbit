@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import { ArrowLeft, ArrowUp, Check, History, Plus, Sparkles, Square, Trash2, X } from 'lucide-vue-next'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import Confirm from '@/components/ui/Confirm.vue'
+import AssistantPlan from './AssistantPlan.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import { relTime } from '@/lib/format'
 import type { AssistantStep } from '@/api/assistant'
@@ -12,7 +13,8 @@ import type { AssistantStep } from '@/api/assistant'
 // The assistant's chat window, floating at the bottom right (the whole screen
 // on a phone): a conversation in bubbles (the person's, its answers with the
 // tools it used above them), the box to ask in, and the list of past
-// conversations. ⌘J / Ctrl+J opens and closes it.
+// conversations. Ask mode reads; Agent mode also lines up changes, shown in
+// one card to approve. ⌘J / Ctrl+J opens and closes it.
 const { t, locale } = useI18n()
 const route = useRoute()
 const store = useAssistantStore()
@@ -25,6 +27,8 @@ const confirmAll = ref(false)
 function stepText(s: AssistantStep) {
   const key = `assistant.step.${s.tool}`
   if (s.tool === 'search' && !s.hint) return t('assistant.step.list_pages')
+  // A change (Agent mode) is only lined up; the card says what it is.
+  if (/^(create|update|delete|trash|move|complete|comment)_/.test(s.tool)) return t('assistant.step.change')
   return t(key) === key ? t('assistant.step.other', { tool: s.tool }) : t(key, { hint: s.hint ?? '' })
 }
 
@@ -145,7 +149,7 @@ const left = computed(() => store.left)
       <div v-if="!store.turns.length && !store.sending" class="ai-empty">
         <Sparkles class="mx-auto h-8 w-8 text-accent" :stroke-width="1.6" />
         <h3 class="mt-3 text-[15px] font-semibold">{{ t('assistant.empty') }}</h3>
-        <p class="mt-1 text-[12.5px] text-text-3">{{ t('assistant.emptyHint') }}</p>
+        <p class="mt-1 text-[12.5px] text-text-3">{{ store.mode === 'agent' ? t('assistant.emptyHintAgent') : t('assistant.emptyHint') }}</p>
         <div class="mt-4 flex flex-col gap-2">
           <button v-for="k in ['week', 'today', 'page']" :key="k" class="ai-suggest" @click="send(t(`assistant.suggest.${k}`))">{{ t(`assistant.suggest.${k}`) }}</button>
         </div>
@@ -157,6 +161,7 @@ const left = computed(() => store.left)
             <li v-for="(s, k) in m.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
           </ul>
           <div class="ai-bubble"><MarkdownView :content="m.text" :editable="false" plain class="ai-md" /></div>
+          <AssistantPlan v-if="m.actions?.length" :actions="m.actions" :busy="store.applying === i" @apply="store.apply(i, $event)" />
         </div>
       </template>
       <div v-if="store.sending" class="ai-answer" data-testid="assistant-working">
@@ -183,8 +188,21 @@ const left = computed(() => store.left)
         <button v-if="store.sending" class="ai-send" :title="t('assistant.stop')" :aria-label="t('assistant.stop')" @click="store.stop()"><Square class="h-3.5 w-3.5" fill="currentColor" /></button>
         <button v-else class="ai-send" :disabled="!draft.trim() || left === 0" :title="t('assistant.send')" :aria-label="t('assistant.send')" data-testid="assistant-send" @click="send()"><ArrowUp class="h-4 w-4" :stroke-width="2.6" /></button>
       </div>
-      <div class="mt-1.5 flex justify-between px-1 text-[11px] text-text-3">
-        <span>{{ t('assistant.askMode') }}</span>
+      <div class="mt-1.5 flex items-center justify-between px-1 text-[11px] text-text-3">
+        <div class="ai-mode" role="radiogroup" :aria-label="t('assistant.mode.label')">
+          <button
+            v-for="m in ['ask', 'agent'] as const"
+            :key="m"
+            role="radio"
+            :aria-checked="store.mode === m"
+            :class="{ on: store.mode === m }"
+            :title="t(`assistant.mode.${m}Hint`)"
+            :data-testid="`assistant-mode-${m}`"
+            @click="store.setMode(m)"
+          >
+            {{ t(`assistant.mode.${m}`) }}
+          </button>
+        </div>
         <span v-if="left !== null">{{ t('assistant.left', { n: left }, left) }}</span>
       </div>
     </footer>
@@ -436,5 +454,27 @@ const left = computed(() => store.left)
 }
 .ai-send:disabled {
   opacity: 0.35;
+}
+.ai-mode {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--fill-2);
+}
+.ai-mode button {
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  transition:
+    background var(--speed),
+    color var(--speed);
+}
+.ai-mode button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 0 0 0.5px var(--border);
 }
 </style>

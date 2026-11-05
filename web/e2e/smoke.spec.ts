@@ -3755,8 +3755,10 @@ test('holiday themes: the owner picks one; every page dresses up, the overviews 
 })
 
 // A stand-in for an OpenAI-style model server (as Ollama's /v1 is): asked
-// first, it looks at the day (get_today); given that, it answers. On this
-// machine's network address — the assistant never calls loopback.
+// first, it looks at the day (get_today); given that, it answers. Asked
+// "plan:<workspace id>" (Agent mode), it lines up a list, a task in it and
+// another task. On this machine's network address — the assistant never
+// calls loopback.
 async function fakeModel(): Promise<{ url: string; close: () => void }> {
   const srv = createServer((req, res) => {
     let raw = ''
@@ -3769,7 +3771,20 @@ async function fakeModel(): Promise<{ url: string; close: () => void }> {
       res.setHeader('Content-Type', 'text/event-stream')
       const chunk = (delta: object, finish: string | null = null) => res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`)
       const end = () => res.end('data: [DONE]\n\n')
-      if (last?.role === 'tool') {
+      const plan = last?.role === 'user' && String(last.content).startsWith('plan:') ? String(last.content).slice(5) : ''
+      if (plan) {
+        const calls = [
+          ['create_task_list', { workspace_id: plan, name: 'Launch', summary: 'Make the Launch list' }],
+          ['create_task', { workspace_id: plan, list_id: 'new:1', title: 'Book the room', summary: 'Add “Book the room” to it' }],
+          ['create_task', { workspace_id: plan, title: 'Unwanted', summary: 'Add “Unwanted”' }],
+        ] as const
+        calls.forEach(([name, args], index) => chunk({ tool_calls: [{ index, id: `p${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }))
+        chunk({}, 'tool_calls')
+        end()
+      } else if (last?.role === 'tool' && String(last.content).startsWith('Lined up')) {
+        chunk({ role: 'assistant', content: 'I’ve lined up three changes for you to approve.' }, 'stop')
+        end()
+      } else if (last?.role === 'tool') {
         chunk({ role: 'assistant', content: '**All clear** this week' })
         setTimeout(() => {
           chunk({ content: ' — nothing due.' }, 'stop')
@@ -3836,6 +3851,61 @@ test('the assistant: the owner sets up a model; a person asks, sees what it look
     await panel.getByTestId('assistant-delete-all').click()
     await page.getByRole('dialog').getByRole('button', { name: 'Delete all' }).click()
     await expect(panel.getByText('No conversations yet.')).toBeVisible()
+  } finally {
+    model.close()
+  }
+})
+
+test('the assistant in Agent mode: it lines changes up in one card; the ticked ones are made, the rest aren’t', async ({ page, request }) => {
+  const model = await fakeModel()
+  try {
+    const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+    const H = { Authorization: `Bearer ${login.access_token}` }
+    await signIn(page, NEW_PASSWORD)
+    await page.setViewportSize({ width: 1400, height: 900 })
+    await page.goto('/owner')
+    await page.locator('.subtab', { hasText: 'Owner' }).click()
+    const card = page.getByTestId('assistant-admin')
+    await card.getByTestId('assistant-provider').selectOption('ollama')
+    await card.getByTestId('assistant-model').fill('fake-model')
+    await card.getByTestId('assistant-url').fill(model.url)
+    await card.getByTestId('assistant-limit').fill('0')
+    if (!(await card.getByTestId('assistant-enabled').isChecked().catch(() => true))) await card.getByTestId('assistant-enabled').click()
+    await card.getByTestId('assistant-save').click()
+    await expect(page.getByText('Assistant saved')).toBeVisible()
+    const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Launch plans', kind: 'work', modules: ['home', 'tasks'], starter: false } })).json()
+
+    await page.goto('/')
+    await page.getByTestId('assistant-open').click()
+    const panel = page.getByTestId('assistant-panel')
+    await panel.getByTestId('assistant-mode-agent').click()
+    await expect(panel.getByTestId('assistant-mode-agent')).toHaveAttribute('aria-checked', 'true')
+    await panel.getByTestId('assistant-input').fill(`plan:${ws.id}`)
+    await panel.getByTestId('assistant-input').press('Enter')
+
+    const plan = panel.getByTestId('assistant-plan')
+    await expect(plan).toContainText('3 changes to approve')
+    await expect(panel.getByTestId('assistant-answer')).toContainText('lined up three changes')
+    const changes = plan.getByTestId('assistant-change')
+    await expect(changes).toHaveCount(3)
+    await expect(changes.nth(1)).toContainText('Add “Book the room” to it')
+    // Nothing is made before it's approved.
+    const lists = async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()) as { name: string }[]).map((l) => l.name)
+    expect(await lists()).not.toContain('Launch')
+
+    await changes.nth(2).getByRole('button').click()
+    await plan.getByTestId('assistant-approve').click()
+    await expect(plan).toContainText('2 changes made')
+    await expect(plan.getByTestId('assistant-approve')).toHaveCount(0)
+    expect(await lists()).toContain('Launch')
+    const tasks = ((await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { title: string }[]).map((x) => x.title)
+    expect(tasks).toContain('Book the room')
+    expect(tasks).not.toContain('Unwanted')
+
+    // The choice of mode is remembered.
+    await page.reload()
+    await page.getByTestId('assistant-open').click()
+    await expect(panel.getByTestId('assistant-mode-agent')).toHaveAttribute('aria-checked', 'true')
   } finally {
     model.close()
   }

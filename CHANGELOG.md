@@ -12,7 +12,10 @@ merge, not at release time.
   answers questions about your own Orbit ("what's due this week?", "sum up
   this page") with Orbit's own tools, as you — it sees only what you can see
   — and shows what it looked at, its answer appearing as it's written. Ask
-  mode: it reads, never changes anything.
+  mode reads only; in Agent mode it can make changes ("make a Launch list
+  with tasks for…"), lined up in one card — untick what you don't want,
+  approve once — and made as you, marked "via the assistant" in a page's
+  history and in the audit log.
   Conversations are kept for you (open, carry on, delete). The owner sets up
   the model (Owner → Assistant): Claude with an API key, OpenAI or a server
   speaking its API, or Ollama on your own network; and a daily limit per

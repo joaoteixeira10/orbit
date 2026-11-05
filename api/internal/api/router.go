@@ -344,6 +344,7 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/assistant/chats/:id", h.getAssistantChat)
 			authed.DELETE("/assistant/chats/:id", h.deleteAssistantChat)
 			authed.DELETE("/assistant/chats", h.deleteAssistantChats)
+			authed.POST("/assistant/chats/:id/apply", notImpersonating(), h.applyAssistantPlan(r))
 			authed.POST("/workspaces/:ws/google/start", notImpersonating(), h.startGoogle)
 			authed.GET("/workspaces/:ws/google/calendars", h.googleCalendars)
 			authed.POST("/workspaces/:ws/google/link", h.linkGoogle)

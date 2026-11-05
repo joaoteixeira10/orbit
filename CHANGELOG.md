@@ -17,6 +17,8 @@ merge, not at release time.
   with tasks for…"), lined up in one card — untick what you don't want,
   approve once — and made as you, marked "via the assistant" in a page's
   history and in the audit log.
+  A workspace's owners may keep the assistant out of it (it can't see it
+  at all) or give it instructions for it (workspace settings → Assistant).
   Conversations are kept for you (open, carry on, delete). The owner sets up
   the model (Owner → Assistant): Claude with an API key, OpenAI or a server
   speaking its API, or Ollama on your own network (through its own API, with

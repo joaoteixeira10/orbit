@@ -48,6 +48,8 @@ export interface Workspace {
   archived_at?: string | null
   grade_scale: number // what marks are out of (Grades): 20, 100, 10, 5
   holidays: string // the country whose public holidays its calendar shows ("" none)
+  assistant_off: boolean // the built-in assistant is kept out of it
+  assistant_notes: string // what the assistant is told about it
   created_at: string
   updated_at: string
 }
@@ -392,7 +394,7 @@ export const workspacesApi = {
   get: (id: string) => api<{ workspace: Workspace; members: Member[] }>(`/workspaces/${id}`),
   create: (b: { name: string; icon?: string; color?: string; kind?: WorkspaceKind; description?: string; modules?: ModuleKey[]; starter?: boolean; locale?: string }) =>
     api<Workspace>('/workspaces', { method: 'POST', body: j(b) }),
-  update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean; grade_scale: number; holidays: string }>) =>
+  update: (id: string, b: Partial<{ name: string; icon: string; color: string; description: string; modules: ModuleKey[]; archived: boolean; grade_scale: number; holidays: string; assistant_off: boolean; assistant_notes: string }>) =>
     api<Workspace>(`/workspaces/${id}`, { method: 'PUT', body: j(b) }),
   remove: (id: string) => api<void>(`/workspaces/${id}`, { method: 'DELETE' }),
   // A whole workspace as a file (transfer) and back (import), between Orbits.

@@ -15,6 +15,7 @@ import { useSortable } from '@/lib/sortable'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { useAssistantStore } from '@/stores/assistant'
 import { workspacesApi, type ModuleKey, type WSRole } from '@/api/planner'
 import { downloadAuthed } from '@/lib/api'
 
@@ -26,6 +27,7 @@ const emit = defineEmits<{ close: [] }>()
 const wss = useWorkspacesStore()
 const auth = useAuthStore()
 const toast = useToastStore()
+const assistant = useAssistantStore()
 const router = useRouter()
 const { t } = useI18n()
 
@@ -38,6 +40,7 @@ const name = ref('')
 const icon = ref('')
 const color = ref('')
 const description = ref('')
+const notes = ref('')
 const modules = ref<ModuleKey[]>([])
 
 watch(
@@ -49,6 +52,7 @@ watch(
     icon.value = ws.value.icon
     color.value = ws.value.color
     description.value = ws.value.description
+    notes.value = ws.value.assistant_notes ?? ''
     modules.value = [...ws.value.modules]
     await Promise.all([wss.loadCatalog(), wss.loadMembers(props.wsId)]).catch(() => {})
   },
@@ -70,6 +74,14 @@ watch([name, icon, color, description], () => {
   timer = setTimeout(() => {
     if (name.value.trim()) void save({ name: name.value.trim(), icon: icon.value, color: color.value, description: description.value })
   }, 450)
+})
+
+// What the assistant is told about it, saved as typed too.
+let notesTimer: ReturnType<typeof setTimeout> | null = null
+watch(notes, (v) => {
+  if (!props.open || !isOwner.value || !ws.value || v === (ws.value.assistant_notes ?? '')) return
+  if (notesTimer) clearTimeout(notesTimer)
+  notesTimer = setTimeout(() => void save({ assistant_notes: v }), 450)
 })
 
 // Modules: on/off and their order.
@@ -195,6 +207,25 @@ async function destroy() {
             <span class="flex-1 text-[14px]">{{ t('ws.template') }}</span>
             <span class="text-[14px] text-text-2">{{ t(`templates.${ws.kind}.name`) }}</span>
           </div>
+        </div>
+
+        <!-- The built-in assistant, when the instance has it. -->
+        <div v-if="assistant.status?.enabled" data-testid="ws-assistant">
+          <h3 class="subhead mb-2 px-1">{{ t('ws.assistant') }}</h3>
+          <div class="group">
+            <div class="group-row">
+              <span class="min-w-0 flex-1">
+                <span class="block text-[14px]">{{ t('ws.assistantIn') }}</span>
+                <span class="block text-[12px] text-text-3">{{ t('ws.assistantInHint') }}</span>
+              </span>
+              <Toggle :model-value="!ws.assistant_off" :disabled="!isOwner" data-testid="ws-assistant-on" @update:model-value="(v) => save({ assistant_off: !v })" />
+            </div>
+          </div>
+          <template v-if="!ws.assistant_off && (isOwner || notes)">
+            <label class="mt-3 mb-1 block px-1 text-[13px] text-text-2" for="ws-assistant-notes">{{ t('ws.assistantNotes') }}</label>
+            <textarea id="ws-assistant-notes" v-model="notes" class="input min-h-[76px] resize-y" :disabled="!isOwner" :placeholder="t('ws.assistantNotesPlaceholder')" maxlength="2000" data-testid="ws-assistant-notes" />
+            <p class="footnote mt-1.5 px-1">{{ t('ws.assistantNotesHint') }}</p>
+          </template>
         </div>
 
         <div class="space-y-2">

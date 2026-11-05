@@ -422,7 +422,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			defer close(events)
 			ask := assistant.Request{
 				System:  fmt.Sprintf(assistantRules, name, user.Username, modeRules) + mcpInstructions,
-				Context: assistantSituation(req.Context, run) + theirWorkspaces(mine) + earlierChanges(history),
+				Context: assistantSituation(req.Context, run) + h.keptOut(uid, req.Context.WorkspaceID) + theirWorkspaces(mine) + earlierChanges(history),
 				History: history,
 				Tools:   tools,
 				Step: func(s assistant.Step) {
@@ -497,6 +497,21 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		}
 		send(assistantEvent{Type: "done", ChatID: ch.ID})
 	}
+}
+
+// keptOut tells the model when the workspace on screen is one its owners
+// keep the assistant out of.
+func (h *Handlers) keptOut(uid, wsID string) string {
+	if wsID == "" {
+		return ""
+	}
+	var n int64
+	h.db.Model(&models.Workspace{}).Joins("JOIN workspace_members ON workspace_members.workspace_id = workspaces.id").
+		Where("workspaces.id = ? AND workspace_members.user_id = ? AND workspaces.assistant_off = ?", wsID, uid, true).Count(&n)
+	if n == 0 {
+		return ""
+	}
+	return "The workspace on their screen has the assistant turned off by its owners: you can't see or change anything in it. If they ask about it, say so.\n"
 }
 
 // assistantScreens: the workspace screens that show one thing, by the

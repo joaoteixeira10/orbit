@@ -212,6 +212,11 @@ it you only see workspaces you're invited to.
   `.orbit.zip` with everything in it, to [move it to another
   Orbit](#moving-a-workspace-to-another-orbit). Members who aren't owners see
   **Leave workspace** instead.
+  When the assistant (Your settings → **The assistant (built in)**) is set up, **Assistant**:
+  **The assistant can use this workspace** — off, it can't see or change
+  anything in it, for anyone (apps through MCP still can); and
+  **Instructions for the assistant** — told to it whenever a member asks
+  something ("answer in Portuguese", "pages here are lesson plans").
 - **Modules** — turn modules on and off (turning one off hides it; nothing is
   deleted) and drag them to change their order in the sidebar.
 - **Members** — invite an existing account by **username or email** as
@@ -1691,6 +1696,9 @@ Below the box you type in, **Ask** or **Agent** (remembered):
   was made. A change that deletes is in red. What it changes says so: a
   page's history shows **via the assistant**, and the audit log has an
   `assistant.apply` entry.
+
+A workspace's owners may keep the assistant out of it, or give it
+instructions for it, in its settings (General → **Assistant**).
 
 Your conversations are kept for you: the clock icon lists them — open one to
 carry on, delete one, or **Delete all**; **+** starts a new one. The owner may

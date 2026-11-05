@@ -412,3 +412,58 @@ func TestClaimsChanges(t *testing.T) {
 		}
 	}
 }
+
+// TestAssistantWorkspaceSwitch: a workspace's owners can keep the assistant
+// out of it (it can't see it at all, though apps through MCP still can), and
+// give it instructions for theirs.
+func TestAssistantWorkspaceSwitch(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	fake := &fakeModel{}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	old := assistantHTTP
+	assistantHTTP = func() *http.Client { return srv.Client() }
+	defer func() { assistantHTTP = old }()
+
+	owner := loginTok(t, r, "admin", "adminpass")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"openai","url":"`+srv.URL+`/v1","model":"llama3.1"}`, owner), http.StatusOK, "set up")
+	school := createWS(t, r, owner, `{"name":"School","kind":"school"}`)
+	secret := createWS(t, r, owner, `{"name":"Secret","kind":"personal"}`)
+	var got workspaceResponse
+	decode(t, authdo(r, "PUT", "/api/v1/workspaces/"+school.ID, `{"assistant_notes":"  Answer in Portuguese.  "}`, owner), &got)
+	if got.AssistantNotes != "Answer in Portuguese." {
+		t.Errorf("notes: %q", got.AssistantNotes)
+	}
+	decode(t, authdo(r, "PUT", "/api/v1/workspaces/"+secret.ID, `{"assistant_off":true}`, owner), &got)
+	if !got.AssistantOff {
+		t.Fatal("not turned off")
+	}
+
+	// Asked from the secret workspace: it lists theirs (not that one), is
+	// told why, and gets the school's instructions.
+	ev := sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi","context":{"workspace_id":"`+secret.ID+`","path":"/w/`+secret.ID+`/tasks"}}`, owner).Body.String())
+	var answer string
+	for _, e := range ev {
+		if e.Type == "answer" {
+			answer = e.Text
+		}
+	}
+	if !strings.Contains(answer, "School") || strings.Contains(answer, "Secret") {
+		t.Errorf("listed: %q", answer)
+	}
+	sent := string(mustJSON(fake.asked[0]))
+	if !strings.Contains(sent, "Answer in Portuguese.") || !strings.Contains(sent, "assistant turned off") || strings.Contains(sent, secret.ID+"\\n") {
+		t.Errorf("told: %s", sent)
+	}
+	// Nor can it line up changes there.
+	ev = sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"plan:`+secret.ID+`"}`, owner).Body.String())
+	for _, e := range ev {
+		if e.Type == "answer" && (len(e.Actions) != 0 || !strings.Contains(e.Text, "no workspace with id "+secret.ID)) {
+			t.Errorf("lined up in it: %+v", e)
+		}
+	}
+	// An app through MCP still sees it.
+	if text, _ := mcpToolCall(t, r, owner, "list_workspaces", map[string]any{}); !strings.Contains(text, "Secret") {
+		t.Errorf("MCP: %s", text)
+	}
+}

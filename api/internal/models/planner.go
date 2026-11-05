@@ -36,6 +36,12 @@ type Workspace struct {
 	// Holidays: the country whose public holidays its calendar shows
 	// (ISO code; "" none).
 	Holidays string `gorm:"size:2" json:"holidays"`
+	// AssistantOff keeps the built-in assistant out of it: it can't see or
+	// change anything in it.
+	AssistantOff bool `gorm:"not null;default:false" json:"assistant_off"`
+	// AssistantNotes: what the assistant is told about it ("answer in
+	// Portuguese", "pages here are lesson plans").
+	AssistantNotes string `gorm:"size:2000" json:"assistant_notes"`
 }
 
 // WorkspaceMember gives one user a role in one workspace. Position is that

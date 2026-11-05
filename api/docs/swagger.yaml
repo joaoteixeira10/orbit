@@ -3419,6 +3419,13 @@ definitions:
     properties:
       archived:
         type: boolean
+      assistant_notes:
+        maxLength: 2000
+        type: string
+      assistant_off:
+        description: 'The built-in assistant: kept out of it, and what it''s told
+          about it.'
+        type: boolean
       color:
         type: string
       description:
@@ -3564,6 +3571,16 @@ definitions:
     properties:
       archived_at:
         type: string
+      assistant_notes:
+        description: |-
+          AssistantNotes: what the assistant is told about it ("answer in
+          Portuguese", "pages here are lesson plans").
+        type: string
+      assistant_off:
+        description: |-
+          AssistantOff keeps the built-in assistant out of it: it can't see or
+          change anything in it.
+        type: boolean
       color:
         description: '#rrggbb; tints the workspace'
         type: string

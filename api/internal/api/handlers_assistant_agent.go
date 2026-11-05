@@ -58,9 +58,11 @@ type myWorkspace struct {
 	ID         string  `json:"id"`
 	Name       string  `json:"name"`
 	ArchivedAt *string `json:"archived_at"`
+	Notes      string  `json:"assistant_notes"`
 }
 
-// theirWorkspaces lists the person's workspaces for the model.
+// theirWorkspaces lists the person's workspaces for the model, with what
+// each one's owners ask of it there.
 func theirWorkspaces(ws []myWorkspace) string {
 	var b strings.Builder
 	for _, w := range ws {
@@ -71,6 +73,9 @@ func theirWorkspaces(ws []myWorkspace) string {
 			b.WriteString("Their workspaces (name: workspace_id):")
 		}
 		fmt.Fprintf(&b, "\n- %s: %s", w.Name, w.ID)
+		if n := strings.TrimSpace(w.Notes); n != "" {
+			fmt.Fprintf(&b, "\n  Its owners' instructions for you, for what's in it: %s", strings.Join(strings.Fields(n), " "))
+		}
 	}
 	if b.Len() > 0 {
 		b.WriteString("\n")

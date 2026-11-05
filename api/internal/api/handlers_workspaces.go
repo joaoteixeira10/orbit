@@ -47,6 +47,10 @@ func (h *Handlers) wsAccess(c *gin.Context, wsID, need string) (ws models.Worksp
 		c.JSON(http.StatusNotFound, gin.H{"error": "workspace not found"})
 		return ws, member, false
 	}
+	if ws.AssistantOff && viaOf(c) == "assistant" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "the assistant is turned off in this workspace"})
+		return ws, member, false
+	}
 	if need != models.WSViewer && auth.Effective(c).ReadOnly {
 		c.JSON(http.StatusForbidden, gin.H{"error": "this API token is read-only"})
 		return ws, member, false
@@ -92,11 +96,16 @@ func (h *Handlers) memberIDs(wsID string) []string {
 }
 
 // myWorkspaceIDs lists the workspaces the caller belongs to (archived ones
-// included unless active is set).
+// included unless active is set; for the assistant, not those it's kept out
+// of).
 func (h *Handlers) myWorkspaceIDs(c *gin.Context, active bool) []string {
-	q := h.db.Model(&models.WorkspaceMember{}).Where("workspace_members.user_id = ?", auth.UserID(c))
+	q := h.db.Model(&models.WorkspaceMember{}).Where("workspace_members.user_id = ?", auth.UserID(c)).
+		Joins("JOIN workspaces ON workspaces.id = workspace_members.workspace_id")
 	if active {
-		q = q.Joins("JOIN workspaces ON workspaces.id = workspace_members.workspace_id").Where("workspaces.archived_at IS NULL")
+		q = q.Where("workspaces.archived_at IS NULL")
+	}
+	if viaOf(c) == "assistant" {
+		q = q.Where("workspaces.assistant_off = ?", false)
 	}
 	var ids []string
 	q.Pluck("workspace_members.workspace_id", &ids)
@@ -212,7 +221,7 @@ func (h *Handlers) listWorkspaces(c *gin.Context) {
 	out := make([]workspaceResponse, 0, len(members))
 	for _, m := range members {
 		var ws models.Workspace
-		if h.db.First(&ws, "id = ?", m.WorkspaceID).Error == nil {
+		if h.db.First(&ws, "id = ?", m.WorkspaceID).Error == nil && (!ws.AssistantOff || viaOf(c) != "assistant") {
 			out = append(out, h.toWorkspaceResponse(ws, m))
 		}
 	}
@@ -374,6 +383,9 @@ type updateWorkspaceRequest struct {
 	Archived    *bool     `json:"archived"`
 	GradeScale  *int      `json:"grade_scale"` // 20, 100, 10 or 5
 	Holidays    *string   `json:"holidays"`    // a country code, "" none
+	// The built-in assistant: kept out of it, and what it's told about it.
+	AssistantOff   *bool   `json:"assistant_off"`
+	AssistantNotes *string `json:"assistant_notes" binding:"omitempty,max=2000"`
 }
 
 // updateWorkspace changes a workspace's settings (owners).
@@ -433,6 +445,12 @@ func (h *Handlers) updateWorkspace(c *gin.Context) {
 		} else {
 			up["archived_at"] = nil
 		}
+	}
+	if req.AssistantOff != nil {
+		up["assistant_off"] = *req.AssistantOff
+	}
+	if req.AssistantNotes != nil {
+		up["assistant_notes"] = strings.TrimSpace(*req.AssistantNotes)
 	}
 	if req.Holidays != nil {
 		if *req.Holidays != "" && !holidays.Known(*req.Holidays) {

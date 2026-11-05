@@ -16288,6 +16288,14 @@ const docTemplate = `{
                 "archived": {
                     "type": "boolean"
                 },
+                "assistant_notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "assistant_off": {
+                    "description": "The built-in assistant: kept out of it, and what it's told about it.",
+                    "type": "boolean"
+                },
                 "color": {
                     "type": "string"
                 },
@@ -16476,6 +16484,14 @@ const docTemplate = `{
             "properties": {
                 "archived_at": {
                     "type": "string"
+                },
+                "assistant_notes": {
+                    "description": "AssistantNotes: what the assistant is told about it (\"answer in\nPortuguese\", \"pages here are lesson plans\").",
+                    "type": "string"
+                },
+                "assistant_off": {
+                    "description": "AssistantOff keeps the built-in assistant out of it: it can't see or\nchange anything in it.",
+                    "type": "boolean"
                 },
                 "color": {
                     "description": "#rrggbb; tints the workspace",

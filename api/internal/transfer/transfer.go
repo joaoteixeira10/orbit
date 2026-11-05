@@ -505,6 +505,7 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 	ws := models.Workspace{
 		Name: trim(strings.TrimSpace(src.Name), 120), Icon: trim(src.Icon, 64), Color: src.Color, Kind: src.Kind,
 		Description: trim(src.Description, 500), CreatedBy: me.ID, GradeScale: src.GradeScale, Holidays: src.Holidays,
+		AssistantOff: src.AssistantOff, AssistantNotes: trim(src.AssistantNotes, 2000),
 	}
 	ws.ID = wsID
 	if ws.Name == "" {

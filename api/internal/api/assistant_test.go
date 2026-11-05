@@ -30,18 +30,38 @@ func (f *fakeModel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Unlock()
 	msgs, _ := body["messages"].([]any)
 	last, _ := msgs[len(msgs)-1].(map[string]any)
-	w.Header().Set("Content-Type", "application/json")
-	if last["role"] == "tool" {
-		_, _ = io.WriteString(w, `{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":`+jsonString("You have: "+last["content"].(string))+`}}]}`)
-		return
+	// Streamed, as Ollama and OpenAI do: the answer in two pieces, the tool
+	// call's arguments split across chunks.
+	w.Header().Set("Content-Type", "text/event-stream")
+	chunk := func(delta, finish string) {
+		fin := "null"
+		if finish != "" {
+			fin = `"` + finish + `"`
+		}
+		_, _ = io.WriteString(w, `data: {"choices":[{"index":0,"delta":`+delta+`,"finish_reason":`+fin+`}]}`+"\n\n")
 	}
-	_, _ = io.WriteString(w, `{"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"list_workspaces","arguments":"{}"}}]}}]}`)
+	if last["role"] == "tool" {
+		chunk(`{"role":"assistant","content":"You have: "}`, "")
+		chunk(`{"content":`+jsonString(last["content"].(string))+`}`, "")
+		chunk(`{}`, "stop")
+	} else {
+		chunk(`{"role":"assistant","tool_calls":[{"index":0,"id":"c1","type":"function","function":{"name":"list_workspaces","arguments":"{"}}]}`, "")
+		chunk(`{"tool_calls":[{"index":0,"function":{"arguments":"}"}}]}`, "")
+		chunk(`{}`, "tool_calls")
+	}
+	_, _ = io.WriteString(w, "data: [DONE]\n\n")
 }
 
 func jsonString(s string) string { b, _ := json.Marshal(s); return string(b) }
 
-// sseEvents reads a text/event-stream answer into its events.
+// sseEvents reads a text/event-stream answer into its events, the answer's
+// pieces (delta) left out.
 func sseEvents(t *testing.T, body string) []assistantEvent {
+	t.Helper()
+	return sseAll(t, body, false)
+}
+
+func sseAll(t *testing.T, body string, deltas bool) []assistantEvent {
 	t.Helper()
 	var out []assistantEvent
 	for _, line := range strings.Split(body, "\n") {
@@ -50,7 +70,9 @@ func sseEvents(t *testing.T, body string) []assistantEvent {
 			if err := json.Unmarshal([]byte(data), &e); err != nil {
 				t.Fatalf("event %q: %v", data, err)
 			}
-			out = append(out, e)
+			if deltas || e.Type != "delta" {
+				out = append(out, e)
+			}
 		}
 	}
 	return out
@@ -113,7 +135,17 @@ func TestAssistantAsk(t *testing.T) {
 
 	w := authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"What workspaces do I have?","context":{"path":"/","title":"Today","now":"Thursday 5 November 2026, 10:00","time_zone":"Europe/Lisbon"}}`, bea)
 	expect(t, w, http.StatusOK, "ask")
+	// The answer comes in pieces as it's written, then whole.
+	var pieces string
+	for _, e := range sseAll(t, w.Body.String(), true) {
+		if e.Type == "delta" {
+			pieces += e.Text
+		}
+	}
 	ev := sseEvents(t, w.Body.String())
+	if len(ev) == 3 && (pieces != ev[1].Text || !strings.HasPrefix(pieces, "You have: ")) {
+		t.Errorf("pieces %q, answer %q", pieces, ev[1].Text)
+	}
 	if len(ev) != 3 || ev[0].Type != "step" || ev[0].Tool != "list_workspaces" || ev[1].Type != "answer" || ev[2].Type != "done" || ev[2].ChatID == "" {
 		t.Fatalf("events: %+v", ev)
 	}

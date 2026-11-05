@@ -1,6 +1,7 @@
 package assistant
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,7 +12,8 @@ import (
 
 // openAI answers with a model behind an OpenAI-style chat API — OpenAI's
 // own, or a server that speaks it (Ollama's /v1, LM Studio, vLLM…): a loop of
-// chat/completions while the model asks for tools.
+// streamed chat/completions while the model asks for tools, its words passed
+// on as they come.
 type openAI struct {
 	base  string // …/v1
 	key   string // "" for a server without one (Ollama)
@@ -58,23 +60,14 @@ func (m *openAI) Answer(ctx context.Context, r Request) (string, error) {
 	}
 
 	for round := 0; ; round++ {
-		body := map[string]any{"model": m.model, "messages": msgs}
+		body := map[string]any{"model": m.model, "messages": msgs, "stream": true}
 		if len(tools) > 0 {
 			body["tools"] = tools
 		}
-		var resp struct {
-			Choices []struct {
-				Message      oaMessage `json:"message"`
-				FinishReason string    `json:"finish_reason"`
-			} `json:"choices"`
-		}
-		if err := m.post(ctx, body, &resp); err != nil {
+		ch, err := m.round(ctx, body, r.Delta)
+		if err != nil {
 			return "", err
 		}
-		if len(resp.Choices) == 0 {
-			return "", fmt.Errorf("the model sent no answer")
-		}
-		ch := resp.Choices[0]
 		text := ""
 		if ch.Message.Content != nil {
 			text = *ch.Message.Content
@@ -106,16 +99,24 @@ func (m *openAI) Answer(ctx context.Context, r Request) (string, error) {
 	}
 }
 
-func (m *openAI) post(ctx context.Context, body any, into any) error {
+type oaChoice struct {
+	Message      oaMessage `json:"message"`
+	FinishReason string    `json:"finish_reason"`
+}
+
+// round is one chat/completions: streamed (each piece of text to delta, the
+// tool calls put together from theirs), or whole from a server that
+// doesn't stream.
+func (m *openAI) round(ctx context.Context, body any, delta func(string)) (oaChoice, error) {
 	b, err := json.Marshal(body)
 	if err != nil {
-		return err
+		return oaChoice{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, m.base+"/chat/completions", bytes.NewReader(b))
 	if err != nil {
-		return err
+		return oaChoice{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if m.key != "" {
@@ -123,7 +124,7 @@ func (m *openAI) post(ctx context.Context, body any, into any) error {
 	}
 	res, err := m.http.Do(req)
 	if err != nil {
-		return err
+		return oaChoice{}, err
 	}
 	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode >= 300 {
@@ -140,7 +141,85 @@ func (m *openAI) post(ctx context.Context, body any, into any) error {
 				msg = s
 			}
 		}
-		return fmt.Errorf("the model's server said: %s (HTTP %d)", strings.TrimSpace(msg), res.StatusCode)
+		return oaChoice{}, fmt.Errorf("the model's server said: %s (HTTP %d)", strings.TrimSpace(msg), res.StatusCode)
 	}
-	return json.NewDecoder(res.Body).Decode(into)
+
+	if !strings.HasPrefix(res.Header.Get("Content-Type"), "text/event-stream") {
+		var whole struct{ Choices []oaChoice }
+		if err := json.NewDecoder(res.Body).Decode(&whole); err != nil {
+			return oaChoice{}, err
+		}
+		if len(whole.Choices) == 0 {
+			return oaChoice{}, fmt.Errorf("the model sent no answer")
+		}
+		return whole.Choices[0], nil
+	}
+
+	var out oaChoice
+	var text strings.Builder
+	got := false
+	sc := bufio.NewScanner(res.Body)
+	sc.Buffer(make([]byte, 64*1024), 4*1024*1024)
+	for sc.Scan() {
+		data, ok := strings.CutPrefix(sc.Text(), "data:")
+		if !ok {
+			continue
+		}
+		data = strings.TrimSpace(data)
+		if data == "[DONE]" {
+			break
+		}
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content   string `json:"content"`
+					ToolCalls []struct {
+						Index    int    `json:"index"`
+						ID       string `json:"id"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
+				} `json:"delta"`
+				FinishReason string `json:"finish_reason"`
+			} `json:"choices"`
+		}
+		if json.Unmarshal([]byte(data), &chunk) != nil || len(chunk.Choices) == 0 {
+			continue
+		}
+		got = true
+		c := chunk.Choices[0]
+		if c.Delta.Content != "" {
+			text.WriteString(c.Delta.Content)
+			if delta != nil {
+				delta(c.Delta.Content)
+			}
+		}
+		for _, tc := range c.Delta.ToolCalls {
+			for len(out.Message.ToolCalls) <= tc.Index {
+				out.Message.ToolCalls = append(out.Message.ToolCalls, oaToolCall{Type: "function"})
+			}
+			call := &out.Message.ToolCalls[tc.Index]
+			if tc.ID != "" {
+				call.ID = tc.ID
+			}
+			call.Function.Name += tc.Function.Name
+			call.Function.Arguments += tc.Function.Arguments
+		}
+		if c.FinishReason != "" {
+			out.FinishReason = c.FinishReason
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return oaChoice{}, err
+	}
+	if !got {
+		return oaChoice{}, fmt.Errorf("the model sent no answer")
+	}
+	out.Message.Role = "assistant"
+	if text.Len() > 0 || len(out.Message.ToolCalls) == 0 {
+		out.Message.Content = str(text.String())
+	}
+	return out, nil
 }

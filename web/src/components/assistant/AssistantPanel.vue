@@ -69,10 +69,19 @@ function fresh() {
   void nextTick(() => input.value?.focus())
 }
 
-// Keep the latest in sight; the box grows with what's typed.
+// Keep the latest in sight — as the answer is written too, unless they've
+// scrolled up to read; the box grows with what's typed.
 watch(
   () => [store.turns.length, store.steps.length, store.sending, store.error],
   () => nextTick(() => body.value?.scrollTo({ top: body.value.scrollHeight })),
+)
+watch(
+  () => store.draft,
+  () => {
+    const el = body.value
+    if (!el || el.scrollHeight - el.scrollTop - el.clientHeight > 80) return
+    void nextTick(() => el.scrollTo({ top: el.scrollHeight }))
+  },
 )
 watch(draft, () =>
   nextTick(() => {
@@ -154,7 +163,8 @@ const left = computed(() => store.left)
         <ul v-if="store.steps.length" class="ai-steps">
           <li v-for="(s, k) in store.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
         </ul>
-        <div class="ai-bubble ai-typing" role="status" :aria-label="t('assistant.thinking')"><span /><span /><span /></div>
+        <div v-if="store.draft" class="ai-bubble"><MarkdownView :content="store.draft" :editable="false" plain class="ai-md" /></div>
+        <div v-else class="ai-bubble ai-typing" role="status" :aria-label="t('assistant.thinking')"><span /><span /><span /></div>
       </div>
       <p v-if="store.error" class="ai-error" role="alert" data-testid="assistant-error">{{ store.error }}</p>
     </div>

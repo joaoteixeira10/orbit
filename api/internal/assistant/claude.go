@@ -10,8 +10,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/v2/option"
 )
 
-// claude answers with Claude, through Anthropic's SDK: a loop of
-// messages.create while the model asks for tools.
+// claude answers with Claude, through Anthropic's SDK: a loop of streamed
+// messages.create while the model asks for tools, its words passed on as
+// they come.
 type claude struct {
 	client anthropic.Client
 	model  string
@@ -62,13 +63,28 @@ func (m *claude) Answer(ctx context.Context, r Request) (string, error) {
 	}
 
 	for round := 0; ; round++ {
-		resp, err := m.client.Messages.New(ctx, anthropic.MessageNewParams{
+		stream := m.client.Messages.NewStreaming(ctx, anthropic.MessageNewParams{
 			Model:     m.model,
 			MaxTokens: 16000,
 			System:    system,
 			Messages:  msgs,
 			Tools:     tools,
 		})
+		resp := anthropic.Message{}
+		for stream.Next() {
+			ev := stream.Current()
+			if err := resp.Accumulate(ev); err != nil {
+				_ = stream.Close()
+				return "", err
+			}
+			if d, ok := ev.AsAny().(anthropic.ContentBlockDeltaEvent); ok && r.Delta != nil {
+				if t, ok := d.Delta.AsAny().(anthropic.TextDelta); ok {
+					r.Delta(t.Text)
+				}
+			}
+		}
+		err := stream.Err()
+		_ = stream.Close()
 		if err != nil {
 			return "", err
 		}
@@ -96,7 +112,7 @@ func (m *claude) Answer(ctx context.Context, r Request) (string, error) {
 				p := v.ToParam()
 				back = append(back, anthropic.ContentBlockParamUnion{OfToolUse: &p})
 				var args map[string]any
-				if json.Unmarshal([]byte(v.JSON.Input.Raw()), &args) != nil || args == nil {
+				if json.Unmarshal(v.Input, &args) != nil || args == nil {
 					args = map[string]any{}
 				}
 				if r.Step != nil {

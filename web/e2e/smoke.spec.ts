@@ -3764,12 +3764,21 @@ async function fakeModel(): Promise<{ url: string; close: () => void }> {
     req.on('end', () => {
       const body = JSON.parse(raw || '{}')
       const last = body.messages?.[body.messages.length - 1]
-      res.setHeader('Content-Type', 'application/json')
-      const message =
-        last?.role === 'tool'
-          ? { role: 'assistant', content: '**All clear** this week — nothing due.' }
-          : { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'get_today', arguments: '{}' } }] }
-      res.end(JSON.stringify({ choices: [{ finish_reason: message.tool_calls ? 'tool_calls' : 'stop', message }] }))
+      // Streamed, as Ollama does; the answer's second half after a pause, so
+      // the first can be seen arriving.
+      res.setHeader('Content-Type', 'text/event-stream')
+      const chunk = (delta: object, finish: string | null = null) => res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`)
+      const end = () => res.end('data: [DONE]\n\n')
+      if (last?.role === 'tool') {
+        chunk({ role: 'assistant', content: '**All clear** this week' })
+        setTimeout(() => {
+          chunk({ content: ' — nothing due.' }, 'stop')
+          end()
+        }, 1200)
+      } else {
+        chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'get_today', arguments: '{}' } }] }, 'tool_calls')
+        end()
+      }
     })
   })
   await new Promise<void>((ok) => srv.listen(0, '0.0.0.0', ok))
@@ -3801,6 +3810,9 @@ test('the assistant: the owner sets up a model; a person asks, sees what it look
     await expect(panel).toContainText('fake-model')
     await panel.getByRole('button', { name: 'What’s due this week?' }).click()
     await expect(panel.getByTestId('assistant-user')).toHaveText('What’s due this week?')
+    // Its words show as they're written, before the answer is done.
+    await expect(panel.getByTestId('assistant-working')).toContainText('All clear this week')
+    await expect(panel.getByTestId('assistant-working')).not.toContainText('nothing due')
     await expect(panel.getByTestId('assistant-answer')).toContainText('Looked at your day')
     await expect(panel.getByTestId('assistant-answer').locator('strong')).toHaveText('All clear')
     await expect(panel).toContainText('4 messages left today')

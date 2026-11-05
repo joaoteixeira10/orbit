@@ -56,6 +56,7 @@ export interface AssistantContext {
 
 export type AssistantEvent =
   | { type: 'step'; tool: string; hint?: string }
+  | { type: 'delta'; text: string }
   | { type: 'answer'; text: string }
   | { type: 'done'; chat_id: string }
   | { type: 'error'; error: string }

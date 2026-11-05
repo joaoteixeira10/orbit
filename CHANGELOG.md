@@ -11,7 +11,8 @@ merge, not at release time.
 - **An assistant built in** — ✦ beside the inbox (or ⌘J): a chat window that
   answers questions about your own Orbit ("what's due this week?", "sum up
   this page") with Orbit's own tools, as you — it sees only what you can see
-  — and shows what it looked at. Ask mode: it reads, never changes anything.
+  — and shows what it looked at, its answer appearing as it's written. Ask
+  mode: it reads, never changes anything.
   Conversations are kept for you (open, carry on, delete). The owner sets up
   the model (Owner → Assistant): Claude with an API key, OpenAI or a server
   speaking its API, or Ollama on your own network; and a daily limit per

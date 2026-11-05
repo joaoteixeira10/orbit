@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { assistantApi, type AssistantChatSummary, type AssistantContext, type AssistantStatus, type AssistantStep, type AssistantTurn } from '@/api/assistant'
 
 // The assistant's panel: whether it's open, the conversation in it (and the
-// list of mine), and the answer being worked out (the tools it uses as it goes).
+// list of mine), and the answer being worked out (the tools it uses as it goes,
+// and its words as they're written).
 export const useAssistantStore = defineStore('assistant', {
   state: () => ({
     open: false,
@@ -12,6 +13,7 @@ export const useAssistantStore = defineStore('assistant', {
     chats: [] as AssistantChatSummary[],
     sending: false,
     steps: [] as AssistantStep[], // of the answer on its way
+    draft: '', // its words so far (those before a tool runs aren't the answer)
     error: '',
     controller: null as AbortController | null,
   }),
@@ -62,13 +64,17 @@ export const useAssistantStore = defineStore('assistant', {
       this.sending = true
       this.error = ''
       this.steps = []
+      this.draft = ''
       this.turns.push({ role: 'user', text: message })
       const ctl = new AbortController()
       this.controller = ctl
       const got: { answer?: AssistantTurn } = {}
       try {
         await assistantApi.ask({ chat_id: this.chatId || undefined, message, context }, (e) => {
-          if (e.type === 'step') this.steps.push({ tool: e.tool, hint: e.hint })
+          if (e.type === 'step') {
+            this.steps.push({ tool: e.tool, hint: e.hint })
+            this.draft = ''
+          } else if (e.type === 'delta') this.draft += e.text
           else if (e.type === 'answer') got.answer = { role: 'assistant', text: e.text, steps: [...this.steps] }
           else if (e.type === 'error') this.error = e.error
           else if (e.type === 'done') this.chatId = e.chat_id
@@ -79,6 +85,7 @@ export const useAssistantStore = defineStore('assistant', {
       } finally {
         this.sending = false
         this.steps = []
+        this.draft = ''
         this.controller = null
         void this.loadStatus()
       }

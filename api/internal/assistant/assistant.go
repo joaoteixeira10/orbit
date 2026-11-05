@@ -52,6 +52,9 @@ type Request struct {
 	Call func(ctx context.Context, name string, args map[string]any) (string, bool)
 	// Step says a tool is about to run (for the panel).
 	Step func(Step)
+	// Delta passes on the answer's words as the model writes them. Words
+	// written before a tool runs (Step) aren't the answer: the panel drops them.
+	Delta func(string)
 }
 
 // Provider answers a Request, running tools as the model asks.

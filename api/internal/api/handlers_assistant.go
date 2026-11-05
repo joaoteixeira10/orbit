@@ -281,7 +281,7 @@ type assistantChatRequest struct {
 // assistantEvent is a line of the answer's stream: a step (a tool it used),
 // the answer, done (with the conversation's id) or an error.
 type assistantEvent struct {
-	Type   string `json:"type"` // step | answer | done | error
+	Type   string `json:"type"` // step | delta | answer | done | error
 	Tool   string `json:"tool,omitempty"`
 	Hint   string `json:"hint,omitempty"`
 	Text   string `json:"text,omitempty"`
@@ -396,7 +396,8 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 					steps = append(steps, s)
 					events <- assistantEvent{Type: "step", Tool: s.Tool, Hint: s.Hint}
 				},
-				Call: func(_ context.Context, tool string, args map[string]any) (string, bool) { return run(tool, args) },
+				Delta: func(s string) { events <- assistantEvent{Type: "delta", Text: s} },
+				Call:  func(_ context.Context, tool string, args map[string]any) (string, bool) { return run(tool, args) },
 			})
 			if err != nil {
 				events <- assistantEvent{Type: "error", Error: h.assistantError(err)}

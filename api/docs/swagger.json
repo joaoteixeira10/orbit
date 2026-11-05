@@ -87,6 +87,226 @@
                 }
             }
         },
+        "/assistant": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "The assistant: on, which model, today's use",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantStatusResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/chat": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Ask the assistant",
+                "parameters": [
+                    {
+                        "description": "The message, the conversation, what's on screen",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantChatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/assistant/chats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "My conversations with the assistant",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.assistantChatSummary"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Delete all my conversations with the assistant",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/assistant/chats/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "A conversation with the assistant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantChatResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Delete a conversation with the assistant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/assistant/config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Get the assistant's set-up",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantConfigResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Set up the assistant",
+                "parameters": [
+                    {
+                        "description": "The assistant",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantConfigResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/audit": {
             "get": {
                 "security": [
@@ -11327,6 +11547,168 @@
                 }
             }
         },
+        "api.assistantChatRequest": {
+            "type": "object",
+            "required": [
+                "message"
+            ],
+            "properties": {
+                "chat_id": {
+                    "type": "string",
+                    "maxLength": 36
+                },
+                "context": {
+                    "$ref": "#/definitions/api.assistantContext"
+                },
+                "message": {
+                    "type": "string",
+                    "maxLength": 8000
+                }
+            }
+        },
+        "api.assistantChatResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "turns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/assistant.Turn"
+                    }
+                }
+            }
+        },
+        "api.assistantChatSummary": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.assistantConfigRequest": {
+            "type": "object",
+            "properties": {
+                "clear_key": {
+                    "type": "boolean"
+                },
+                "daily_limit": {
+                    "type": "integer",
+                    "maximum": 100000,
+                    "minimum": 0
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "description": "\"\" keeps the one there is",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "model": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "anthropic",
+                        "openai",
+                        "ollama"
+                    ]
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 300
+                }
+            }
+        },
+        "api.assistantConfigResponse": {
+            "type": "object",
+            "properties": {
+                "daily_limit": {
+                    "type": "integer"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "has_key": {
+                    "description": "the key itself is never sent back",
+                    "type": "boolean"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "provider": {
+                    "description": "anthropic | openai | ollama",
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.assistantContext": {
+            "type": "object",
+            "properties": {
+                "now": {
+                    "description": "the person's local time, as they see it",
+                    "type": "string",
+                    "maxLength": 60
+                },
+                "path": {
+                    "description": "the page on screen",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "time_zone": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "title": {
+                    "description": "its title, as shown",
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "workspace_id": {
+                    "type": "string",
+                    "maxLength": 36
+                }
+            }
+        },
+        "api.assistantStatusResponse": {
+            "type": "object",
+            "properties": {
+                "daily_limit": {
+                    "description": "0: none",
+                    "type": "integer"
+                },
+                "enabled": {
+                    "description": "on and set up",
+                    "type": "boolean"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "used_today": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.backlinkTask": {
             "type": "object",
             "properties": {
@@ -16146,6 +16528,39 @@
                     "type": "string"
                 },
                 "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "assistant.Step": {
+            "type": "object",
+            "properties": {
+                "hint": {
+                    "type": "string"
+                },
+                "tool": {
+                    "type": "string"
+                }
+            }
+        },
+        "assistant.Turn": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "role": {
+                    "description": "user | assistant",
+                    "type": "string"
+                },
+                "steps": {
+                    "description": "Steps: the tools the assistant used for this answer, in order.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/assistant.Step"
+                    }
+                },
+                "text": {
                     "type": "string"
                 }
             }

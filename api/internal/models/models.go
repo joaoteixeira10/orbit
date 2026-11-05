@@ -405,7 +405,27 @@ func AllModels() []any {
 		&CalDAVLink{},
 		&CalDAVItem{},
 		&CalendarFeed{},
+		&AssistantChat{},
+		&AssistantUsage{},
 	}
+}
+
+// AssistantChat is a conversation with the built-in assistant, kept for the
+// person who had it (Delete, or Delete all, removes it): its lines as shown
+// (JSON []assistant.Turn).
+type AssistantChat struct {
+	Base
+	UserID string   `gorm:"index;size:36;not null" json:"-"`
+	Title  string   `gorm:"size:200" json:"title"`
+	Turns  JSONText `gorm:"type:text" json:"turns,omitempty"`
+}
+
+// AssistantUsage counts the messages a person sent the assistant in a day
+// (YYYY-MM-DD), for the owner's daily limit.
+type AssistantUsage struct {
+	UserID string `gorm:"primaryKey;size:36"`
+	Day    string `gorm:"primaryKey;size:10"`
+	Count  int    `gorm:"not null;default:0"`
 }
 
 // JSONText is JSON kept as text in a column, sent as the JSON it holds (so

@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createHmac } from 'node:crypto'
+import { createServer } from 'node:http'
+import { networkInterfaces } from 'node:os'
 import { strToU8, zipSync } from 'fflate'
 
 // Runs against a fresh instance (see the e2e workflow): the bootstrap admin
@@ -3750,4 +3752,79 @@ test('holiday themes: the owner picks one; every page dresses up, the overviews 
   await expect(page.getByTestId('holiday-chip')).toHaveCount(0)
   await expect(page.getByTestId('holiday-effects-row')).toHaveCount(0)
   await expect(page.getByTestId('holiday-logo')).toHaveCount(0)
+})
+
+// A stand-in for an OpenAI-style model server (as Ollama's /v1 is): asked
+// first, it looks at the day (get_today); given that, it answers. On this
+// machine's network address — the assistant never calls loopback.
+async function fakeModel(): Promise<{ url: string; close: () => void }> {
+  const srv = createServer((req, res) => {
+    let raw = ''
+    req.on('data', (c) => (raw += c))
+    req.on('end', () => {
+      const body = JSON.parse(raw || '{}')
+      const last = body.messages?.[body.messages.length - 1]
+      res.setHeader('Content-Type', 'application/json')
+      const message =
+        last?.role === 'tool'
+          ? { role: 'assistant', content: '**All clear** this week — nothing due.' }
+          : { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'get_today', arguments: '{}' } }] }
+      res.end(JSON.stringify({ choices: [{ finish_reason: message.tool_calls ? 'tool_calls' : 'stop', message }] }))
+    })
+  })
+  await new Promise<void>((ok) => srv.listen(0, '0.0.0.0', ok))
+  const ip = Object.values(networkInterfaces()).flat().find((a) => a && a.family === 'IPv4' && !a.internal)!.address
+  return { url: `http://${ip}:${(srv.address() as { port: number }).port}/v1`, close: () => srv.close() }
+}
+
+test('the assistant: the owner sets up a model; a person asks, sees what it looked at and the answer; conversations are kept and deleted', async ({ page }) => {
+  const model = await fakeModel()
+  try {
+    await signIn(page, NEW_PASSWORD)
+    await page.setViewportSize({ width: 1400, height: 900 })
+    // Off: no ✦.
+    await expect(page.getByTestId('assistant-open')).toHaveCount(0)
+    await page.goto('/owner')
+    await page.locator('.subtab', { hasText: 'Owner' }).click()
+    const card = page.getByTestId('assistant-admin')
+    await card.getByTestId('assistant-enabled').click()
+    await card.getByTestId('assistant-provider').selectOption('ollama')
+    await card.getByTestId('assistant-model').fill('fake-model')
+    await card.getByTestId('assistant-url').fill(model.url)
+    await card.getByTestId('assistant-limit').fill('5')
+    await card.getByTestId('assistant-save').click()
+    await expect(page.getByText('Assistant saved')).toBeVisible()
+
+    await page.goto('/')
+    await page.getByTestId('assistant-open').click()
+    const panel = page.getByTestId('assistant-panel')
+    await expect(panel).toContainText('fake-model')
+    await panel.getByRole('button', { name: 'What’s due this week?' }).click()
+    await expect(panel.getByTestId('assistant-user')).toHaveText('What’s due this week?')
+    await expect(panel.getByTestId('assistant-answer')).toContainText('Looked at your day')
+    await expect(panel.getByTestId('assistant-answer').locator('strong')).toHaveText('All clear')
+    await expect(panel).toContainText('4 messages left today')
+
+    // Typed, with Enter: the same conversation carries on.
+    await panel.getByTestId('assistant-input').fill('And next week?')
+    await panel.getByTestId('assistant-input').press('Enter')
+    await expect(panel.getByTestId('assistant-answer')).toHaveCount(2)
+
+    // Kept: closed with Escape, ⌘J opens it again; the conversation is in the list.
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+    await page.keyboard.press('ControlOrMeta+j')
+    await panel.getByTestId('assistant-new').click()
+    await expect(panel.getByTestId('assistant-user')).toHaveCount(0)
+    await panel.getByTestId('assistant-history').click()
+    await expect(panel.getByTestId('assistant-chat-item')).toHaveCount(1)
+    await panel.getByTestId('assistant-chat-item').getByText('What’s due this week?').click()
+    await expect(panel.getByTestId('assistant-user')).toHaveCount(2)
+    await panel.getByTestId('assistant-history').click()
+    await panel.getByTestId('assistant-delete-all').click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete all' }).click()
+    await expect(panel.getByText('No conversations yet.')).toBeVisible()
+  } finally {
+    model.close()
+  }
 })

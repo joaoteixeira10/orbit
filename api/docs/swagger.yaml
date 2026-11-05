@@ -104,6 +104,119 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  api.assistantChatRequest:
+    properties:
+      chat_id:
+        maxLength: 36
+        type: string
+      context:
+        $ref: '#/definitions/api.assistantContext'
+      message:
+        maxLength: 8000
+        type: string
+    required:
+    - message
+    type: object
+  api.assistantChatResponse:
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+      turns:
+        items:
+          $ref: '#/definitions/assistant.Turn'
+        type: array
+    type: object
+  api.assistantChatSummary:
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  api.assistantConfigRequest:
+    properties:
+      clear_key:
+        type: boolean
+      daily_limit:
+        maximum: 100000
+        minimum: 0
+        type: integer
+      enabled:
+        type: boolean
+      key:
+        description: '"" keeps the one there is'
+        maxLength: 500
+        type: string
+      model:
+        maxLength: 120
+        type: string
+      provider:
+        enum:
+        - anthropic
+        - openai
+        - ollama
+        type: string
+      url:
+        maxLength: 300
+        type: string
+    type: object
+  api.assistantConfigResponse:
+    properties:
+      daily_limit:
+        type: integer
+      enabled:
+        type: boolean
+      has_key:
+        description: the key itself is never sent back
+        type: boolean
+      model:
+        type: string
+      provider:
+        description: anthropic | openai | ollama
+        type: string
+      url:
+        type: string
+    type: object
+  api.assistantContext:
+    properties:
+      now:
+        description: the person's local time, as they see it
+        maxLength: 60
+        type: string
+      path:
+        description: the page on screen
+        maxLength: 500
+        type: string
+      time_zone:
+        maxLength: 64
+        type: string
+      title:
+        description: its title, as shown
+        maxLength: 300
+        type: string
+      workspace_id:
+        maxLength: 36
+        type: string
+    type: object
+  api.assistantStatusResponse:
+    properties:
+      daily_limit:
+        description: '0: none'
+        type: integer
+      enabled:
+        description: on and set up
+        type: boolean
+      model:
+        type: string
+      provider:
+        type: string
+      used_today:
+        type: integer
+    type: object
   api.backlinkTask:
     properties:
       done:
@@ -3523,6 +3636,28 @@ definitions:
       workspace_id:
         type: string
     type: object
+  assistant.Step:
+    properties:
+      hint:
+        type: string
+      tool:
+        type: string
+    type: object
+  assistant.Turn:
+    properties:
+      at:
+        type: string
+      role:
+        description: user | assistant
+        type: string
+      steps:
+        description: 'Steps: the tools the assistant used for this answer, in order.'
+        items:
+          $ref: '#/definitions/assistant.Step'
+        type: array
+      text:
+        type: string
+    type: object
   audit.VerifyResult:
     properties:
       broken_at:
@@ -4470,6 +4605,137 @@ paths:
       summary: Revoke any API token (admin)
       tags:
       - users
+  /assistant:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.assistantStatusResponse'
+      security:
+      - BearerAuth: []
+      summary: 'The assistant: on, which model, today''s use'
+      tags:
+      - assistant
+  /assistant/chat:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The message, the conversation, what's on screen
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.assistantChatRequest'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Ask the assistant
+      tags:
+      - assistant
+  /assistant/chats:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete all my conversations with the assistant
+      tags:
+      - assistant
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.assistantChatSummary'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: My conversations with the assistant
+      tags:
+      - assistant
+  /assistant/chats/{id}:
+    delete:
+      parameters:
+      - description: Conversation id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a conversation with the assistant
+      tags:
+      - assistant
+    get:
+      parameters:
+      - description: Conversation id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.assistantChatResponse'
+      security:
+      - BearerAuth: []
+      summary: A conversation with the assistant
+      tags:
+      - assistant
+  /assistant/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.assistantConfigResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the assistant's set-up
+      tags:
+      - assistant
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: The assistant
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.assistantConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.assistantConfigResponse'
+      security:
+      - BearerAuth: []
+      summary: Set up the assistant
+      tags:
+      - assistant
   /audit:
     get:
       parameters:

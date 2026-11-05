@@ -5,7 +5,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
   ClipboardList, LogOut, Moon, Sun, BookOpen, LifeBuoy, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
-  PanelRight, FolderOpen, ArrowUp, ArrowDown,
+  PanelRight, FolderOpen, ArrowUp, ArrowDown, Sparkles,
 } from 'lucide-vue-next'
 import { useSortable } from '@/lib/sortable'
 import SideRail from '@/components/SideRail.vue'
@@ -27,6 +27,8 @@ import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
 import HolidayEffectsRow from '@/components/holiday/HolidayEffectsRow.vue'
 import HolidayParticles from '@/components/holiday/HolidayParticles.vue'
+import AssistantPanel from '@/components/assistant/AssistantPanel.vue'
+import { useAssistantStore } from '@/stores/assistant'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
 import { pagesApi, workspacesApi, type Workspace } from '@/api/planner'
 import { ICONS, MODULE_ROUTES } from '@/lib/icons'
@@ -46,6 +48,9 @@ const branding = useBrandingStore()
 // A holiday theme (the owner's): its colours on, re-checked every minute (a
 // season starts and ends; New Year's hours count down).
 const holiday = useHolidayStore()
+// The assistant (when the owner set one up): ✦ beside the inbox, ⌘J.
+const assistant = useAssistantStore()
+void assistant.loadStatus()
 watch(() => [holiday.active?.id, holiday.mode], () => holiday.apply(), { immediate: true })
 const holidayClock = window.setInterval(() => holiday.tick(), 60_000)
 // Its falling snow, bats, confetti… over every page: each person's Effects,
@@ -398,6 +403,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
             <b v-else class="truncate">{{ branding.appName }}</b>
           </template>
           <span class="ml-auto" />
+          <button v-if="!narrow && assistant.enabled" class="icon-btn h-7 w-7" :class="{ 'text-accent': assistant.open }" :title="t('assistant.open') + (isMac ? ' (⌘J)' : ' (Ctrl+J)')" :aria-label="t('assistant.open')" data-testid="assistant-open" @click="assistant.open = !assistant.open"><Sparkles class="h-4 w-4" /></button>
           <InboxButton v-if="!narrow" />
           <button v-if="!narrow" class="icon-btn h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></button>
         </div>
@@ -601,6 +607,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
           <WsIcon v-if="currentWs" :icon="currentWs.icon" :color="currentWs.color" :size="20" :name="currentWs.name" />
           <span class="truncate">{{ currentWs?.name ?? branding.appName }}</span>
         </div>
+        <button v-if="assistant.enabled" class="icon-btn" :aria-label="t('assistant.open')" @click="assistant.open = !assistant.open"><Sparkles class="h-[18px] w-[18px]" /></button>
         <InboxButton placement="bottom-end" />
         <button class="icon-btn" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></button>
       </header>
@@ -626,6 +633,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
     <button v-if="railHere && !rail.open && !phone" type="button" class="rail-tab" :title="t('outline.title')" :aria-label="t('outline.title')" data-testid="rail-open" @click="setRailOpen(true)"><PanelRight class="h-4 w-4" /></button>
 
     <HolidayParticles v-if="holiday.active && prefs.holidayEffects && motionOk" />
+    <AssistantPanel />
     <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
     <QuickNoteSheet :open="quickNoteOpen" @close="quickNoteOpen = false" />
     <NewWorkspaceSheet :open="newWsOpen" @close="newWsOpen = false" />

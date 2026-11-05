@@ -160,6 +160,25 @@ async function rawFetch(path: string, init: RequestInit): Promise<Response> {
   return fetch(`${BASE}${path}`, { ...init, credentials: 'include', headers })
 }
 
+// apiStream is api() for an answer read as it comes (text/event-stream): the
+// same sign-in, one retry after a refresh; the Response is the caller's.
+export async function apiStream(path: string, init: RequestInit = {}): Promise<Response> {
+  let res = await rawFetch(path, init)
+  if (res.status === 401 && !isImpersonating() && (await tryRefresh())) res = await rawFetch(path, init)
+  if (!res.ok) {
+    let msg = res.statusText
+    let body: any
+    try {
+      body = await res.json()
+      if (body?.error) msg = body.error
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiError(res.status, msg, body)
+  }
+  return res
+}
+
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   let res = await rawFetch(path, init)
 

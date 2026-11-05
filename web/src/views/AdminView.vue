@@ -31,6 +31,7 @@ import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 import DevThemesCard from '@/components/admin/DevThemesCard.vue'
 import HolidayThemesCard from '@/components/admin/HolidayThemesCard.vue'
+import AssistantCard from '@/components/admin/AssistantCard.vue'
 
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -1517,8 +1518,9 @@ function switchTab(t: Tab) {
 
       </div><!-- /left column -->
 
-      <!-- RIGHT column: Security alerts -->
+      <!-- RIGHT column: the assistant, security alerts -->
       <div class="flex flex-col gap-5">
+      <AssistantCard />
       <!-- Security alerts -->
       <div class="card overflow-hidden">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3">

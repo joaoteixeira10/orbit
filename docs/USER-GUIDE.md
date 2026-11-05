@@ -1669,6 +1669,18 @@ yours, named after it ("OAuth: Claude"), listed under API tokens — revoke
 it there to cut it off. An assistant that takes a header can use an API
 token instead (`Authorization: Bearer orb_…`).
 
+**The assistant (built in)**: when the owner set one up, **✦** beside the
+inbox (or ⌘J / Ctrl+J) opens a chat panel at the right. Ask about your Orbit
+— "what's due this week?", "sum up this page", "what did we decide about the
+logo?" — and it looks it up with Orbit's own tools, as you (it sees only what
+you can see), showing what it looked at ("Searched for "logo"", "Read a page")
+above its answer; links in the answer open the page or list. It knows the page
+you're on ("this page"). It's in **Ask mode**: it reads, it never changes
+anything. Your conversations are kept for you: the clock icon lists them —
+open one to carry on, delete one, or **Delete all**; **+** starts a new one.
+The owner may set a daily number of messages (the panel says how many are
+left).
+
 ## 25. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
@@ -1780,6 +1792,20 @@ client ID** (*Web application*) whose authorised redirect URI is the address
 the card shows; paste its client ID and secret, **Save**. The secret is kept
 sealed with the master key. **Remove** turns it off (syncs already linked
 stop at their next run).
+
+**Assistant**: the model behind the built-in assistant (off by default).
+**Claude (Anthropic)** with an API key (the model starts as
+`claude-opus-5-5`), **OpenAI, or a server that speaks its API** (OpenAI's,
+LM Studio, vLLM… — its address ending in `/v1`, a key if it needs one), or
+**Ollama** (its address, e.g. `http://ollama.lan:11434/v1`, and the model's
+name, e.g. `llama3.1`). **Messages per person a day** (0: no limit) — with
+your key, that's what you pay for. The key is sealed with the master key and
+never shown again (**Remove the key**); saving asks for your password again
+when step-up is on. What the assistant reads to answer is sent to that
+model's service: for nothing to leave your network, use an Ollama of your
+own. For Claude, Anthropic's server-side fallback is on: if the model
+declines on safety grounds, Anthropic answers with another model in the same
+call.
 
 **Diagrams (draw.io)**: the address the Diagrams module loads the draw.io
 editor from — draw.io's own (`embed.diagrams.net`, the default), or your

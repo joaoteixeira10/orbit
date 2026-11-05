@@ -333,6 +333,17 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/google/status", h.googleStatus)
 			authed.GET("/google/app", h.auth.RequireOwner(), h.getGoogleApp)
 			authed.PUT("/google/app", h.auth.RequireOwner(), h.requireStepUp(), h.setGoogleApp)
+
+			// The built-in assistant: the owner's set-up; each person's
+			// conversations; asking (as the person, never while impersonating).
+			authed.GET("/assistant", h.assistantStatus)
+			authed.GET("/assistant/config", h.auth.RequireOwner(), h.getAssistantConfig)
+			authed.PUT("/assistant/config", h.auth.RequireOwner(), h.requireStepUp(), h.setAssistantConfig)
+			authed.POST("/assistant/chat", notImpersonating(), h.assistantChat(r))
+			authed.GET("/assistant/chats", h.listAssistantChats)
+			authed.GET("/assistant/chats/:id", h.getAssistantChat)
+			authed.DELETE("/assistant/chats/:id", h.deleteAssistantChat)
+			authed.DELETE("/assistant/chats", h.deleteAssistantChats)
 			authed.POST("/workspaces/:ws/google/start", notImpersonating(), h.startGoogle)
 			authed.GET("/workspaces/:ws/google/calendars", h.googleCalendars)
 			authed.POST("/workspaces/:ws/google/link", h.linkGoogle)

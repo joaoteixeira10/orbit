@@ -434,6 +434,8 @@ func (h *Handlers) deleteUser(c *gin.Context) {
 	h.db.Where("workspace_id = '' AND owner_id = ?", user.ID).Delete(&models.Folder{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.PushSubscription{})
 	h.db.Where("user_id = ?", user.ID).Delete(&models.GitAccount{})
+	h.db.Where("user_id = ?", user.ID).Delete(&models.AssistantChat{})
+	h.db.Where("user_id = ?", user.ID).Delete(&models.AssistantUsage{})
 	h.recordCtx(c, "user.delete", "user", user.ID,
 		gin.H{"username": user.Username})
 	h.notifyUsersChanged()

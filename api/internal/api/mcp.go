@@ -175,13 +175,7 @@ func (h *Handlers) mcpOne(call *mcpCall, req mcpRequest) (mcpResponse, bool) {
 			res.Result = mcpText(s, false)
 			break
 		}
-		// As written: < > & stay themselves (Markdown, Mermaid's arrows).
-		var buf bytes.Buffer
-		enc := json.NewEncoder(&buf)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", " ")
-		_ = enc.Encode(out)
-		r := mcpText(strings.TrimSpace(buf.String()), false)
+		r := mcpText(toolText(out), false)
 		if m, ok := out.(map[string]any); ok {
 			r["structuredContent"] = m
 		}
@@ -190,6 +184,20 @@ func (h *Handlers) mcpOne(call *mcpCall, req mcpRequest) (mcpResponse, bool) {
 		res.Error = &mcpError{Code: -32601, Message: "method not found: " + req.Method}
 	}
 	return res, true
+}
+
+// toolText is a tool's answer as text: itself, or its JSON as written (< > &
+// stay themselves: Markdown, Mermaid's arrows).
+func toolText(out any) string {
+	if s, ok := out.(string); ok {
+		return s
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", " ")
+	_ = enc.Encode(out)
+	return strings.TrimSpace(buf.String())
 }
 
 func mcpText(s string, isErr bool) map[string]any {
@@ -201,6 +209,9 @@ func mcpText(s string, isErr bool) map[string]any {
 type mcpCall struct {
 	c   *gin.Context
 	api http.Handler
+	// client marks the calls (X-Orbit-Client): "mcp", or "assistant" for
+	// the built-in one.
+	client string
 }
 
 // bufWriter is a ResponseWriter that keeps the answer.
@@ -237,7 +248,11 @@ func (m *mcpCall) do(method, path string, q url.Values, body any, into any) erro
 	}
 	req.Header.Set("Authorization", m.c.GetHeader("Authorization"))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Orbit-Client", "mcp")
+	client := m.client
+	if client == "" {
+		client = "mcp"
+	}
+	req.Header.Set("X-Orbit-Client", client)
 	req.RemoteAddr = m.c.Request.RemoteAddr
 	w := &bufWriter{head: http.Header{}, code: http.StatusOK}
 	m.api.ServeHTTP(w, req)

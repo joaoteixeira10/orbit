@@ -19,7 +19,8 @@ import { markTerms, type Term } from '@/lib/glossary'
 // guest: a guest link's secret — pictures, files and what's shown in place
 // load through it, and a link to a page asks the guest view (page) to go.
 // terms: the workspace's glossary, marked where used (pointing explains them).
-const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string; terms?: Term[]; breaks?: boolean }>()
+// plain: links stay links (no sheet or diagram shown in place, no page tree) — the assistant's answers.
+const props = defineProps<{ content: string; editable: boolean; math?: boolean; guest?: string; terms?: Term[]; breaks?: boolean; plain?: boolean }>()
 const emit = defineEmits<{ toggle: [index: number]; edit: []; page: [id: string] }>()
 const { t } = useI18n()
 const router = useRouter()
@@ -118,6 +119,7 @@ const app = getCurrentInstance()?.appContext ?? null
 const embeds: HTMLElement[] = []
 function addSheets() {
   for (const el of embeds.splice(0)) render(null, el)
+  if (props.plain) return
   for (const a of root.value?.querySelectorAll<HTMLAnchorElement>('a.md-sheet, a.md-diagram, a.md-whiteboard') ?? []) {
     const p = a.parentElement
     if (!p || p.tagName !== 'P' || p.textContent?.trim() !== a.textContent?.trim()) continue

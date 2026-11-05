@@ -59,6 +59,19 @@ func (f *fakeModel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, "data: [DONE]\n\n")
 		return
 	}
+	// "claim:<workspace id>": it first only says it lined a task up; told
+	// it didn't, it calls the tool.
+	if strings.HasPrefix(fmt.Sprint(last["content"]), "claim:") && last["role"] == "user" {
+		chunk(`{"role":"assistant","content":"I've lined up a task for you."}`, "stop")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		return
+	}
+	if strings.HasPrefix(fmt.Sprint(last["content"]), "(From Orbit") {
+		ws, _ := strings.CutPrefix(fmt.Sprint(msgs[len(msgs)-3].(map[string]any)["content"]), "claim:")
+		chunk(`{"tool_calls":[{"index":0,"id":"k1","type":"function","function":{"name":"create_task","arguments":`+jsonString(`{"workspace_id":"`+ws+`","title":"Buy milk","summary":"Add Buy milk"}`)+`}}]}`, "tool_calls")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		return
+	}
 	if last["role"] == "tool" {
 		chunk(`{"role":"assistant","content":"You have: "}`, "")
 		chunk(`{"content":`+jsonString(last["content"].(string))+`}`, "")
@@ -347,6 +360,25 @@ func TestAssistantAgent(t *testing.T) {
 		t.Errorf("unknown workspace: %+v", ev)
 	}
 
+	// Saying it lined a change up without calling the tool: told so once,
+	// it calls it, and the change is there to approve.
+	w = authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"claim:`+ws.ID+`"}`, owner)
+	all := sseAll(t, w.Body.String(), true)
+	restarted := false
+	for _, e := range all {
+		restarted = restarted || e.Type == "restart"
+	}
+	ev = sseEvents(t, w.Body.String())
+	var got assistantEvent
+	for _, e := range ev {
+		if e.Type == "answer" {
+			got = e
+		}
+	}
+	if !restarted || len(got.Actions) != 1 || got.Actions[0].Summary != "Add Buy milk" {
+		t.Errorf("claimed only: %+v", ev)
+	}
+
 	// Ask mode offers nothing that changes.
 	sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi"}`, owner).Body.String())
 	if strings.Contains(string(mustJSON(fake.asked[len(fake.asked)-1]["tools"])), "create_task") {
@@ -362,5 +394,21 @@ func TestAssistantAgent(t *testing.T) {
 	db.Where("page_id = ?", pg.ID).First(&v)
 	if v.Via != "mcp" {
 		t.Errorf("via: %q", v.Via)
+	}
+}
+
+func TestClaimsChanges(t *testing.T) {
+	for text, want := range map[string]bool{
+		"I've lined up creating a task Buy milk":           true,
+		"I created the page for you.":                      true,
+		"The task has been queued.":                        true,
+		"Error: not lined up: there's no workspace":        false,
+		"I couldn't line it up: no such workspace.":        false,
+		"You have three tasks due this week.":              false,
+		"Lined up: nothing — tell me which list you mean.": false,
+	} {
+		if got := claimsChanges(text); got != want {
+			t.Errorf("claimsChanges(%q) = %v", text, got)
+		}
 	}
 }

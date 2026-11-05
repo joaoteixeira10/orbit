@@ -286,11 +286,12 @@ type assistantChatRequest struct {
 }
 
 // assistantEvent is a line of the answer's stream: a step (a tool it used),
-// a piece of the answer as it's written (delta), the answer — with, in Agent
+// a piece of the answer as it's written (delta; restart: what was written so
+// far isn't the answer), the answer — with, in Agent
 // mode, the changes it lined up — done (with the conversation's id) or an
 // error.
 type assistantEvent struct {
-	Type    string             `json:"type"` // step | delta | answer | done | error
+	Type    string             `json:"type"` // step | delta | restart | answer | done | error
 	Tool    string             `json:"tool,omitempty"`
 	Hint    string             `json:"hint,omitempty"`
 	Text    string             `json:"text,omitempty"`
@@ -417,7 +418,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		var steps []assistant.Step
 		go func() {
 			defer close(events)
-			text, err := model.Answer(c.Request.Context(), assistant.Request{
+			ask := assistant.Request{
 				System:  fmt.Sprintf(assistantRules, name, user.Username, modeRules) + mcpInstructions,
 				Context: assistantSituation(req.Context, run) + theirWorkspaces(mine) + earlierChanges(history),
 				History: history,
@@ -428,7 +429,18 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				},
 				Delta: func(s string) { events <- assistantEvent{Type: "delta", Text: s} },
 				Call:  func(_ context.Context, tool string, args map[string]any) (string, bool) { return run(tool, args) },
-			})
+			}
+			text, err := model.Answer(c.Request.Context(), ask)
+			// Agent mode: an answer that says it lined changes up while none
+			// came through (a model writing it rather than calling the tool)
+			// is sent back once, for it to call them.
+			if err == nil && agent && len(actions) == 0 && claimsChanges(text) {
+				events <- assistantEvent{Type: "restart"}
+				ask.History = append(append([]assistant.Turn{}, history...),
+					assistant.Turn{Role: "assistant", Text: text},
+					assistant.Turn{Role: "user", Text: notLinedUp})
+				text, err = model.Answer(c.Request.Context(), ask)
+			}
 			if err != nil {
 				events <- assistantEvent{Type: "error", Error: h.assistantError(err)}
 				return

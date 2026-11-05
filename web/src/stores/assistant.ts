@@ -124,6 +124,7 @@ export const useAssistantStore = defineStore('assistant', {
             this.steps.push({ tool: e.tool, hint: e.hint })
             this.draft = ''
           } else if (e.type === 'delta') this.draft += e.text
+          else if (e.type === 'restart') this.draft = ''
           else if (e.type === 'answer') got.answer = { role: 'assistant', text: e.text, steps: [...this.steps], mode, actions: e.actions }
           else if (e.type === 'error') this.error = e.error
           else if (e.type === 'done') this.chatId = e.chat_id

@@ -26,8 +26,19 @@ const assistantAgentRules = `This is Agent mode: besides looking things up, you 
 - Look up what you need first (their workspaces are listed at the end, by name and id), then line up every change the request needs, then answer in a sentence or two saying what you've lined up for them to approve. Never say it's done, and don't ask them to confirm: the approval is how they confirm.
 - Give each change a "summary" in their language that names the thing, e.g. Move "Book the room" to Friday.
 - A change that makes something (a task list, a page, a task…) gives back an id like new:1; use it in later changes that need it (tasks in the new list, say). It can't be read before it's made.
+- A change is lined up only by calling its tool. Writing that you've lined something up, made it or queued it does nothing: they'd see no changes to approve.
 - Line up only what they asked for.
 - A task, note or event can't move to another workspace. To move one, line up making it anew there (with its details) and deleting the old one, and say that's how.`
+
+// claimed: an answer saying it lined changes up or made them ("I've lined
+// up…", "I created…") — not "couldn't line it up".
+var claimed = regexp.MustCompile(`(?i)\b(i('ve| have)( just)?|i'll|i will|i)\s+(lined up|queued|created|added|moved|deleted|made|changed|updated|scheduled|set up)\b|\b(has|have) been (lined up|queued)\b`)
+
+// claimsChanges tells whether an answer says it lined changes up.
+func claimsChanges(text string) bool { return claimed.MatchString(text) }
+
+// notLinedUp is what the model is told when it only said so.
+const notLinedUp = "(From Orbit, not the person:) Nothing was lined up — you wrote about the changes but didn't call the tools, so they'd see nothing to approve. Call the tools for each change now, then answer again."
 
 // agentSummary is the argument each change carries in Agent mode: what it
 // does, in words, for the card.

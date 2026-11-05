@@ -19,6 +19,9 @@ merge, not at release time.
   history and in the audit log.
   A workspace's owners may keep the assistant out of it (it can't see it
   at all) or give it instructions for it (workspace settings → Assistant).
+  The owner may let people use their own model (Settings → Assistant: their
+  Claude or OpenAI key, their Ollama; no daily limit); a server on the
+  local network for that is listed in `AI_SERVERS`.
   Conversations are kept for you (open, carry on, delete). The owner sets up
   the model (Owner → Assistant): Claude with an API key, OpenAI or a server
   speaking its API, or Ollama on your own network (through its own API, with

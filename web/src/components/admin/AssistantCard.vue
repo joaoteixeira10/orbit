@@ -14,13 +14,13 @@ const { t } = useI18n()
 const toast = useToastStore()
 const assistant = useAssistantStore()
 const cfg = ref<AssistantConfig | null>(null)
-const form = reactive({ enabled: false, provider: 'anthropic' as AssistantProvider, model: '', url: '', key: '', clear_key: false, daily_limit: 0, context: 16384 })
+const form = reactive({ enabled: false, provider: 'anthropic' as AssistantProvider, model: '', url: '', key: '', clear_key: false, daily_limit: 0, context: 16384, allow_own: false })
 const saving = ref(false)
 const providers: AssistantProvider[] = ['anthropic', 'openai', 'ollama']
 
 function fill(c: AssistantConfig) {
   cfg.value = c
-  Object.assign(form, { enabled: c.enabled, provider: c.provider || 'anthropic', model: c.model, url: c.url, key: '', clear_key: false, daily_limit: c.daily_limit, context: c.context || 16384 })
+  Object.assign(form, { enabled: c.enabled, provider: c.provider || 'anthropic', model: c.model, url: c.url, key: '', clear_key: false, daily_limit: c.daily_limit, context: c.context || 16384, allow_own: c.allow_own })
 }
 onMounted(async () => fill(await assistantApi.config()))
 
@@ -90,6 +90,13 @@ async function save() {
         <input v-model.number="form.daily_limit" class="input !w-28" type="number" min="0" data-testid="assistant-limit" />
         <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.limitHint') }}</span>
       </label>
+      <div class="flex items-start justify-between gap-4 border-t border-border pt-4">
+        <span>
+          <span class="block text-[13px] font-semibold">{{ t('assistant.admin.own') }}</span>
+          <span class="mt-0.5 block text-[11.5px] text-text-3">{{ t('assistant.admin.ownHint') }}</span>
+        </span>
+        <Toggle v-model="form.allow_own" :aria-label="t('assistant.admin.own')" data-testid="assistant-allow-own" />
+      </div>
       <div><button type="submit" class="btn-primary btn-sm" :disabled="saving" data-testid="assistant-save">{{ t('assistant.admin.save') }}</button></div>
     </form>
   </div>

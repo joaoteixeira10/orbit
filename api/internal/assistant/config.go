@@ -24,6 +24,9 @@ type Config struct {
 	// Context: how much an Ollama model reads of a request, in tokens
 	// (0: DefaultContext).
 	Context int
+	// AllowOwn lets each person use their own model instead (their key,
+	// their Ollama), in Settings.
+	AllowOwn bool
 }
 
 const (
@@ -34,6 +37,7 @@ const (
 	keyKey     = "assistant_key"
 	keyLimit   = "assistant_daily_limit"
 	keyContext = "assistant_context"
+	keyOwn     = "assistant_allow_own"
 )
 
 // DefaultModel is the model a provider starts with (Claude's current Opus;
@@ -48,7 +52,7 @@ func DefaultModel(provider string) string {
 // Load reads the instance's assistant.
 func Load(db *gorm.DB, sealer *keystore.Sealer) Config {
 	var rows []models.Setting
-	for _, k := range []string{keyEnabled, keyKind, keyModel, keyURL, keyKey, keyLimit, keyContext} {
+	for _, k := range []string{keyEnabled, keyKind, keyModel, keyURL, keyKey, keyLimit, keyContext, keyOwn} {
 		var r models.Setting
 		if db.Where(&models.Setting{Key: k}).First(&r).Error == nil {
 			rows = append(rows, r)
@@ -69,6 +73,8 @@ func Load(db *gorm.DB, sealer *keystore.Sealer) Config {
 			c.DailyLimit, _ = strconv.Atoi(r.Value)
 		case keyContext:
 			c.Context, _ = strconv.Atoi(r.Value)
+		case keyOwn:
+			c.AllowOwn = r.Value == "true"
 		case keyKey:
 			if raw, err := base64.StdEncoding.DecodeString(r.Value); err == nil {
 				if plain, err := sealer.Unseal(raw); err == nil {
@@ -95,6 +101,7 @@ func Save(db *gorm.DB, sealer *keystore.Sealer, c Config, clearKey bool) error {
 		keyURL:     strings.TrimRight(strings.TrimSpace(c.URL), "/"),
 		keyLimit:   strconv.Itoa(c.DailyLimit),
 		keyContext: strconv.Itoa(c.Context),
+		keyOwn:     strconv.FormatBool(c.AllowOwn),
 	} {
 		if err := set(k, v); err != nil {
 			return err

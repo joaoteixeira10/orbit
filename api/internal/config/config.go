@@ -105,6 +105,10 @@ type Config struct {
 	// connect even when they resolve to a private address — your own server
 	// on the LAN. Any other server must be public (https, not private IPs).
 	GitServers []string // GIT_SERVERS (comma list of base URLs)
+	// AIServers are the model servers (an Ollama, an OpenAI-style server)
+	// people may use as their own assistant's even on a private network;
+	// any other must be public and use https.
+	AIServers []string // AI_SERVERS (comma list of addresses)
 	// DrawioURL is where the draw.io editor for Diagrams is loaded from:
 	// draw.io's own (the default), or your own (the jgraph/drawio container).
 	// An admin can change it in Settings.
@@ -182,6 +186,7 @@ func Load() (*Config, error) {
 		CORSOrigins:      splitNonEmpty(env("CORS_ORIGINS", "")),
 		TrustedProxies:   splitNonEmpty(env("TRUSTED_PROXIES", "")),
 		GitServers:       splitNonEmpty(env("GIT_SERVERS", "")),
+		AIServers:        splitNonEmpty(env("AI_SERVERS", "")),
 		DrawioURL:        env("DRAWIO_URL", "https://embed.diagrams.net"),
 		MaxBodyBytes:     int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
 		UploadMaxBytes:   int64(envInt("UPLOAD_MAX_MB", 25)) << 20,

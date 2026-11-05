@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import NotificationSettings from '@/components/settings/NotificationSettings.vue'
 import GitSettings from '@/components/settings/GitSettings.vue'
+import AssistantOwnSettings from '@/components/settings/AssistantOwnSettings.vue'
+import { useAssistantStore } from '@/stores/assistant'
 import DevThemePicker from '@/components/DevThemePicker.vue'
 import { useBrandingStore } from '@/stores/branding'
 import { ref, computed, onMounted, nextTick } from 'vue'
@@ -22,7 +24,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot } from 'lucide-vue-next'
+import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot, Sparkles } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { calendarApi, type Feed } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -43,6 +45,7 @@ function changeLocale(code: LocaleCode) {
   void prefs.persist({ locale: code })
 }
 const toast = useToastStore()
+const assistant = useAssistantStore()
 
 const sections = computed(() => [
   { group: t('settings.personal'), items: [
@@ -52,6 +55,7 @@ const sections = computed(() => [
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
     ...(auth.features.git_integration !== false ? [{ id: 'git', label: t('git.settings.title'), icon: GitBranch }] : []),
     ...(auth.features.calendar_feeds !== false ? [{ id: 'feeds', label: t('settings.feeds'), icon: CalendarRange }] : []),
+    ...(assistant.status?.own_allowed ? [{ id: 'assistant', label: t('assistant.title'), icon: Sparkles }] : []),
   ] },
   { group: t('settings.security'), items: [
     { id: 'password', label: t('settings.password'), icon: Lock },
@@ -605,6 +609,12 @@ onMounted(loadSessions)
         <section v-if="auth.features.git_integration !== false" id="git" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><GitBranch class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('git.settings.title') }}</h2></div>
           <div class="p-5"><GitSettings /></div>
+        </section>
+
+        <!-- My own model for the assistant, when the owner allows it -->
+        <section v-if="assistant.status?.own_allowed" id="assistant" class="card overflow-hidden scroll-mt-4">
+          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Sparkles class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('assistant.title') }}</h2></div>
+          <div class="p-5"><AssistantOwnSettings /></div>
         </section>
 
         <!-- Calendar feeds -->

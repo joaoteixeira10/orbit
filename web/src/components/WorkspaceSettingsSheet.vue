@@ -210,7 +210,7 @@ async function destroy() {
         </div>
 
         <!-- The built-in assistant, when the instance has it. -->
-        <div v-if="assistant.status?.enabled" data-testid="ws-assistant">
+        <div v-if="assistant.status?.enabled || assistant.status?.own_allowed" data-testid="ws-assistant">
           <h3 class="subhead mb-2 px-1">{{ t('ws.assistant') }}</h3>
           <div class="group">
             <div class="group-row">

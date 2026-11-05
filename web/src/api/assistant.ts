@@ -9,6 +9,8 @@ export interface AssistantStatus {
   enabled: boolean
   provider?: AssistantProvider
   model?: string
+  own: boolean // the model is my own (Settings → Assistant)
+  own_allowed: boolean // the owner lets people use their own
   daily_limit: number // 0: none
   used_today: number
 }
@@ -21,6 +23,20 @@ export interface AssistantConfig {
   has_key: boolean
   daily_limit: number
   context: number // Ollama: how much the model reads, in tokens (0: 16384)
+  allow_own: boolean // people may use their own model instead
+}
+
+// My own model for the assistant, when the owner lets people use their own.
+export interface AssistantOwn {
+  allowed: boolean
+  instance: string // the instance's model, if it has one on
+  use: boolean // mine, rather than the instance's
+  provider: AssistantProvider
+  model: string
+  url: string
+  has_key: boolean
+  context: number
+  servers: string[] // on Orbit's network, allowed by the operator (AI_SERVERS)
 }
 
 export interface AssistantStep {
@@ -88,6 +104,9 @@ export const assistantApi = {
   config: () => api<AssistantConfig>('/assistant/config'),
   setConfig: (b: Partial<AssistantConfig> & { key?: string; clear_key?: boolean }) =>
     api<AssistantConfig>('/assistant/config', { method: 'PUT', body: j(b) }),
+  own: () => api<AssistantOwn>('/me/assistant'),
+  setOwn: (b: { use: boolean; provider: AssistantProvider; model: string; url: string; key?: string; clear_key?: boolean; context?: number }) =>
+    api<AssistantOwn>('/me/assistant', { method: 'PUT', body: j(b) }),
   chats: () => api<AssistantChatSummary[]>('/assistant/chats'),
   chat: (id: string) => api<AssistantChat>(`/assistant/chats/${id}`),
   removeChat: (id: string) => api<void>(`/assistant/chats/${id}`, { method: 'DELETE' }),

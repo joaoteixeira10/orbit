@@ -41,9 +41,11 @@ var assistantHTTP = func() *http.Client {
 }
 
 type assistantStatusResponse struct {
-	Enabled    bool   `json:"enabled"` // on and set up
+	Enabled    bool   `json:"enabled"` // there's a model for them: the instance's or their own
 	Provider   string `json:"provider,omitempty"`
 	Model      string `json:"model,omitempty"`
+	Own        bool   `json:"own"`         // the model is their own
+	OwnAllowed bool   `json:"own_allowed"` // they may set up their own (Settings)
 	DailyLimit int    `json:"daily_limit"` // 0: none
 	UsedToday  int    `json:"used_today"`
 }
@@ -66,10 +68,11 @@ func (h *Handlers) assistantUsed(uid string) int {
 //	@Success	200	{object}	assistantStatusResponse
 //	@Router		/assistant [get]
 func (h *Handlers) assistantStatus(c *gin.Context) {
-	cfg := assistant.Load(h.db, h.sealer)
-	out := assistantStatusResponse{DailyLimit: cfg.DailyLimit, UsedToday: h.assistantUsed(auth.UserID(c))}
-	if _, err := cfg.New(http.DefaultClient); cfg.Enabled && err == nil {
-		out.Enabled, out.Provider, out.Model = true, cfg.Provider, cfg.Model
+	uid := auth.UserID(c)
+	cfg, own, ok := h.assistantFor(uid)
+	out := assistantStatusResponse{OwnAllowed: assistant.Load(h.db, h.sealer).AllowOwn, UsedToday: h.assistantUsed(uid)}
+	if ok {
+		out.Enabled, out.Provider, out.Model, out.Own, out.DailyLimit = true, cfg.Provider, cfg.Model, own, cfg.DailyLimit
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -81,7 +84,8 @@ type assistantConfigResponse struct {
 	URL        string `json:"url"`
 	HasKey     bool   `json:"has_key"` // the key itself is never sent back
 	DailyLimit int    `json:"daily_limit"`
-	Context    int    `json:"context"` // Ollama: how much the model reads, in tokens
+	Context    int    `json:"context"`   // Ollama: how much the model reads, in tokens
+	AllowOwn   bool   `json:"allow_own"` // people may use their own model instead
 }
 
 type assistantConfigRequest struct {
@@ -95,6 +99,8 @@ type assistantConfigRequest struct {
 	// Context: for Ollama, how much the model reads of a request (tokens;
 	// 0: 16384).
 	Context int `json:"context" binding:"omitempty,min=2048,max=1048576"`
+	// AllowOwn lets people use their own model (Settings → Assistant).
+	AllowOwn bool `json:"allow_own"`
 }
 
 // getAssistantConfig returns the instance's assistant (owner).
@@ -109,7 +115,7 @@ func (h *Handlers) getAssistantConfig(c *gin.Context) {
 	cfg := assistant.Load(h.db, h.sealer)
 	c.JSON(http.StatusOK, assistantConfigResponse{
 		Enabled: cfg.Enabled, Provider: cfg.Provider, Model: cfg.Model, URL: cfg.URL,
-		HasKey: cfg.Key != "", DailyLimit: cfg.DailyLimit, Context: cfg.Context,
+		HasKey: cfg.Key != "", DailyLimit: cfg.DailyLimit, Context: cfg.Context, AllowOwn: cfg.AllowOwn,
 	})
 }
 
@@ -130,7 +136,7 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 		return
 	}
 	old := assistant.Load(h.db, h.sealer)
-	cfg := assistant.Config{Enabled: req.Enabled, Provider: req.Provider, Model: strings.TrimSpace(req.Model), URL: strings.TrimSpace(req.URL), Key: req.Key, DailyLimit: req.DailyLimit, Context: req.Context}
+	cfg := assistant.Config{Enabled: req.Enabled, Provider: req.Provider, Model: strings.TrimSpace(req.Model), URL: strings.TrimSpace(req.URL), Key: req.Key, DailyLimit: req.DailyLimit, Context: req.Context, AllowOwn: req.AllowOwn}
 	if cfg.Provider == "" {
 		cfg.Provider = assistant.Anthropic
 	}
@@ -167,7 +173,7 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 		h.internalError(c, err, "could not save it")
 		return
 	}
-	h.recordCtx(c, "assistant.config", "settings", "assistant", gin.H{"enabled": cfg.Enabled, "provider": cfg.Provider, "model": cfg.Model, "key_changed": strings.TrimSpace(req.Key) != "" || req.ClearKey})
+	h.recordCtx(c, "assistant.config", "settings", "assistant", gin.H{"enabled": cfg.Enabled, "allow_own": cfg.AllowOwn, "provider": cfg.Provider, "model": cfg.Model, "key_changed": strings.TrimSpace(req.Key) != "" || req.ClearKey})
 	h.getAssistantConfig(c)
 }
 
@@ -331,9 +337,13 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 			return
 		}
 		uid := auth.UserID(c)
-		cfg := assistant.Load(h.db, h.sealer)
-		model, err := cfg.New(assistantHTTP())
-		if !cfg.Enabled || err != nil {
+		cfg, own, ok := h.assistantFor(uid)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "the assistant isn't on"})
+			return
+		}
+		model, err := cfg.New(h.assistantClient(cfg, own))
+		if err != nil {
 			c.JSON(http.StatusForbidden, gin.H{"error": "the assistant isn't on"})
 			return
 		}

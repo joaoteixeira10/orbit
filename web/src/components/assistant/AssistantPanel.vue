@@ -144,7 +144,7 @@ onUnmounted(() => clearInterval(tick))
       <Sparkles v-else class="h-[18px] w-[18px] text-accent" />
       <div class="min-w-0 flex-1">
         <div class="truncate text-[14px] font-semibold">{{ view === 'history' ? t('assistant.history') : t('assistant.title') }}</div>
-        <div v-if="store.status?.model" class="truncate text-[11px] text-text-3">{{ store.status.model }}</div>
+        <div v-if="store.status?.model" class="truncate text-[11px] text-text-3" data-testid="assistant-model-name">{{ store.status.model }}<template v-if="store.status.own"> · {{ t('assistant.yours') }}</template></div>
       </div>
       <button v-if="view === 'chat'" class="icon-btn h-8 w-8" :title="t('assistant.history')" :aria-label="t('assistant.history')" data-testid="assistant-history" @click="showHistory"><History class="h-4 w-4" /></button>
       <button class="icon-btn h-8 w-8" :title="t('assistant.newChat')" :aria-label="t('assistant.newChat')" data-testid="assistant-new" @click="fresh"><Plus class="h-4 w-4" /></button>

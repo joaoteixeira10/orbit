@@ -1700,6 +1700,14 @@ Below the box you type in, **Ask** or **Agent** (remembered):
 A workspace's owners may keep the assistant out of it, or give it
 instructions for it, in its settings (General → **Assistant**).
 
+**Your own model.** When the owner lets people use their own, Settings →
+**Assistant** sets up yours: your Claude or OpenAI key, or your own Ollama
+(public, with https — or one of the servers on Orbit's network the address
+field suggests). **Use my own model** switches the assistant to it; the
+window then shows its name with "· yours". There's no daily limit on yours,
+and what the assistant reads of your Orbit goes to that service. The key is
+sealed and never shown again.
+
 Your conversations are kept for you: the clock icon lists them — open one to
 carry on, delete one, or **Delete all**; **+** starts a new one. The owner may
 set a daily number of messages (the window says how many are left).
@@ -1831,7 +1839,11 @@ when step-up is on. What the assistant reads to answer is sent to that
 model's service: for nothing to leave your network, use an Ollama of your
 own. For Claude, Anthropic's server-side fallback is on: if the model
 declines on safety grounds, Anthropic answers with another model in the same
-call.
+call. **Let people use their own**: each person may then set up their own
+model in Settings → **Assistant** and use it instead of this one — or as the
+only one, with the assistant itself off. Your daily limit doesn't apply to
+theirs. Their address must be public and use https, unless it's on a server
+listed in `AI_SERVERS` (see [Configuration](CONFIGURATION.md)).
 
 **Diagrams (draw.io)**: the address the Diagrams module loads the draw.io
 editor from — draw.io's own (`embed.diagrams.net`, the default), or your

@@ -184,6 +184,7 @@ won't frame `http://` in an `https://` page).
 | Variable | Req | Default | Notes |
 |---|---|---|---|
 | `GIT_SERVERS` | – | | Comma list of Gitea / Forgejo (or GitHub Enterprise) base URLs (e.g. `https://gitea.lan,http://git.home:3000`) that users may connect **even on a private network** — your own server. They are also suggested in Settings → Git, and may use plain `http://`. Any other server must be public and use `https`: for those Orbit's public-only guard refuses private, loopback and link-local addresses (Web Push uses the same guard). |
+| `AI_SERVERS` | – | | Comma list of model servers (e.g. `http://ollama.lan:11434,https://vllm.home`) that people may use as **their own** assistant model (Settings → Assistant, when the owner lets people use their own) **even on a private network**; they may use plain `http://`, and are suggested in that field. Matched by scheme, host and port. Any other must be public and use `https`. The owner's own model (Owner → Assistant) may be on the local network without this. |
 
 Each person connects their own account (Settings → Git) with a personal
 access token with the permissions *issue: read and write*, *repository:

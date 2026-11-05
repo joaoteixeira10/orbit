@@ -337,6 +337,8 @@ func New(d Deps) *gin.Engine {
 			// The built-in assistant: the owner's set-up; each person's
 			// conversations; asking (as the person, never while impersonating).
 			authed.GET("/assistant", h.assistantStatus)
+			authed.GET("/me/assistant", h.getAssistantOwn)
+			authed.PUT("/me/assistant", notImpersonating(), h.setAssistantOwn)
 			authed.GET("/assistant/config", h.auth.RequireOwner(), h.getAssistantConfig)
 			authed.PUT("/assistant/config", h.auth.RequireOwner(), h.requireStepUp(), h.setAssistantConfig)
 			authed.POST("/assistant/chat", notImpersonating(), h.assistantChat(r))

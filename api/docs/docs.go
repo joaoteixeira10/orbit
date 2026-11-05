@@ -3866,6 +3866,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/assistant": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "My own model for the assistant",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantOwnResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "Set up my own model for the assistant",
+                "parameters": [
+                    {
+                        "description": "My model",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantOwnRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.assistantOwnResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/me/blocks": {
             "get": {
                 "security": [
@@ -11678,6 +11738,10 @@ const docTemplate = `{
         "api.assistantConfigRequest": {
             "type": "object",
             "properties": {
+                "allow_own": {
+                    "description": "AllowOwn lets people use their own model (Settings → Assistant).",
+                    "type": "boolean"
+                },
                 "clear_key": {
                     "type": "boolean"
                 },
@@ -11721,6 +11785,10 @@ const docTemplate = `{
         "api.assistantConfigResponse": {
             "type": "object",
             "properties": {
+                "allow_own": {
+                    "description": "people may use their own model instead",
+                    "type": "boolean"
+                },
                 "context": {
                     "description": "Ollama: how much the model reads, in tokens",
                     "type": "integer"
@@ -11775,6 +11843,83 @@ const docTemplate = `{
                 }
             }
         },
+        "api.assistantOwnRequest": {
+            "type": "object",
+            "properties": {
+                "clear_key": {
+                    "type": "boolean"
+                },
+                "context": {
+                    "type": "integer",
+                    "maximum": 1048576,
+                    "minimum": 2048
+                },
+                "key": {
+                    "description": "\"\" keeps the one there is",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "model": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "anthropic",
+                        "openai",
+                        "ollama"
+                    ]
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "use": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.assistantOwnResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "description": "the owner lets people use their own",
+                    "type": "boolean"
+                },
+                "context": {
+                    "type": "integer"
+                },
+                "has_key": {
+                    "description": "the key itself is never sent back",
+                    "type": "boolean"
+                },
+                "instance": {
+                    "description": "the instance's model, if it has one on",
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "servers": {
+                    "description": "Servers: the ones they may use on Orbit's network (AI_SERVERS).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "url": {
+                    "type": "string"
+                },
+                "use": {
+                    "description": "theirs, rather than the instance's",
+                    "type": "boolean"
+                }
+            }
+        },
         "api.assistantStatusResponse": {
             "type": "object",
             "properties": {
@@ -11783,11 +11928,19 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "enabled": {
-                    "description": "on and set up",
+                    "description": "there's a model for them: the instance's or their own",
                     "type": "boolean"
                 },
                 "model": {
                     "type": "string"
+                },
+                "own": {
+                    "description": "the model is their own",
+                    "type": "boolean"
+                },
+                "own_allowed": {
+                    "description": "they may set up their own (Settings)",
+                    "type": "boolean"
                 },
                 "provider": {
                     "type": "string"

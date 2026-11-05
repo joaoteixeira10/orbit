@@ -3924,3 +3924,45 @@ test('the assistant in Agent mode: it lines changes up in one card; the ticked o
     model.close()
   }
 })
+
+test('the assistant: people may use their own model; a workspace’s owners can keep it out or instruct it', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto('/owner')
+  await page.locator('.subtab', { hasText: 'Owner' }).click()
+  const card = page.getByTestId('assistant-admin')
+  await card.getByTestId('assistant-allow-own').click()
+  await card.getByTestId('assistant-save').click()
+  await expect(page.getByText('Assistant saved')).toBeVisible()
+
+  // Settings → Assistant: an address on a private network is refused; a
+  // Claude key is theirs, and the window says so.
+  await page.goto('/settings#assistant')
+  const own = page.getByTestId('assistant-own')
+  await own.getByTestId('assistant-own-provider').selectOption('ollama')
+  await own.getByTestId('assistant-own-url').fill('https://10.1.2.3:11434')
+  await own.getByTestId('assistant-own-model').fill('llama3.1')
+  await own.getByTestId('assistant-own-use').click()
+  await own.getByTestId('assistant-own-save').click()
+  await expect(page.getByText('that address is on a private network')).toBeVisible()
+  await own.getByTestId('assistant-own-provider').selectOption('anthropic')
+  await own.getByTestId('assistant-own-key').fill('sk-ant-e2e')
+  await own.getByTestId('assistant-own-save').click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await page.getByTestId('assistant-open').click()
+  await expect(page.getByTestId('assistant-model-name')).toHaveText('claude-opus-5-5 · yours')
+  await page.keyboard.press('Escape')
+
+  // Workspace settings → Assistant.
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Private diary', kind: 'personal' } })).json()
+  await page.goto(`/w/${ws.id}`)
+  await page.getByRole('button', { name: 'Workspace settings' }).click()
+  const sect = page.getByTestId('ws-assistant')
+  await sect.getByTestId('ws-assistant-notes').fill('Answer in Portuguese.')
+  await expect.poll(async () => (await (await request.get(`/api/v1/workspaces/${ws.id}`, { headers: H })).json()).workspace.assistant_notes).toBe('Answer in Portuguese.')
+  await sect.getByTestId('ws-assistant-on').click()
+  await expect(sect.getByTestId('ws-assistant-notes')).toHaveCount(0)
+  await expect.poll(async () => (await (await request.get(`/api/v1/workspaces/${ws.id}`, { headers: H })).json()).workspace.assistant_off).toBe(true)
+})

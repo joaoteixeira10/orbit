@@ -160,6 +160,9 @@ definitions:
     type: object
   api.assistantConfigRequest:
     properties:
+      allow_own:
+        description: AllowOwn lets people use their own model (Settings → Assistant).
+        type: boolean
       clear_key:
         type: boolean
       context:
@@ -194,6 +197,9 @@ definitions:
     type: object
   api.assistantConfigResponse:
     properties:
+      allow_own:
+        description: people may use their own model instead
+        type: boolean
       context:
         description: 'Ollama: how much the model reads, in tokens'
         type: integer
@@ -233,16 +239,77 @@ definitions:
         maxLength: 36
         type: string
     type: object
+  api.assistantOwnRequest:
+    properties:
+      clear_key:
+        type: boolean
+      context:
+        maximum: 1048576
+        minimum: 2048
+        type: integer
+      key:
+        description: '"" keeps the one there is'
+        maxLength: 500
+        type: string
+      model:
+        maxLength: 120
+        type: string
+      provider:
+        enum:
+        - anthropic
+        - openai
+        - ollama
+        type: string
+      url:
+        maxLength: 300
+        type: string
+      use:
+        type: boolean
+    type: object
+  api.assistantOwnResponse:
+    properties:
+      allowed:
+        description: the owner lets people use their own
+        type: boolean
+      context:
+        type: integer
+      has_key:
+        description: the key itself is never sent back
+        type: boolean
+      instance:
+        description: the instance's model, if it has one on
+        type: string
+      model:
+        type: string
+      provider:
+        type: string
+      servers:
+        description: 'Servers: the ones they may use on Orbit''s network (AI_SERVERS).'
+        items:
+          type: string
+        type: array
+      url:
+        type: string
+      use:
+        description: theirs, rather than the instance's
+        type: boolean
+    type: object
   api.assistantStatusResponse:
     properties:
       daily_limit:
         description: '0: none'
         type: integer
       enabled:
-        description: on and set up
+        description: 'there''s a model for them: the instance''s or their own'
         type: boolean
       model:
         type: string
+      own:
+        description: the model is their own
+        type: boolean
+      own_allowed:
+        description: they may set up their own (Settings)
+        type: boolean
       provider:
         type: string
       used_today:
@@ -7024,6 +7091,42 @@ paths:
       summary: Revoke an API token
       tags:
       - auth
+  /me/assistant:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.assistantOwnResponse'
+      security:
+      - BearerAuth: []
+      summary: My own model for the assistant
+      tags:
+      - assistant
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: My model
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.assistantOwnRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.assistantOwnResponse'
+      security:
+      - BearerAuth: []
+      summary: Set up my own model for the assistant
+      tags:
+      - assistant
   /me/blocks:
     get:
       parameters:

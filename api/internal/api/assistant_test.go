@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
 )
 
@@ -466,4 +467,72 @@ func TestAssistantWorkspaceSwitch(t *testing.T) {
 	if text, _ := mcpToolCall(t, r, owner, "list_workspaces", map[string]any{}); !strings.Contains(text, "Secret") {
 		t.Errorf("MCP: %s", text)
 	}
+}
+
+// TestAssistantOwn: when the owner lets people use their own model, each may
+// set up theirs (public and https, or a server in AI_SERVERS) and it answers
+// them, with no daily limit; the key is never sent back.
+func TestAssistantOwn(t *testing.T) {
+	_, db := newTestRouterDB(t, false)
+	fake := &fakeModel{}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	r := routerOn(t, db, &config.Config{GinMode: "test", AuthRateBurst: 100, AuthRatePerMinute: 6000, AIServers: []string{srv.URL}}, nil)
+	owner := loginTok(t, r, "admin", "adminpass")
+	status := func() assistantStatusResponse {
+		var st assistantStatusResponse
+		decode(t, authdo(r, "GET", "/api/v1/assistant", "", owner), &st)
+		return st
+	}
+	mine := func(body string) *httptest.ResponseRecorder {
+		return authdo(r, "PUT", "/api/v1/me/assistant", body, owner)
+	}
+
+	if st := status(); st.Enabled || st.OwnAllowed {
+		t.Fatalf("off: %+v", st)
+	}
+	expect(t, mine(`{"use":true,"provider":"openai","url":"`+srv.URL+`/v1","model":"mine"}`), http.StatusForbidden, "not allowed yet")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":false,"allow_own":true}`, owner), http.StatusOK, "allow own")
+	if st := status(); st.Enabled || !st.OwnAllowed {
+		t.Fatalf("allowed: %+v", st)
+	}
+
+	expect(t, mine(`{"use":true,"provider":"ollama","url":"https://10.1.2.3:11434"}`), http.StatusBadRequest, "private address")
+	expect(t, mine(`{"use":true,"provider":"ollama","url":"http://example.com:11434"}`), http.StatusBadRequest, "plain http")
+	expect(t, mine(`{"use":true,"provider":"anthropic"}`), http.StatusBadRequest, "Claude without a key")
+	w := mine(`{"use":true,"provider":"openai","url":"` + srv.URL + `/v1","model":"mine","key":"sk-secret"}`)
+	expect(t, w, http.StatusOK, "on an AI_SERVERS server")
+	if strings.Contains(w.Body.String(), "sk-secret") || !strings.Contains(w.Body.String(), `"has_key":true`) {
+		t.Errorf("own: %s", w.Body.String())
+	}
+	if st := status(); !st.Enabled || !st.Own || st.Model != "mine" || st.DailyLimit != 0 {
+		t.Fatalf("mine: %+v", st)
+	}
+
+	// It answers, with no daily limit though the instance's has one.
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"allow_own":true,"provider":"openai","url":"https://api.example.com/v1","model":"theirs","daily_limit":1}`, owner), http.StatusOK, "instance on")
+	for i := 0; i < 2; i++ {
+		ev := sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi"}`, owner).Body.String())
+		if len(ev) == 0 || ev[len(ev)-1].Type != "done" {
+			t.Fatalf("answer %d: %+v", i, ev)
+		}
+	}
+	if m := fake.asked[len(fake.asked)-1]["model"]; m != "mine" {
+		t.Errorf("asked %v", m)
+	}
+	if fake.asked[0]["model"] != "mine" {
+		t.Error("not mine")
+	}
+
+	// Choosing the instance's, or the owner taking it back, leaves theirs.
+	expect(t, mine(`{"use":false,"provider":"openai","url":"`+srv.URL+`/v1","model":"mine"}`), http.StatusOK, "the instance's")
+	if st := status(); st.Own || st.Model != "theirs" || st.DailyLimit != 1 {
+		t.Errorf("instance's: %+v", st)
+	}
+	expect(t, mine(`{"use":true,"provider":"openai","url":"`+srv.URL+`/v1","model":"mine"}`), http.StatusOK, "mine again")
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":false,"allow_own":false}`, owner), http.StatusOK, "owner stops it")
+	if st := status(); st.Enabled || st.OwnAllowed {
+		t.Errorf("stopped: %+v", st)
+	}
+	expect(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"message":"hi"}`, owner), http.StatusForbidden, "no model")
 }

@@ -407,6 +407,7 @@ func AllModels() []any {
 		&CalendarFeed{},
 		&AssistantChat{},
 		&AssistantUsage{},
+		&AssistantOwn{},
 	}
 }
 
@@ -418,6 +419,20 @@ type AssistantChat struct {
 	UserID string   `gorm:"index;size:36;not null" json:"-"`
 	Title  string   `gorm:"size:200" json:"title"`
 	Turns  JSONText `gorm:"type:text" json:"turns,omitempty"`
+}
+
+// AssistantOwn is a person's own model for the assistant (Settings →
+// Assistant), used when the owner lets people use their own and they chose
+// it: like the instance's, its key sealed.
+type AssistantOwn struct {
+	UserID    string `gorm:"primaryKey;size:36"`
+	InUse     bool   `gorm:"not null;default:false"` // theirs, rather than the instance's
+	Provider  string `gorm:"size:16"`
+	Model     string `gorm:"size:120"`
+	URL       string `gorm:"size:300"`
+	KeySealed []byte
+	Context   int `gorm:"not null;default:0"`
+	UpdatedAt time.Time
 }
 
 // AssistantUsage counts the messages a person sent the assistant in a day

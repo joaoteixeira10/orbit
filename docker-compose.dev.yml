@@ -27,7 +27,14 @@ services:
       CORS_ORIGINS: http://localhost:5180,http://localhost:5173
       WEBAUTHN_RP_ORIGINS: http://localhost:5180,http://localhost:8090
       PUBLIC_URL: http://localhost:5180
+      # An Ollama on this machine, also as someone's own model (Settings →
+      # Assistant); the owner's may use it without this.
+      AI_SERVERS: http://host.docker.internal:11434
       GOFLAGS: -buildvcs=false
+    # host.docker.internal is this machine: a local Ollama
+    # (http://host.docker.internal:11434 in Owner → Assistant).
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
       - .:/src
       - orbit-go-cache:/root/.cache/go-build

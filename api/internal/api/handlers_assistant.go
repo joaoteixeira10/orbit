@@ -439,7 +439,7 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 				}
 			}
 			if !t.ReadOnly {
-				return propose(&actions, t, args, mine)
+				return propose(&actions, t, args, mine, func(kind, id string) (assistantItem, bool) { return h.lookup(c, mine, kind, id) })
 			}
 			out, err := t.Run(call, mcpArgs(args))
 			if err != nil {

@@ -51,7 +51,9 @@ export interface AssistantAction {
   n: number
   tool: string
   title: string
-  summary: string
+  summary: string // in the model's words
+  target?: string // the title of what it changes, as Orbit has it
+  where?: string // the workspace it's in
   destructive?: boolean
   args: Record<string, unknown>
   state: 'proposed' | 'done' | 'skipped' | 'failed'

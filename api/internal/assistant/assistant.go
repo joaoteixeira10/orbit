@@ -54,8 +54,10 @@ type File struct {
 type Action struct {
 	N           int            `json:"n"` // 1, 2…: what it makes is new:N to later ones
 	Tool        string         `json:"tool"`
-	Title       string         `json:"title"`   // the kind of change: "Create a task"
-	Summary     string         `json:"summary"` // this one, in the model's words
+	Title       string         `json:"title"`            // the kind of change: "Create a task"
+	Summary     string         `json:"summary"`          // this one, in the model's words
+	Target      string         `json:"target,omitempty"` // the title of what it changes, as Orbit has it
+	Where       string         `json:"where,omitempty"`  // the workspace it's in
 	Destructive bool           `json:"destructive,omitempty"`
 	Args        map[string]any `json:"args"`
 	State       string         `json:"state"`            // proposed | done | skipped | failed

@@ -77,6 +77,12 @@ func (f *fakeModel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, "data: [DONE]\n\n")
 		return
 	}
+	// "misuse:<id>": moves a "page" by an id that isn't one (a task's).
+	if id, ok := strings.CutPrefix(fmt.Sprint(last["content"]), "misuse:"); ok && last["role"] == "user" {
+		chunk(`{"tool_calls":[{"index":0,"id":"m1","type":"function","function":{"name":"move_page","arguments":`+jsonString(`{"page_id":"`+id+`","summary":"Move Buy milk to Personal"}`)+`}}]}`, "tool_calls")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		return
+	}
 	// "claim:<workspace id>": it first only says it lined a task up; told
 	// it didn't, it calls the tool.
 	if strings.HasPrefix(fmt.Sprint(last["content"]), "claim:") && last["role"] == "user" {
@@ -308,7 +314,7 @@ func TestAssistantAgent(t *testing.T) {
 		t.Fatalf("events: %+v", ev)
 	}
 	acts := ev[3].Actions
-	if acts[0].Title != "Create a task list" || acts[0].Summary != "Make the Launch list" || acts[0].State != "proposed" || acts[0].Args["summary"] != nil {
+	if acts[0].Title != "Create a task list" || acts[0].Summary != "Make the Launch list" || acts[0].State != "proposed" || acts[0].Args["summary"] != nil || acts[0].Where != "Work" {
 		t.Errorf("lined up: %+v", acts[0])
 	}
 	if strings.Contains(lists(), "Launch") {
@@ -378,6 +384,16 @@ func TestAssistantAgent(t *testing.T) {
 		t.Errorf("unknown workspace: %+v", ev)
 	}
 
+	// A task's id given as a page's isn't lined up: the model is told what
+	// it is. A real one shows what it's on, as Orbit has it.
+	text, _ := mcpToolCall(t, r, owner, "create_task", map[string]any{"workspace_id": ws.ID, "title": "Buy milk"})
+	var task struct{ ID string }
+	_ = json.Unmarshal([]byte(text), &task)
+	ev = sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"misuse:`+task.ID+`"}`, owner).Body.String())
+	if len(ev) != 3 || len(ev[1].Actions) != 0 || !strings.Contains(ev[1].Text, `it's the task "Buy milk"`) {
+		t.Errorf("a task as a page: %+v", ev)
+	}
+
 	// Saying it lined a change up without calling the tool: told so once,
 	// it calls it, and the change is there to approve.
 	w = authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"claim:`+ws.ID+`"}`, owner)
@@ -405,7 +421,7 @@ func TestAssistantAgent(t *testing.T) {
 
 	// A page saved through MCP says so in its history (the assistant's
 	// changes go the same way, marked "assistant").
-	text, _ := mcpToolCall(t, r, owner, "create_page", map[string]any{"workspace_id": ws.ID, "title": "Notes", "content": "First thoughts"})
+	text, _ = mcpToolCall(t, r, owner, "create_page", map[string]any{"workspace_id": ws.ID, "title": "Notes", "content": "First thoughts"})
 	var pg struct{ ID string }
 	_ = json.Unmarshal([]byte(text), &pg)
 	var v models.PageVersion

@@ -39,8 +39,8 @@ const made = computed(() => props.actions.filter((a) => a.state === 'done').leng
         </span>
         <div class="min-w-0 flex-1">
           <div class="plan-summary" :class="{ off: !open && a.state !== 'done' }">{{ a.summary || a.title }}</div>
-          <div class="plan-kind">
-            {{ a.title }}
+          <div class="plan-kind" data-testid="assistant-change-on">
+            {{ a.title }}<template v-if="a.target"> · “{{ a.target }}”</template><template v-if="a.where"> · {{ t('assistant.plan.in', { name: a.where }) }}</template>
             <template v-if="!open && a.state !== 'done' && a.result"> · {{ a.state === 'skipped' && a.result === 'not approved' ? t('assistant.plan.state.skipped') : a.result }}</template>
           </div>
         </div>

@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
 )
 
 // Agent mode: the assistant may change things, but nothing is changed as it
@@ -83,17 +86,144 @@ func theirWorkspaces(ws []myWorkspace) string {
 	return b.String()
 }
 
-// propose lines a change up and tells the model so — or, when it names a
-// workspace they don't have, says so at once, for the model to put right.
-func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any, mine []myWorkspace) (string, bool) {
-	if id, ok := args["workspace_id"].(string); ok && !newRef.MatchString(id) {
-		known := false
+// assistantItem is something a change names, as Orbit has it.
+type assistantItem struct{ Kind, Title, WorkspaceID string }
+
+// idKind is what a tool's argument names (page_id a page…); "" not one
+// that's checked.
+func idKind(tool, arg string) string {
+	switch arg {
+	case "page_id":
+		return "page"
+	case "parent_id":
+		if tool == "create_task" {
+			return "task"
+		}
+		return "page"
+	case "task_id":
+		return "task"
+	case "list_id":
+		return "list"
+	case "event_id":
+		return "event"
+	case "diagram_id":
+		return "diagram"
+	case "file_id":
+		return "file"
+	}
+	return ""
+}
+
+// lookup finds what an id is among what the assistant may see in the
+// person's workspaces (kind "": whatever it is).
+func (h *Handlers) lookup(c *gin.Context, mine []myWorkspace, kind, id string) (assistantItem, bool) {
+	in := func(ws string) bool {
 		for _, w := range mine {
-			known = known || w.ID == id
+			if w.ID == ws {
+				return true
+			}
 		}
-		if !known {
-			return "not lined up: there's no workspace with id " + id + ". " + strings.TrimSpace(theirWorkspaces(mine)), true
+		return false
+	}
+	if kind == "" {
+		for _, k := range []string{"page", "task", "list", "event", "diagram"} {
+			if it, ok := h.lookup(c, mine, k, id); ok {
+				return it, true
+			}
 		}
+		return assistantItem{}, false
+	}
+	it := assistantItem{Kind: kind}
+	switch kind {
+	case "page":
+		var p models.Page
+		if h.db.First(&p, "id = ?", id).Error != nil || p.TrashedAt != nil || !in(p.WorkspaceID) || !h.pageVisible(c, p) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = p.Title, p.WorkspaceID
+	case "task":
+		var t models.Task
+		if h.db.Select("id", "workspace_id", "title").First(&t, "id = ?", id).Error != nil || !in(t.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = t.Title, t.WorkspaceID
+	case "list":
+		var l models.TaskList
+		if h.db.Select("id", "workspace_id", "name").First(&l, "id = ?", id).Error != nil || !in(l.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = l.Name, l.WorkspaceID
+	case "event":
+		var e models.Event
+		if h.db.Select("id", "workspace_id", "title").First(&e, "id = ?", id).Error != nil || !in(e.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = e.Title, e.WorkspaceID
+	case "diagram":
+		var d models.Diagram
+		if h.db.Select("id", "workspace_id", "title").First(&d, "id = ?", id).Error != nil || !in(d.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = d.Title, d.WorkspaceID
+	case "file":
+		var u models.Upload
+		if h.db.Select("id", "name").First(&u, "id = ? AND target = ? AND owner_id = ?", id, uploads.Chat, auth.UserID(c)).Error != nil {
+			return it, false
+		}
+		it.Title = u.Name
+	default:
+		return it, false
+	}
+	return it, true
+}
+
+// propose lines a change up and tells the model so — or, when it names a
+// workspace they don't have, or something that isn't what the tool takes
+// (a task's id as a page's), says so at once, for the model to put right.
+// The card shows what the change is on, as Orbit has it, beside the model's
+// summary of it.
+func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any, mine []myWorkspace, look func(kind, id string) (assistantItem, bool)) (string, bool) {
+	wsName := func(id string) string {
+		for _, w := range mine {
+			if w.ID == id {
+				return w.Name
+			}
+		}
+		return ""
+	}
+	wsArg, _ := args["workspace_id"].(string)
+	if wsArg != "" && !newRef.MatchString(wsArg) && wsName(wsArg) == "" {
+		return "not lined up: there's no workspace with id " + wsArg + ". " + strings.TrimSpace(theirWorkspaces(mine)), true
+	}
+	var target, where string
+	keys := make([]string, 0, len(args))
+	for k := range args {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		kind := idKind(t.Name, k)
+		id, _ := args[k].(string)
+		if kind == "" || id == "" || newRef.MatchString(id) {
+			continue
+		}
+		it, ok := look(kind, id)
+		if !ok {
+			msg := fmt.Sprintf("not lined up: %s %s isn't a %s they can see", k, id, kind)
+			if other, found := look("", id); found {
+				msg += fmt.Sprintf(" — it's the %s %q; a %s is changed with the tools for a %s", other.Kind, other.Title, other.Kind, other.Kind)
+			}
+			return msg + ".", true
+		}
+		if wsArg != "" && !newRef.MatchString(wsArg) && it.WorkspaceID != "" && it.WorkspaceID != wsArg {
+			return fmt.Sprintf("not lined up: the %s %q is in the workspace %s, not in workspace_id %s (%s).", kind, it.Title, wsName(it.WorkspaceID), wsArg, wsName(wsArg)), true
+		}
+		if target == "" && k != "parent_id" && k != "list_id" {
+			target, where = it.Title, it.WorkspaceID
+		}
+	}
+	if where == "" && !newRef.MatchString(wsArg) {
+		where = wsArg
 	}
 	n := len(*actions) + 1
 	summary, _ := args[agentSummary].(string)
@@ -104,10 +234,11 @@ func propose(actions *[]assistant.Action, t *mcpTool, args map[string]any, mine 
 		}
 	}
 	*actions = append(*actions, assistant.Action{
-		N: n, Tool: t.Name, Title: t.Title, Summary: strings.TrimSpace(summary),
+		N: n, Tool: t.Name, Title: t.Title, Summary: strings.TrimSpace(summary), Target: target, Where: wsName(where),
 		Destructive: t.Destructive, Args: rest, State: assistant.Proposed,
 	})
-	return fmt.Sprintf(`{"status":"lined up","change":%d,"id":"new:%d","next":"Nothing more to do for this one: they approve all the changes together after your answer. Line up any other changes the request needs, then tell them in a sentence what you've lined up."}`, n, n), false
+	// Short, and not worded as an instruction: small models copy it out.
+	return fmt.Sprintf(`{"status":"lined up","change":%d,"id":"new:%d","waits_for":"their approval"}`, n, n), false
 }
 
 // earlierChanges tells the model what became of the changes lined up

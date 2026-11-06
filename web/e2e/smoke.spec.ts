@@ -3914,6 +3914,8 @@ test('the assistant in Agent mode: it lines changes up in one card; the ticked o
     const changes = plan.getByTestId('assistant-change')
     await expect(changes).toHaveCount(3)
     await expect(changes.nth(1)).toContainText('Add “Book the room” to it')
+    // What each is on, as Orbit has it, beside the model's words.
+    await expect(changes.first().getByTestId('assistant-change-on')).toHaveText('Create a task list · in Launch plans')
     // Nothing is made before it's approved.
     const lists = async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()) as { name: string }[]).map((l) => l.name)
     expect(await lists()).not.toContain('Launch')

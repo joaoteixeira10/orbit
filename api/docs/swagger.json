@@ -17111,11 +17111,19 @@
                     "description": "this one, in the model's words",
                     "type": "string"
                 },
+                "target": {
+                    "description": "the title of what it changes, as Orbit has it",
+                    "type": "string"
+                },
                 "title": {
                     "description": "the kind of change: \"Create a task\"",
                     "type": "string"
                 },
                 "tool": {
+                    "type": "string"
+                },
+                "where": {
+                    "description": "the workspace it's in",
                     "type": "string"
                 }
             }

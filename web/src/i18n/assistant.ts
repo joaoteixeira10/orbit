@@ -36,6 +36,7 @@ export const assistantEn = {
       agentHint: 'Agent: it can also make changes — you see them first and approve',
     },
     plan: {
+      in: 'in {name}',
       title: 'Changes to approve | 1 change to approve | {n} changes to approve',
       decided: 'No changes made | 1 change made | {n} changes made',
       approve: 'Approve | Approve 1 change | Approve {n} changes',
@@ -143,6 +144,7 @@ export const assistantPt = {
       agentHint: 'Agente: também pode fazer alterações — vê-as primeiro e aprova',
     },
     plan: {
+      in: 'em {name}',
       title: 'Alterações para aprovar | 1 alteração para aprovar | {n} alterações para aprovar',
       decided: 'Nenhuma alteração feita | 1 alteração feita | {n} alterações feitas',
       approve: 'Aprovar | Aprovar 1 alteração | Aprovar {n} alterações',

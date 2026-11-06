@@ -299,6 +299,24 @@ func (a mcpArgs) str(k string) string {
 	return ""
 }
 
+// strs is a list of words given (as a list, or one by itself).
+func (a mcpArgs) strs(k string) []string {
+	var out []string
+	switch v := a[k].(type) {
+	case []any:
+		for _, x := range v {
+			if s, ok := x.(string); ok && strings.TrimSpace(s) != "" {
+				out = append(out, strings.TrimSpace(s))
+			}
+		}
+	case string:
+		if strings.TrimSpace(v) != "" {
+			out = append(out, strings.TrimSpace(v))
+		}
+	}
+	return out
+}
+
 func (a mcpArgs) has(k string) bool {
 	_, ok := a[k]
 	return ok

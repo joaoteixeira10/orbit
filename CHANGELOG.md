@@ -39,6 +39,11 @@ merge, not at release time.
   editors could open; the assistant's "Put a file in Files" does the same.
 - A quick note turned into a page keeps its drawing: a whiteboard of the
   workspace, shown on the page.
+- The assistant (and MCP clients) tag pages for real: "Create a page" takes
+  tags, and a YAML header a model writes at the top of a page's text becomes
+  the page's tags and properties instead of a line and a heading; a first
+  heading repeating the title is dropped. A Markdown file made into a page
+  from the chat takes its header and its own title the same way.
 
 ## [0.4.0] - 2026-11-05
 

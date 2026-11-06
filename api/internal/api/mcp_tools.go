@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
+
+	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
 )
 
 // The MCP tools: each a call (or two) to the REST API, its answer trimmed to
@@ -206,15 +210,24 @@ var mcpTools = []mcpTool{
 	},
 	{
 		Name: "create_page", Title: "Create a page",
-		Description: "A new page, with its text in Markdown; inside another page (parent_id) or filed in a folder (folder_id) if given.",
+		Description: "A new page, with its text in Markdown (the title isn't repeated in it); inside another page (parent_id) or filed in a folder (folder_id) if given; with tags if given.",
 		Props: map[string]mcpProp{
 			"workspace_id": pWS, "title": {Type: "string", Description: "Its title"}, "content": {Type: "string", Description: "Its text, in Markdown"},
 			"parent_id": {Type: "string", Description: "The page it goes inside"}, "folder_id": {Type: "string", Description: "A folder to file it in"}, "icon": {Type: "string", Description: "An emoji"},
+			"tags": {Type: "array", Description: "Its tags"},
 		},
 		Required: []string{"workspace_id", "title"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
+			body := a.pick("title", "content", "parent_id", "folder_id", "icon")
+			text, tags, fields := pageText(a.str("title"), a.str("content"))
+			if a.has("content") {
+				body["content"] = text
+			}
 			var p map[string]any
-			if err := m.do("POST", "/workspaces/"+a.str("workspace_id")+"/pages", nil, a.pick("title", "content", "parent_id", "folder_id", "icon"), &p); err != nil {
+			if err := m.do("POST", "/workspaces/"+a.str("workspace_id")+"/pages", nil, body, &p); err != nil {
+				return nil, err
+			}
+			if err := tagPage(m, p, append(a.strs("tags"), tags...), fields); err != nil {
 				return nil, err
 			}
 			return keepOne(p, "id", "title", "workspace_id", "parent_id", "folder_id", "version"), nil
@@ -239,7 +252,19 @@ var mcpTools = []mcpTool{
 			if a.has("content") || a.has("append") {
 				text, _ := cur["content"].(string)
 				if a.has("content") {
-					text, _ = a["content"].(string)
+					title, _ := cur["title"].(string)
+					if a.has("title") {
+						title = a.str("title")
+					}
+					var tags []string
+					var fields []planner.Field
+					text, tags, fields = pageText(title, a.str("content"))
+					if len(tags) > 0 && !a.has("tags") {
+						body["tags"] = tags
+					}
+					if len(fields) > 0 {
+						body["fields"] = withFields(cur["fields"], fields)
+					}
 				}
 				if add, _ := a["append"].(string); add != "" {
 					text = strings.TrimRight(text, "\n") + "\n\n" + add
@@ -754,4 +779,53 @@ func splitAddr(s string) (string, int) {
 		n = n*10 + int(r-'0')
 	}
 	return s[:i], n
+}
+
+// firstHeading is a "# heading" on the first line of Markdown text.
+var firstHeading = regexp.MustCompile(`^\s*#[ \t]+(.+?)[ \t]*#*[ \t]*(?:\n|$)`)
+
+// pageText takes off the top of a page's text what belongs elsewhere — a
+// YAML header (its tags and properties) and a first "# heading" repeating
+// its title — as a model writes it (it sees pages so in read_page), or a
+// Markdown file has it.
+func pageText(title, text string) (rest string, tags []string, fields []planner.Field) {
+	text = strings.TrimLeft(strings.ReplaceAll(text, "\r\n", "\n"), "\ufeff\n")
+	tags, fields, rest = planner.ReadFrontmatter(text)
+	if h := firstHeading.FindStringSubmatch(rest); h != nil && strings.EqualFold(strings.TrimSpace(h[1]), strings.TrimSpace(title)) {
+		rest = rest[len(h[0]):]
+	}
+	return strings.TrimLeft(rest, "\n"), tags, fields
+}
+
+// tagPage gives a page just made its tags and properties, if it has any.
+func tagPage(m *mcpCall, p map[string]any, tags []string, fields []planner.Field) error {
+	body := map[string]any{}
+	if len(tags) > 0 {
+		body["tags"] = tags
+	}
+	if len(fields) > 0 {
+		body["fields"] = fields
+	}
+	if len(body) == 0 {
+		return nil
+	}
+	id, _ := p["id"].(string)
+	return m.do("PUT", "/pages/"+id, nil, body, nil)
+}
+
+// withFields is a page's properties with these set (by name).
+func withFields(cur any, set []planner.Field) []planner.Field {
+	var out []planner.Field
+	if b, err := json.Marshal(cur); err == nil {
+		_ = json.Unmarshal(b, &out)
+	}
+	for _, f := range set {
+		i := slices.IndexFunc(out, func(g planner.Field) bool { return strings.EqualFold(g.Key, f.Key) })
+		if i < 0 {
+			out = append(out, f)
+		} else {
+			out[i] = f
+		}
+	}
+	return out
 }

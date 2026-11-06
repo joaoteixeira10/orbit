@@ -656,7 +656,7 @@ func TestAssistantAttachments(t *testing.T) {
 	}
 	var page struct{ Title, Content string }
 	decode(t, authdo(r, "GET", "/api/v1/pages/"+turn.Actions[1].MadeID, "", owner), &page)
-	if page.Title != "plan" || !strings.Contains(page.Content, "Step one: book the room.") || !strings.Contains(page.Content, "# The plan") {
+	if page.Title != "The plan" || !strings.Contains(page.Content, "Step one: book the room.") || strings.Contains(page.Content, "# The plan") { // its own title, as Import takes it
 		t.Errorf("page: %+v", page)
 	}
 

@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -192,4 +195,79 @@ func Frontmatter(tags, fields string) string {
 	}
 	b.WriteString("---\n")
 	return b.String()
+}
+
+var (
+	fmHead   = regexp.MustCompile(`^---\n([\s\S]*?)\n---[ \t]*(?:\n|$)`)
+	fmQuoted = regexp.MustCompile(`^("(?:[^"\\]|\\.)*")\s*:\s*(.*)$`)
+	fmPlain  = regexp.MustCompile(`^([^:#\s][^:]*?)\s*:\s*(.*)$`)
+	fmItem   = regexp.MustCompile(`^\s*-\s+`)
+	fmNumber = regexp.MustCompile(`^-?\d+(\.\d+)?$`)
+	fmDate   = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+)
+
+// ReadFrontmatter takes a YAML header off Markdown text: its tags, and the
+// rest as properties (simple "key: value" lines; lists only for tags) —
+// what Frontmatter writes, and Obsidian and the like.
+func ReadFrontmatter(md string) (tags []string, fields []Field, rest string) {
+	m := fmHead.FindStringSubmatch(md)
+	if m == nil {
+		return nil, nil, md
+	}
+	unquote := func(s string) string { return strings.Trim(s, `"'`) }
+	lines := strings.Split(m[1], "\n")
+	for i := 0; i < len(lines); i++ {
+		var key, raw string
+		if q := fmQuoted.FindStringSubmatch(lines[i]); q != nil {
+			if json.Unmarshal([]byte(q[1]), &key) != nil {
+				continue
+			}
+			raw = q[2]
+		} else if p := fmPlain.FindStringSubmatch(lines[i]); p != nil {
+			key, raw = strings.TrimSpace(p[1]), p[2]
+		} else {
+			continue
+		}
+		raw = strings.TrimSpace(raw)
+		if strings.EqualFold(key, "tags") {
+			var list []any
+			switch {
+			case raw == "":
+				for i+1 < len(lines) && fmItem.MatchString(lines[i+1]) {
+					i++
+					tags = append(tags, unquote(fmItem.ReplaceAllString(lines[i], "")))
+				}
+			case json.Unmarshal([]byte(strings.ReplaceAll(raw, "'", `"`)), &list) == nil:
+				for _, t := range list {
+					tags = append(tags, fmt.Sprint(t))
+				}
+			default:
+				for _, t := range strings.Split(strings.Trim(raw, "[]"), ",") {
+					tags = append(tags, strings.TrimLeft(unquote(strings.TrimSpace(t)), "#"))
+				}
+			}
+			continue
+		}
+		if len(raw) > 1 && strings.ContainsAny(raw[:1], `"'`) && raw[len(raw)-1] == raw[0] {
+			raw = raw[1 : len(raw)-1]
+		}
+		f := Field{Key: key, Type: "text", Value: raw}
+		switch {
+		case raw == "":
+			f.Value = nil
+		case raw == "true" || raw == "false":
+			f.Type, f.Value = "checkbox", raw == "true"
+		case fmNumber.MatchString(raw):
+			n, _ := strconv.ParseFloat(raw, 64)
+			f.Type, f.Value = "number", n
+		case fmDate.MatchString(raw):
+			f.Type = "date"
+		case strings.HasPrefix(raw, "http:") || strings.HasPrefix(raw, "https:") || strings.HasPrefix(raw, "mailto:"):
+			f.Type = "url"
+		}
+		if !slices.ContainsFunc(fields, func(g Field) bool { return strings.EqualFold(g.Key, key) }) && len(fields) < maxFields {
+			fields = append(fields, f)
+		}
+	}
+	return tags, fields, md[len(m[0]):]
 }

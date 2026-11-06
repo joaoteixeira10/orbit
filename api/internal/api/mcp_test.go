@@ -81,6 +81,30 @@ func TestMCP(t *testing.T) {
 	if text != "# Kickoff\n\nAgenda\n\n- coffee" {
 		t.Fatalf("read page: %q", text)
 	}
+	// A model writing a page as Orbit exports one: its YAML header becomes
+	// tags and properties, and the title isn't said twice.
+	text, bad = mcpToolCall(t, r, alice, "create_page", map[string]any{"workspace_id": ws.ID, "title": "Site Fix", "tags": []any{"Ops"},
+		"content": "---\ntags: [\"Procedure\"]\nowner: Ana\n---\n# Site Fix\n\n```sh\nscp a b\n```"})
+	_ = json.Unmarshal([]byte(text), &pg)
+	if bad {
+		t.Fatalf("create page with a header: %s", text)
+	}
+	var got struct {
+		Content string
+		Tags    []string
+		Fields  []map[string]any
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/pages/"+pg.ID, "", alice).Body.Bytes(), &got)
+	if got.Content != "```sh\nscp a b\n```" || strings.Join(got.Tags, ",") != "Ops,Procedure" || len(got.Fields) != 1 || got.Fields[0]["value"] != "Ana" {
+		t.Fatalf("header: %+v", got)
+	}
+	if _, bad = mcpToolCall(t, r, alice, "update_page", map[string]any{"page_id": pg.ID, "content": "---\ntags:\n  - Runbook\n---\nDone."}); bad {
+		t.Fatal("update with a header")
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/pages/"+pg.ID, "", alice).Body.Bytes(), &got)
+	if got.Content != "Done." || strings.Join(got.Tags, ",") != "Runbook" || len(got.Fields) != 1 {
+		t.Fatalf("update header: %+v", got)
+	}
 	if text, bad = mcpToolCall(t, r, alice, "create_task_list", map[string]any{"workspace_id": ws.ID, "name": "Launch"}); bad {
 		t.Fatalf("list: %s", text)
 	}

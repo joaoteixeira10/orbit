@@ -427,9 +427,16 @@ var attachmentTools = []mcpTool{
 			if body["title"] == "" {
 				body["title"] = strings.TrimSuffix(t.Name, path.Ext(t.Name))
 			}
-			body["content"] = asMarkdown(t.Name, f.Type, t.Text)
+			text, tags, fields := pageText(a.str("title"), asMarkdown(t.Name, f.Type, t.Text))
+			if h := firstHeading.FindStringSubmatch(text); h != nil && a.str("title") == "" {
+				body["title"], text = strings.TrimSpace(h[1]), text[len(h[0]):] // a Markdown file's own title
+			}
+			body["content"] = text
 			var p map[string]any
 			if err := m.do("POST", "/workspaces/"+a.str("workspace_id")+"/pages", nil, body, &p); err != nil {
+				return nil, err
+			}
+			if err := tagPage(m, p, tags, fields); err != nil {
 				return nil, err
 			}
 			return keepOne(p, "id", "title", "workspace_id", "parent_id", "folder_id"), nil

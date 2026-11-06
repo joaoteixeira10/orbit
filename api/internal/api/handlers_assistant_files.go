@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -386,15 +388,19 @@ var attachmentTools = []mcpTool{
 	},
 	{
 		Name: "save_attachment", Title: "Put a file in Files",
-		Description: "Put a file they attached in a workspace's Files (in a folder, if given), as it is — the file itself, whatever it is (a draw.io diagram, a PDF, an image…).",
+		Description: "Put a file they attached in a workspace's Files (in a folder, if given) — the file itself, never through you: a draw.io, Mermaid or Excalidraw file becomes a diagram or whiteboard there, opened in Orbit; anything else (a PDF, an image…) goes as it is.",
 		Props: map[string]mcpProp{
 			"file_id": {Type: "string", Description: "The attached file's id"}, "workspace_id": pWS,
 			"folder_id": {Type: "string", Description: "A folder of that workspace's Files (none: the top)"},
 		},
 		Required: []string{"file_id", "workspace_id"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
+			id := url.PathEscape(a.str("file_id"))
+			if made, ok, err := openInOrbit(m, id, a); ok || err != nil {
+				return made, err
+			}
 			var u map[string]any
-			if err := m.do("POST", "/assistant/files/"+url.PathEscape(a.str("file_id"))+"/save", nil, a.pick("workspace_id", "folder_id"), &u); err != nil {
+			if err := m.do("POST", "/assistant/files/"+id+"/save", nil, a.pick("workspace_id", "folder_id"), &u); err != nil {
 				return nil, err
 			}
 			return keepOne(u, "id", "name", "workspace_id", "folder_id"), nil
@@ -429,6 +435,79 @@ var attachmentTools = []mcpTool{
 			return keepOne(p, "id", "title", "workspace_id", "parent_id", "folder_id"), nil
 		},
 	},
+}
+
+// openInOrbit makes an attached draw.io, Mermaid or Excalidraw file a
+// diagram or whiteboard in the workspace (ok false: it isn't one, or its
+// content isn't what its name says — it then goes as a file).
+func openInOrbit(m *mcpCall, id string, a mcpArgs) (any, bool, error) {
+	var f attachmentRaw
+	if err := m.do("GET", "/assistant/files/"+id+"/raw", nil, nil, &f); err != nil || f.Text == "" {
+		return nil, false, nil
+	}
+	name := strings.ToLower(f.Name)
+	title := orbitExt.ReplaceAllString(f.Name, "")
+	body := a.pick("folder_id")
+	body["title"] = title
+	path, kind := "", ""
+	switch {
+	case strings.HasSuffix(name, ".drawio") || strings.HasSuffix(name, ".dio"):
+		if !strings.Contains(f.Text, "<mxfile") && !strings.Contains(f.Text, "<mxGraphModel") {
+			return nil, false, nil
+		}
+		path, kind, body["data"] = "diagrams", "diagram", f.Text
+	case strings.HasSuffix(name, ".mmd") || strings.HasSuffix(name, ".mermaid"):
+		path, kind, body["kind"], body["data"] = "diagrams", "diagram", models.DiagramMermaid, strings.TrimSpace(f.Text)
+	case strings.HasSuffix(name, ".excalidraw"):
+		var scene struct{ Type string }
+		if json.Unmarshal([]byte(f.Text), &scene) != nil || scene.Type != "excalidraw" {
+			return nil, false, nil
+		}
+		path, kind, body["scene"] = "drawings", "whiteboard", f.Text
+	default:
+		return nil, false, nil
+	}
+	var made map[string]any
+	if err := m.do("POST", "/workspaces/"+a.str("workspace_id")+"/"+path, nil, body, &made); err != nil {
+		return nil, true, err
+	}
+	out := keepOne(made, "id", "title", "workspace_id", "folder_id")
+	out["kind"] = kind
+	return out, true, nil
+}
+
+var orbitExt = regexp.MustCompile(`(?i)\.(drawio|dio|excalidraw|mmd|mermaid)$`)
+
+type attachmentRaw struct {
+	Name string `json:"name"`
+	Text string `json:"text"` // the file as text ("" when it isn't text)
+}
+
+// getAttachmentRaw gives an attached text file whole, as it is (a draw.io
+// or Excalidraw file, to open it in Orbit).
+//
+//	@Summary	An attached text file, as it is
+//	@Tags		assistant
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id	path		string	true	"File id"
+//	@Success	200	{object}	attachmentRaw
+//	@Router		/assistant/files/{id}/raw [get]
+func (h *Handlers) getAttachmentRaw(c *gin.Context) {
+	u, ok := h.myAttachment(c)
+	if !ok {
+		return
+	}
+	data, err := uploads.Read(h.db, u)
+	if err != nil {
+		h.internalError(c, err, "could not read the file")
+		return
+	}
+	out := attachmentRaw{Name: u.Name}
+	if utf8.Valid(data) {
+		out.Text = string(data)
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 // getAttachment describes a file attached for the assistant.

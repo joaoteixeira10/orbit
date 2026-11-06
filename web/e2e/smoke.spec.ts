@@ -3585,7 +3585,11 @@ test('task sheet: comments beside the details; a note turns into a page with its
   const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Side by side', kind: 'work', starter: false, modules: ['home', 'tasks', 'notes', 'pages'] } })).json()
   const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: 'Work', color: '#5856D6' } })).json()
   await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Two columns', list_id: list.id } })
-  await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Packing', body: 'For the trip\n- passport\n- charger\nsee https://example.org/a_b\n```sh\n  pack --all *.txt\n```\nthen `zip` it' } })
+  const packing = await (await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Packing', body: 'For the trip\n- passport\n- charger\nsee https://example.org/a_b\n```sh\n  pack --all *.txt\n```\nthen `zip` it' } })).json()
+  // The note has a drawing too.
+  const sketch = await (await request.post(`/api/v1/notes/${packing.id}/drawing`, { headers: H })).json()
+  const scene = JSON.stringify({ type: 'excalidraw', version: 2, elements: [{ id: 'r1', type: 'rectangle', x: 0, y: 0, width: 80, height: 40 }], appState: {}, files: {} })
+  expect((await request.put(`/api/v1/drawings/${sketch.id}`, { headers: H, data: { scene, preview: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><rect width="80" height="40"/></svg>', version: sketch.version } })).ok()).toBeTruthy()
 
   await signIn(page, NEW_PASSWORD)
   await page.setViewportSize({ width: 1400, height: 900 })
@@ -3612,6 +3616,28 @@ test('task sheet: comments beside the details; a note turns into a page with its
   await expect(doc.locator('a[href="https://example.org/a_b"]')).toHaveCount(1)
   await expect(doc.locator('pre code')).toHaveText('  pack --all *.txt')
   await expect(doc.locator('p code')).toHaveText('zip')
+  // Its drawing comes along: a whiteboard of the workspace, on the page.
+  await expect(page.getByTestId('whiteboard-embed')).toBeVisible()
+  const boards = (await (await request.get(`/api/v1/workspaces/${ws.id}/drawings`, { headers: H })).json()) as { title: string; scene?: string }[]
+  expect(boards.map((b) => b.title)).toEqual(['Drawing — Packing'])
+})
+
+test('a draw.io or Excalidraw file added to Files becomes a diagram or whiteboard, not a file', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Drawn', kind: 'work', starter: false, modules: ['home', 'files', 'whiteboards', 'diagrams'] } })).json()
+  await signIn(page, NEW_PASSWORD)
+  await page.goto(`/w/${ws.id}/files`)
+  await page.getByTestId('files-add-input').setInputFiles([
+    { name: 'Untitled-2026-11-06-1131.excalidraw', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ type: 'excalidraw', version: 2, elements: [], appState: {}, files: {} })) },
+    { name: 'network.drawio', mimeType: 'application/xml', buffer: Buffer.from('<mxfile><diagram name="p" id="a"><mxGraphModel><root><mxCell id="0"/></root></mxGraphModel></diagram></mxfile>') },
+    { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('kept as a file') },
+  ])
+  await expect(page.getByTestId('file-card').filter({ hasText: 'notes.txt' })).toBeVisible()
+  await expect.poll(async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/drawings`, { headers: H })).json()) as { title: string }[]).map((x) => x.title)).toEqual(['Untitled-2026-11-06-1131'])
+  await expect.poll(async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/diagrams`, { headers: H })).json()) as { title: string }[]).map((x) => x.title)).toEqual(['network'])
+  const files = ((await (await request.get(`/api/v1/workspaces/${ws.id}/files`, { headers: H })).json()) as { name: string }[]).map((x) => x.name)
+  expect(files).toEqual(['notes.txt'])
 })
 
 test('editors keep their own look: Sheets light in a dark Orbit', async ({ page, request }) => {

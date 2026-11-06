@@ -321,6 +321,14 @@ definitions:
       used_today:
         type: integer
     type: object
+  api.attachmentRaw:
+    properties:
+      name:
+        type: string
+      text:
+        description: the file as text ("" when it isn't text)
+        type: string
+    type: object
   api.attachmentResponse:
     properties:
       id:
@@ -5055,6 +5063,26 @@ paths:
       security:
       - BearerAuth: []
       summary: An attached file
+      tags:
+      - assistant
+  /assistant/files/{id}/raw:
+    get:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.attachmentRaw'
+      security:
+      - BearerAuth: []
+      summary: An attached text file, as it is
       tags:
       - assistant
   /assistant/files/{id}/save:

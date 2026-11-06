@@ -652,6 +652,8 @@ card, for what you'd jot on a Post-it. Longer writing belongs in a page.
   "[ ] " / "[x] " tasks, "# " a heading, "> " a quote, web addresses
   links, a block between ``` lines code (as written, spaces and all) and
   `this` inline code. Anything else stays the text it was (a "*" is a star).
+  The note's drawing comes too: a whiteboard of that workspace ("Drawing —
+  the note's title"), shown on the page under the text.
 - Click a card to open it larger; it saves as you type. **⤢ Bigger** (in its
   toolbar, and in the Quick Note box) opens notes wide, with room to write;
   **Smaller** goes back. It's remembered on this device. Emptying a note and
@@ -1418,7 +1420,10 @@ attachments of pages, tasks and notes. A folder's tile says what it holds of eve
 **Files of every kind.** In **Files**, **Upload** adds any file (a PDF, a
 photo, a Word document…) to the folder shown, as it is — or drop files from
 the computer onto the page, or onto a folder. A picture shows as its
-thumbnail.
+thumbnail. A draw.io (`.drawio`), Mermaid (`.mmd`) or Excalidraw
+(`.excalidraw`) file becomes a diagram or a whiteboard instead, as with
+**Import** (when the workspace has that module), since only Orbit's editors
+open them.
 
 **Shown in place.** A click on a file — in Files, on a task or a note, a
 file's link in a page, a search result — opens it over what you're doing
@@ -1707,8 +1712,9 @@ one up or answer from it. In Agent mode it can also line up, on the same
 card:
 
 - **Put a file in Files** — the file itself goes into a workspace's Files
-  (a folder, if you say), whatever it is: "put these three draw.io files in
-  Escola". It never passes through the model.
+  (a folder, if you say): "put these three draw.io files in Escola". A
+  draw.io, Mermaid or Excalidraw file becomes a diagram or a whiteboard
+  there; anything else goes as it is. It never passes through the model.
 - **Make a page from a file** — a page with the file's text as it is
   (Markdown kept; a PDF's or a document's text as paragraphs), however long.
   For something rewritten — summed up, or one page per chapter — ask for

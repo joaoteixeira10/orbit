@@ -17,6 +17,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { useSortable, type SortMove } from '@/lib/sortable'
 import { pagesApi, type Note, type NoteColor, type NoteInput } from '@/api/planner'
+import { drawingsApi } from '@/components/draw/drawing'
+import { embedHref } from '@/lib/embeds'
+import { escapeTitle } from '@/components/editor/embed'
 
 // Quick notes: a wall of sticky notes (Keep-like), pinned ones first — a
 // workspace's (/w/:ws/notes), or the user's own Quick Notes (/notes), in no
@@ -186,12 +189,23 @@ const askMove = (n: Note) => (picker.value = { mode: 'move', note: n })
 async function toPage(n: Note, target = ws.value) {
   if (target === 'me') return (picker.value = { mode: 'page', note: n })
   try {
-    const p = await pagesApi.create(target, { title: n.title, content: pageDoc(n) })
+    const p = await pagesApi.create(target, { title: n.title, content: (pageDoc(n).trim() + (await boardOf(n, target))).trim() })
     await usePagesStore().load(target)
     router.push({ name: 'ws-page', params: { ws: target, page: p.id } })
   } catch (e: any) {
     toast.error(e.message)
   }
+}
+
+// boardOf: a note's drawing, as a whiteboard of the workspace the page goes
+// to, shown on the page under the text ("" no drawing).
+async function boardOf(n: Note, target: string): Promise<string> {
+  if (!n.drawing?.preview) return ''
+  const d = await drawingsApi.get(n.drawing.id)
+  if (!d.scene) return ''
+  const title = n.title ? t('notes.drawingOf', { title: n.title }) : t('notes.drawingUntitled')
+  const b = await drawingsApi.make(target, { title, scene: d.scene, preview: d.preview })
+  return `\n\n[${escapeTitle(title)}](${embedHref({ kind: 'board', ws: target, id: b.id })})\n`
 }
 
 async function toTasks(n: Note, target = ws.value) {

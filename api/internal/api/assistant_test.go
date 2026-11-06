@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"strings"
 	"sync"
 	"testing"
@@ -657,6 +658,32 @@ func TestAssistantAttachments(t *testing.T) {
 	decode(t, authdo(r, "GET", "/api/v1/pages/"+turn.Actions[1].MadeID, "", owner), &page)
 	if page.Title != "plan" || !strings.Contains(page.Content, "Step one: book the room.") || !strings.Contains(page.Content, "# The plan") {
 		t.Errorf("page: %+v", page)
+	}
+
+	// A draw.io or Excalidraw file goes in as a diagram or whiteboard.
+	for _, file := range []struct{ name, body, list string }{
+		{"network.drawio", `<mxfile><diagram name="p">x</diagram></mxfile>`, "/diagrams"},
+		{"sketch.excalidraw", `{"type":"excalidraw","version":2,"elements":[]}`, "/drawings"},
+	} {
+		w := attach(owner, file.name, file.body)
+		expect(t, w, http.StatusCreated, "attach "+file.name)
+		var g attachmentResponse
+		decode(t, w, &g)
+		w = authdo(r, "POST", "/api/v1/assistant/chat", `{"chat_id":"`+chatID+`","mode":"agent","message":"files:`+ws.ID+`:`+g.ID+`","files":["`+g.ID+`"]}`, owner)
+		expect(t, w, http.StatusOK, "ask "+file.name)
+		var chat assistantChatResponse
+		decode(t, authdo(r, "GET", "/api/v1/assistant/chats/"+chatID, "", owner), &chat)
+		at := len(chat.Turns) - 1
+		var turn assistant.Turn
+		decode(t, authdo(r, "POST", "/api/v1/assistant/chats/"+chatID+"/apply", fmt.Sprintf(`{"turn":%d,"approve":[1]}`, at), owner), &turn)
+		if turn.Actions[0].State != "done" {
+			t.Fatalf("%s: %+v", file.name, turn.Actions[0])
+		}
+		var made []struct{ ID, Title string }
+		decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+file.list, "", owner), &made)
+		if len(made) != 1 || made[0].Title != strings.TrimSuffix(file.name, path.Ext(file.name)) || made[0].ID != turn.Actions[0].MadeID {
+			t.Errorf("%s made: %+v (%s)", file.name, made, turn.Actions[0].MadeID)
+		}
 	}
 
 	// Not among their own files; gone with the conversation (the copy in

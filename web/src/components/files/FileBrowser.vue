@@ -14,7 +14,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import NotePlacePicker from '@/components/notes/NotePlacePicker.vue'
 import { drawingsApi } from '@/components/draw/drawing'
 import { countParts, filesApi, inside, pathTo, sizeText, tree, type FileItem, type FileKind, type FileUsage, type FileVersion, type Folder } from '@/lib/filesApi'
-import { download, duplicate, linkOf, onRoute, remove, rename, routeOf } from '@/lib/fileOps'
+import { bringIn, download, duplicate, linkOf, onRoute, opensAs, remove, rename, routeOf } from '@/lib/fileOps'
 import { downloadUpload, uploadBlobUrl } from '@/lib/uploads'
 import { openFile } from '@/lib/fileView'
 import { svgUrl } from '@/lib/drawio'
@@ -171,7 +171,17 @@ async function addFiles(list: File[], folderId = here.value) {
   for (const f of list) {
     adding.value++
     try {
-      await filesApi.upload(props.ws, folderId, f)
+      // A draw.io, Mermaid or Excalidraw file becomes what Orbit opens it
+      // as (a diagram, a whiteboard); one that isn't goes as a file.
+      const kind = opensAs(f.name)
+      const opened =
+        kind &&
+        props.kinds.includes(kind) &&
+        (await bringIn(props.ws, f, folderId, { tab: t('sheets.tabName', { n: 1 }), notDrawio: t('diagrams.notDrawio'), notExcalidraw: t('drive.notExcalidraw'), notMermaid: t('mermaid.notMermaid') }).then(
+          () => true,
+          () => false,
+        ))
+      if (!opened) await filesApi.upload(props.ws, folderId, f)
       n++
     } catch (e: any) {
       toast.error(`${f.name}: ${e?.message ?? e}`)

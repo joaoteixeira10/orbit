@@ -32,6 +32,14 @@ merge, not at release time.
   instructions); and a daily limit per person. A round ✦ button in the
   corner opens it; it can be expanded to the middle of the screen.
 
+### Fixed
+
+- A draw.io, Mermaid or Excalidraw file uploaded or dropped into Files
+  becomes a diagram or whiteboard (as Import does), not a file only Orbit's
+  editors could open; the assistant's "Put a file in Files" does the same.
+- A quick note turned into a page keeps its drawing: a whiteboard of the
+  workspace, shown on the page.
+
 ## [0.4.0] - 2026-11-05
 
 ### Added

@@ -351,6 +351,7 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/assistant/files/:id", h.getAttachment)
 			authed.DELETE("/assistant/files/:id", h.dropAttachment)
 			authed.GET("/assistant/files/:id/text", h.getAttachmentText)
+			authed.GET("/assistant/files/:id/raw", h.getAttachmentRaw)
 			authed.PUT("/assistant/files/:id/text", h.setAttachmentText)
 			authed.POST("/assistant/files/:id/save", h.saveAttachment)
 			authed.POST("/workspaces/:ws/google/start", notImpersonating(), h.startGoogle)

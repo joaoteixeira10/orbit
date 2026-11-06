@@ -114,6 +114,15 @@ export function kindOfFile(name: string): FileKind | null {
   return null
 }
 
+// opensAs: a file only Orbit's own editors open — a draw.io, Mermaid or
+// Excalidraw file — and what it becomes (null: one kept as a file; a
+// spreadsheet or an SVG may be wanted as it is).
+export function opensAs(name: string): FileKind | null {
+  if (/\.excalidraw$/i.test(name)) return 'board'
+  if (/\.(drawio|dio|mmd|mermaid)$/i.test(name) || /\.drawio\.svg$/i.test(name)) return 'diagram'
+  return null
+}
+
 // bringIn makes a new file from one on the computer, in a folder.
 export async function bringIn(ws: string, file: File, folderId: string, words: { tab: string; notDrawio: string; notExcalidraw: string; notMermaid: string }): Promise<{ kind: FileKind; id: string; title: string }> {
   const kind = kindOfFile(file.name)

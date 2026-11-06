@@ -453,6 +453,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/files/{id}/raw": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assistant"
+                ],
+                "summary": "An attached text file, as it is",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.attachmentRaw"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/files/{id}/save": {
             "post": {
                 "security": [
@@ -12176,6 +12209,18 @@ const docTemplate = `{
                 },
                 "used_today": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.attachmentRaw": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "text": {
+                    "description": "the file as text (\"\" when it isn't text)",
+                    "type": "string"
                 }
             }
         },

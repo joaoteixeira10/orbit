@@ -1,0 +1,103 @@
+# Release — tag the current main HEAD and create the GitHub release. Manual trigger.
+#
+# Does NOT build the image — run "Build & Push" first for the same version.
+# Creates git tag + release `v<version>`. The release body is a curated "what's
+# new" summary lifted from CHANGELOG.md (the `## [<version>]` section, falling
+# back to `## [Unreleased]`) followed by the auto-generated commit list since the
+# previous tag.
+#
+# Version: bare (1.3.0) or with a leading v (v1.3.0) — normalized either way.
+# Pre-releases (1.3.0-rc.1) are marked as pre-release and never become "Latest".
+#
+# Uses the built-in GITHUB_TOKEN (contents: write) — no secrets needed.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, semver e.g. 1.3.0 (tag/release → v1.3.0)"
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history + tags for the changelog
+          fetch-tags: true
+
+      - name: Create tag + release with changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="$(echo "${INPUT_VERSION}" | tr -d '[:space:]')"
+          VERSION="${VERSION#v}"
+          if ! echo "${VERSION}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "::error::'${INPUT_VERSION}' is not a valid semver version (expected e.g. 1.3.0)"
+            exit 1
+          fi
+          TAG="v${VERSION}"
+
+          # Fail early and clearly if this version was already released.
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag ${TAG} already exists"
+            exit 1
+          fi
+
+          # Auto-generated commit list since the previous release tag.
+          # Release tags only (vX.Y.Z) — skips markers like v0-python.
+          PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || true)
+          if [ -n "$PREV" ]; then RANGE="${PREV}..HEAD"; else RANGE=""; fi
+          COMMITS=$(git log --no-merges --pretty='- %s (%h)' $RANGE)
+          [ -z "$COMMITS" ] && COMMITS="- (no changes recorded)"
+
+          # Curated highlights from CHANGELOG.md: the section for this version,
+          # else the [Unreleased] section. Grabs lines after the matching
+          # `## [...]` heading up to the next `## ` heading (### subheadings kept).
+          extract() {
+            awk -v want="$1" '
+              /^##[[:space:]]/ { if (grab) exit; if (index(tolower($0), tolower(want))) { grab=1; next } }
+              grab { print }
+            ' CHANGELOG.md 2>/dev/null
+          }
+          # trim leading/trailing blank lines, keep internal ones
+          trim() {
+            awk '{ l[NR]=$0 } END {
+              s=1; while (s<=NR && l[s] ~ /^[[:space:]]*$/) s++
+              e=NR; while (e>=s && l[e] ~ /^[[:space:]]*$/) e--
+              for (i=s;i<=e;i++) print l[i]
+            }'
+          }
+          HIGHLIGHTS=""
+          if [ -f CHANGELOG.md ]; then
+            HIGHLIGHTS=$(extract "[${VERSION}]")
+            [ -z "$(printf '%s' "$HIGHLIGHTS" | tr -d '[:space:]')" ] && HIGHLIGHTS=$(extract "[unreleased]")
+            HIGHLIGHTS=$(printf '%s\n' "$HIGHLIGHTS" | trim)
+          fi
+
+          if [ -n "$PREV" ]; then CHANGEHDR="**All changes since ${PREV}:**"; else CHANGEHDR="**All changes:**"; fi
+          if [ -n "$(printf '%s' "$HIGHLIGHTS" | tr -d '[:space:]')" ]; then
+            printf '## What'"'"'s new\n\n%s\n\n---\n\n%s\n\n%s\n' "$HIGHLIGHTS" "$CHANGEHDR" "$COMMITS" > /tmp/notes.md
+          else
+            printf '%s\n\n%s\n' "$CHANGEHDR" "$COMMITS" > /tmp/notes.md
+          fi
+
+          # Pre-releases are flagged and never marked "Latest".
+          case "${VERSION}" in
+            *-*) FLAGS="--prerelease --latest=false" ;;
+            *)   FLAGS="--latest" ;;
+          esac
+
+          # Creates the tag on this exact commit and the release in one call.
+          gh release create "${TAG}" \
+            --target "${GITHUB_SHA}" \
+            --title "${TAG}" \
+            --notes-file /tmp/notes.md \
+            ${FLAGS}
+
+          echo "Released ${TAG}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"

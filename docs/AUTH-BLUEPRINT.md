@@ -6,8 +6,8 @@ exact parameters**, **where it lives**, and **the traps**.
 
 Stack: Go 1.2x · Gin · GORM (sqlite/mysql/postgres) · Vue 3 + Pinia + Vite.
 Snapshot: v2.1.x plus the auth-hardening change (CHANGELOG `[Unreleased]` → next release), 2026-09.
-Companion doc: [PROJECT-BLUEPRINT.md](PROJECT-BLUEPRINT.md) covers everything that isn't auth
-(repo layout, Docker dev loop, CI, releases, docs, tests, update check, themes).
+Everything that isn't auth (repo layout, Docker dev loop, CI, releases, docs, tests, update
+check, themes) was in the project blueprint, which is no longer kept in this repo.
 
 ---
 
@@ -484,7 +484,7 @@ Scoped privileges : ca.read ca.edit ca.delete ca.offline cert.read cert.issue ce
   - You can't demote, disable or delete the last active superuser, or delete yourself.
   - The owner can't be impersonated. Only the owner may impersonate a superuser.
 - **Owner** (identity flag, exactly one, transferable in a transaction; see the naming note in
-  [PROJECT-BLUEPRINT.md](PROJECT-BLUEPRINT.md)). Owner-only:
+  the project blueprint). Owner-only:
   feature flags, owner transfer, security policy, SSO config, cert-login config,
   backup export/restore, root-key export, security alerts.
 - `/auth/me` returns `privileges` (sets as arrays), `is_owner`, `features`,

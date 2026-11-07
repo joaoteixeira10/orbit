@@ -1,7 +1,7 @@
 # Architecture
 
-How Orbit is built and why. Orbit follows the project blueprint
-([PROJECT-BLUEPRINT.md](PROJECT-BLUEPRINT.md), [AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md));
+How Orbit is built and why. Orbit follows the auth blueprint
+([AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md));
 [BLUEPRINT-FIT.md](BLUEPRINT-FIT.md) lists where it differs. This page covers
 Orbit's own parts: the planner.
 

@@ -152,8 +152,8 @@ SSRF-guarded client. Details: [docs/SECURITY.md](docs/SECURITY.md).
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's built and why |
 | [RELEASING.md](docs/RELEASING.md) | Cutting a release |
 | [ROADMAP.md](docs/ROADMAP.md) | What could come next |
-| [BLUEPRINT-FIT.md](docs/BLUEPRINT-FIT.md) | How the project blueprint applies here |
-| [PROJECT-BLUEPRINT.md](docs/PROJECT-BLUEPRINT.md), [AUTH-BLUEPRINT.md](docs/AUTH-BLUEPRINT.md) | The blueprints Orbit follows |
+| [BLUEPRINT-FIT.md](docs/BLUEPRINT-FIT.md) | How the blueprints apply here |
+| [AUTH-BLUEPRINT.md](docs/AUTH-BLUEPRINT.md) | The auth blueprint Orbit follows |
 
 ## License
 

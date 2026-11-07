@@ -3972,7 +3972,7 @@ test('the assistant in Agent mode: it lines changes up in one card; the ticked o
     const wsFiles = ((await (await request.get(`/api/v1/workspaces/${ws.id}/files`, { headers: H })).json()) as { name: string }[]).map((x) => x.name)
     expect(wsFiles).toContain('notes.md')
     const pages = ((await (await request.get(`/api/v1/workspaces/${ws.id}/pages`, { headers: H })).json()) as { title: string }[]).map((x) => x.title)
-    expect(pages).toContain('notes')
+    expect(pages).toContain('Notes') // the file's own "# Notes" title
 
     // The choice of mode is remembered.
     await page.reload()

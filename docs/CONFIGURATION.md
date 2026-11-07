@@ -36,7 +36,7 @@ These are read by `docker compose`, not by Orbit.
 
 | Variable | Req | Default | Notes |
 |---|---|---|---|
-| `ORBIT_IMAGE` | – | `harbor.ubonito.org/orbit/orbit` | Image `docker-compose.yml` runs (a placeholder: point it at your registry). |
+| `ORBIT_IMAGE` | – | `ghcr.io/joaoteixeira10/orbit` | Image `docker-compose.yml` runs. Point it at your own registry to run a different build. |
 | `ORBIT_VERSION` | – | `latest` | Image tag. **Pin a release** (e.g. `v0.1.0`) for repeatable deploys. Update with `docker compose pull && docker compose up -d`. |
 | `ORBIT_PORT` | – | `8080` | Host port mapped to the container's `:8080`. |
 | `VERSION`, `COMMIT`, `BUILD_TIME` | – | from git | Build arguments for `docker-compose-build.yml` (`make up-build` fills them). They stamp the version shown in About. |

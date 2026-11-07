@@ -85,8 +85,8 @@ dev:             ## API (air) + SPA (Vite) with live reload → http://localhost
 VERSION    ?= $(shell git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --always --dirty 2>/dev/null || echo dev)
 COMMIT     ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-# Placeholder: set your registry (or REGISTRY=… on the command line).
-REGISTRY   ?= harbor.ubonito.org/orbit/orbit
+# Override with REGISTRY=… on the command line to push elsewhere.
+REGISTRY   ?= ghcr.io/joaoteixeira10/orbit
 PLATFORMS  ?= linux/amd64,linux/arm64
 VNUM       := $(patsubst v%,%,$(VERSION))
 

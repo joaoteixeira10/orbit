@@ -63,7 +63,7 @@ tokens are secrets only.
 | Name | Used by | Required |
 |---|---|---|
 | `HARBOR_REGISTRY_HOST` | Build & Push | yes — the Harbor host to log in to |
-| `HARBOR_IMAGE` | Build & Push | yes — the full image path on Harbor, host included, without a tag (`harbor.ubonito.org/orbit/orbit`; the same as `ORBIT_IMAGE` in `.env.example` and `REGISTRY` in the Makefile). Without the host the push goes to Docker Hub |
+| `HARBOR_IMAGE` | Build & Push | yes — the full image path on Harbor, host included, without a tag (e.g. `harbor.example.org/orbit/orbit`). Without the host the push goes to Docker Hub |
 | `HARBOR_USERNAME` | Build & Push | yes |
 | `HARBOR_PASSWORD` | Build & Push | yes — a secret |
 | `PACKAGES_TOKEN` | Build & Push | no — a dedicated credential for the Gitea registry; without it the built-in Actions token is used (needs package write) |
@@ -127,8 +127,8 @@ version **`0.2.0`**.
 
 `make release-image` is a local fallback: the same multi-arch build with
 `docker buildx`, pushed to `REGISTRY` (default
-`harbor.ubonito.org/orbit/orbit`, a placeholder) as `:v<version>` and `:latest`.
-It pushes to Harbor only, not to the Gitea registry, and needs a
+`ghcr.io/joaoteixeira10/orbit`) as `:v<version>` and `:latest`.
+It pushes to that registry only, not to Harbor or the Gitea registry, and needs a
 `docker login` first. Run it from the bumped `main` with
 `make release-image VERSION=0.2.0`.
 

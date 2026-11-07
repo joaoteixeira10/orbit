@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-07
+
 ### Added
 
 - **An assistant built in** — ✦ beside the inbox (or ⌘J): a chat window that

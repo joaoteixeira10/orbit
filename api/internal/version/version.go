@@ -33,7 +33,7 @@ const RepositoryURL = "https://gitea.ubonito.org/jteixeira/Orbit"
 // also injects Version/Commit/BuildTime via -ldflags; the -ldflags Version wins
 // at runtime, and Commit/BuildTime are only set that way.
 var (
-	Version   = "0.4.0"
+	Version   = "0.5.0"
 	Commit    = ""
 	BuildTime = ""
 )

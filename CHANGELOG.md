@@ -6,6 +6,14 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Changed
+
+- **The image and the update check moved to GitHub.** The image is now
+  `ghcr.io/joaoteixeira10/orbit` (`ORBIT_IMAGE`). About and the "newer
+  release?" check now read <https://github.com/joaoteixeira10/orbit> and its
+  latest GitHub release. A `REPO_URL` on any other host is still read as a
+  Gitea or Forgejo repo. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

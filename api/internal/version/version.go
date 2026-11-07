@@ -1,5 +1,5 @@
 // Package version exposes build/version info and a release checker that polls
-// the app's own (public) Gitea releases API for a newer version.
+// the app's own (public) GitHub releases API for a newer version.
 package version
 
 import (
@@ -20,7 +20,7 @@ import (
 // RepositoryURL is the default upstream repo (shown in About + used for the
 // update check). It can be overridden via REPO_URL, or the check disabled
 // entirely via UPDATE_CHECK=false (see config + NewChecker).
-const RepositoryURL = "https://gitea.ubonito.org/jteixeira/Orbit"
+const RepositoryURL = "https://github.com/joaoteixeira10/orbit"
 
 // These are overridden at build time via -ldflags, e.g.:
 //
@@ -83,7 +83,7 @@ type Checker struct {
 
 // NewChecker builds a release checker. repoURL defaults to RepositoryURL when
 // empty; enabled=false disables the update check (the repo URL is still used for
-// the About link). The releases API URL is derived from the repo URL (Gitea).
+// the About link). The releases API URL is derived from the repo URL.
 func NewChecker(repoURL string, enabled bool) *Checker {
 	if repoURL == "" {
 		repoURL = RepositoryURL
@@ -96,16 +96,23 @@ func NewChecker(repoURL string, enabled bool) *Checker {
 	}
 }
 
-// releasesAPI derives the Gitea "latest release" API URL from a repo web URL:
-// https://host/owner/repo → https://host/api/v1/repos/owner/repo/releases/latest.
+// releasesAPI derives the "latest release" API URL from a repo web URL:
+//
+//	https://github.com/owner/repo → https://api.github.com/repos/owner/repo/releases/latest
+//	https://host/owner/repo       → https://host/api/v1/repos/owner/repo/releases/latest (Gitea/Forgejo, for a REPO_URL override)
+//
+// GitHub's latest release skips drafts and pre-releases.
 func releasesAPI(repoURL string) string {
 	u, err := url.Parse(repoURL)
 	if err != nil || u.Host == "" {
 		return ""
 	}
-	p := strings.Trim(u.Path, "/")
+	p := strings.TrimSuffix(strings.Trim(u.Path, "/"), ".git")
 	if p == "" {
 		return ""
+	}
+	if h := strings.ToLower(u.Host); h == "github.com" || h == "www.github.com" {
+		return "https://api.github.com/repos/" + p + "/releases/latest"
 	}
 	return u.Scheme + "://" + u.Host + "/api/v1/repos/" + p + "/releases/latest"
 }

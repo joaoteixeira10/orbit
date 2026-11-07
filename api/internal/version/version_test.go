@@ -29,14 +29,20 @@ func TestNewCheckerOverrideAndDisable(t *testing.T) {
 	}
 }
 
+// TestReleasesAPIDerivation: a GitHub repo uses api.github.com, any other host
+// the Gitea-style /api/v1 path; a bad or empty URL gives no endpoint.
 func TestReleasesAPIDerivation(t *testing.T) {
-	got := releasesAPI("https://git.example.org/me/fork")
-	want := "https://git.example.org/api/v1/repos/me/fork/releases/latest"
-	if got != want {
-		t.Errorf("releasesAPI = %q, want %q", got, want)
+	cases := []struct{ repo, want string }{
+		{RepositoryURL, "https://api.github.com/repos/joaoteixeira10/orbit/releases/latest"},
+		{"https://github.com/me/fork.git", "https://api.github.com/repos/me/fork/releases/latest"},
+		{"https://git.example.org/me/fork", "https://git.example.org/api/v1/repos/me/fork/releases/latest"},
+		{"", ""},
+		{"https://github.com/", ""},
 	}
-	if u := releasesAPI(""); u != "" {
-		t.Errorf("releasesAPI(\"\") = %q, want empty", u)
+	for _, c := range cases {
+		if got := releasesAPI(c.repo); got != c.want {
+			t.Errorf("releasesAPI(%q) = %q, want %q", c.repo, got, c.want)
+		}
 	}
 }
 

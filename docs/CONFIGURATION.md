@@ -198,7 +198,7 @@ sync every 3 minutes; the `git_integration` feature flag turns all of it off.
 | `METRICS_ENABLED` | – | `false` | Serves Prometheus metrics at `/metrics`: HTTP requests and latency, sign-ins, and counts of users, workspaces, pages, open tasks and failing calendar subscriptions (see [deploy/](../deploy/README.md)). The endpoint has **no sign-in**: block it at your reverse proxy or keep it on an internal network. |
 | `SYSLOG_ADDR` | – | | Also sends every audit entry as one JSON line to syslog (facility AUTH), with its chain hash. `host:port` uses UDP (port 514 when left out); a path like `/dev/log` uses the local socket. If the address can't be reached at start-up, Orbit stops. |
 | `UPDATE_CHECK` | – | `true` | Checks for a newer release every 6 hours and shows it in About. `false` turns it off. |
-| `REPO_URL` | – | `https://gitea.ubonito.org/jteixeira/Orbit` | Repository for the About link and the update check (a Gitea repo URL). |
+| `REPO_URL` | – | `https://github.com/joaoteixeira10/orbit` | Repository for the About link and the update check. A `github.com` URL reads its latest GitHub release; any other host is treated as Gitea or Forgejo (`/api/v1/repos/…`). |
 
 ## Secrets backends (file and vault)
 

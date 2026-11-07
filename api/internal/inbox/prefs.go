@@ -3,7 +3,7 @@ package inbox
 import (
 	"encoding/json"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // Delivery is where one kind of notification goes besides the inbox.

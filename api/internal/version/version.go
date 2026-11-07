@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"github.com/joaoteixeira10/orbit/api/internal/safedial"
 )
 
 // RepositoryURL is the default upstream repo (shown in About + used for the
@@ -24,9 +24,9 @@ const RepositoryURL = "https://github.com/joaoteixeira10/orbit"
 
 // These are overridden at build time via -ldflags, e.g.:
 //
-//	-X gitea.ubonito.org/jteixeira/orbit/api/internal/version.Version=1.2.3
-//	-X gitea.ubonito.org/jteixeira/orbit/api/internal/version.Commit=abc1234
-//	-X gitea.ubonito.org/jteixeira/orbit/api/internal/version.BuildTime=2026-05-29T12:00:00Z
+//	-X github.com/joaoteixeira10/orbit/api/internal/version.Version=1.2.3
+//	-X github.com/joaoteixeira10/orbit/api/internal/version.Commit=abc1234
+//	-X github.com/joaoteixeira10/orbit/api/internal/version.BuildTime=2026-05-29T12:00:00Z
 //
 // Version is bumped per release by scripts/set-version.sh (committed before the
 // build) so the value is consistent across the repo. The build/release workflow

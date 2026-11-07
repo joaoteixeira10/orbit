@@ -4,7 +4,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/docs"
+	"github.com/joaoteixeira10/orbit/api/docs"
 
 	"github.com/gin-gonic/gin"
 )

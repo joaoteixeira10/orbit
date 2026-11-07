@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/backup"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/version"
+	"github.com/joaoteixeira10/orbit/api/internal/backup"
+	"github.com/joaoteixeira10/orbit/api/internal/uploads"
+	"github.com/joaoteixeira10/orbit/api/internal/version"
 
 	"github.com/gin-gonic/gin"
 )

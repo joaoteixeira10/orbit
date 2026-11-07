@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/uploads"
 
 	"github.com/gin-gonic/gin"
 )

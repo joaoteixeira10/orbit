@@ -17,10 +17,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm/clause"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
+	"github.com/joaoteixeira10/orbit/api/internal/assistant"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/uploads"
 )
 
 // Attachments: files a person adds to a conversation with the assistant

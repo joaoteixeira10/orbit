@@ -1,4 +1,4 @@
-module gitea.ubonito.org/jteixeira/orbit/api
+module github.com/joaoteixeira10/orbit/api
 
 go 1.26.0
 

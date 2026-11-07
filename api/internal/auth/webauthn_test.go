@@ -3,7 +3,7 @@ package auth
 import (
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
+	"github.com/joaoteixeira10/orbit/api/internal/ephemeral"
 )
 
 func TestChallengeStoreSingleUse(t *testing.T) {

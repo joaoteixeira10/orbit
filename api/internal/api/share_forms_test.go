@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/feature"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // TestGuestLinks: an editor makes a link to a page and what's under it; a

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
+	"github.com/joaoteixeira10/orbit/api/internal/search"
 )
 
 type diagramResp struct {

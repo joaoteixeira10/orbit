@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"github.com/joaoteixeira10/orbit/api/internal/ephemeral"
+	"github.com/joaoteixeira10/orbit/api/internal/keystore"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/safedial"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"

@@ -16,10 +16,10 @@ import (
 	"slices"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
+	"github.com/joaoteixeira10/orbit/api/internal/config"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/planner"
+	"github.com/joaoteixeira10/orbit/api/internal/search"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
+	"github.com/joaoteixeira10/orbit/api/internal/planner"
 )
 
 // The MCP tools: each a call (or two) to the REST API, its answer trimmed to

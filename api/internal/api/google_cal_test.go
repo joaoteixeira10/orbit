@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/google"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/google"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	ical "github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"

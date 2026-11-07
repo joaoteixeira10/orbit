@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/caldav"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
+	"github.com/joaoteixeira10/orbit/api/internal/caldav"
+	"github.com/joaoteixeira10/orbit/api/internal/feature"
 )
 
 // UseCalDAV gives the scheduler the CalDAV sync: every few minutes each

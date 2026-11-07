@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
+	"github.com/joaoteixeira10/orbit/api/internal/notify"
 )
 
 // TestPersonalChannels: a person adds their own Slack webhook (it must take a

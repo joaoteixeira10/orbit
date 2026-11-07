@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
 
 	"github.com/gin-gonic/gin"
 )

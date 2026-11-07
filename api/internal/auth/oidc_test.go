@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
+	"github.com/joaoteixeira10/orbit/api/internal/ephemeral"
 )
 
 func TestExtractRoleClaim(t *testing.T) {

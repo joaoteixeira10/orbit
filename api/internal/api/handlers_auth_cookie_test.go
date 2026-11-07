@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
+	"github.com/joaoteixeira10/orbit/api/internal/config"
 
 	"github.com/gin-gonic/gin"
 )

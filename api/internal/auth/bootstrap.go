@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"

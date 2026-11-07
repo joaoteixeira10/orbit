@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/events"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/glebarez/sqlite"

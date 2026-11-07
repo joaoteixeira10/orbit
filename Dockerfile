@@ -33,7 +33,7 @@ ARG BUILD_TIME=""
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0 GOFLAGS=-buildvcs=false
-RUN VP=gitea.ubonito.org/jteixeira/orbit/api/internal/version; \
+RUN VP=github.com/joaoteixeira10/orbit/api/internal/version; \
     LDFLAGS="-s -w"; \
     [ -n "$VERSION" ]    && LDFLAGS="$LDFLAGS -X $VP.Version=$VERSION"; \
     [ -n "$COMMIT" ]     && LDFLAGS="$LDFLAGS -X $VP.Commit=$COMMIT"; \

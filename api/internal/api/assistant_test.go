@@ -13,9 +13,9 @@ import (
 	"sync"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/assistant"
+	"github.com/joaoteixeira10/orbit/api/internal/config"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // fakeModel is a stand-in for an OpenAI-style server: asked first, it calls

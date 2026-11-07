@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
+	"github.com/joaoteixeira10/orbit/api/internal/feature"
+	"github.com/joaoteixeira10/orbit/api/internal/gitsync"
 )
 
 // UseGit gives the scheduler the git sync: every few minutes it pulls the

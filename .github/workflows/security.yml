@@ -1,0 +1,78 @@
+# Security scans — three independent jobs so one failure doesn't mask the others:
+#   • govulncheck — Go deps + stdlib, call-graph aware (only *reachable* CVEs).
+#   • npm-audit   — shipped web dependencies.
+#   • gitleaks    — secrets across the full git history.
+# Runs on every PR (like Test/E2E), plus weekly — the cron still matters because
+# new advisories/leaks can surface against code that hasn't changed since the
+# last PR, which a PR-only trigger would never catch.
+name: Security scan
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    env:
+      GOFLAGS: -buildvcs=false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.10"
+          cache-dependency-path: api/go.sum
+      # @latest is intentional: a vuln scanner should use the freshest detector.
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          cd api && "$(go env GOPATH)/bin/govulncheck" ./...
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: install
+        working-directory: web
+        run: npm ci
+      # Fail only on high/critical advisories in *shipped* deps; dev-only tooling
+      # (vite/vitest/etc.) doesn't reach the served artifact.
+      - name: npm audit (production deps)
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=high
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history — gitleaks scans every commit
+      # Latest gitleaks on purpose, like govulncheck: new detection rules should
+      # apply to old history too.
+      # The token only lifts the API rate limit (shared runner IPs hit the
+      # anonymous one).
+      - name: secret scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+            | grep -oE '"tag_name": *"v[^"]+"' | head -1 | sed -E 's/.*"v([^"]+)".*/\1/')
+          echo "gitleaks v$ver"
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --verbose

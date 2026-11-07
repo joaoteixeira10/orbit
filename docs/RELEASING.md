@@ -18,7 +18,7 @@ make set-version VERSION=0.2.0      # rewrites every version marker (runs on the
 #    edit CHANGELOG.md: "## [Unreleased]" → "## [0.2.0] - YYYY-MM-DD",
 #    and add a fresh, empty "## [Unreleased]" above it
 git commit -am "release: 0.2.0"
-#    run `make check lint` locally, push, open a PR, merge it to main
+#    push, open a PR, merge it to main once Test / E2E / Security scan are green
 # 2. GitHub → Actions → "Build & Push" → branch main, version 0.2.0   (image :v0.2.0 + :latest)
 # 3. gh release create v0.2.0 --target main …  (tag v0.2.0 + release notes, see step 3)
 # 4. Check the package, the release page, and /api/v1/version on a deployed instance.
@@ -45,15 +45,16 @@ git commit -am "release: 0.2.0"
 
 ## Workflows
 
-One workflow, in `.github/workflows/`:
+All in `.github/workflows/`.
 
 | Workflow | File | Runs on | Does |
 |---|---|---|---|
+| Test | `test.yml` | pull requests, by hand | Go `gofmt`, `vet`, `golangci-lint`, build, tests with coverage; web lint, typecheck, Vitest |
+| E2E | `e2e.yml` | pull requests, by hand | Builds the binary with the SPA embedded, boots it, runs Playwright (with a Radicale service for the CalDAV test) |
+| Security scan | `security.yml` | pull requests, by hand, Mondays 06:00 UTC | `govulncheck`, `npm audit --omit=dev --audit-level=high`, `gitleaks` over the full history |
 | Build & Push | `docker-image.yml` | **by hand only** | One multi-arch build, pushed to this repo's GitHub Container Registry (`ghcr.io/<owner>/<repo>`) |
 
-It logs in with the built-in `GITHUB_TOKEN`, so no secrets or variables are
-needed. There is no CI on pull requests: run `make check lint` locally before
-merging.
+They use the built-in `GITHUB_TOKEN`, so no secrets or variables are needed.
 
 ## 0. Pre-flight
 
@@ -91,7 +92,8 @@ In the same branch:
 1. Rename `## [Unreleased]` to `## [0.2.0] - YYYY-MM-DD`.
 2. Add a new, empty `## [Unreleased]` above it.
 
-Commit, run `make check lint`, push, open a PR, and merge it to `main`.
+Commit, push, open a PR, and merge it to `main` when the pull-request
+workflows are green.
 
 ## 2. Build & Push the image
 

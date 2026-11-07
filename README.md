@@ -128,7 +128,7 @@ make swag                   # regenerate the OpenAPI spec after changing handler
 | `make dev` | the dev stack (`docker-compose.dev.yml`): API on :8090, app on :5180 |
 | `make test` / `vet` / `lint` / `vuln` | Go checks, in a pinned container |
 | `make web-test` / `web-typecheck` / `web-lint` / `web-build` | the web checks |
-| `make check` | vet, Go tests, web lint, typecheck and tests (run with `make lint` before merging) |
+| `make check` | what CI's Test workflow runs (minus lint) |
 | `make image` / `up-build` | build the image locally / build and run it |
 | `make set-version VERSION=x.y.z` | bump every version marker |
 

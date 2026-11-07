@@ -52,7 +52,7 @@ vet:             ## go vet ./...
 	$(DOCKER_GO) go vet ./...
 fmt:             ## gofmt -w
 	$(DOCKER_GO) gofmt -l -w .
-lint:            ## golangci-lint (pinned)
+lint:            ## golangci-lint (pinned, same as CI)
 	$(DOCKER_GO) sh -c 'command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION); golangci-lint run ./...'
 vuln:            ## govulncheck (pinned)
 	$(DOCKER_GO) sh -c 'go install golang.org/x/vuln/cmd/govulncheck@$(VULN_VERSION) && govulncheck ./...'
@@ -75,7 +75,7 @@ web-test:        ## vitest
 web-build:       ## vite build
 	$(DOCKER_NODE) npm run build
 
-check: vet test web-lint web-typecheck web-test  ## vet + tests + web lint/typecheck/tests (run with lint before merging)
+check: vet test web-lint web-typecheck web-test  ## what CI's Test workflow runs (minus lint)
 
 ## --- Dev loop ---
 dev:             ## API (air) + SPA (Vite) with live reload → http://localhost:5180

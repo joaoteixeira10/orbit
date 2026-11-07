@@ -1,0 +1,88 @@
+# End-to-end (Playwright). Builds the single binary (SPA embedded), then in ONE
+# step boots it and runs the browser tests against it, so the server is up for
+# the whole test and stopped after it. Runs on every PR + on demand.
+name: E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    # A CalDAV server for the two-way calendar test (any password). The job
+    # runs on the host, so it is reached at the container's own Docker-network
+    # address: a private address the guarded dialer allows (localhost, which a
+    # published port would need, it refuses).
+    services:
+      radicale:
+        image: tomsquest/docker-radicale:latest
+    env:
+      GOFLAGS: -buildvcs=false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.10"
+          cache-dependency-path: api/go.sum
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build SPA + embed + build binary
+        run: |
+          (cd web && npm run build)
+          rm -rf api/internal/webui/dist
+          cp -r web/dist api/internal/webui/dist
+          (cd api && go build -o /tmp/orbit ./cmd/server)
+
+      - name: Find the CalDAV server
+        run: |
+          ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${{ job.services.radicale.id }}")
+          echo "E2E_CALDAV_URL=http://${ip}:5232" >> "$GITHUB_ENV"
+          for _ in $(seq 1 30); do
+            curl -sS -o /dev/null "http://${ip}:5232/" && break
+            sleep 1
+          done
+          echo "CalDAV at http://${ip}:5232"
+
+      - name: Install Playwright browser
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E (server + tests in one step)
+        working-directory: web
+        env:
+          DB_DRIVER: sqlite
+          DB_URL: /tmp/e2e-orbit.db
+          ORBIT_MASTER_KEY: e2e-master-key-please-32-bytes-minimum
+          JWT_SECRET: e2e-jwt-secret-please-32-bytes-minimum!!
+          ADMIN_USER: admin
+          ADMIN_PASSWORD: admin123
+          GIN_MODE: debug
+          HTTP_ADDR: ":8080"
+          # Every test signs in; keep the sign-in rate limit out of the way.
+          AUTH_RATE_BURST: "50"
+          AUTH_RATE_PER_MINUTE: "600"
+          E2E_BASE_URL: http://localhost:8080
+        run: |
+          /tmp/orbit & SRV=$!
+          trap 'kill "$SRV" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8080/api/v1/readyz >/dev/null 2>&1 && break
+            sleep 1
+          done
+          npm run e2e

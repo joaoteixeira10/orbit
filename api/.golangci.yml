@@ -1,6 +1,5 @@
-# golangci-lint config (v2). Runs in CI (.gitea/workflows/test.yml) and via
-# `make lint`. The standard set (errcheck, govet, ineffassign, staticcheck,
-# unused) plus a few high-value extras.
+# golangci-lint config (v2). Runs via `make lint`. The standard set
+# (errcheck, govet, ineffassign, staticcheck, unused) plus a few high-value extras.
 version: "2"
 
 linters:

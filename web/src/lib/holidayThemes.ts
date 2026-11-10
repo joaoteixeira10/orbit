@@ -256,7 +256,7 @@ export const HOLIDAYS: Holiday[] = [
     },
     decor: { kind: 'lights', count: 24, colors: ['#ff4d5e', '#ffc94a', '#4fd18b', '#fff3d6'] },
     particles: { kind: 'fall', count: 80, viewBox: '0 0 10 10', shapes: [DOT], colors: ['var(--h-flake)'], size: [2, 5], dur: [9, 20], opacity: [0.3, 0.8] }, // blur(0.6px) when size > 3
-    window: y => ({ start: d(y, 12, 1), end: d(y, 12, 26), peak: d(y, 12, 25) }),
+    window: y => ({ start: d(y, 12, 20), end: d(y, 12, 26), peak: d(y, 12, 25) }),
   },
 
   // ── Halloween ──

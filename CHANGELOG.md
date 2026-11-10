@@ -13,6 +13,11 @@ merge, not at release time.
 - **Sub-tasks can be renamed and reordered** in a task's details: click the
   name to fix it, drag the grip to move it.
 
+### Changed
+
+- **Christmas theme starts on 20 December** (was 1 December) when the holiday
+  theme is on Automatic; it still ends on 26 December.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

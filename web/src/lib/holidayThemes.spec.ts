@@ -12,7 +12,9 @@ describe('holiday themes', () => {
     expect(auto(2026, 11, 1)).toBe('halloween')
     expect(auto(2026, 11, 2)).toBe(null)
     expect(auto(2026, 11, 30)).toBe(null)
-    expect(auto(2026, 12, 1)).toBe('christmas')
+    expect(auto(2026, 12, 1)).toBe(null)
+    expect(auto(2026, 12, 19)).toBe(null)
+    expect(auto(2026, 12, 20)).toBe('christmas')
     expect(auto(2026, 12, 26)).toBe('christmas')
     expect(auto(2026, 12, 27)).toBe('nye')
     expect(auto(2027, 1, 1)).toBe('nye') // the window that began the year before

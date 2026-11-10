@@ -1978,7 +1978,7 @@ petals; on the overviews (your Home and each workspace's) also lights,
 bunting or things on threads along the top and art on the cards, and by your
 greeting a countdown ("51 days to Christmas"; New Year's in hours on 31
 December). Pick **Off**, **Automatic** — each in its season:
-Halloween 15 October – 1 November, Christmas 1–26 December, New Year's Eve
+Halloween 15 October – 1 November, Christmas 20–26 December, New Year's Eve
 27 December – 1 January, Easter Palm Sunday – Easter Monday, Santos Populares
 June, Lunar New Year a week before to two weeks after (the card says which
 shows now) — or one of the six, shown now whatever the date. It's saved at

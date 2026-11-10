@@ -16,7 +16,7 @@ export const holidayEn = {
       noneNow: 'None in season today',
       saved: 'Holiday theme saved',
       season: {
-        christmas: '1–26 December',
+        christmas: '20–26 December',
         halloween: '15 October – 1 November',
         nye: '27 December – 1 January',
         easter: 'Palm Sunday – Easter Monday',
@@ -84,7 +84,7 @@ export const holidayPt = {
       noneNow: 'Nenhuma na época hoje',
       saved: 'Tema festivo guardado',
       season: {
-        christmas: '1–26 de dezembro',
+        christmas: '20–26 de dezembro',
         halloween: '15 de outubro – 1 de novembro',
         nye: '27 de dezembro – 1 de janeiro',
         easter: 'Domingo de Ramos – Segunda-feira de Páscoa',

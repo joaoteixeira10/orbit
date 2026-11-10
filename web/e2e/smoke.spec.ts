@@ -3432,6 +3432,12 @@ test('impersonating shows the person’s workspaces; the audit log has its start
   await expect(page.getByText('Viewing as')).toBeVisible()
   await expect(side.getByText('Ivo Garden', { exact: true })).toBeVisible()
   await expect(side.getByText(mine.name, { exact: true })).toBeHidden()
+  // Something done as Ivo, while impersonating: audited as Ivo's, by the admin.
+  await page.getByRole('button', { name: 'New workspace' }).first().click()
+  await page.getByRole('button', { name: /^Personal/ }).click()
+  await page.getByPlaceholder('Workspace name').fill('Ivo Shed')
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ivo Shed' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Return to my account' }).click()
   await expect(side.getByText(mine.name, { exact: true })).toBeVisible()
@@ -3441,6 +3447,12 @@ test('impersonating shows the person’s workspaces; the audit log has its start
   await page.getByTestId('audit-imp').click()
   await expect(page.locator('.act-kind', { hasText: 'user.impersonate_end' })).toBeVisible()
   await expect(page.locator('.act-kind', { hasText: /^user\.impersonate$/ })).toBeVisible()
+  // The workspace was made as Ivo, by the admin: a pill beside Ivo's name says so.
+  const made = page.locator('tr', { has: page.getByTestId('audit-via-admin') })
+  await expect(made).toHaveCount(1)
+  await expect(made.locator('.act-kind')).toHaveText('workspace.create')
+  await expect(made).toContainText('ivo')
+  await expect(made.getByTestId('audit-via-admin')).toHaveText('via admin')
   await expect(page.locator('.act-kind', { hasText: 'auth.login' })).toHaveCount(0)
 })
 

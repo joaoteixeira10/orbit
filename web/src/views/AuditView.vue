@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search } from 'lucide-vue-next'
+import { Search, VenetianMask } from 'lucide-vue-next'
 import { auditApi } from '@/api'
 import type { AuditEntry } from '@/api/types'
 import { useToastStore } from '@/stores/toast'
@@ -141,7 +141,11 @@ function otherDetail(a: AuditEntry) {
             <td><span class="act-kind" :class="[kind(a), { failed: !result(a).ok }]">{{ kind(a) }}</span></td>
             <td>
               <b>{{ (!a.user_id && changeDetail(a.detail).actor) || a.user_name || '—' }}</b>
-              <div class="faint small">{{ [a.impersonator_name ? t('audit.via', { admin: a.impersonator_name }) : '', changeDetail(a.detail).via, a.ip].filter(Boolean).join(' · ') }}</div>
+              <!-- Done by an admin signed in as them: said plainly, beside the name. -->
+              <span v-if="a.impersonator_name" class="via-admin" :title="t('audit.viaTitle', { admin: a.impersonator_name })" data-testid="audit-via-admin">
+                <VenetianMask class="h-3 w-3" aria-hidden="true" />{{ t('audit.via', { admin: a.impersonator_name }) }}
+              </span>
+              <div class="faint small">{{ [changeDetail(a.detail).via, a.ip].filter(Boolean).join(' · ') }}</div>
             </td>
             <td class="mono small">
               <div v-if="changeDetail(a.detail).scope" class="scope">{{ changeDetail(a.detail).scope }}</div>
@@ -174,6 +178,20 @@ function otherDetail(a: AuditEntry) {
 </template>
 
 <style scoped>
+.via-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
 .btn.btn-on {
   background: var(--accent);
   border-color: var(--accent);

@@ -152,6 +152,8 @@ export const useBrandingStore = defineStore('branding', {
     applyAccent() {
       const root = document.documentElement
       this.dark = root.classList.contains('dark')
+      // A developer theme also washes the top of the page in its colour.
+      root.classList.toggle('dev-theme', !!this.theme)
       const setRamp = (accent: string, strong: string, fg: string, text = accent) => {
         root.style.setProperty('--accent', accent)
         root.style.setProperty('--accent-strong', strong)

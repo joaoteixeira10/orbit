@@ -195,6 +195,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv11", "ss01";
 }
+/* A developer theme: a soft wash of its colour from the top right of the
+   main column (AppShell's .main; a holiday theme paints its own). */
+html.dev-theme .main:not(.holiday-main) {
+  background: radial-gradient(1200px 600px at 78% -8%, var(--accent-soft), transparent 60%), var(--bg);
+}
 code,
 .mono {
   font-family: var(--font-mono);

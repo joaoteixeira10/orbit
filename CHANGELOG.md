@@ -17,6 +17,15 @@ merge, not at release time.
 
 - **Christmas theme starts on 20 December** (was 1 December) when the holiday
   theme is on Automatic; it still ends on 26 December.
+- **Task notes keep one height** — the notes box in a task's details is the
+  same size empty or long; longer notes fade at the bottom, scroll inside it,
+  and **Show all** opens it to fit them. Less space above Schedule.
+
+### Fixed
+
+- Typing into a task's empty notes no longer drops out of editing after the
+  first character.
+- The comment box no longer draws a second focus ring inside its own.
 
 ## [0.5.0] - 2026-11-07
 

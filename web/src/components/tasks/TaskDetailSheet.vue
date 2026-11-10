@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, ChevronDown, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical } from 'lucide-vue-next'
+import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, ChevronDown, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical, Maximize2, Minimize2 } from 'lucide-vue-next'
 import { estimateText } from '@/lib/weekPlan'
 import { durationOf, useFocusStore } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
@@ -90,6 +90,28 @@ const notes = ref('')
 // boxes that tick; a click (not on a link or box) or the pencil edits them.
 const editingNotes = ref(false)
 const notesEl = ref<InstanceType<typeof CodeArea> | null>(null)
+// The notes box keeps one height; when they're longer it fades at the
+// bottom (until scrolled to the end) and "Show all" lets it grow to fit.
+const notesBox = ref<HTMLElement | null>(null)
+const notesAll = ref(false)
+const notesMore = ref(false)
+const notesAtEnd = ref(true)
+function measureNotes() {
+  const el = notesBox.value
+  notesMore.value = !!el && el.scrollHeight > el.clientHeight + 1
+  notesAtEnd.value = !el || el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+}
+const notesSizes = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measureNotes)
+watch(notesBox, (el) => {
+  notesSizes?.disconnect()
+  if (el) {
+    notesSizes?.observe(el)
+    if (el.firstElementChild) notesSizes?.observe(el.firstElementChild)
+  }
+  measureNotes()
+})
+watch([notes, notesAll], () => void nextTick(measureNotes))
+onBeforeUnmount(() => notesSizes?.disconnect())
 const tagDraft = ref('')
 const subDraft = ref('')
 watch(
@@ -101,6 +123,7 @@ watch(
     title.value = task.value?.title ?? ''
     notes.value = task.value?.notes ?? ''
     editingNotes.value = false
+    notesAll.value = false
   },
   { immediate: true },
 )
@@ -179,6 +202,12 @@ function notesEsc(e: KeyboardEvent) {
 function tickInNotes(i: number) {
   notes.value = toggleTask(notes.value, i)
   void save({ notes: notes.value })
+}
+// A click in the box's empty space below the text writes at its end.
+function notesBoxDown(e: MouseEvent) {
+  if (!editable.value || (e.target as HTMLElement).closest('.cm-editor')) return
+  e.preventDefault()
+  notesEl.value?.focus('end')
 }
 function notesClick(e: MouseEvent) {
   if (!(e.target as HTMLElement).closest('a, input, pre, button, .md-remote-img, img')) void editNotes()
@@ -443,11 +472,11 @@ async function startFocus() {
               @blur="saveTitle"
               @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
             />
-            <div v-if="notes.trim() && !editingNotes" class="notes-box" :class="{ editable }" data-testid="task-notes-view" @click="notesClick">
+            <div v-if="notes.trim() && !editingNotes" ref="notesBox" class="notes-box" :class="{ editable, all: notesAll, fade: notesMore && !notesAtEnd }" data-testid="task-notes-view" @click="notesClick" @scroll="measureNotes">
               <MarkdownView class="notes-md" :content="notes" :editable="editable" math breaks @toggle="tickInNotes" @edit="editNotes" />
             </div>
             <!-- The editor's size and look from here (it takes no class of its own). -->
-            <div v-else-if="editable || notes.trim()" class="math-wrap notes-area" @keydown.esc="notesEsc">
+            <div v-else-if="editable || notes.trim()" ref="notesBox" class="math-wrap notes-area" :class="{ all: notesAll, fade: notesMore && !notesAtEnd }" data-testid="task-notes-box" @scroll="measureNotes" @keydown.esc="notesEsc" @mousedown="notesBoxDown" @focusin="editingNotes = editable">
               <CodeArea
                 id="task-notes"
                 ref="notesEl"
@@ -461,6 +490,9 @@ async function startFocus() {
                 @blur="saveNotes"
               />
             </div>
+            <button v-if="notesMore || notesAll" type="button" class="notes-more" data-testid="task-notes-more" @mousedown.prevent @click="notesAll = !notesAll">
+              <component :is="notesAll ? Minimize2 : Maximize2" class="h-3.5 w-3.5" />{{ notesAll ? t('tasks.notesLess') : t('tasks.notesAll') }}
+            </button>
           </div>
         </div>
         <p v-if="gitReadOnly" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text" data-testid="git-read-only">{{ t('git.bot.readOnlyTask', { host: gitHost }) }}</p>
@@ -805,7 +837,7 @@ async function startFocus() {
   overflow-y: auto;
 }
 .t-head {
-  padding: 18px 22px 14px;
+  padding: 18px 22px 8px;
   background: var(--surface);
 }
 /* Dark: one dark grey for the whole sheet (the grouped black was too dark),
@@ -883,14 +915,23 @@ html.dark .t-side {
   font-size: 13px;
   color: var(--text-2);
 }
+.t-body > .sec:first-child {
+  margin-top: 10px;
+}
 .title-area {
   field-sizing: content;
 }
-/* Notes: quiet text under the title; while written in, a box of its own
-   that scrolls when long (the fields stay a scroll away). */
+/* Notes: quiet text under the title; while written in, a box of its own.
+   Always the same height (about six lines), empty or long, scrolling
+   inside, so the fields below never move. */
+.notes-area,
+.notes-box {
+  --notes-h: 136px;
+}
 .notes-area {
-  max-height: 40vh;
+  height: var(--notes-h);
   overflow-y: auto;
+  cursor: text;
   margin-top: 2px;
   padding: 2px 0;
   border-radius: 8px;
@@ -909,12 +950,37 @@ html.dark .t-side {
   min-height: 1.6em;
 }
 .notes-box {
-  max-height: 40vh;
+  height: var(--notes-h);
   overflow-y: auto;
   margin-top: 2px;
 }
 .notes-box.editable {
   cursor: text;
+}
+.notes-area.all,
+.notes-box.all {
+  height: auto;
+  min-height: var(--notes-h);
+}
+/* More below: the last lines fade out until scrolled to. */
+.notes-area.fade,
+.notes-box.fade {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+}
+.notes-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.notes-more:hover {
+  background: var(--fill-2);
 }
 .notes-box .notes-md {
   font-size: 14px;

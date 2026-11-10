@@ -491,6 +491,10 @@ function onKey(e: KeyboardEvent) {
   font-size: 14px;
   outline: none;
 }
+/* The box shows the focus (its ring); the field inside draws none. */
+.comment-box:focus-visible {
+  box-shadow: none;
+}
 .comment-edit {
   display: block;
   width: 100%;

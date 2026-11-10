@@ -860,8 +860,11 @@ and mentions** is in Settings → Notifications.
 **Notes** are Markdown, as pages are: **bold**, lists, `- [ ]` checklists,
 links, code, quotes. They read rendered — tick a checklist's boxes right
 there — and a click on the text (or a double click) shows the source to edit;
-click outside, or **Esc**, to save. The task list and the board show the
-notes' first line as plain text. A task linked to a git issue keeps the
+click outside, or **Esc**, to save. The notes box is always the same height,
+empty or long, so the fields below stay put. Longer notes fade out at the
+bottom and scroll inside it; **Show all** under them opens the box to fit
+them all (**Show less** shrinks it back).
+The task list and the board show the notes' first line as plain text. A task linked to a git issue keeps the
 issue's body here, so it reads the same as on the server.
 
 **Estimates**: how long a task should take — **Estimate** in its details,

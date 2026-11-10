@@ -441,10 +441,24 @@ test('task notes: written in Markdown, read rendered, a box ticks, the row shows
   const row = page.locator('.task-row', { hasText: 'Essay' })
   await row.hover()
   await row.getByTitle('Details').click()
+  // Empty or long, the notes take the same room; long ones scroll inside.
+  const box = page.getByTestId('task-notes-box')
+  const height = (el: HTMLElement) => el.offsetHeight // the layout's, not the opening animation's
+  const emptyH = await box.evaluate(height)
   await page.getByTestId('task-notes').click()
-  await page.keyboard.insertText('**Bring** the [rubric](https://example.org)\n\n- [ ] outline\n- [ ] draft')
+  await page.keyboard.insertText('**Bring** the [rubric](https://example.org)\n\n- [ ] outline\n- [ ] draft' + '\n\nmore'.repeat(12))
+  await expect.poll(() => box.evaluate(height)).toBe(emptyH)
   await page.locator('#task-title').click() // leave the notes: they save and render
   const view = page.getByTestId('task-notes-view')
+  await expect.poll(() => view.evaluate(height)).toBe(emptyH)
+  expect(await view.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+  // There's more: the box fades at the bottom, and Show all opens it to fit.
+  await expect(view).toHaveClass(/fade/)
+  await page.getByTestId('task-notes-more').click()
+  await expect.poll(() => view.evaluate(height)).toBeGreaterThan(emptyH)
+  await expect(view).not.toHaveClass(/fade/)
+  await page.getByTestId('task-notes-more').click()
+  await expect.poll(() => view.evaluate(height)).toBe(emptyH)
   await expect(view.locator('strong')).toHaveText('Bring')
   await expect(view.getByRole('link', { name: 'rubric' })).toHaveAttribute('href', 'https://example.org')
   await view.locator('input[type=checkbox]').first().check()
@@ -3534,7 +3548,7 @@ test('task sheet: how its date stands, a status from its menu, any estimate, a f
   await expect(page.getByTestId('activity-line').first()).toContainText('created this task')
   // Notes keep their lines; long ones, even while written in, leave the fields and buttons in reach.
   await expect(page.getByTestId('task-notes-view').locator('br')).toHaveCount(60)
-  await page.getByTestId('task-notes-view').locator('p').first().click()
+  await page.getByTestId('task-notes-view').locator('p').first().click({ position: { x: 20, y: 8 } }) // its first line (the rest scrolls inside the box)
   await expect(page.getByTestId('task-start-focus')).toBeInViewport()
   await expect(page.getByTestId('task-due-bar')).toBeInViewport()
   await page.keyboard.press('Escape')

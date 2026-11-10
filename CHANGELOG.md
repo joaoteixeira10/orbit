@@ -12,6 +12,11 @@ merge, not at release time.
   name (A–Z), newest or oldest first, or as before; remembered per browser.
 - **Sub-tasks can be renamed and reordered** in a task's details: click the
   name to fix it, drag the grip to move it.
+- **More for assistants (MCP and the built-in one)** — habits (list, tick a
+  day, add, change, archive, delete), goals (and a task counting towards one),
+  the journal (read a day or a month, write or add to a day), bookmarks,
+  the focus timer (start, stop, today's sessions), and changing or deleting
+  notes.
 
 ### Changed
 

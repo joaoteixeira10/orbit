@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/assistant"
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
@@ -81,6 +82,13 @@ func (f *fakeModel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// "misuse:<id>": moves a "page" by an id that isn't one (a task's).
 	if id, ok := strings.CutPrefix(fmt.Sprint(last["content"]), "misuse:"); ok && last["role"] == "user" {
 		chunk(`{"tool_calls":[{"index":0,"id":"m1","type":"function","function":{"name":"move_page","arguments":`+jsonString(`{"page_id":"`+id+`","summary":"Move Buy milk to Personal"}`)+`}}]}`, "tool_calls")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		return
+	}
+	// "tick:<habit id>:<date>": ticks a habit that day.
+	if rest, ok := strings.CutPrefix(fmt.Sprint(last["content"]), "tick:"); ok && last["role"] == "user" {
+		id, date, _ := strings.Cut(rest, ":")
+		chunk(`{"tool_calls":[{"index":0,"id":"h1","type":"function","function":{"name":"check_habit","arguments":`+jsonString(`{"habit_id":"`+id+`","date":"`+date+`","summary":"Tick NTE Farm"}`)+`}}]}`, "tool_calls")
 		_, _ = io.WriteString(w, "data: [DONE]\n\n")
 		return
 	}
@@ -393,6 +401,30 @@ func TestAssistantAgent(t *testing.T) {
 	ev = sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"misuse:`+task.ID+`"}`, owner).Body.String())
 	if len(ev) != 3 || len(ev[1].Actions) != 0 || !strings.Contains(ev[1].Text, `it's the task "Buy milk"`) {
 		t.Errorf("a task as a page: %+v", ev)
+	}
+
+	// A habit (their own): the card names it; approved, the day is ticked.
+	life := createWS(t, r, owner, `{"name":"Farm","kind":"personal","starter":false,"modules":["home","habits"]}`)
+	text, _ = mcpToolCall(t, r, owner, "create_habit", map[string]any{"workspace_id": life.ID, "title": "NTE Farm"})
+	var habit struct{ ID string }
+	_ = json.Unmarshal([]byte(text), &habit)
+	today := time.Now().Format("2006-01-02")
+	ev = sseEvents(t, authdo(r, "POST", "/api/v1/assistant/chat", `{"mode":"agent","message":"tick:`+habit.ID+`:`+today+`"}`, owner).Body.String())
+	var lined assistantEvent
+	for _, e := range ev {
+		if e.Type == "answer" {
+			lined = e
+		}
+	}
+	if len(lined.Actions) != 1 || lined.Actions[0].Target != "NTE Farm" || lined.Actions[0].Where != "Farm" {
+		t.Fatalf("habit lined up: %+v", ev)
+	}
+	decode(t, authdo(r, "POST", "/api/v1/assistant/chats/"+ev[len(ev)-1].ChatID+"/apply", `{"turn":1,"approve":[1]}`, owner), &turn)
+	if turn.Actions[0].State != "done" {
+		t.Fatalf("habit tick: %+v", turn.Actions[0])
+	}
+	if text, _ = mcpToolCall(t, r, owner, "list_habits", map[string]any{"workspace_id": life.ID}); !strings.Contains(text, today) {
+		t.Errorf("not ticked: %s", text)
 	}
 
 	// Saying it lined a change up without calling the tool: told so once,

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -110,6 +111,14 @@ func idKind(tool, arg string) string {
 		return "diagram"
 	case "file_id":
 		return "file"
+	case "habit_id":
+		return "habit"
+	case "goal_id":
+		return "goal"
+	case "bookmark_id":
+		return "bookmark"
+	case "note_id":
+		return "note"
 	}
 	return ""
 }
@@ -126,7 +135,7 @@ func (h *Handlers) lookup(c *gin.Context, mine []myWorkspace, kind, id string) (
 		return false
 	}
 	if kind == "" {
-		for _, k := range []string{"page", "task", "list", "event", "diagram"} {
+		for _, k := range []string{"page", "task", "list", "event", "diagram", "goal", "bookmark", "note", "habit"} {
 			if it, ok := h.lookup(c, mine, k, id); ok {
 				return it, true
 			}
@@ -165,6 +174,31 @@ func (h *Handlers) lookup(c *gin.Context, mine []myWorkspace, kind, id string) (
 			return it, false
 		}
 		it.Title, it.WorkspaceID = d.Title, d.WorkspaceID
+	case "habit": // their own
+		var hb models.Habit
+		if h.db.Select("id", "workspace_id", "title").First(&hb, "id = ? AND owner_id = ?", id, auth.UserID(c)).Error != nil || !in(hb.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = hb.Title, hb.WorkspaceID
+	case "goal":
+		var g models.Goal
+		if h.db.Select("id", "workspace_id", "title").First(&g, "id = ?", id).Error != nil || !in(g.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = g.Title, g.WorkspaceID
+	case "bookmark":
+		var b models.Bookmark
+		if h.db.Select("id", "workspace_id", "title", "url").First(&b, "id = ?", id).Error != nil || !in(b.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = cmp.Or(b.Title, b.URL), b.WorkspaceID
+	case "note": // a workspace's, or their own Quick Note
+		var n models.Note
+		if h.db.Select("id", "workspace_id", "owner_id", "title", "plain_text").First(&n, "id = ?", id).Error != nil ||
+			(n.WorkspaceID == "" && n.OwnerID != auth.UserID(c)) || (n.WorkspaceID != "" && !in(n.WorkspaceID)) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = cmp.Or(n.Title, clip(strings.TrimSpace(n.PlainText), 60)), n.WorkspaceID
 	case "file":
 		var u models.Upload
 		if h.db.Select("id", "name").First(&u, "id = ? AND target = ? AND owner_id = ?", id, uploads.Chat, auth.UserID(c)).Error != nil {

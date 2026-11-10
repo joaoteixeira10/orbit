@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -248,5 +249,96 @@ func TestOAuth(t *testing.T) {
 	}
 	if named != 2 {
 		t.Fatalf("tokens: %+v", list)
+	}
+}
+
+// TestMCPLife: habits, goals, the journal, bookmarks, focus and notes through
+// MCP — each person's own habits and journal stay their own.
+func TestMCPLife(t *testing.T) {
+	r, _, _, alice, bob := plannerSetupDB(t)
+	ws := createWS(t, r, alice, `{"name":"Home","kind":"personal","starter":false,"modules":["home","tasks","notes","habits","goals","journal","bookmarks","focus"]}`)
+	call := func(tok, name string, args map[string]any) map[string]any {
+		t.Helper()
+		text, bad := mcpToolCall(t, r, tok, name, args)
+		if bad {
+			t.Fatalf("%s: %s", name, text)
+		}
+		var out map[string]any
+		_ = json.Unmarshal([]byte(text), &out)
+		return out
+	}
+	today := time.Now().Format("2006-01-02")
+
+	// Habits: made, ticked, listed with the day done; untick; someone else can't.
+	hb := call(alice, "create_habit", map[string]any{"workspace_id": ws.ID, "title": "NTE Farm", "icon": "🌱"})
+	hid := hb["id"].(string)
+	got := call(alice, "check_habit", map[string]any{"habit_id": hid, "date": today})
+	if d := got["done_on"].([]any); len(d) != 1 || d[0] != today {
+		t.Fatalf("ticked: %v", got)
+	}
+	list := call(alice, "list_habits", map[string]any{"workspace_id": ws.ID})["items"].([]any)
+	if len(list) != 1 || list[0].(map[string]any)["title"] != "NTE Farm" {
+		t.Fatalf("habits: %v", list)
+	}
+	got = call(alice, "check_habit", map[string]any{"habit_id": hid, "date": today, "done": false})
+	if len(got["done_on"].([]any)) != 0 {
+		t.Fatalf("unticked: %v", got)
+	}
+	if _, bad := mcpToolCall(t, r, bob, "check_habit", map[string]any{"habit_id": hid, "date": today}); !bad {
+		t.Fatal("bob ticked alice's habit")
+	}
+	call(alice, "update_habit", map[string]any{"habit_id": hid, "archived": true})
+
+	// Goals, with a task counting towards one.
+	g := call(alice, "create_goal", map[string]any{"workspace_id": ws.ID, "title": "Run 10k", "due": "2027-06-01"})
+	call(alice, "create_task_list", map[string]any{"workspace_id": ws.ID, "name": "Errands"})
+	call(alice, "create_task", map[string]any{"workspace_id": ws.ID, "title": "Buy shoes", "goal_id": g["id"]})
+	goals := call(alice, "list_goals", map[string]any{"workspace_id": ws.ID})["items"].([]any)
+	if gl := goals[0].(map[string]any); gl["title"] != "Run 10k" || gl["tasks"].(float64) != 1 {
+		t.Fatalf("goals: %v", goals)
+	}
+	call(alice, "update_goal", map[string]any{"goal_id": g["id"], "achieved": true})
+
+	// The journal: written, added to, read back; the month lists the day.
+	call(alice, "write_journal", map[string]any{"workspace_id": ws.ID, "date": "2026-11-09", "content": "Planted the beans.", "mood": 4})
+	call(alice, "write_journal", map[string]any{"workspace_id": ws.ID, "date": "2026-11-09", "append": "Rain later."})
+	day := call(alice, "read_journal", map[string]any{"workspace_id": ws.ID, "date": "2026-11-09"})
+	if day["content"] != "Planted the beans.\n\nRain later." || day["mood"].(float64) != 4 {
+		t.Fatalf("journal: %v", day)
+	}
+	month := call(alice, "read_journal", map[string]any{"workspace_id": ws.ID, "month": "2026-11"})["items"].([]any)
+	if len(month) != 1 {
+		t.Fatalf("month: %v", month)
+	}
+
+	// Bookmarks.
+	b := call(alice, "create_bookmark", map[string]any{"workspace_id": ws.ID, "url": "https://example.org/seeds", "title": "Seeds", "tags": []string{"farm"}, "read_later": true})
+	call(alice, "update_bookmark", map[string]any{"bookmark_id": b["id"], "read": true})
+	bs := call(alice, "list_bookmarks", map[string]any{"workspace_id": ws.ID})["items"].([]any)
+	if bm := bs[0].(map[string]any); bm["title"] != "Seeds" || bm["read_at"] == nil {
+		t.Fatalf("bookmarks: %v", bs)
+	}
+	call(alice, "delete_bookmark", map[string]any{"bookmark_id": b["id"]})
+
+	// Focus: started, seen running, stopped.
+	call(alice, "start_focus", map[string]any{"workspace_id": ws.ID, "minutes": 25})
+	if f := call(alice, "get_focus", nil); f["running"] == nil {
+		t.Fatalf("focus: %v", f)
+	}
+	call(alice, "stop_focus", nil)
+	if f := call(alice, "get_focus", nil); f["running"] != nil {
+		t.Fatalf("still running: %v", f)
+	}
+
+	// Notes: changed and deleted.
+	n := call(alice, "create_note", map[string]any{"workspace_id": ws.ID, "body": "milk"})
+	call(alice, "update_note", map[string]any{"note_id": n["id"], "body": "milk, eggs", "pinned": true})
+	ns := call(alice, "list_notes", map[string]any{"workspace_id": ws.ID})["items"].([]any)
+	if nn := ns[0].(map[string]any); nn["body"] != "milk, eggs" || nn["pinned"] != true {
+		t.Fatalf("notes: %v", ns)
+	}
+	call(alice, "delete_note", map[string]any{"note_id": n["id"]})
+	if ns := call(alice, "list_notes", map[string]any{"workspace_id": ws.ID})["items"].([]any); len(ns) != 0 {
+		t.Fatalf("note not deleted: %v", ns)
 	}
 }

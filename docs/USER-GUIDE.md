@@ -1678,8 +1678,9 @@ privileges** keeps only some admin privileges. The token is shown once. See
 
 **Assistants (MCP)**: Claude, ChatGPT, Cursor and other assistants that
 speak MCP (the Model Context Protocol) can use Orbit as you — read and
-write pages, tasks and sub-tasks, comments, events, notes, Mermaid
-diagrams; read sheets, diagrams, history and the graph; search; and ask
+write pages, tasks and sub-tasks, comments, events, notes, goals,
+bookmarks, Mermaid diagrams, and your own habits (tick a day), journal and
+focus timer; read sheets, diagrams, history and the graph; search; and ask
 Orbit's own guides how something is done (`orbit_help`: "set up SSO with
 Authentik" gets the guide's steps). Settings →
 **Assistants (MCP)** gives the address (`https://<your Orbit>/mcp`) and

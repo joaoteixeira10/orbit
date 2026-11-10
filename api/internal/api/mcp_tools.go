@@ -414,11 +414,12 @@ var mcpTools = []mcpTool{
 			"assignee_ids": {Type: "array", Description: "Who does it (user ids, from list_members)"},
 			"parent_id":    {Type: "string", Description: "The task it's a sub-task of"},
 			"tags":         {Type: "array", Description: "Tags"},
+			"goal_id":      {Type: "string", Description: "A goal it counts towards (from list_goals)"},
 		},
 		Required: []string{"workspace_id", "title"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
 			var t map[string]any
-			body := a.pick("title", "list_id", "due", "due_time", "start", "notes", "priority", "estimate", "assignee_ids", "parent_id", "tags")
+			body := a.pick("title", "list_id", "due", "due_time", "start", "notes", "priority", "estimate", "assignee_ids", "parent_id", "tags", "goal_id")
 			if err := m.do("POST", "/workspaces/"+a.str("workspace_id")+"/tasks", nil, body, &t); err != nil {
 				return nil, err
 			}
@@ -427,7 +428,7 @@ var mcpTools = []mcpTool{
 	},
 	{
 		Name: "update_task", Title: "Change a task",
-		Description: "Change a task's title, dates, notes, priority, people, list or tags; done: true completes it (false reopens).",
+		Description: "Change a task's title, dates, notes, priority, people, list, tags or goal; done: true completes it (false reopens).",
 		Props: map[string]mcpProp{
 			"task_id": pTask, "title": {Type: "string", Description: "What to do"}, "list_id": {Type: "string", Description: "Move it to this list"},
 			"due": pDate("When it's due"), "due_time": {Type: "string", Description: "Its time (HH:MM; empty clears)"}, "start": pDate("When work starts"),
@@ -436,10 +437,11 @@ var mcpTools = []mcpTool{
 			"assignee_ids": {Type: "array", Description: "Who does it (the whole list of user ids)"},
 			"tags":         {Type: "array", Description: "Its tags (the whole list)"},
 			"done":         {Type: "boolean", Description: "Done (true) or open again (false)"},
+			"goal_id":      {Type: "string", Description: "A goal it counts towards (from list_goals; empty: none)"},
 		},
 		Required: []string{"task_id"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
-			body := a.pick("title", "list_id", "due", "due_time", "start", "notes", "priority", "estimate", "assignee_ids", "tags")
+			body := a.pick("title", "list_id", "due", "due_time", "start", "notes", "priority", "estimate", "assignee_ids", "tags", "goal_id")
 			if a.has("done") {
 				body["completed"] = a["done"]
 			}

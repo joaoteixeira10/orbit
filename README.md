@@ -5,10 +5,7 @@ school, work, home, a shared household — each with only the **modules** it
 needs — and keep everything in one place that looks and feels like an Apple
 app.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png">
-  <img alt="Orbit's Today page: overdue and today's tasks across workspaces, the day's events, an exam countdown and quick notes" src="docs/images/today-light.png">
-</picture>
+![Orbit's Today page: overdue and today's tasks across workspaces, the day's events, an exam countdown and quick notes](docs/images/today-light.png)
 
 - **Today** — what's late, due and coming up across every workspace, with
   each shared workspace's activity ("Ana completed 3 tasks").

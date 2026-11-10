@@ -3153,6 +3153,32 @@ test('assistants: an app signs in with OAuth (allowed read only here), then uses
   await expect(page.locator('#apitokens')).toContainText('OAuth: Test Assistant')
 })
 
+test('MCP writes what people open: a whiteboard with sticky notes draws them; a sheet written shows its cells', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Board room', kind: 'work', starter: false, modules: ['home', 'whiteboards', 'sheets', 'files'] } })).json()
+  const tool = async (name: string, args: unknown) => {
+    const out = (await (await request.post('/mcp', { headers: H, data: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } } })).json()) as any
+    expect(out.result.isError, out.result.content[0].text).toBe(false)
+    return JSON.parse(out.result.content[0].text)
+  }
+  const wb = await tool('create_whiteboard', { workspace_id: ws.id, title: 'Retro', notes: ['Went well', 'To improve'] })
+  await tool('add_to_whiteboard', { whiteboard_id: wb.id, notes: ['Actions'] })
+  const sh = await tool('create_sheet', { workspace_id: ws.id, title: 'Budget', tsv: 'Item\tCost\nRoom\t120\nFood\t80' })
+  await tool('write_sheet', { sheet_id: sh.id, cells: { A4: 'Total', B4: '=SUM(B2:B3)' } })
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  // The notes are Excalidraw's own: the board opens with them (three boxes, each its text).
+  await page.goto(`/w/${ws.id}/whiteboards/${wb.id}`)
+  await expect(page.locator('.excalidraw canvas.interactive')).toBeVisible({ timeout: 20000 })
+  await page.waitForTimeout(800)
+  await page.screenshot({ path: 'test-results/mcp-whiteboard.png' })
+  await page.goto(`/w/${ws.id}/s/${sh.id}`)
+  await expect(page.getByText('Total', { exact: true })).toBeVisible()
+  await expect(page.getByText('200', { exact: true })).toBeVisible() // worked out
+})
+
 test('guest links and forms: a page read and edited by its link, no account; a public form adds a row', async ({ page, browser, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

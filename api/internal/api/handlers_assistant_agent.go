@@ -110,7 +110,24 @@ func idKind(tool, arg string) string {
 	case "diagram_id":
 		return "diagram"
 	case "file_id":
+		if tool == "read_file" || tool == "update_file" || tool == "delete_file" {
+			return "wsfile" // a file in a workspace's Files, not one attached here
+		}
 		return "file"
+	case "folder_id":
+		return "folder"
+	case "sheet_id":
+		return "sheet"
+	case "whiteboard_id":
+		return "whiteboard"
+	case "course_id":
+		return "course"
+	case "grade_id":
+		return "grade"
+	case "comment_id":
+		return "comment"
+	case "smart_list_id":
+		return "smart list"
 	case "habit_id":
 		return "habit"
 	case "goal_id":
@@ -135,7 +152,7 @@ func (h *Handlers) lookup(c *gin.Context, mine []myWorkspace, kind, id string) (
 		return false
 	}
 	if kind == "" {
-		for _, k := range []string{"page", "task", "list", "event", "diagram", "goal", "bookmark", "note", "habit"} {
+		for _, k := range []string{"page", "task", "list", "event", "diagram", "goal", "bookmark", "note", "habit", "sheet", "whiteboard", "folder", "wsfile", "course"} {
 			if it, ok := h.lookup(c, mine, k, id); ok {
 				return it, true
 			}
@@ -199,6 +216,54 @@ func (h *Handlers) lookup(c *gin.Context, mine []myWorkspace, kind, id string) (
 			return it, false
 		}
 		it.Title, it.WorkspaceID = cmp.Or(n.Title, clip(strings.TrimSpace(n.PlainText), 60)), n.WorkspaceID
+	case "sheet":
+		var x models.Sheet
+		if h.db.Select("id", "workspace_id", "title").First(&x, "id = ?", id).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Title, x.WorkspaceID
+	case "whiteboard":
+		var x models.Drawing
+		if h.db.Select("id", "workspace_id", "title").First(&x, "id = ? AND note_id = ''", id).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Title, x.WorkspaceID
+	case "folder":
+		var x models.Folder
+		if h.db.Select("id", "workspace_id", "name").First(&x, "id = ?", id).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Name, x.WorkspaceID
+	case "wsfile":
+		var x models.Upload
+		if h.db.Select("id", "workspace_id", "name").First(&x, "id = ? AND target <> ?", id, uploads.Chat).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Name, x.WorkspaceID
+	case "course":
+		var x models.Course
+		if h.db.Select("id", "workspace_id", "name").First(&x, "id = ?", id).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Name, x.WorkspaceID
+	case "grade": // their own
+		var x models.Grade
+		if h.db.Select("id", "workspace_id", "title").First(&x, "id = ? AND owner_id = ?", id, auth.UserID(c)).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Title, x.WorkspaceID
+	case "comment":
+		var x models.TaskComment
+		if h.db.Select("id", "workspace_id", "body").First(&x, "id = ?", id).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = clip(strings.TrimSpace(x.Body), 60), x.WorkspaceID
+	case "smart list":
+		var x models.SmartList
+		if h.db.Select("id", "workspace_id", "name").First(&x, "id = ?", id).Error != nil || !in(x.WorkspaceID) {
+			return it, false
+		}
+		it.Title, it.WorkspaceID = x.Name, x.WorkspaceID
 	case "file":
 		var u models.Upload
 		if h.db.Select("id", "name").First(&u, "id = ? AND target = ? AND owner_id = ?", id, uploads.Chat, auth.UserID(c)).Error != nil {

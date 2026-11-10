@@ -394,9 +394,23 @@ func (h *Handlers) assistantChat(api http.Handler) gin.HandlerFunc {
 		call := &mcpCall{c: c, api: api, client: "assistant"}
 		allowed := map[string]*mcpTool{}
 		var tools []assistant.Tool
+		// The tools for a module only when one of their workspaces has it on
+		// (fewer for the model to read through).
+		var theirs []struct {
+			Modules []string `json:"modules"`
+		}
+		_ = call.do("GET", "/workspaces", nil, nil, &theirs)
+		on := map[string]bool{}
+		for _, w := range theirs {
+			for _, mod := range w.Modules {
+				on[mod] = true
+			}
+		}
 		offered := make([]*mcpTool, 0, len(mcpTools)+len(attachmentTools))
 		for i := range mcpTools {
-			offered = append(offered, &mcpTools[i])
+			if mcpTools[i].Module == "" || on[mcpTools[i].Module] {
+				offered = append(offered, &mcpTools[i])
+			}
 		}
 		// The tools for attached files, once there are some.
 		for _, t := range turns {

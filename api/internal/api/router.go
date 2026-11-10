@@ -390,6 +390,7 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/workspaces/:ws/files/usage", h.filesUsage)
 			authed.GET("/files/:id", h.getFile)
 			authed.PUT("/files/:id", h.updateFile)
+			authed.GET("/files/:id/text", h.getFileText)
 			authed.PUT("/files/:id/text", h.setFileText)
 			authed.GET("/files/:id/versions", h.fileVersions)
 			authed.POST("/files/:id/current", h.fileCurrent)

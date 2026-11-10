@@ -1223,6 +1223,16 @@ definitions:
         maxLength: 2000000
         type: string
     type: object
+  api.fileTextResponse:
+    properties:
+      name:
+        type: string
+      text:
+        description: '"" when it has no words to read (a picture, say)'
+        type: string
+      type:
+        type: string
+    type: object
   api.fileUsage:
     properties:
       all:
@@ -6483,6 +6493,25 @@ paths:
       tags:
       - files
   /files/{id}/text:
+    get:
+      parameters:
+      - description: File id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.fileTextResponse'
+      security:
+      - BearerAuth: []
+      summary: A file's text
+      tags:
+      - files
     put:
       consumes:
       - application/json

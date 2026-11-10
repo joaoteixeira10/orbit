@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -17,7 +18,8 @@ import (
 // what an assistant needs.
 
 type mcpProp struct {
-	Type        string // string | integer | boolean | array
+	Type        string // string | integer | number | boolean | object | array
+	Items       string // an array's: string (the default) or object
 	Description string
 	Enum        []string
 }
@@ -30,7 +32,10 @@ type mcpTool struct {
 	Required    []string
 	ReadOnly    bool
 	Destructive bool
-	Run         func(m *mcpCall, a mcpArgs) (any, error)
+	// Module: the workspace module it's for ("" any); the built-in assistant
+	// is offered it only when one of the person's workspaces has it on.
+	Module string
+	Run    func(m *mcpCall, a mcpArgs) (any, error)
 }
 
 func (t mcpTool) schema() map[string]any {
@@ -38,7 +43,7 @@ func (t mcpTool) schema() map[string]any {
 	for k, p := range t.Props {
 		s := map[string]any{"type": p.Type, "description": p.Description}
 		if p.Type == "array" {
-			s["items"] = map[string]any{"type": "string"}
+			s["items"] = map[string]any{"type": cmp.Or(p.Items, "string")}
 		}
 		if len(p.Enum) > 0 {
 			s["enum"] = p.Enum
@@ -76,6 +81,15 @@ var (
 	}
 	pPriority = mcpProp{Type: "integer", Description: "0 none, 1 low, 2 medium, 3 high"}
 )
+
+// oneOccurrence is the query naming one occurrence of a repeating event.
+func oneOccurrence(a mcpArgs) url.Values {
+	o := a.str("occurrence")
+	if o == "" {
+		return nil
+	}
+	return url.Values{"occurrence": {o}, "scope": {cmp.Or(a.str("scope"), "this")}}
+}
 
 // items wraps a list so it can be structured content.
 func items(list any) map[string]any { return map[string]any{"items": list} }
@@ -543,8 +557,9 @@ var mcpTools = []mcpTool{
 	},
 	{
 		Name: "update_event", Title: "Change an event",
-		Description: "Change an event (a repeating one: the whole series).",
+		Description: "Change an event. A repeating one: the whole series, or with occurrence (that day's start, from list_events) just that one (scope this) or it and the ones after (scope following).",
 		Props: map[string]mcpProp{
+			"occurrence": pInstant("One occurrence's start"), "scope": {Type: "string", Description: "With occurrence: this (default) or following", Enum: []string{"this", "following"}},
 			"event_id": {Type: "string", Description: "The event's id"}, "title": {Type: "string", Description: "Its title"},
 			"starts_at": pInstant("When it starts"), "ends_at": pInstant("When it ends"), "all_day": {Type: "boolean", Description: "All day"},
 			"location": {Type: "string", Description: "Where"}, "notes": {Type: "string", Description: "Notes"}, "rrule": {Type: "string", Description: "How it repeats (empty: it doesn't)"},
@@ -552,7 +567,7 @@ var mcpTools = []mcpTool{
 		Required: []string{"event_id"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
 			var e map[string]any
-			if err := m.do("PUT", "/events/"+a.str("event_id"), nil, a.pick("title", "starts_at", "ends_at", "all_day", "location", "notes", "rrule"), &e); err != nil {
+			if err := m.do("PUT", "/events/"+a.str("event_id"), oneOccurrence(a), a.pick("title", "starts_at", "ends_at", "all_day", "location", "notes", "rrule"), &e); err != nil {
 				return nil, err
 			}
 			return keepOne(e, "id", "title", "starts_at", "ends_at", "all_day", "rrule"), nil
@@ -560,10 +575,14 @@ var mcpTools = []mcpTool{
 	},
 	{
 		Name: "delete_event", Title: "Delete an event", Destructive: true,
-		Description: "Deletes an event (a repeating one: the whole series).",
-		Props:       map[string]mcpProp{"event_id": {Type: "string", Description: "The event's id"}}, Required: []string{"event_id"},
+		Description: "Deletes an event. A repeating one: the whole series, or with occurrence (that day's start, from list_events) just that one (scope this) or it and the ones after (scope following).",
+		Props: map[string]mcpProp{
+			"event_id": {Type: "string", Description: "The event's id"}, "occurrence": pInstant("One occurrence's start"),
+			"scope": {Type: "string", Description: "With occurrence: this (default) or following", Enum: []string{"this", "following"}},
+		},
+		Required: []string{"event_id"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
-			if err := m.do("DELETE", "/events/"+a.str("event_id"), nil, nil, nil); err != nil {
+			if err := m.do("DELETE", "/events/"+a.str("event_id"), oneOccurrence(a), nil, nil); err != nil {
 				return nil, err
 			}
 			return "Deleted.", nil
@@ -608,17 +627,17 @@ var mcpTools = []mcpTool{
 	// ---- Files: sheets, diagrams, whiteboards, folders ----
 	{
 		Name: "list_files", Title: "List files", ReadOnly: true,
-		Description: "A workspace's folders (with the task list a folder is the project of), sheets, diagrams and whiteboards.",
+		Description: "A workspace's folders (with the task list a folder is the project of), sheets, diagrams, whiteboards and files (uploaded ones, and those attached to pages, tasks and notes; read_file reads one).",
 		Props:       map[string]mcpProp{"workspace_id": pWS}, Required: []string{"workspace_id"},
 		Run: func(m *mcpCall, a mcpArgs) (any, error) {
 			ws := "/workspaces/" + a.str("workspace_id")
 			out := map[string]any{}
-			for _, k := range []struct{ key, path string }{{"folders", "/folders"}, {"sheets", "/sheets"}, {"diagrams", "/diagrams"}, {"whiteboards", "/drawings"}} {
+			for _, k := range []struct{ key, path string }{{"folders", "/folders"}, {"sheets", "/sheets"}, {"diagrams", "/diagrams"}, {"whiteboards", "/drawings"}, {"files", "/files"}} {
 				var xs []map[string]any
 				if err := m.do("GET", ws+k.path, nil, nil, &xs); err != nil {
 					continue // a module that's off
 				}
-				out[k.key] = keep(xs, "id", "name", "title", "kind", "folder_id", "parent_id", "list_id", "updated_at")
+				out[k.key] = keep(xs, "id", "name", "title", "kind", "type", "size", "folder_id", "parent_id", "list_id", "on_kind", "on_title", "updated_at")
 			}
 			return out, nil
 		},
@@ -692,7 +711,7 @@ var mcpTools = []mcpTool{
 	},
 	{
 		Name: "update_mermaid_diagram", Title: "Change a Mermaid diagram",
-		Description: "Replaces a Mermaid diagram's text (and title).",
+		Description: "Replaces a Mermaid diagram's text, or renames it (title; any diagram, draw.io too).",
 		Props: map[string]mcpProp{
 			"diagram_id": {Type: "string", Description: "The diagram's id"}, "mermaid": {Type: "string", Description: "Its new Mermaid text"}, "title": {Type: "string", Description: "A new title"},
 		},
@@ -702,8 +721,8 @@ var mcpTools = []mcpTool{
 			if err := m.do("GET", "/diagrams/"+a.str("diagram_id"), nil, nil, &cur); err != nil {
 				return nil, err
 			}
-			if cur["kind"] != "mermaid" {
-				return nil, errors.New("it's a draw.io diagram: change it in Orbit")
+			if cur["kind"] != "mermaid" && a.has("mermaid") {
+				return nil, errors.New("it's a draw.io diagram: its drawing is changed in Orbit (its title can be, here)")
 			}
 			body := a.pick("title")
 			if a.has("mermaid") {

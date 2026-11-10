@@ -326,6 +326,37 @@ func (h *Handlers) getFile(c *gin.Context) {
 	c.JSON(http.StatusOK, f)
 }
 
+type fileTextResponse struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Text string `json:"text"` // "" when it has no words to read (a picture, say)
+}
+
+// getFileText reads what a file says: a text-like one as text, a PDF from
+// what the app read of it, a sheet or document as its lines.
+//
+//	@Summary	A file's text
+//	@Tags		files
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id	path		string	true	"File id"
+//	@Success	200	{object}	fileTextResponse
+//	@Router		/files/{id}/text [get]
+func (h *Handlers) getFileText(c *gin.Context) {
+	u, ok := h.uploadAccess(c, models.WSViewer)
+	if !ok {
+		return
+	}
+	if u.Target == uploads.Page {
+		var p models.Page
+		if h.db.First(&p, "id = ?", u.TargetID).Error == nil && !h.pageVisible(c, p) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+			return
+		}
+	}
+	c.JSON(http.StatusOK, fileTextResponse{Name: u.Name, Type: u.Type, Text: h.attachmentText(u)})
+}
+
 type fileTextRequest struct {
 	Text string `json:"text" binding:"max=2000000"`
 }

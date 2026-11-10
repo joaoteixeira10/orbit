@@ -2743,6 +2743,37 @@ const docTemplate = `{
             }
         },
         "/files/{id}/text": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "A file's text",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.fileTextResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -13485,6 +13516,21 @@ const docTemplate = `{
                 "text": {
                     "type": "string",
                     "maxLength": 2000000
+                }
+            }
+        },
+        "api.fileTextResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "text": {
+                    "description": "\"\" when it has no words to read (a picture, say)",
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },

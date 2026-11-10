@@ -1677,14 +1677,19 @@ privileges** keeps only some admin privileges. The token is shown once. See
 [API](API.md).
 
 **Assistants (MCP)**: Claude, ChatGPT, Cursor and other assistants that
-speak MCP (the Model Context Protocol) can use Orbit as you — read and
-write pages, tasks and sub-tasks, comments, events, notes, goals,
-bookmarks, Mermaid diagrams, and your own habits (tick a day), journal and
-focus timer; read sheets, diagrams, history and the graph; search; and ask
+speak MCP (the Model Context Protocol) can use Orbit as you — nearly
+everything you do in a workspace: pages (and their trash, copies, history,
+favourites, forms), task lists, tasks, boards, comments and smart lists,
+events and subscribed calendars, notes and their checklists, goals,
+bookmarks, sheets (read and written), Mermaid diagrams, whiteboards (read,
+sticky notes added), files and folders, courses and grades, your own habits
+(tick a day), journal and focus timer, your notifications, a workspace's
+settings and members, its activity and graph; search; and ask
 Orbit's own guides how something is done (`orbit_help`: "set up SSO with
 Authentik" gets the guide's steps). Settings →
 **Assistants (MCP)** gives the address (`https://<your Orbit>/mcp`) and
-how to add it in each. The assistant then sends you to Orbit to allow it:
+how to add it in each. Not through it: the instance's and your account's
+settings (users, roles, sign-in, tokens, backups). The assistant then sends you to Orbit to allow it:
 **Read and change**, or **Only read**. Allowing it makes it an API token of
 yours, named after it ("OAuth: Claude"), listed under API tokens — revoke
 it there to cut it off. An assistant that takes a header can use an API

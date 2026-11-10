@@ -334,6 +334,10 @@ func TestAssistantAgent(t *testing.T) {
 	if !strings.Contains(sys, "Agent mode") || !strings.Contains(sys, "- Work: "+ws.ID) {
 		t.Errorf("system: %s", sys)
 	}
+	// A module's tools only once a workspace of theirs has it on.
+	if strings.Contains(string(mustJSON(first["tools"])), "check_habit") {
+		t.Error("habit tools offered with no workspace that has habits")
+	}
 	for _, x := range first["tools"].([]any) {
 		fn := x.(map[string]any)["function"].(map[string]any)
 		if fn["name"] == "create_task" && !strings.Contains(string(mustJSON(fn["parameters"])), `"summary"`) {
@@ -415,6 +419,9 @@ func TestAssistantAgent(t *testing.T) {
 		if e.Type == "answer" {
 			lined = e
 		}
+	}
+	if !strings.Contains(string(mustJSON(fake.asked[len(fake.asked)-1]["tools"])), "check_habit") {
+		t.Error("habit tools not offered with a workspace that has habits")
 	}
 	if len(lined.Actions) != 1 || lined.Actions[0].Target != "NTE Farm" || lined.Actions[0].Where != "Farm" {
 		t.Fatalf("habit lined up: %+v", ev)

@@ -17,6 +17,7 @@ import (
 // the real admin behind them. Pre-auth flows (login, etc.) still use
 // audit.Record directly with an explicit user id.
 func (h *Handlers) recordCtx(c *gin.Context, action, targetType, targetID string, detail any) {
+	c.Set(ctxAudited, true) // not again by auditImpersonated
 	var imp *string
 	if id := auth.ImpersonatorID(c); id != "" {
 		imp = &id

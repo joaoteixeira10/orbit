@@ -3448,9 +3448,8 @@ test('impersonating shows the person’s workspaces; the audit log has its start
   await expect(page.locator('.act-kind', { hasText: 'user.impersonate_end' })).toBeVisible()
   await expect(page.locator('.act-kind', { hasText: /^user\.impersonate$/ })).toBeVisible()
   // The workspace was made as Ivo, by the admin: a pill beside Ivo's name says so.
-  const made = page.locator('tr', { has: page.getByTestId('audit-via-admin') })
+  const made = page.locator('tr', { has: page.getByTestId('audit-via-admin') }).filter({ has: page.locator('.act-kind', { hasText: 'workspace.create' }) })
   await expect(made).toHaveCount(1)
-  await expect(made.locator('.act-kind')).toHaveText('workspace.create')
   await expect(made).toContainText('ivo')
   await expect(made.getByTestId('audit-via-admin')).toHaveText('via admin')
   await expect(page.locator('.act-kind', { hasText: 'auth.login' })).toHaveCount(0)

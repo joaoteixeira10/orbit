@@ -106,10 +106,22 @@ function result(a: AuditEntry) {
   const d = changeDetail(a.detail)
   return { ok: d.ok !== false, error: d.error || '', reason: d.reason || '' }
 }
-// The raw detail (e.g. what a user update touched).
+// The rest of the detail (e.g. what a user update touched): what isn't
+// already shown — who, where, on what, how it went — nor plumbing (route).
+const SHOWN = ['targets', 'ok', 'error', 'reason', 'actor', 'via', 'scope', 'route']
 function otherDetail(a: AuditEntry) {
   if (!a.detail) return ''
-  return a.detail.length > 160 ? a.detail.slice(0, 160) + '…' : a.detail
+  let rest = a.detail
+  try {
+    const d = JSON.parse(a.detail)
+    if (d && typeof d === 'object' && !Array.isArray(d)) {
+      for (const k of SHOWN) delete d[k]
+      rest = Object.keys(d).length ? JSON.stringify(d) : ''
+    }
+  } catch {
+    /* not JSON: shown as it is */
+  }
+  return rest.length > 160 ? rest.slice(0, 160) + '…' : rest
 }
 </script>
 
@@ -140,10 +152,12 @@ function otherDetail(a: AuditEntry) {
             <td class="nowrap small">{{ fmtDate(a.created_at) }}</td>
             <td><span class="act-kind" :class="[kind(a), { failed: !result(a).ok }]">{{ kind(a) }}</span></td>
             <td>
-              <b>{{ (!a.user_id && changeDetail(a.detail).actor) || a.user_name || '—' }}</b>
               <!-- Done by an admin signed in as them: said plainly, beside the name. -->
-              <span v-if="a.impersonator_name" class="via-admin" :title="t('audit.viaTitle', { admin: a.impersonator_name })" data-testid="audit-via-admin">
-                <VenetianMask class="h-3 w-3" aria-hidden="true" />{{ t('audit.via', { admin: a.impersonator_name }) }}
+              <span class="who">
+                <b>{{ (!a.user_id && changeDetail(a.detail).actor) || a.user_name || '—' }}</b>
+                <span v-if="a.impersonator_name" class="via-admin" :title="t('audit.viaTitle', { admin: a.impersonator_name })" data-testid="audit-via-admin">
+                  <VenetianMask class="h-3 w-3" aria-hidden="true" />{{ t('audit.via', { admin: a.impersonator_name }) }}
+                </span>
               </span>
               <div class="faint small">{{ [changeDetail(a.detail).via, a.ip].filter(Boolean).join(' · ') }}</div>
             </td>
@@ -178,11 +192,16 @@ function otherDetail(a: AuditEntry) {
 </template>
 
 <style scoped>
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
 .via-admin {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--warn-bg);
@@ -190,7 +209,6 @@ function otherDetail(a: AuditEntry) {
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
-  vertical-align: 1px;
 }
 .btn.btn-on {
   background: var(--accent);

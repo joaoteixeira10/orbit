@@ -28,7 +28,9 @@ merge, not at release time.
 ### Changed
 
 - **The audit log says plainly when an admin did something as someone** — a
-  "via admin" pill beside the person's name (hover: who, and how).
+  "via <admin>" pill beside the person's name (hover: who, and how); and
+  every change made while impersonating is now in it (a task saved, a page
+  edited…), not only the kinds audited anyway.
 - **Developer themes wash the top of the page in their colour** — a soft
   glow from the top right of the main column.
 - **Christmas theme starts on 20 December** (was 1 December) when the holiday

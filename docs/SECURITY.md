@@ -149,7 +149,10 @@ access token with no refresh, and nothing that would outlast it can be made
 meanwhile: new sessions (`rotate-token`), API tokens, password, two-factor and
 passkey changes, git accounts, push devices and calendar feeds are refused.
 Everything done meanwhile is audited under the target **and** the real admin
-(`impersonator_id`).
+(`impersonator_id`) — every change, not only the kinds audited anyway (a task
+saved, a page edited: `task.update`, `page.update`…; the same change to the
+same thing again within three minutes is one entry). The audit log marks them
+with a "via <admin>" pill.
 
 ## Authorization
 

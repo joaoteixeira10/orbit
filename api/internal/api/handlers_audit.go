@@ -92,6 +92,25 @@ func (h *Handlers) enrichAudit(entries []models.AuditLog) []auditEntryView {
 
 	users := h.resolveNames(&models.User{}, "username", merge(userIDs, byType["user"]))
 	roles := h.resolveNames(&models.Role{}, "name", byType["role"])
+	// Workspace things (a task, a page…): their name now, else — gone — the
+	// last name the workspace's activity feed knew them by. Read when shown:
+	// an entry itself is never changed (the hash chain).
+	things := map[string]string{}
+	for typ, ids := range byType {
+		if k, ok := impersonatedNames[typ+"s"]; ok {
+			for id, n := range h.resolveNames(k.model, k.col, ids) {
+				things[typ+"|"+id] = clip(strings.Join(strings.Fields(n), " "), 80)
+			}
+			for id := range ids {
+				if things[typ+"|"+id] == "" {
+					var a models.Activity
+					if h.db.Select("title").Where("link LIKE ?", "%"+id+"%").Order("created_at desc").Limit(1).Find(&a).Error == nil && a.Title != "" {
+						things[typ+"|"+id] = a.Title
+					}
+				}
+			}
+		}
+	}
 
 	views := make([]auditEntryView, len(entries))
 	for i := range entries {
@@ -121,6 +140,10 @@ func (h *Handlers) enrichAudit(entries []models.AuditLog) []auditEntryView {
 				v.TargetName = users[e.TargetID]
 			case "role":
 				v.TargetName = roles[e.TargetID]
+			default:
+				if n := things[e.TargetType+"|"+e.TargetID]; n != "" {
+					v.TargetName = e.TargetType + " · " + n
+				}
 			}
 		}
 		views[i] = v

@@ -194,7 +194,7 @@ func New(d Deps) *gin.Engine {
 		// Server-scoped privileges are enforced inside the handlers (they need
 		// the server); global privileges are gated by RequireGlobal middleware.
 		authed := v1.Group("")
-		authed.Use(h.auth.Required())
+		authed.Use(h.auth.Required(), h.auditImpersonated()) // changes while acting as someone are audited
 		{
 			// Self-service.
 			authed.GET("/auth/me", h.me)

@@ -172,6 +172,18 @@ func TestImpersonationAudit(t *testing.T) {
 	// As impersonated-bob, create a user — a mutation that funnels through recordCtx.
 	createUserAs(t, r, tok.AccessToken, `{"username":"frank","password":"frankpassword","role_ids":[]}`)
 
+	// Changes not audited on their own are too, while impersonating: a page
+	// made and edited (twice: one entry), as bob, by the admin.
+	ws := createWS(t, r, tok.AccessToken, `{"name":"Bob's","kind":"personal","starter":false,"modules":["home","pages"]}`)
+	pw := authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/pages", `{"title":"Notes"}`, tok.AccessToken)
+	var pg struct{ ID string }
+	_ = json.Unmarshal(pw.Body.Bytes(), &pg)
+	if w := authdo(r, "PUT", "/api/v1/pages/"+pg.ID, `{"content":"one","version":1}`, tok.AccessToken); w.Code != 200 {
+		t.Fatalf("page save: %d %s", w.Code, w.Body.String())
+	}
+	authdo(r, "PUT", "/api/v1/pages/"+pg.ID, `{"content":"two","version":2}`, tok.AccessToken)
+	authdo(r, "PUT", "/api/v1/me/password", `{"current_password":"bobpassword","new_password":"whatever-123456"}`, tok.AccessToken) // refused: not audited
+
 	// The user.create entry should name bob as actor and admin as impersonator.
 	aw := authdo(r, "GET", "/api/v1/audit?per_page=500", "", owner)
 	if aw.Code != 200 {
@@ -201,6 +213,51 @@ func TestImpersonationAudit(t *testing.T) {
 	if !found {
 		t.Error("did not find the user.create audit entry for frank")
 	}
+	count := map[string]int{}
+	for _, it := range page.Items {
+		if it.ImpersonatorName == "admin" && it.UserName == "bob" {
+			count[it.Action]++
+		}
+	}
+	if count["workspace.create"] != 1 || count["page.create"] != 1 || count["page.update"] != 1 || count["password.update"] != 0 {
+		t.Errorf("changes while impersonating: %v", count)
+	}
+	// Each says where and on what, by name — even once it's gone.
+	authdo(r, "DELETE", "/api/v1/pages/"+pg.ID, "", tok.AccessToken)
+	aw = authdo(r, "GET", "/api/v1/audit?per_page=500&impersonation=1", "", owner)
+	_ = json.Unmarshal(aw.Body.Bytes(), &page)
+	details := map[string]string{}
+	for _, it := range page.Items {
+		details[it.Action] = it.Detail
+	}
+	// An entry's target by name when shown, even when it held only an id and
+	// the thing is gone (the name the activity feed last knew).
+	var lst struct{ ID string }
+	_ = json.Unmarshal(authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/lists", `{"name":"Jobs"}`, tok.AccessToken).Body.Bytes(), &lst)
+	var tk struct{ ID string }
+	_ = json.Unmarshal(authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/tasks", `{"title":"Fix the gate","list_id":"`+lst.ID+`"}`, tok.AccessToken).Body.Bytes(), &tk)
+	authdo(r, "DELETE", "/api/v1/tasks/"+tk.ID, "", tok.AccessToken)
+	var named struct {
+		Items []struct {
+			Action     string `json:"action"`
+			TargetName string `json:"target_name"`
+		} `json:"items"`
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/audit?per_page=500&impersonation=1", "", owner).Body.Bytes(), &named)
+	gotName := ""
+	for _, it := range named.Items {
+		if it.Action == "task.delete" {
+			gotName = it.TargetName
+		}
+	}
+	if gotName != "task · Fix the gate" {
+		t.Errorf("deleted task's name: %q", gotName)
+	}
+	for _, a := range []string{"page.create", "page.update", "page.delete"} {
+		if !strings.Contains(details[a], `"scope":"Bob's"`) || !strings.Contains(details[a], `page · Notes`) {
+			t.Errorf("%s: %s", a, details[a])
+		}
+	}
 
 	// Back as the owner: the end is recorded, and the impersonation filter
 	// shows the start, the end and what was done meanwhile — nothing else.
@@ -214,7 +271,7 @@ func TestImpersonationAudit(t *testing.T) {
 	for _, it := range page.Items {
 		got = append(got, it.Action)
 	}
-	if strings.Join(got, ",") != "user.impersonate_end,user.create,user.impersonate" {
+	if strings.Join(got, ",") != "user.impersonate_end,task.delete,task.create,list.create,page.delete,page.update,page.create,workspace.create,user.create,user.impersonate" {
 		t.Errorf("impersonation filter: got %v", got)
 	}
 	if w := authdo(r, "POST", "/api/v1/users/"+bob+"/impersonate/end", "", tok.AccessToken); w.Code != 403 {

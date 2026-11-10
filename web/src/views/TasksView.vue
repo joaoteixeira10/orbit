@@ -33,7 +33,7 @@ const tasks = useTasksStore()
 const wss = useWorkspacesStore()
 const auth = useAuthStore()
 const toast = useToastStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const ws = computed(() => String(route.params.ws))
 const workspace = computed(() => wss.byId(ws.value))
@@ -204,7 +204,7 @@ interface Section {
   preset?: TaskInput // what a task added here gets (its group's priority, person, date)
   noAdd?: boolean
 }
-const sections = computed<Section[]>(() => {
+const grouped = computed<Section[]>(() => {
   const byRank = (a: Task, b: Task) => a.rank - b.rank
   const byDue = (a: Task, b: Task) => (a.due ?? '').localeCompare(b.due ?? '') || (a.due_time ?? '').localeCompare(b.due_time ?? '') || a.rank - b.rank
   if (grouping.value !== 'default') {
@@ -276,6 +276,25 @@ const sections = computed<Section[]>(() => {
     }
   }
   return []
+})
+
+// Order within each section: the view's own (a list's drag order, dates),
+// or by name, newest or oldest first. Remembered per browser.
+type SortBy = 'manual' | 'name' | 'newest' | 'oldest'
+const SORTS: SortBy[] = ['manual', 'name', 'newest', 'oldest']
+const sortBy = ref<SortBy>(SORTS.find((x) => x === localStorage.getItem('orbit_tasks_sort')) ?? 'manual')
+watch(sortBy, (v) => localStorage.setItem('orbit_tasks_sort', v))
+const sorting = computed<SortBy>(() => (canGroup.value ? sortBy.value : 'manual'))
+const sections = computed<Section[]>(() => {
+  const s = sorting.value
+  if (s === 'manual') return grouped.value
+  const names = new Intl.Collator(locale.value, { numeric: true, sensitivity: 'base' })
+  const order = {
+    name: (a: Task, b: Task) => names.compare(a.title, b.title),
+    newest: (a: Task, b: Task) => b.created_at.localeCompare(a.created_at),
+    oldest: (a: Task, b: Task) => a.created_at.localeCompare(b.created_at),
+  }[s]
+  return grouped.value.map((x) => ({ ...x, tasks: [...x.tasks].sort(order) }))
 })
 
 // smartPreset is what a task added in a smart list gets, so it shows there:
@@ -412,8 +431,9 @@ function onDrop(m: { id: string; toGroup: string; beforeId: string }) {
 }
 const container = ref<HTMLElement | null>(null)
 // One Sortable per section (a list has at most 12 columns); each follows
-// its element as sections come and go. Only a real list is reorderable.
-const sortEls = computed(() => (list.value && editable.value && grouping.value === 'default' ? sectionEls.value : []))
+// its element as sections come and go. Only a real list in its own order
+// is reorderable.
+const sortEls = computed(() => (list.value && editable.value && grouping.value === 'default' && sorting.value === 'manual' ? sectionEls.value : []))
 for (let i = 0; i < 12; i++) {
   const r = computed(() => sortEls.value[i] ?? null)
   useSortable(r, onDrop, { group: 'task-rows', handle: '.task-row', filter: 'input,button.check,button.info', preventOnFilter: false, draggable: '[data-id]' })
@@ -506,8 +526,8 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         <button v-if="narrow" class="btn-plain -ml-2" @click="router.push({ name: 'ws-tasks', params: { ws } })"><ChevronLeft class="h-5 w-5" />{{ t('tasks.lists') }}</button>
         <div class="flex-1" />
         <template v-if="sel !== 'completed'">
-          <button v-if="canGroup" ref="groupAnchor" class="btn btn-sm shrink-0" :aria-expanded="groupOpen" @click="groupOpen = !groupOpen">
-            <Rows3 class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('tasks.groupBy') }}:</span> {{ groupLabel(grouping) }}
+          <button v-if="canGroup" ref="groupAnchor" class="btn btn-sm shrink-0" data-testid="tasks-view-menu" :aria-expanded="groupOpen" @click="groupOpen = !groupOpen">
+            <Rows3 class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('tasks.groupBy') }}:</span> {{ groupLabel(grouping) }}<template v-if="sorting !== 'manual'"> · {{ t(`tasks.sortShort.${sorting}`) }}</template>
           </button>
           <TaskFilter v-if="!saved || saved.can_edit" :ws="ws" :fkey="filterKey" :show-lists="!list" :can-save="!saved && canSmart" @save="newSmart" />
         </template>
@@ -532,6 +552,10 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
           <div class="cap px-2.5 pb-1 pt-1.5">{{ t('tasks.groupBy') }}</div>
           <button v-for="g in groupOptions" :key="g" class="menu-item w-full" @click="(groupBy = g), (groupOpen = false)">
             <Check class="h-4 w-4" :class="grouping === g ? 'text-accent' : 'opacity-0'" />{{ groupLabel(g) }}
+          </button>
+          <div class="cap px-2.5 pb-1 pt-2.5">{{ t('tasks.sortBy') }}</div>
+          <button v-for="o in SORTS" :key="o" class="menu-item w-full" :data-testid="`tasks-sort-${o}`" @click="(sortBy = o), (groupOpen = false)">
+            <Check class="h-4 w-4" :class="sorting === o ? 'text-accent' : 'opacity-0'" />{{ t(`tasks.sort.${o}`) }}
           </button>
         </div>
       </Popover>
@@ -565,7 +589,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
               @update="(p) => change(x, p)"
               @expand="foldSubs(x.id)"
             />
-            <div v-for="sub in openSubs.has(x.id) ? all.filter((y) => y.parent_id === x.id && (!y.done || showDone)) : []" :key="sub.id" class="pl-8">
+            <div v-for="sub in openSubs.has(x.id) ? all.filter((y) => y.parent_id === x.id && (!y.done || showDone)).sort((a, b) => a.rank - b.rank) : []" :key="sub.id" class="pl-8">
               <TaskRow :task="sub" :color="listById.get(x.list_id)?.color" compact :editable="editable" @toggle="toggle(sub)" @open="openTask = sub.id" />
             </div>
           </div>

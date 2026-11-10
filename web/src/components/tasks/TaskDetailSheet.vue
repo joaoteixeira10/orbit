@@ -2,11 +2,12 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, ChevronDown, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight } from 'lucide-vue-next'
+import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, ChevronDown, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical } from 'lucide-vue-next'
 import { estimateText } from '@/lib/weekPlan'
 import { durationOf, useFocusStore } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
 import Overlay from '@/components/ui/Overlay.vue'
+import { useSortable } from '@/lib/sortable'
 import Popover from '@/components/ui/Popover.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useTasksStore } from '@/stores/tasks'
@@ -231,6 +232,30 @@ async function toggleSub(id: string, done: boolean) {
 async function removeSub(id: string) {
   await tasks.remove(props.ws, id).catch((e) => toast.error(e.message))
 }
+// A sub-task's name is changed in place (empty puts it back).
+async function renameSub(id: string, was: string, el: HTMLInputElement) {
+  const v = el.value.trim()
+  if (!v || v === was) {
+    el.value = was
+    return
+  }
+  try {
+    await tasks.update(props.ws, id, { title: v })
+  } catch (e: any) {
+    el.value = was
+    toast.error(e.message)
+  }
+}
+// Dragged by their grip into another order.
+const subsEl = ref<HTMLElement | null>(null)
+useSortable(
+  subsEl,
+  (m) => {
+    const s = subtasks.value.find((x) => x.id === m.id)
+    if (s) void tasks.move(props.ws, s.id, s.column_id, m.beforeId || '^').catch((e) => toast.error(e.message))
+  },
+  { handle: '.sub-grip', draggable: '[data-id]' },
+)
 
 // Git: the task's issue, or linking one by its address.
 const gitOn = computed(() => auth.features.git_integration !== false)
@@ -644,12 +669,27 @@ async function startFocus() {
         <template v-if="!task.parent_id">
           <h3 class="sec flex items-center gap-1.5"><ListTree class="h-3.5 w-3.5" />{{ t('tasks.subtasks') }}</h3>
           <div class="group">
-            <div v-for="s in subtasks" :key="s.id" class="group-row !min-h-[40px]">
-              <button class="check !h-[18px] !w-[18px]" :class="{ on: s.done }" :style="{ '--check': list?.color || 'var(--ws)' }" :disabled="!editable" @click="toggleSub(s.id, !s.done)">
-                <Check class="h-2.5 w-2.5" :stroke-width="3.4" />
-              </button>
-              <span class="flex-1 text-[14px]" :class="{ 'text-text-3 line-through': s.done }">{{ s.title }}</span>
-              <button v-if="editable" class="icon-btn h-6 w-6" @click="removeSub(s.id)"><X class="h-3.5 w-3.5" /></button>
+            <div v-if="subtasks.length" ref="subsEl" class="subs">
+              <div v-for="s in subtasks" :key="s.id" :data-id="s.id" class="group-row !min-h-[40px]" data-testid="task-sub">
+                <GripVertical v-if="editable && subtasks.length > 1" data-testid="task-sub-grip" class="sub-grip h-4 w-4 shrink-0 cursor-grab text-text-3" :aria-label="t('tasks.dragSub')" />
+                <button class="check !h-[18px] !w-[18px]" :class="{ on: s.done }" :style="{ '--check': list?.color || 'var(--ws)' }" :disabled="!editable" @click="toggleSub(s.id, !s.done)">
+                  <Check class="h-2.5 w-2.5" :stroke-width="3.4" />
+                </button>
+                <input
+                  v-if="editable"
+                  :value="s.title"
+                  class="min-w-0 flex-1 bg-transparent text-[14px] outline-none"
+                  :class="{ 'text-text-3 line-through': s.done }"
+                  :aria-label="t('tasks.renameSub')"
+                  maxlength="500"
+                  data-testid="task-sub-title"
+                  @keydown.enter="($event.target as HTMLInputElement).blur()"
+                  @keydown.esc="(($event.target as HTMLInputElement).value = s.title), ($event.target as HTMLInputElement).blur()"
+                  @blur="renameSub(s.id, s.title, $event.target as HTMLInputElement)"
+                />
+                <span v-else class="flex-1 text-[14px]" :class="{ 'text-text-3 line-through': s.done }">{{ s.title }}</span>
+                <button v-if="editable" class="icon-btn h-6 w-6" @click="removeSub(s.id)"><X class="h-3.5 w-3.5" /></button>
+              </div>
             </div>
             <div v-if="editable" class="group-row !min-h-[40px]">
               <Plus class="h-4 w-4 text-text-3" />
@@ -750,6 +790,10 @@ async function startFocus() {
 </template>
 
 <style scoped>
+/* The sub-tasks sit in their own box (to be dragged), lined like the group's rows. */
+.subs > * + * {
+  border-top: 0.5px solid var(--border);
+}
 /* One column: everything scrolls, Delete / Start focus stay at the bottom.
    Wide (a task with its activity): the details on the left — header, the
    fields scrolling, the buttons — and the activity on the right. */

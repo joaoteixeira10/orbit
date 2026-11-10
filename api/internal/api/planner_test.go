@@ -625,3 +625,33 @@ func TestListArchive(t *testing.T) {
 		t.Fatalf("restored: home %d, calendar %d", h, c)
 	}
 }
+
+// TestSubtaskOrder: a sub-task moves among its task's others, and stays in
+// its task's column.
+func TestSubtaskOrder(t *testing.T) {
+	r, _, alice, _ := plannerSetup(t)
+	ws := createWS(t, r, alice, `{"name":"Home","kind":"personal"}`)
+	var task, a, b, c, moved taskOut
+	decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/tasks", `{"title":"Trip"}`, alice), &task)
+	sub := func(title string, into *taskOut) {
+		decode(t, authdo(r, "POST", "/api/v1/workspaces/"+ws.ID+"/tasks", `{"title":"`+title+`","parent_id":"`+task.ID+`"}`, alice), into)
+	}
+	sub("Tickets", &a)
+	sub("Hotel", &b)
+	sub("Bags", &c)
+	decode(t, authdo(r, "POST", "/api/v1/tasks/"+c.ID+"/move", `{"column_id":"`+c.ColumnID+`","after_id":"^"}`, alice), &moved)
+	if moved.Rank >= a.Rank || moved.ColumnID != task.ColumnID {
+		t.Fatalf("to the top: %+v (first was %v)", moved, a.Rank)
+	}
+	decode(t, authdo(r, "POST", "/api/v1/tasks/"+a.ID+"/move", `{"column_id":"`+a.ColumnID+`","after_id":"`+b.ID+`"}`, alice), &moved)
+	if moved.Rank <= b.Rank {
+		t.Fatalf("after Hotel: %+v (Hotel %v)", moved, b.Rank)
+	}
+	var all []taskOut
+	decode(t, authdo(r, "GET", "/api/v1/workspaces/"+ws.ID+"/tasks", "", alice), &all)
+	for _, x := range all {
+		if x.ID == task.ID && (x.Rank != task.Rank || x.ColumnID != task.ColumnID) {
+			t.Fatalf("its task stays put: %+v", x)
+		}
+	}
+}

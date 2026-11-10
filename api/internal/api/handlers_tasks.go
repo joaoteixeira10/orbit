@@ -614,13 +614,23 @@ func (h *Handlers) applyTaskFields(req taskRequest, t *models.Task) string {
 
 // columnRank returns a rank at the end of a column, or right after afterID.
 func (h *Handlers) columnRank(listID, columnID, afterID, exclude string) float64 {
+	return h.rankAmong(h.db.Where("list_id = ? AND column_id = ? AND parent_id IS NULL", listID, columnID), afterID, exclude)
+}
+
+// subRank is a sub-task's rank among its task's others: right after afterID
+// ("^" first, "" last).
+func (h *Handlers) subRank(parentID, afterID, exclude string) float64 {
+	return h.rankAmong(h.db.Where("parent_id = ?", parentID), afterID, exclude)
+}
+
+// rankAmong is a rank among the tasks q finds (but exclude): right after
+// afterID, "^" first, "" (or one not there) last.
+func (h *Handlers) rankAmong(q *gorm.DB, afterID, exclude string) float64 {
 	var sibs []struct {
 		ID   string
 		Rank float64
 	}
-	h.db.Model(&models.Task{}).Select("id", "rank").
-		Where("list_id = ? AND column_id = ? AND parent_id IS NULL AND id <> ?", listID, columnID, exclude).
-		Order("rank").Find(&sibs)
+	q.Model(&models.Task{}).Select("id", "rank").Where("id <> ?", exclude).Order("rank").Find(&sibs)
 	if len(sibs) == 0 {
 		return planner.Rank(nil, nil)
 	}
@@ -857,7 +867,9 @@ type moveTaskRequest struct {
 }
 
 // moveTask drops a task in a column of a board, at a position (editors).
-// Dropping it in a done column completes it; out of one reopens it.
+// Dropping it in a done column completes it; out of one reopens it. A
+// sub-task moves only among its task's sub-tasks (after_id; the column is
+// its task's).
 //
 //	@Summary	Move a task on a board
 //	@Tags		tasks
@@ -877,8 +889,13 @@ func (h *Handlers) moveTask(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	if t.ParentID != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "sub-tasks move with their task"})
+	if t.ParentID != nil { // only among its task's sub-tasks: its column and list are its task's
+		if err := h.db.Model(&models.Task{}).Where("id = ?", t.ID).Update("rank", h.subRank(*t.ParentID, req.AfterID, t.ID)).Error; err != nil {
+			h.internalError(c, err, "could not move the sub-task")
+			return
+		}
+		h.publishWS(c, t.WorkspaceID, "tasks")
+		c.JSON(http.StatusOK, h.countedOne(toTaskResponse(reloadTask(h, t.ID))))
 		return
 	}
 	listID := t.ListID

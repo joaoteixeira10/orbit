@@ -832,7 +832,9 @@ its list, the title, **Add notes…**, and a bar that says how its date stands
 - **People & tags** — **Assignees** (one or several members — each gets the
   reminders; **+** adds one; alone in a workspace, **Invite people** opens
   its Members) and **Tags**.
-- The git issue (where git is on) and **Sub-tasks**.
+- The git issue (where git is on) and **Sub-tasks**: click one's name to
+  fix it (Enter keeps it, Esc puts it back), and drag one by its grip
+  (⋮) into another order.
 
 At the bottom: **Delete** (it deletes the task's files too) and **Start
 focus** (a focus session on it at once, with the length you picked last —
@@ -874,6 +876,11 @@ them to reorder or move between statuses. **Group by** at the top groups a
 list (or All) by **due date** (overdue, today, this week, next week, later,
 no date), **priority** or **person** instead; a task added under a group gets
 its priority, person or date.
+The same menu **sorts** the tasks within each group: **Default** (the
+order you dragged them into, or by date), **Name (A–Z)**, **Newest first**
+or **Oldest first** (by when they were added). The button shows the sort
+(*Status · A–Z*); sorted, they can't be dragged. Both are remembered in that
+browser. Sub-tasks keep their own order.
 
 **Filter** (at the top of Tasks, Board, Timeline and Charts) narrows the tasks
 by keyword, **due** (overdue, today, this week, next week, later, no date),

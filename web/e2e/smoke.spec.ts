@@ -2145,6 +2145,51 @@ test('tasks: sub-tasks fold under their task, with a bar of how many are done', 
   await expect(page.getByText('Write the draft')).toHaveCount(0)
 })
 
+test('tasks: sorted by name or age; sub-tasks renamed and dragged into order', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Chores', kind: 'personal', modules: ['home', 'tasks'] } })).json()
+  const made: { id: string; title: string }[] = []
+  for (const title of ['Water plants', 'Buy milk', 'Call mum']) made.push(await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title } })).json())
+  for (const title of ['Kitchen', 'Balcny', 'Garden']) await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title, parent_id: made[0].id } })
+  const subs = async () =>
+    ((await (await request.get(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H })).json()) as { title: string; parent_id?: string; rank: number }[])
+      .filter((x) => x.parent_id === made[0].id).sort((a, b) => a.rank - b.rank).map((x) => x.title)
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 860 })
+  await page.goto(`/w/${ws.id}/tasks/all`)
+  const titles = page.locator('.row-wrap > .task-row .title')
+  await expect(titles).toHaveText(['Water plants', 'Buy milk', 'Call mum'])
+
+  // A–Z, then newest first; remembered.
+  await page.getByTestId('tasks-view-menu').click()
+  await page.getByTestId('tasks-sort-name').click()
+  await expect(titles).toHaveText(['Buy milk', 'Call mum', 'Water plants'])
+  await expect(page.getByTestId('tasks-view-menu')).toContainText('A–Z')
+  await page.getByTestId('tasks-view-menu').click()
+  await page.getByTestId('tasks-sort-newest').click()
+  await expect(titles).toHaveText(['Call mum', 'Buy milk', 'Water plants'])
+  await page.reload()
+  await expect(titles).toHaveText(['Call mum', 'Buy milk', 'Water plants'])
+  await page.getByTestId('tasks-view-menu').click()
+  await page.getByTestId('tasks-sort-manual').click()
+  await expect(titles).toHaveText(['Water plants', 'Buy milk', 'Call mum'])
+
+  // A sub-task's name is fixed in place; dragged by its grip to the top.
+  await page.getByText('Water plants').click()
+  const sheet = page.getByTestId('task-sheet')
+  const names = sheet.getByTestId('task-sub-title')
+  const shown = () => names.evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))
+  await expect.poll(shown).toEqual(['Kitchen', 'Balcny', 'Garden'])
+  await names.nth(1).fill('Balcony')
+  await names.nth(1).press('Enter')
+  await expect.poll(subs).toEqual(['Kitchen', 'Balcony', 'Garden'])
+  await sheet.getByTestId('task-sub-grip').nth(2).dragTo(sheet.getByTestId('task-sub').first(), { targetPosition: { x: 20, y: 4 } })
+  await expect.poll(subs).toEqual(['Garden', 'Kitchen', 'Balcony'])
+  await expect.poll(shown).toEqual(['Garden', 'Kitchen', 'Balcony'])
+})
+
 test('databases: rows out as Excel and CSV, rows in from a CSV', async ({ page, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

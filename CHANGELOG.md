@@ -6,6 +6,13 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Added
+
+- **Tasks sorted by name or age** — the Group by menu also sorts each group:
+  name (A–Z), newest or oldest first, or as before; remembered per browser.
+- **Sub-tasks can be renamed and reordered** in a task's details: click the
+  name to fix it, drag the grip to move it.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

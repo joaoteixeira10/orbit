@@ -11,10 +11,6 @@ What Orbit could do next, roughly in the order it would pay off. The
   shell and the workspaces you opened, and a queue of changes made offline
   (synced in order, conflicts shown like a page's 409). The blueprint says
   "installable, not offline" for admin consoles; a planner is different.
-- **Real-time co-editing of pages.** Today two people editing one page get a
-  "someone else changed this page" banner. Yjs (with TipTap's collaboration
-  extension) over the existing SSE stream plus a small update endpoint would
-  merge edits live, with cursors.
 - **Sharing files and photos** into Orbit from a phone (links and text
   already land in Quick Notes; files need a POST share target and the
   service worker to receive them).
@@ -56,16 +52,9 @@ What Orbit could do next, roughly in the order it would pay off. The
   GitLab merge requests as tasks of a list (they're linked by hand today).
 - Git: milestones as a list layout or a filter (they're a field now);
   webhooks for tasks linked by hand.
-- Git: an "only as me" choice — today every editor of a linked list writes
-  to git as whoever linked it (a decision for the owner).
-
 - A critical path on the timeline (dependencies are there).
-- Swimlanes on boards (by assignee or priority); WIP limits per column.
+- WIP limits per board column.
 - Time estimates and a weekly planner view that fits tasks into free time.
 
 ## Instance
 
-- PostgreSQL support once it is smoke-tested (blueprint §11.5).
-- Notification channels (Slack, Teams, webhooks) get the titles of what they
-  report; a choice to send only "you have a notification" (a decision for
-  the owner).

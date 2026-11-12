@@ -75,6 +75,25 @@ docker compose -f docker-compose.dev.yml logs --tail=200 api   # dev
   | `The identity provider returned an error.` | The provider refused (wrong client, redirect URL not registered, user not allowed) |
   | `SSO sign-in failed.` | The callback didn't check out (see the log: `oidc callback failed`) |
   | `Your account could not be provisioned (it may be disabled).` | The matching Orbit user is disabled, or couldn't be created |
+  | `That account's email isn't one this Orbit lets in.` | The provider is kept to some email domains (Owner → SSO → Allowed email domains), and the account isn't of one, or its email isn't verified |
+
+  SAML: the log says `saml begin failed` (Orbit couldn't read the identity
+  provider's metadata — its URL, or the pasted XML) or `saml response
+  refused` (the answer wasn't signed by a certificate in the metadata, came
+  from another issuer, or wasn't for Orbit's Entity ID / Reply URL — check
+  both at the provider against Owner → SSO). A sign-in started at the
+  identity provider's portal (IdP-initiated) is refused on purpose: start it
+  from Orbit's login page.
+
+- **SCIM provisioning answers `401`.** It's off (Owner → SSO → Provisioning),
+  or the identity provider has an old token: **Make a new token** and paste
+  it there. Orbit answers `409` for a userName a local account already has —
+  SCIM never takes over an account it didn't make.
+
+- **"Locking needs Orbit opened over HTTPS".** Locking notes and pages
+  encrypts in the browser, which browsers allow only on a secure page: HTTPS,
+  or `localhost`. Put Orbit behind HTTPS (see
+  [reverse-proxies.md](reverse-proxies.md)).
 
 - **Passkeys don't work** (`passkeys are not enabled on this server`, or the
   browser refuses). Passkeys need `WEBAUTHN_RP_ID` = the host name people type

@@ -25,6 +25,8 @@ services:
       - orbit-data:/data
       # Automatic backups to a directory (Owner → Owner → Backups → /backups):
       # - ./backups:/backups
+    # Upgrading? BACKUP_BEFORE_MIGRATE=true in .env copies the SQLite database
+    # (orbit.db.before-<version>, in the volume) before a new version changes it.
     restart: unless-stopped
 
   # Optional: PostgreSQL instead of the SQLite file. Set in .env:

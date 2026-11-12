@@ -1802,7 +1802,9 @@ roles**), and **Branding** / **Notifications** when the owner delegated them.
 account, role, workspace and membership change, with **Verify integrity**
 (checks the tamper-evident chain) and **CSV** export. **Impersonations**
 shows only those: each start and end (returned, or its time ran out) and what
-was done in between (`via <admin>`). Admin screens update live.
+was done in between — every change, under the person's name with a **via
+<admin>** pill, and what it was on by name (`task · Buy milk`, with its
+workspace). Admin screens update live.
 
 > Admins manage **accounts**, not content: they can't open other people's
 > workspaces.

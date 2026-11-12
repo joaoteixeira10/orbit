@@ -99,7 +99,10 @@ front; DNS only is one hop less. If proxied:
 
 **SSO.** The **Redirect URL** in **Owner → SSO**, and the one registered at your
 identity provider, use the public host:
-`https://orbit.example.org/api/v1/auth/oidc/callback`. See
+`https://orbit.example.org/api/v1/auth/oidc/callback`. A SAML provider's
+**Entity ID** and **Reply URL** (`…/api/v1/auth/saml/<id>/metadata`, `…/acs`)
+and SCIM's base URL (`https://orbit.example.org/scim/v2`) are built the same
+way — set `PUBLIC_URL`, and pass `/scim/v2` through like the rest. See
 [SSO-entra.md](SSO-entra.md) and [SSO-authentik.md](SSO-authentik.md).
 
 ## 3. What the proxy must do

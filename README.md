@@ -54,9 +54,18 @@ app.
   private to its members: instance admins manage accounts, not your
   planner. Move a whole workspace to another Orbit (export / import).
 - **Accounts** — passwords with two-factor (authenticator app or passkey),
-  passkeys, SSO (OpenID Connect), sign in with Gitea, GitHub or GitLab for the git
-  integration, API tokens (optionally read-only), a tamper-evident audit
-  log, encrypted backups.
+  passkeys, single sign-on with several providers at once (Google, any
+  OpenID Connect provider, SAML 2.0 — kept to your email domains if you
+  like), accounts and groups provisioned by Okta or Entra (SCIM), groups
+  that carry roles and workspaces, sign in with Gitea, GitHub or GitLab for
+  the git integration, API tokens (optionally read-only), a tamper-evident
+  audit log (what an admin did as someone, said plainly), encrypted
+  backups.
+- **Locked notes and pages** — a note or a page kept to you, encrypted in
+  your browser with your own PIN: not even an admin can read it.
+- **An assistant** — built in (Claude, an OpenAI-style service or your
+  Ollama), answering from your own Orbit and making changes you approve;
+  and an MCP server, so Claude, ChatGPT or Cursor work in Orbit as you.
 - **Anywhere** — light and dark, developer themes, English and Portuguese,
   and installable on a phone (Add to Home Screen) with a bottom tab bar and
   the share sheet.

@@ -40,14 +40,17 @@ TipTap 3 (ProseMirror) · SortableJS · `emersion/go-ical` + `teambition/rrule-g
 ## Data model
 
 ```
-Workspace ─┬─ WorkspaceMember (user, role: owner|editor|viewer, sidebar position)
+Workspace ─┬─ WorkspaceMember (user, role: owner|editor|viewer, direct_role, sidebar position)
+           ├─ WorkspaceGroup (group, role) ─ Group ─┬─ GroupMember (user)
+           │                                        └─ GroupRole (instance role)
            ├─ Page (parent → Page, Markdown, plain text, rank, version, trashed_at)
            │    └─ PageFavorite (per user)
            ├─ TaskList (columns JSON: [{id, name, color, done}])
            │    └─ Task (column, parent → Task, due date + time, repeat, rank, completed_at, assignee)
            ├─ Event (starts/ends UTC, all_day, tz, rrule, until, exdates, remind_minutes)
            └─ CalendarSubscription (sealed URL) ─ ExternalEvent (expanded occurrences)
-User ─ CalendarFeed (token hash, which workspaces, include tasks)
+User ─┬─ CalendarFeed (token hash, which workspaces, include tasks)
+      └─ LockKey (the lock key, wrapped by the PIN in the browser)
 ```
 
 - **Modules** are a JSON list on the workspace (order = sidebar order). The
@@ -65,6 +68,10 @@ User ─ CalendarFeed (token hash, which workspaces, include tasks)
   queries; `exdates` remove single occurrences.
 - **Page versions**: saving content needs the version the editor started
   from; a mismatch is a 409 carrying the newer page.
+- **Locked notes and pages** (`Sealing`: sealed, sealed_by, cipher) keep
+  only text encrypted in the browser (`web/src/lib/lock.ts`); locking clears
+  the readable text, its search words, a page's history and its shared
+  editing document.
 
 ## Access
 
@@ -76,7 +83,13 @@ Every planner handler loads the resource, then calls `wsAccess(ws, need)`:
 4. a write in an **archived** workspace → 409.
 
 Instance roles (`admin`, `member`, `none`) only gate administration and
-`workspaces.create`. Creating a workspace makes you its owner. The last owner
+`workspaces.create` — a person's own plus their groups' (`auth.GroupRoles`).
+**Groups in workspaces** stay plain membership rows: `Role` is the higher of
+the person's `DirectRole` and their groups' roles there, kept so by
+`planner.SyncGroupAccess` after any change to groups, their people or direct
+roles (refusing one that would leave no owner) — so every "who's in it"
+query still reads one table. Sign-in providers (OpenID Connect, Google,
+SAML) and SCIM can keep groups too (source `oidc` / `scim`). Creating a workspace makes you its owner. The last owner
 can't leave or be demoted; deleting an account deletes the workspaces it was
 alone in and promotes another member elsewhere (`releaseWorkspaces`).
 

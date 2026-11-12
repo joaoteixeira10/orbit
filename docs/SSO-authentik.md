@@ -118,7 +118,10 @@ The `issuer` in that JSON must match what you enter in Orbit exactly.
 
 ## 5. Enter the settings in Orbit
 
-Sign in as the owner and open **Owner → SSO** (**Single sign-on (OIDC)**).
+Sign in as the owner and open **Owner → SSO**, then **OpenID Connect** to add
+a provider (or the pencil, to change the one you have). Give it a **Name** —
+the login button says "Sign in with <Name>" — and an **Id** (the first
+provider's is `default`; keep it if people already sign in with SSO).
 
 | Field | Value |
 |---|---|
@@ -133,7 +136,9 @@ Sign in as the owner and open **Owner → SSO** (**Single sign-on (OIDC)**).
 
 1. Click **Test** next to **Issuer URL**. "Discovery succeeded — issuer looks
    good" means Orbit reached Authentik and found a valid OIDC provider.
-2. Click **Save SSO settings**.
+2. Click **Save SSO settings**. Optional: **Allowed email domains** keeps it
+   to your organisation's addresses; **Groups claim** keeps the provider's
+   groups as Orbit groups (Admin → Groups), joined and left at each sign-in.
 
 Orbit always requests `openid profile email`; **Extra scopes** adds more,
 separated by spaces. The **Client secret** is write-only. After saving, the

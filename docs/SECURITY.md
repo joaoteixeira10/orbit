@@ -488,6 +488,10 @@ user. Release mode refuses either secret under 32 characters.
 - [ ] Consider `otp_enforced`, and step-up (`step_up_auth`).
 - [ ] Owner security alerts on, with a notification channel.
 - [ ] Leave `impersonation` off unless you need it.
+- [ ] SCIM provisioning off unless an identity provider uses it; a new token
+      if the old one may have leaked.
+- [ ] A sign-in provider for your organisation only: set its **Allowed email
+      domains** (Google especially).
 - [ ] Give `users.manage` and `admin` only to people you would trust as owner.
 - [ ] Run Audit log → Verify now and then.
 

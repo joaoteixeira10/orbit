@@ -42,3 +42,23 @@ func TestOIDCStateSingleUse(t *testing.T) {
 		t.Fatalf("unknown state accepted: %v", err)
 	}
 }
+
+// TestDomainAllowed: with domains set, a verified email of one of them;
+// Google's hosted-domain claim must agree too.
+func TestDomainAllowed(t *testing.T) {
+	g := OIDCSettings{Kind: "google", Domains: []string{"school.edu"}}
+	o := OIDCSettings{Kind: "oidc", Domains: []string{"school.edu"}}
+	ok := map[string]any{"email_verified": true, "hd": "school.edu"}
+	if !domainAllowed(g, "ana@School.edu", ok) || !domainAllowed(o, "ana@school.edu", map[string]any{"email_verified": true}) {
+		t.Fatal("allowed domain refused")
+	}
+	if domainAllowed(g, "ana@school.edu", map[string]any{"email_verified": true}) {
+		t.Error("google without hd")
+	}
+	if domainAllowed(o, "ana@school.edu", map[string]any{}) || domainAllowed(o, "ana@evil.test", map[string]any{"email_verified": true}) {
+		t.Error("unverified or other domain")
+	}
+	if !domainAllowed(OIDCSettings{}, "anyone@anywhere", nil) {
+		t.Error("no domains: anyone")
+	}
+}

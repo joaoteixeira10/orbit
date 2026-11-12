@@ -115,8 +115,11 @@ You add passkeys in **Settings → Passkeys** first.
 
 ### With single sign-on (SSO)
 
-If the owner set up SSO, the card shows **Sign in with SSO**. It takes you to
-your company's identity provider and back. Your first SSO sign-in creates your
+If the owner set up SSO, the card shows a button for each way in — **Sign
+in with SSO**, **Sign in with Google**, **Sign in with Authentik**… It takes
+you to that identity provider and back. A provider may be kept to some
+email domains (your school's or company's): another account is turned
+away. Your first SSO sign-in creates your
 Orbit account. Its role comes from your provider's groups or the default
 role (often `none`, which can see nothing until an admin gives you a role).
 
@@ -2082,15 +2085,28 @@ Reminders). Click **Save**.
 
 ### SSO
 
-**Single sign-on (OIDC)**: the on/off switch, **Issuer URL** with **Test**,
-**Client ID**, **Client secret** (write-only), **Redirect URL** (register this
-exact URL at your provider, for example
-`https://orbit.example.org/api/v1/auth/oidc/callback`), **Extra scopes**, **Role
-claim** and **Default role**. Click **Save SSO settings**.
+**Single sign-on**: the identity providers people sign in with, each its own
+button on the login page. **Google** adds Google sign-in; **OpenID Connect**
+adds any other (Authentik, Microsoft Entra, Keycloak…). For each: a **name**
+for its button and an **id**, the on/off switch, **Issuer URL** with **Test**
+(not for Google), **Client ID**, **Client secret** (write-only), **Redirect
+URL** (register this exact URL at the provider, for example
+`https://orbit.example.org/api/v1/auth/oidc/callback` — the same for all),
+then:
 
-New users are created at their first sign-in. If a role claim is set, its
-values are matched to role names at each sign-in. Otherwise, or with no match,
-the user gets the default role.
+- **Allowed email domains**: only accounts with a verified email of these
+  domains sign in (Google: of your Google Workspace domain too). Empty:
+  anyone the provider lets through.
+- **Groups claim** (e.g. `groups`): each sign-in puts the person in exactly
+  the groups the provider names — made here as needed, marked **From
+  sign-in** — so giving such a group roles or workspaces (Admin → Groups)
+  follows your directory.
+- **Role claim** and **Default role**: roles by name from a claim, else the
+  default role.
+
+New users are created at their first sign-in, one account per provider. The
+first provider (id `default`) is the one from before there could be
+several: its people keep their accounts.
 
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).

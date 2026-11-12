@@ -62,17 +62,18 @@ func validAssetSource(s string) string {
 
 // brandingResponse is the public theming payload the SPA loads at boot.
 type brandingResponse struct {
-	AppName             string `json:"app_name"`
-	AccentColor         string `json:"accent_color"`
-	LogoDataURL         string `json:"logo_data_url"`
-	FaviconDataURL      string `json:"favicon_data_url"`
-	ShowAppName         bool   `json:"show_app_name"`
-	ShowLogo            bool   `json:"show_logo"` // show the sidebar/login logo mark
-	LoginMessage        string `json:"login_message"`
-	OIDCEnabled         bool   `json:"oidc_enabled"`         // SPA shows the "Sign in with SSO" button
-	HideLocalLogin      bool   `json:"hide_local_login"`     // hide the password form on /login (when SSO is available)
-	PasswordlessEnabled bool   `json:"passwordless_enabled"` // SPA shows the "Sign in with a passkey" button
-	AutoSSO             bool   `json:"auto_sso"`             // login page auto-starts SSO (unless ?local=1)
+	AppName             string      `json:"app_name"`
+	AccentColor         string      `json:"accent_color"`
+	LogoDataURL         string      `json:"logo_data_url"`
+	FaviconDataURL      string      `json:"favicon_data_url"`
+	ShowAppName         bool        `json:"show_app_name"`
+	ShowLogo            bool        `json:"show_logo"` // show the sidebar/login logo mark
+	LoginMessage        string      `json:"login_message"`
+	OIDCEnabled         bool        `json:"oidc_enabled"`         // SPA shows the "Sign in with SSO" button
+	SSOProviders        []ssoButton `json:"sso_providers"`        // one "Sign in with …" button each
+	HideLocalLogin      bool        `json:"hide_local_login"`     // hide the password form on /login (when SSO is available)
+	PasswordlessEnabled bool        `json:"passwordless_enabled"` // SPA shows the "Sign in with a passkey" button
+	AutoSSO             bool        `json:"auto_sso"`             // login page auto-starts SSO (unless ?local=1)
 
 	DeveloperThemesEnabled  bool   `json:"developer_themes_enabled"`
 	DeveloperTheme          string `json:"developer_theme"` // blue | gold | red | ink | green
@@ -136,6 +137,7 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		ShowLogo:            showLogo,
 		LoginMessage:        m[keyLoginMessage],
 		OIDCEnabled:         h.oidc != nil && h.oidc.Enabled(),
+		SSOProviders:        h.ssoButtons(),
 		HideLocalLogin:      h.hideLocalLogin(),
 		PasswordlessEnabled: h.passwordlessEnabled(),
 		AutoSSO:             h.autoSSO(),
@@ -265,4 +267,22 @@ func (h *Handlers) loadSettings() map[string]string {
 
 func (h *Handlers) setSetting(key, value string) {
 	h.db.Save(&models.Setting{Key: key, Value: value, UpdatedAt: time.Now()})
+}
+
+// ssoButton is a sign-in provider as the login page shows it.
+type ssoButton struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+}
+
+func (h *Handlers) ssoButtons() []ssoButton {
+	out := []ssoButton{}
+	if h.oidc == nil {
+		return out
+	}
+	for _, p := range h.oidc.Usable() {
+		out = append(out, ssoButton{ID: p.ID, Name: p.Name, Kind: p.Kind})
+	}
+	return out
 }

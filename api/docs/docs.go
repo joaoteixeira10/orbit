@@ -850,7 +850,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Get OIDC config",
+                "summary": "Get OIDC config (the first provider)",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -875,7 +875,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Update OIDC config",
+                "summary": "Update OIDC config (the default provider)",
                 "parameters": [
                     {
                         "description": "OIDC settings",
@@ -945,7 +945,112 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Begin OIDC login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Which provider (the first one if not given)",
+                        "name": "provider",
+                        "in": "query"
+                    }
+                ],
                 "responses": {}
+            }
+        },
+        "/auth/oidc/providers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "SSO providers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.oidcConfigDTO"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oidc/providers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Add or change an SSO provider",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider id (a-z, 0-9, -)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Its settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.oidcConfigDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.oidcConfigDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Remove an SSO provider",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
             }
         },
         "/auth/oidc/test": {
@@ -13058,6 +13163,13 @@ const docTemplate = `{
                 "show_logo": {
                     "description": "show the sidebar/login logo mark",
                     "type": "boolean"
+                },
+                "sso_providers": {
+                    "description": "one \"Sign in with …\" button each",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ssoButton"
+                    }
                 }
             }
         },
@@ -15898,14 +16010,35 @@ const docTemplate = `{
                 "default_role": {
                     "type": "string"
                 },
+                "domains": {
+                    "description": "only verified emails of these domains",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "enabled": {
                     "type": "boolean"
+                },
+                "group_claim": {
+                    "description": "the IdP's groups, kept as Orbit groups",
+                    "type": "string"
                 },
                 "has_secret": {
                     "description": "response only",
                     "type": "boolean"
                 },
+                "id": {
+                    "type": "string"
+                },
                 "issuer": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "oidc | google",
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "redirect_url": {
@@ -16930,6 +17063,20 @@ const docTemplate = `{
                 },
                 "until": {
                     "description": "RFC 3339 (instead of minutes)",
+                    "type": "string"
+                }
+            }
+        },
+        "api.ssoButton": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

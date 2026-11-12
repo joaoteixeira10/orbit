@@ -88,6 +88,7 @@ export interface Branding {
   show_logo: boolean
   login_message: string
   oidc_enabled: boolean
+  sso_providers?: { id: string; name: string; kind: string }[]
   hide_local_login: boolean
   passwordless_enabled: boolean
   auto_sso: boolean
@@ -104,6 +105,11 @@ export interface Branding {
 }
 
 export interface OIDCConfig {
+  id?: string // a-z, 0-9, -
+  name?: string // on the login button: "Sign in with <name>"
+  kind?: 'oidc' | 'google'
+  group_claim?: string // the IdP's groups, kept as Orbit groups
+  domains?: string[] // only verified emails of these domains
   enabled: boolean
   issuer: string
   client_id: string

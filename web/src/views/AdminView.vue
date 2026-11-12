@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import GroupsAdmin from '@/components/admin/GroupsAdmin.vue'
+import SSOProviders from '@/components/admin/SSOProviders.vue'
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { onLiveEvent } from '@/lib/live'
 import { useFlash } from '@/lib/highlight'
-import { usersApi, apiTokensAdminApi, rolesApi, settingsApi, notifyApi, securityApi, oidcApi, featuresApi, ownerApi, type CreateUserInput, type RoleInput } from '@/api'
-import type { User, Role, NotifConfig, OIDCConfig, APIToken } from '@/api/types'
+import { usersApi, apiTokensAdminApi, rolesApi, settingsApi, notifyApi, securityApi, featuresApi, ownerApi, type CreateUserInput, type RoleInput } from '@/api'
+import type { User, Role, NotifConfig, APIToken } from '@/api/types'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
@@ -631,36 +632,6 @@ async function setAutoSso(v: boolean) {
     toast.error(e.message)
   }
 }
-// ---------- SSO / OIDC ----------
-const oidcCfg = ref<OIDCConfig | null>(null)
-const oidcBusy = ref(false)
-async function loadOIDC() {
-  oidcCfg.value = await oidcApi.getConfig()
-}
-async function saveOIDC() {
-  if (!oidcCfg.value) return
-  oidcBusy.value = true
-  try {
-    oidcCfg.value = await oidcApi.updateConfig(oidcCfg.value)
-    await branding.load() // refresh the public oidc_enabled flag
-    toast.success(t('adm.sso.saved'))
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    oidcBusy.value = false
-  }
-}
-async function testOIDC() {
-  if (!oidcCfg.value?.issuer) return
-  try {
-    await oidcApi.testDiscovery(oidcCfg.value.issuer)
-    toast.success(t('adm.sso.discoveryOk'))
-  } catch (e: any) {
-    toast.error(e.message)
-  }
-}
-
-
 // Keep the active tab valid for the current area, and fire its lazy loader —
 // including when navigating between /admin and /owner (same component reused).
 watch(
@@ -893,7 +864,6 @@ function switchTab(t: Tab) {
   if (t === 'branding') loadBrandForm()
   if (t === 'notifications' && !notifCfg.value) loadNotifConfig()
   if (t === 'security' && !secLoaded.value) loadSecurity()
-  if (t === 'sso' && !oidcCfg.value) loadOIDC()
 }
 </script>
 
@@ -1401,53 +1371,7 @@ function switchTab(t: Tab) {
 
     <!-- ===== SSO / OIDC ===== -->
     <section v-else-if="tab === 'sso'" class="max-w-3xl">
-      <div v-if="oidcCfg" class="card p-5">
-        <div class="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h3 class="text-[14px] font-semibold">{{ t('adm.sso.title') }}</h3>
-            <div class="text-[12px] text-text-3">{{ t('adm.sso.hint') }}</div>
-          </div>
-          <Toggle v-model="oidcCfg.enabled" />
-        </div>
-        <div class="flex flex-col gap-3">
-          <div>
-            <label class="label">{{ t('adm.sso.issuer') }}</label>
-            <div class="flex gap-2">
-              <input v-model="oidcCfg.issuer" class="input" placeholder="https://idp.example.com/realms/main" />
-              <button type="button" class="btn-ghost shrink-0" @click="testOIDC">{{ t('adm.test') }}</button>
-            </div>
-            <i18n-t scope="global" keypath="adm.sso.issuerHint" tag="p" class="mt-1 text-[11px] text-text-3"><template #path><code>/.well-known/openid-configuration</code></template></i18n-t>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="label">{{ t('adm.sso.clientId') }}</label><input v-model="oidcCfg.client_id" class="input" /></div>
-            <div>
-              <label class="label">{{ t('adm.sso.clientSecret') }}</label>
-              <input v-model="oidcCfg.client_secret" type="password" class="input" :placeholder="oidcCfg.has_secret ? t('adm.sso.secretUnchanged') : ''" />
-            </div>
-          </div>
-          <div>
-            <label class="label">{{ t('adm.sso.redirect') }}</label>
-            <input v-model="oidcCfg.redirect_url" class="input" placeholder="https://orbit.example.org/api/v1/auth/oidc/callback" />
-            <p class="mt-1 text-[11px] text-text-3">{{ t('adm.sso.redirectHint') }}</p>
-          </div>
-          <div class="grid grid-cols-3 gap-3">
-            <div><label class="label">{{ t('adm.sso.scopes') }}</label><input v-model="oidcCfg.scopes" class="input" placeholder="groups" /></div>
-            <div><label class="label">{{ t('adm.sso.roleClaim') }}</label><input v-model="oidcCfg.role_claim" class="input" placeholder="groups" /></div>
-            <div><label class="label">{{ t('adm.sso.defaultRole') }}</label><input v-model="oidcCfg.default_role" class="input" :placeholder="t('adm.sso.defaultRoleNone')" /></div>
-          </div>
-          <p class="text-[11px] text-text-3">
-            {{ t('adm.sso.provisioning') }}
-          </p>
-          <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
-            <div>
-              <div class="text-[13px] font-semibold">{{ t('admin.ssoAllowAdmin') }}</div>
-              <div class="text-[12px] text-text-3">{{ t('admin.ssoAllowAdminHint') }}</div>
-            </div>
-            <Toggle :model-value="!!oidcCfg.allow_admin" @update:model-value="(v) => oidcCfg && (oidcCfg.allow_admin = v)" />
-          </div>
-          <div class="flex justify-end"><button class="btn-primary" :disabled="oidcBusy" @click="saveOIDC">{{ oidcBusy ? t('common.saving') : t('adm.sso.save') }}</button></div>
-        </div>
-      </div>
+      <SSOProviders />
     </section>
 
 

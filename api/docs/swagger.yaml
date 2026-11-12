@@ -566,6 +566,11 @@ definitions:
       show_logo:
         description: show the sidebar/login logo mark
         type: boolean
+      sso_providers:
+        description: one "Sign in with …" button each
+        items:
+          $ref: '#/definitions/api.ssoButton'
+        type: array
     type: object
   api.caldavAccountRequest:
     properties:
@@ -2545,12 +2550,27 @@ definitions:
         type: string
       default_role:
         type: string
+      domains:
+        description: only verified emails of these domains
+        items:
+          type: string
+        type: array
       enabled:
         type: boolean
+      group_claim:
+        description: the IdP's groups, kept as Orbit groups
+        type: string
       has_secret:
         description: response only
         type: boolean
+      id:
+        type: string
       issuer:
+        type: string
+      kind:
+        description: oidc | google
+        type: string
+      name:
         type: string
       redirect_url:
         type: string
@@ -3266,6 +3286,15 @@ definitions:
         type: integer
       until:
         description: RFC 3339 (instead of minutes)
+        type: string
+    type: object
+  api.ssoButton:
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+      name:
         type: string
     type: object
   api.subscriptionRequest:
@@ -5522,7 +5551,7 @@ paths:
             $ref: '#/definitions/api.oidcConfigDTO'
       security:
       - BearerAuth: []
-      summary: Get OIDC config
+      summary: Get OIDC config (the first provider)
       tags:
       - auth
     put:
@@ -5544,7 +5573,7 @@ paths:
             $ref: '#/definitions/api.oidcConfigDTO'
       security:
       - BearerAuth: []
-      summary: Update OIDC config
+      summary: Update OIDC config (the default provider)
       tags:
       - auth
   /auth/oidc/exchange:
@@ -5576,8 +5605,72 @@ paths:
       - auth
   /auth/oidc/login:
     get:
+      parameters:
+      - description: Which provider (the first one if not given)
+        in: query
+        name: provider
+        type: string
       responses: {}
       summary: Begin OIDC login
+      tags:
+      - auth
+  /auth/oidc/providers:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.oidcConfigDTO'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: SSO providers
+      tags:
+      - auth
+  /auth/oidc/providers/{id}:
+    delete:
+      parameters:
+      - description: Provider id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove an SSO provider
+      tags:
+      - auth
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider id (a-z, 0-9, -)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Its settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.oidcConfigDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.oidcConfigDTO'
+      security:
+      - BearerAuth: []
+      summary: Add or change an SSO provider
       tags:
       - auth
   /auth/oidc/test:

@@ -139,6 +139,9 @@ export const meApi = {
 export const oidcApi = {
   getConfig: () => api<OIDCConfig>('/auth/oidc/config'),
   updateConfig: (cfg: OIDCConfig) => api<OIDCConfig>('/auth/oidc/config', { method: 'PUT', body: JSON.stringify(cfg) }),
+  providers: () => api<OIDCConfig[]>('/auth/oidc/providers'),
+  saveProvider: (id: string, cfg: OIDCConfig) => api<OIDCConfig>(`/auth/oidc/providers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(cfg) }),
+  removeProvider: (id: string) => api<void>(`/auth/oidc/providers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   testDiscovery: (issuer: string) =>
     api<{ status: string }>('/auth/oidc/test', { method: 'POST', body: JSON.stringify({ issuer }) }),
   exchange: (code: string) =>

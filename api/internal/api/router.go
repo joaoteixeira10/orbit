@@ -560,6 +560,9 @@ func New(d Deps) *gin.Engine {
 			authed.GET("/auth/oidc/config", h.auth.RequireOwner(), h.getOIDCConfig)
 			authed.PUT("/auth/oidc/config", h.auth.RequireOwner(), h.requireStepUp(), h.updateOIDCConfig)
 			authed.POST("/auth/oidc/test", h.auth.RequireOwner(), h.testOIDCDiscovery)
+			authed.GET("/auth/oidc/providers", h.auth.RequireOwner(), h.listOIDCProviders)
+			authed.PUT("/auth/oidc/providers/:id", h.auth.RequireOwner(), h.requireStepUp(), h.saveOIDCProvider)
+			authed.DELETE("/auth/oidc/providers/:id", h.auth.RequireOwner(), h.requireStepUp(), h.deleteOIDCProvider)
 		}
 	}
 

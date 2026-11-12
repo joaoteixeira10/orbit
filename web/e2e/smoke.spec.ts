@@ -3286,6 +3286,30 @@ test('groups: made in Admin with people; a workspace’s owner adds one — its 
   expect(mine.map((w: any) => w.name)).toContain('Studio Team')
 })
 
+test('sign-in providers: the owner adds Google kept to a domain; the login page has its button', async ({ page, browser }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await page.goto('/owner')
+  await page.locator('.subtab', { hasText: 'SSO' }).click()
+  await page.getByTestId('sso-add-google').click()
+  await page.getByTestId('sso-client-id').fill('123.apps.googleusercontent.com')
+  await page.getByTestId('sso-domains').fill('school.edu')
+  await page.getByTestId('sso-save').click()
+  const row = page.getByTestId('sso-provider').filter({ hasText: 'Google' })
+  await expect(row).toContainText('school.edu')
+  await page.screenshot({ path: 'test-results/sso-providers.png' })
+
+  const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL })
+  const anon = await ctx.newPage()
+  await anon.goto('/login')
+  await expect(anon.getByRole('button', { name: 'Sign in with Google' })).toBeVisible()
+  await ctx.close()
+  // Removed: the button goes.
+  await row.getByRole('button', { name: 'Delete' }).click()
+  await page.getByRole('button', { name: 'Delete' }).last().click()
+  await expect(page.getByTestId('sso-provider')).toHaveCount(0)
+})
+
 test('guest links and forms: a page read and edited by its link, no account; a public form adds a row', async ({ page, browser, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

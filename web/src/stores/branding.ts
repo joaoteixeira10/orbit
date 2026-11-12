@@ -52,6 +52,8 @@ export const useBrandingStore = defineStore('branding', {
     // Where Diagrams load the draw.io editor from.
     drawioUrl: 'https://embed.diagrams.net',
     oidcEnabled: false,
+    // One "Sign in with …" button each (several identity providers).
+    ssoProviders: [] as { id: string; name: string; kind: string }[],
     hideLocalLogin: false,
     passwordlessEnabled: true,
     autoSso: false,
@@ -129,6 +131,7 @@ export const useBrandingStore = defineStore('branding', {
       this.showLogo = b.show_logo
       this.loginMessage = b.login_message
       this.oidcEnabled = b.oidc_enabled
+      this.ssoProviders = b.sso_providers ?? []
       this.hideLocalLogin = b.hide_local_login
       this.passwordlessEnabled = b.passwordless_enabled
       this.autoSso = b.auto_sso

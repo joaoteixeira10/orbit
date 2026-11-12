@@ -8,6 +8,12 @@ merge, not at release time.
 
 ### Added
 
+- **Several sign-in providers** — Owner → SSO lists them, each its own button
+  on the login page: Google, and any OpenID Connect one (Authentik, Entra,
+  Keycloak…). A provider can be kept to **email domains** (verified; for
+  Google, your Workspace domain), and its **groups claim** keeps your
+  directory's groups as Orbit groups, joined and left at each sign-in. The
+  SSO set up before is the first provider; its people keep their accounts.
 - **Groups** — Admin → Groups: sets of people that carry roles; a
   workspace's owners add a group with a role, and everyone in it is a member
   ("through Design"). Joining or leaving a group gives or takes all of it.

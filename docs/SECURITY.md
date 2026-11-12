@@ -141,6 +141,15 @@ dangerous actions need a fresh password or passkey check within the last 5
 minutes: feature flags, security policy, SSO settings, owner transfer and
 starting an impersonation.
 
+**Sign-in providers.** Several OpenID Connect providers (Google is one) can
+be set by the owner (step-up), their client secrets sealed. Each login's
+state names its provider; an account's subject is the provider's
+(`<id>|<sub>`, the first provider's as before), so two providers can't map
+to one account. A provider limited to email domains admits only a verified
+email of them (Google: its `hd` claim must agree). A provider's groups
+claim keeps that provider's groups only (others' and Orbit's own are never
+touched); a sync that would leave a workspace without an owner is skipped.
+
 **Groups.** A group carries instance roles (added to its members' own when
 privileges are worked out, on every request) and workspace roles (kept as
 the members' rows: the higher of their own and their groups'). Managing

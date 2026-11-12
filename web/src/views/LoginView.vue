@@ -42,6 +42,7 @@ const ssoErrors: Record<string, string> = {
   auth_failed: t('acct.signin.ssoFailed'),
   provisioning: t('acct.signin.ssoProvisioning'),
   token: t('acct.signin.ssoToken'),
+  domain: t('acct.signin.ssoDomain'),
 }
 
 // SSO goes off to the identity provider and comes back to /login?sso=…, so
@@ -63,13 +64,13 @@ function done() {
 }
 
 // Start SSO: full-page redirect to the backend, which redirects to the IdP.
-function signInWithSSO() {
+function signInWithSSO(provider = '') {
   try {
     if (typeof route.query.redirect === 'string') sessionStorage.setItem(AFTER_SSO, route.query.redirect)
   } catch {
     /* no storage */
   }
-  window.location.href = '/api/v1/auth/oidc/login'
+  window.location.href = '/api/v1/auth/oidc/login' + (provider ? `?provider=${encodeURIComponent(provider)}` : '')
 }
 
 // Conditional-UI passkey autofill: armed on mount, cancelled on submit/unmount.
@@ -236,7 +237,13 @@ function backToCredentials() {
             <button v-if="showPasskey" type="button" :disabled="loading" class="alt" @click="signInWithPasskey">
               <Fingerprint :size="16" /> {{ t('login.withPasskey') }}
             </button>
-            <button v-if="branding.oidcEnabled" type="button" :disabled="loading" class="alt" @click="signInWithSSO">
+            <!-- One button per identity provider ("Sign in with Google"…). -->
+            <template v-if="branding.ssoProviders.length > 1 || branding.ssoProviders[0]?.name !== 'SSO'">
+              <button v-for="p in branding.ssoProviders" :key="p.id" type="button" :disabled="loading" class="alt" :data-testid="`sso-${p.id}`" @click="signInWithSSO(p.id)">
+                <LogIn :size="16" /> {{ t('login.withProvider', { name: p.name }) }}
+              </button>
+            </template>
+            <button v-else-if="branding.oidcEnabled" type="button" :disabled="loading" class="alt" @click="signInWithSSO()">
               <LogIn :size="16" /> {{ t('login.withSSO') }}
             </button>
           </template>

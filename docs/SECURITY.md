@@ -141,6 +141,19 @@ dangerous actions need a fresh password or passkey check within the last 5
 minutes: feature flags, security policy, SSO settings, owner transfer and
 starting an impersonation.
 
+**Locked notes and pages.** A person can lock a note or a page with a PIN.
+The text is encrypted in their browser (AES-GCM, 256-bit) with their lock
+key — random, kept on the server only wrapped by a key derived from the PIN
+(PBKDF2-SHA-256, 600 000 iterations, a random salt). The server never sees
+the PIN or the key; locking clears the readable text, its search words, a
+page's history and its live-editing state, and the API refuses readable text
+for a locked item, or any change to it from anyone but who locked it. Not
+covered: titles, attachments, a note's drawing. A lost PIN can't be
+recovered; setting or forgetting it is audited and refused while
+impersonating (an impersonating admin can't open what someone locked, as
+they don't know the PIN). Web Crypto needs a secure context: HTTPS, or
+localhost.
+
 **Impersonation** (feature flag `impersonation`, off by default). A holder of
 `users.impersonate` can act as another user to see what they see. The owner
 can never be impersonated; only the owner can impersonate an admin; nobody can

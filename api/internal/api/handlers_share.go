@@ -337,7 +337,8 @@ func (h *Handlers) guestPageOf(c *gin.Context) {
 		return
 	}
 	var p models.Page
-	if !g.pages[c.Param("id")] || h.db.First(&p, "id = ?", c.Param("id")).Error != nil {
+	// A locked page isn't shown or changed by a link (only who locked it opens it).
+	if !g.pages[c.Param("id")] || h.db.First(&p, "id = ?", c.Param("id")).Error != nil || p.Sealed {
 		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
 		return
 	}
@@ -372,7 +373,8 @@ func (h *Handlers) guestEdit(c *gin.Context) {
 		return
 	}
 	var p models.Page
-	if !g.pages[c.Param("id")] || h.db.First(&p, "id = ?", c.Param("id")).Error != nil {
+	// A locked page isn't shown or changed by a link (only who locked it opens it).
+	if !g.pages[c.Param("id")] || h.db.First(&p, "id = ?", c.Param("id")).Error != nil || p.Sealed {
 		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
 		return
 	}

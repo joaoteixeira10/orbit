@@ -9,7 +9,7 @@ import { joinPage } from '@/components/editor/together'
 import { personColor } from '@/lib/presence'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2, Lock, ListTree } from 'lucide-vue-next'
+import { Star, MoreHorizontal, ChevronRight, FileText, Plus, Smile, Image, RotateCcw, AlertTriangle, Trash2, Archive, Users, Pencil, Check, CalendarDays, GraduationCap, CalendarCheck, LayoutTemplate, CheckCircle2, Table2, Lock, ListTree, LockKeyhole } from 'lucide-vue-next'
 import { pagesApi, withContent, type Page } from '@/api/planner'
 import { ApiError, CLIENT_ID } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
@@ -35,6 +35,8 @@ import { rail, setRailOpen } from '@/lib/rail'
 import { useGlossary } from '@/components/pages/useGlossary'
 import { usePrefsStore, type PageEditorMode } from '@/stores/prefs'
 import { toggleTask } from '@/lib/markdown'
+import { seal, unseal, unlocked } from '@/lib/lock'
+import { askUnlock } from '@/lib/lockPrompt'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
 import CoverPicker from '@/components/editor/CoverPicker.vue'
 import { coverBackground, randomCover } from '@/components/editor/covers'
@@ -107,7 +109,12 @@ function onToggle(index: number) {
 }
 
 const canEditWs = computed(() => !!ws.value && ws.value.role !== 'viewer' && !ws.value.archived_at && !auth.privileges.read_only)
-const editable = computed(() => !!page.value && page.value.can_edit && !page.value.trashed_at && canEditWs.value && !invalid.value)
+// A locked page (lib/lock): its text sealed; opened with my PIN it reads and
+// saves as any page (sealed on the way out), never edited together.
+const sealedOpen = ref(false)
+const sealedMine = computed(() => !!page.value?.sealed && page.value.sealed_by === auth.user?.id)
+const shut = computed(() => !!page.value?.sealed && !sealedOpen.value)
+const editable = computed(() => !!page.value && page.value.can_edit && !page.value.trashed_at && canEditWs.value && !invalid.value && !shut.value)
 const viewOnly = computed(() => !!page.value && !page.value.trashed_at && !ws.value?.archived_at && !editable.value && !invalid.value)
 const favorite = computed(() => pages.find(pageId.value)?.favorite ?? page.value?.favorite ?? false)
 const coverBg = computed(() => coverBackground(page.value?.cover))
@@ -157,6 +164,16 @@ async function load(id: string) {
   loading.value = true
   try {
     const p = await pagesApi.get(id)
+    if (s !== session) return
+    sealedOpen.value = false
+    if (p.sealed && p.cipher && p.sealed_by === auth.user?.id && unlocked.value) {
+      try {
+        p.content = (await unseal<{ content: string }>(p.cipher)).content
+        sealedOpen.value = true
+      } catch {
+        /* shut: the PIN opens it */
+      }
+    }
     if (s !== session) return
     page.value = p
     version.value = p.version
@@ -225,7 +242,9 @@ function saveContent(over?: number): Promise<void> {
   saving.value = true
   const run = (async () => {
     try {
-      const saved = await pagesApi.update(p.id, { content, version: over ?? version.value }, !!together.value)
+      const saved = p.sealed
+        ? await pagesApi.update(p.id, { cipher: await seal({ content }), version: over ?? version.value })
+        : await pagesApi.update(p.id, { content, version: over ?? version.value }, !!together.value)
       if (s !== session || !page.value) return
       version.value = saved.version
       savedGen = gen
@@ -336,6 +355,66 @@ const offLive = onLiveEvent('ws', (e) => {
   if (e.what !== 'pages' || String(e.ws) !== wsId.value || e.origin === CLIENT_ID || !page.value) return
   clearTimeout(liveTimer)
   liveTimer = setTimeout(() => void refresh(), 300)
+})
+
+// ---- Locking (lib/lock) ----
+async function openSealed() {
+  const p = page.value
+  if (!p?.cipher || !sealedMine.value || !(await askUnlock())) return
+  try {
+    const content = (await unseal<{ content: string }>(p.cipher)).content
+    page.value = { ...p, content }
+    draft.value = content
+    hasText.value = !!content.trim()
+    sealedOpen.value = true
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function lockPage() {
+  menuOpen.value = false
+  const p = page.value
+  if (!p) return
+  if (p.db || p.template) return toast.error(t('lock.cantLock'))
+  if (!(await askUnlock())) return
+  await saveContent()
+  const content = currentContent()
+  try {
+    const saved = await pagesApi.update(p.id, { lock: true, cipher: await seal({ content }), version: version.value })
+    version.value = saved.version
+    sealedOpen.value = true
+    page.value = { ...p, ...saved, content }
+    pages.patch({ id: p.id, sealed: true })
+    toast.success(t('lock.lockedDone'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function unlockPage() {
+  menuOpen.value = false
+  const p = page.value
+  if (!p || !sealedOpen.value) return
+  await saveContent()
+  const content = currentContent()
+  try {
+    const saved = await pagesApi.update(p.id, { lock: false, content, version: version.value })
+    version.value = saved.version
+    sealedOpen.value = false
+    page.value = { ...p, ...saved, content }
+    pages.patch({ id: p.id, sealed: false })
+    toast.info(t('lock.unlockedDone'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+// Locked again (by hand, or after a while unused): shut the page.
+watch(unlocked, async (u) => {
+  if (u || !sealedOpen.value || !page.value) return
+  await saveContent()
+  editing.value = false
+  sealedOpen.value = false
+  draft.value = ''
+  page.value = { ...page.value, content: '' }
 })
 
 async function refresh() {
@@ -737,7 +816,7 @@ const here = usePresence('page', pageId, computed(() => !!together.value))
 const joining = ref(false)
 const joinFailed = ref(false)
 const togetherKey = ref(0)
-const togetherOn = computed(() => editing.value && mode.value === 'visual' && editable.value && ready.value)
+const togetherOn = computed(() => editing.value && mode.value === 'visual' && editable.value && ready.value && !page.value?.sealed)
 const leader = computed(() => {
   const eds = here.people.value.filter((x) => x.editing)
   return !eds.length || eds[0].client === CLIENT_ID
@@ -973,7 +1052,12 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
           <DatabaseView v-if="isDb" :ws="wsId" :page-id="page.id" :editable="editable" />
           <p v-if="isTemplate && editable" class="tpl-note"><LayoutTemplate class="h-3.5 w-3.5 shrink-0" />{{ t('pages.isTemplate', { fields: PLACEHOLDERS }) }}</p>
 
-          <p v-if="editing && togetherOn && !together && !joinFailed" class="py-6 text-center text-[13px] text-text-3" data-testid="together-joining">{{ t('presence.joining') }}</p>
+          <div v-if="shut" class="sealed-page" data-testid="page-locked">
+            <LockKeyhole class="h-8 w-8 text-text-3" />
+            <p class="text-[14px] text-text-2">{{ sealedMine ? t('lock.lockedHint') : t('lock.lockedOther') }}</p>
+            <button v-if="sealedMine" class="btn" data-testid="page-unlock" @click="openSealed">{{ t('lock.openIt') }}</button>
+          </div>
+          <p v-else-if="editing && togetherOn && !together && !joinFailed" class="py-6 text-center text-[13px] text-text-3" data-testid="together-joining">{{ t('presence.joining') }}</p>
           <component
             :is="mode === 'markdown' ? MarkdownEditor : PageEditor"
             v-else-if="editing"
@@ -1025,7 +1109,16 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
       </div>
     </template>
 
-    <PageMenu v-if="menuOpen && page" :page-id="page.id" :ws="wsId" :anchor="menuBtn" @close="menuOpen = false" />
+    <PageMenu
+      v-if="menuOpen && page"
+      :page-id="page.id"
+      :ws="wsId"
+      :anchor="menuBtn"
+      :lock="!page.sealed ? (editable && !isDb && !isTemplate ? 'lock' : '') : sealedMine && sealedOpen ? 'unlock' : ''"
+      @close="menuOpen = false"
+      @lock="lockPage"
+      @unlock="unlockPage"
+    />
     <AccessSheet v-if="page && editable" :open="accessOpen" :page="page" :ws="wsId" @close="closeAccess" @changed="accessChanged" />
     <ShareSheet v-if="page" :open="shareOpen" :page-id="page.id" :editable="editable" @close="closeShare" />
     <PageHistory v-if="page" :open="historyOpen" :ws="wsId" :page-id="page.id" :title="title" :editable="editable" @close="closeHistory" @restore="restoreVersion" />
@@ -1035,6 +1128,14 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
 </template>
 
 <style scoped>
+.sealed-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px;
+  text-align: center;
+}
 .page-view {
   min-height: 100%;
   padding-bottom: 96px;

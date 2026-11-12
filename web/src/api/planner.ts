@@ -79,8 +79,11 @@ export interface PageSummary {
   db?: Database // it's a database of the pages inside it
   props?: Props // its values, as a row of its parent's database
   tags?: string[] // any page's tags
+  sealed?: boolean // locked (lib/lock): its text sealed with someone's PIN
 }
 export interface Page extends PageSummary {
+  sealed_by?: string // who locked it (only they open it)
+  cipher?: string // a locked page's Markdown, sealed
   fields?: PageField[] // its own properties (any page)
   cover: string
   content: string
@@ -234,6 +237,10 @@ export interface Note {
   attachments?: Upload[] // files on the note (in lists)
   remind_at?: string | null // a one-off reminder
   drawing?: { id: string; preview: string } // its drawing (Excalidraw)
+  // Locked (lib/lock): its text only as cipher, sealed with sealed_by's PIN.
+  sealed?: boolean
+  sealed_by?: string
+  cipher?: string
 }
 export interface NoteInput {
   title?: string
@@ -244,6 +251,8 @@ export interface NoteInput {
   pinned?: boolean
   lang?: string
   remind_at?: string // RFC 3339; "" takes it off
+  lock?: boolean // true: lock it (with cipher); false: remove the lock (with its text)
+  cipher?: string // a locked note's text, sealed
 }
 
 // One entry of the notification inbox. It says what happened (kind, verb,
@@ -458,7 +467,7 @@ export const pagesApi = {
   // What links to a page: other pages, and tasks whose notes do.
   backlinks: (id: string) => api<{ pages: PageSummary[]; tasks: { id: string; title: string; list_id: string; done: boolean }[] }>(`/pages/${id}/backlinks`),
   // together: saved by the tab that saves for everyone editing it at once.
-  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; glossary?: boolean; db?: Database | null; props?: Record<string, PropValue | null>; tags?: string[]; fields?: PageField[] }, together = false) =>
+  update: (id: string, b: { title?: string; icon?: string; cover?: string; content?: string; version?: number; template?: boolean; glossary?: boolean; db?: Database | null; props?: Record<string, PropValue | null>; tags?: string[]; fields?: PageField[]; lock?: boolean; cipher?: string }, together = false) =>
     api<Page>(`/pages/${id}`, { method: 'PUT', body: j(b), headers: together ? { 'X-Orbit-Collab': '1' } : undefined }).then(withContent),
   // A workspace's tags (most used first), and its pages with one.
   tags: (ws: string) => api<{ tag: string; count: number }[]>(`/workspaces/${ws}/tags`),

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, Plus, MoreHorizontal, FileText, Lock } from 'lucide-vue-next'
+import { ChevronRight, Plus, MoreHorizontal, FileText, Lock, LockKeyhole } from 'lucide-vue-next'
 import { usePagesStore, type PageNode } from '@/stores/pages'
 import { useSortable, type SortMove } from '@/lib/sortable'
 import PageMenu from './PageMenu.vue'
@@ -60,6 +60,7 @@ function go(n: PageNode) {
         <FileText v-else class="h-3.5 w-3.5 shrink-0 !text-text-3" />
         <span class="min-w-0 flex-1 truncate">{{ n.title || t('pages.untitled') }}</span>
         <Lock v-if="n.restricted" class="h-3 w-3 shrink-0 !text-text-3" :aria-label="t('access.restricted')" data-testid="tree-lock" />
+        <LockKeyhole v-if="n.sealed" class="h-3 w-3 shrink-0 !text-text-3" :aria-label="t('lock.locked')" data-testid="tree-sealed" />
         <!-- Shown on hover — and while this row's menu is open, which is
              anchored to its ⋯ (hidden, the menu would lose its place). -->
         <span v-if="canEdit" class="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex" :class="{ '!flex': menuFor === n.id }">

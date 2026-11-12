@@ -8,6 +8,11 @@ merge, not at release time.
 
 ### Added
 
+- **Locked notes and pages** — ⋯ → Lock keeps a note's or a page's text to
+  you, encrypted in your browser with your lock PIN (Settings → Locked notes
+  and pages): Orbit keeps only that — not the text, its search words, a
+  page's history — so nobody reads it without the PIN, not even an admin. The
+  title stays; a forgotten PIN can't be reset. Needs HTTPS.
 - **`BACKUP_BEFORE_MIGRATE`** (off by default) — with SQLite, on the first
   start of a new version Orbit copies the database beside itself
   (`orbit.db.before-<version>`) before changing it, to go back to if the new

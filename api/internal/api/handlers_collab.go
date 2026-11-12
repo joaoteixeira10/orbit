@@ -48,6 +48,11 @@ func (h *Handlers) collabTarget(c *gin.Context, need string) (collabDoc, bool) {
 		if !ok {
 			return d, false
 		}
+		// A locked page isn't edited together: its text would pass readable.
+		if p.Sealed {
+			c.JSON(http.StatusConflict, gin.H{"error": "a locked page isn't edited together"})
+			return d, false
+		}
 		d.ws, d.version = p.WorkspaceID, p.Version
 	case "board":
 		b, ok := h.drawingAccess(c, need)

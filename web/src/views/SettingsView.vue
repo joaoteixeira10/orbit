@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import NotificationSettings from '@/components/settings/NotificationSettings.vue'
 import GitSettings from '@/components/settings/GitSettings.vue'
+import LockSettings from '@/components/settings/LockSettings.vue'
 import AssistantOwnSettings from '@/components/settings/AssistantOwnSettings.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import DevThemePicker from '@/components/DevThemePicker.vue'
@@ -24,7 +25,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot, Sparkles } from 'lucide-vue-next'
+import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot, Sparkles, LockKeyhole } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { calendarApi, type Feed } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -62,6 +63,7 @@ const sections = computed(() => [
     // TOTP is unusable for SSO accounts (no password login), so hide it for them.
     ...(auth.user?.oidc ? [] : [{ id: 'twofa', label: t('settings.twofa'), icon: ShieldCheck }]),
     ...(passkeysAvailable.value ? [{ id: 'passkeys', label: t('settings.passkeys'), icon: KeyRound }] : []),
+    { id: 'lock', label: t('lock.settings.title'), icon: LockKeyhole },
     { id: 'apitokens', label: t('settings.apitokens'), icon: Terminal },
     ...(auth.features.sessions ? [{ id: 'sessions', label: t('settings.sessions'), icon: MonitorSmartphone }] : []),
   ] },
@@ -753,6 +755,12 @@ onMounted(loadSessions)
         </section>
 
         <!-- API tokens -->
+        <!-- Locked notes and pages: the lock PIN -->
+        <section id="lock" class="card overflow-hidden scroll-mt-4">
+          <div class="flex items-center gap-2 border-b border-border px-5 py-3"><LockKeyhole class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('lock.settings.title') }}</h2></div>
+          <div class="p-5"><LockSettings /></div>
+        </section>
+
         <section id="apitokens" class="card overflow-hidden scroll-mt-4">
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Terminal class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('settings.apitokens') }}</h2></div>
           <div class="flex flex-col gap-4 p-5">

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, FileType, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, FileType, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA, LockKeyhole, LockKeyholeOpen } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { filesApi, tree, type Folder } from '@/lib/filesApi'
 import Popover from './ui/Popover.vue'
@@ -15,8 +15,10 @@ import { pageFile, download, fileName } from '@/lib/markdown'
 // A page's actions: favourite, duplicate, copy link, download or copy it as
 // Markdown, move to another parent, file it in a folder (with Files on),
 // move to the trash.
-const props = defineProps<{ pageId: string; ws: string; anchor: HTMLElement | null }>()
-const emit = defineEmits<{ close: [] }>()
+// lock: offer Lock ('lock'), Remove lock ('unlock') or neither — the page
+// view knows (it holds the text, sealed or not).
+const props = defineProps<{ pageId: string; ws: string; anchor: HTMLElement | null; lock?: '' | 'lock' | 'unlock' }>()
+const emit = defineEmits<{ close: []; lock: []; unlock: [] }>()
 const pages = usePagesStore()
 const wss = useWorkspacesStore()
 const toast = useToastStore()
@@ -222,23 +224,25 @@ const trash = () =>
         {{ page?.favorite ? t('pages.unfavorite') : t('pages.favorite') }}
       </button>
       <button class="menu-item" @click="duplicate"><Copy class="h-4 w-4 text-text-2" />{{ t('pages.duplicate') }}</button>
+      <button v-if="props.lock === 'lock'" class="menu-item" data-testid="page-lock" @click="emit('lock')"><LockKeyhole class="h-4 w-4 text-text-2" />{{ t('lock.lock') }}</button>
+      <button v-else-if="props.lock === 'unlock'" class="menu-item" data-testid="page-unlock-for-good" @click="emit('unlock')"><LockKeyholeOpen class="h-4 w-4 text-text-2" />{{ t('lock.unlockFor') }}</button>
       <button class="menu-item" @click="copyLink"><Link class="h-4 w-4 text-text-2" />{{ t('pages.copyLink') }}</button>
-      <button class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
-      <button class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
-      <button class="menu-item" data-testid="page-pdf" @click="exporting = 'pdf'"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
-      <button class="menu-item" data-testid="page-docx" @click="exporting = 'docx'"><FileType class="h-4 w-4 text-text-2" />{{ t('editor.docx') }}</button>
+      <button v-if="!page?.sealed" class="menu-item" @click="copyMd"><FileCode class="h-4 w-4 text-text-2" />{{ t('editor.copyMd') }}</button>
+      <button v-if="!page?.sealed" class="menu-item" @click="downloadMd"><Download class="h-4 w-4 text-text-2" />{{ t('editor.download') }}</button>
+      <button v-if="!page?.sealed" class="menu-item" data-testid="page-pdf" @click="exporting = 'pdf'"><Printer class="h-4 w-4 text-text-2" />{{ t('editor.pdf') }}</button>
+      <button v-if="!page?.sealed" class="menu-item" data-testid="page-docx" @click="exporting = 'docx'"><FileType class="h-4 w-4 text-text-2" />{{ t('editor.docx') }}</button>
       <button class="menu-item" data-testid="page-access" @click="access"><Lock class="h-4 w-4 text-text-2" />{{ t('access.menu') }}</button>
-      <button v-if="auth.features.guest_links !== false" class="menu-item" data-testid="page-share" @click="share"><Share2 class="h-4 w-4 text-text-2" />{{ t('share.menu') }}</button>
-      <button class="menu-item" data-testid="page-history-open" @click="history"><History class="h-4 w-4 text-text-2" />{{ t('history.title') }}</button>
+      <button v-if="auth.features.guest_links !== false && !page?.sealed" class="menu-item" data-testid="page-share" @click="share"><Share2 class="h-4 w-4 text-text-2" />{{ t('share.menu') }}</button>
+      <button v-if="!page?.sealed" class="menu-item" data-testid="page-history-open" @click="history"><History class="h-4 w-4 text-text-2" />{{ t('history.title') }}</button>
       <button class="menu-item" @click="picking = true"><FolderInput class="h-4 w-4 text-text-2" />{{ t('pages.moveTo') }}</button>
       <button v-if="canFile" class="menu-item" data-testid="page-file-in" @click="startFiling"><FolderIcon class="h-4 w-4 text-text-2" />{{ t('project.fileIn') }}</button>
-      <button class="menu-item" data-testid="page-db-toggle" @click="toggleDatabase">
+      <button v-if="!page?.sealed" class="menu-item" data-testid="page-db-toggle" @click="toggleDatabase">
         <Table2 class="h-4 w-4 text-text-2" />{{ page?.db ? t('db.stop') : t('db.turnInto') }}
       </button>
       <button class="menu-item" data-testid="page-glossary-toggle" @click="toggleGlossary">
         <BookA class="h-4 w-4 text-text-2" />{{ page?.glossary ? t('glossary.stop') : t('glossary.use') }}
       </button>
-      <button class="menu-item" data-testid="page-template-toggle" @click="toggleTemplate">
+      <button v-if="!page?.sealed" class="menu-item" data-testid="page-template-toggle" @click="toggleTemplate">
         <LayoutTemplate class="h-4 w-4 text-text-2" />{{ page?.template ? t('pages.templateStop') : t('pages.templateUse') }}
       </button>
       <div class="menu-sep" />

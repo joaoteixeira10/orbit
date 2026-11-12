@@ -227,6 +227,11 @@ type noteRequest struct {
 	// RemindAt: an RFC 3339 instant for a one-off reminder to whoever sets
 	// it; "" takes it off.
 	RemindAt *string `json:"remind_at"`
+	// Lock: true locks it (with Cipher: its text, sealed in the app); false
+	// opens it for good (its text sent again, in Body / Items). Cipher alone:
+	// a locked note's text, changed.
+	Lock   *bool   `json:"lock"`
+	Cipher *string `json:"cipher"`
 }
 
 // applyNoteFields validates and copies a request onto n. Turning a text note
@@ -417,6 +422,13 @@ func (h *Handlers) updateNote(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	if sealedByOther(c, n.Sealing) {
+		return
+	}
+	if msg := h.sealNote(req, &n, auth.UserID(c)); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
 	if msg := applyNoteFields(req, &n, auth.UserID(c)); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -440,7 +452,7 @@ func (h *Handlers) updateNote(c *gin.Context) {
 //	@Router		/notes/{id} [delete]
 func (h *Handlers) deleteNote(c *gin.Context) {
 	n, ok := h.noteAccess(c)
-	if !ok {
+	if !ok || sealedByOther(c, n.Sealing) {
 		return
 	}
 	_ = uploads.TrashFor(h.db, uploads.Note, []string{n.ID})
@@ -529,7 +541,7 @@ type moveNoteRequest struct {
 //	@Router		/notes/{id}/move [post]
 func (h *Handlers) moveNote(c *gin.Context) {
 	n, ok := h.noteAccess(c)
-	if !ok {
+	if !ok || sealedByOther(c, n.Sealing) {
 		return
 	}
 	var req moveNoteRequest
@@ -585,4 +597,37 @@ func noteTitle(n models.Note) string {
 		line = string(r[:80]) + "…"
 	}
 	return line
+}
+
+// sealNote applies a request's lock: locking keeps only the sealed text (its
+// readable text, items and search words cleared); opening takes the text
+// sent; a locked note's text changes only sealed.
+func (h *Handlers) sealNote(req noteRequest, n *models.Note, uid string) string {
+	switch {
+	case req.Lock != nil && *req.Lock && !n.Sealed:
+		if req.Cipher == nil || !validCipher(*req.Cipher) {
+			return "locking takes the note's text, sealed (cipher)"
+		}
+		if req.Body != nil || req.Items != nil {
+			return "locking sends the text only sealed (cipher), never as it is"
+		}
+		if !h.hasLockKey(uid) {
+			return "set a lock PIN first (Settings → Locked notes and pages)"
+		}
+		n.Sealing = models.Sealing{Sealed: true, SealedBy: uid, Cipher: *req.Cipher}
+		n.Body, n.Items, n.PlainText = "", "[]", ""
+	case req.Lock != nil && !*req.Lock && n.Sealed:
+		n.Sealing = models.Sealing{}
+	case n.Sealed:
+		if req.Body != nil || req.Items != nil {
+			return "a locked note's text is sent sealed (cipher)"
+		}
+		if req.Cipher != nil {
+			if !validCipher(*req.Cipher) {
+				return "cipher: the note's text, sealed"
+			}
+			n.Cipher = *req.Cipher
+		}
+	}
+	return ""
 }

@@ -219,6 +219,9 @@ var mcpTools = []mcpTool{
 			if title == "" {
 				title = "Untitled"
 			}
+			if sealed, _ := p["sealed"].(bool); sealed {
+				content = "(Locked with its author's PIN: its text can't be read here, or changed.)"
+			}
 			return "# " + title + "\n\n" + content, nil
 		},
 	},
@@ -603,7 +606,7 @@ var mcpTools = []mcpTool{
 			if err := m.do("GET", path, nil, nil, &ns); err != nil {
 				return nil, err
 			}
-			return items(keep(ns, "id", "title", "body", "items", "checklist", "pinned", "updated_at")), nil
+			return items(keep(ns, "id", "title", "body", "items", "checklist", "pinned", "sealed", "updated_at")), nil
 		},
 	},
 	{

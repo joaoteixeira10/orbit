@@ -5081,6 +5081,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/me/lock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "lock"
+                ],
+                "summary": "My lock key (wrapped)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.lockKeyResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "lock"
+                ],
+                "summary": "Set or change my lock PIN",
+                "parameters": [
+                    {
+                        "description": "The key, wrapped",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.lockKeyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.lockKeyResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "lock"
+                ],
+                "summary": "Forget my lock PIN (and what it locked)",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/me/notes": {
             "get": {
                 "security": [
@@ -14774,6 +14850,56 @@ const docTemplate = `{
                 }
             }
         },
+        "api.lockKeyRequest": {
+            "type": "object",
+            "required": [
+                "iterations",
+                "iv",
+                "salt",
+                "wrapped"
+            ],
+            "properties": {
+                "iterations": {
+                    "type": "integer"
+                },
+                "iv": {
+                    "type": "string"
+                },
+                "salt": {
+                    "type": "string"
+                },
+                "wrapped": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.lockKeyResponse": {
+            "type": "object",
+            "properties": {
+                "iterations": {
+                    "type": "integer"
+                },
+                "iv": {
+                    "type": "string"
+                },
+                "salt": {
+                    "type": "string"
+                },
+                "sealed": {
+                    "description": "How many notes and pages they've locked (all lost if the PIN is).",
+                    "type": "integer"
+                },
+                "set": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "wrapped": {
+                    "type": "string"
+                }
+            }
+        },
         "api.loginRequest": {
             "type": "object",
             "required": [
@@ -14976,6 +15102,9 @@ const docTemplate = `{
                 "checklist": {
                     "type": "boolean"
                 },
+                "cipher": {
+                    "type": "string"
+                },
                 "color": {
                     "type": "string"
                 },
@@ -14989,6 +15118,10 @@ const docTemplate = `{
                     "description": "Lang: how its text is coloured — \"\" (guessed), \"text\", \"markdown\", or\na code language (json, bash, python…).",
                     "type": "string",
                     "maxLength": 24
+                },
+                "lock": {
+                    "description": "Lock: true locks it (with Cipher: its text, sealed in the app); false\nopens it for good (its text sent again, in Body / Items). Cipher alone:\na locked note's text, changed.",
+                    "type": "boolean"
                 },
                 "pinned": {
                     "type": "boolean"
@@ -15018,6 +15151,9 @@ const docTemplate = `{
                 },
                 "checklist": {
                     "type": "boolean"
+                },
+                "cipher": {
+                    "type": "string"
                 },
                 "color": {
                     "description": "a colour key (yellow, green, …); \"\" = plain",
@@ -15062,6 +15198,12 @@ const docTemplate = `{
                 },
                 "remind_at": {
                     "description": "RemindAt: a one-off reminder (to RemindBy, who set it); cleared once sent.",
+                    "type": "string"
+                },
+                "sealed": {
+                    "type": "boolean"
+                },
+                "sealed_by": {
                     "type": "string"
                 },
                 "title": {
@@ -15348,6 +15490,9 @@ const docTemplate = `{
                 "can_edit": {
                     "type": "boolean"
                 },
+                "cipher": {
+                    "type": "string"
+                },
                 "content": {
                     "description": "Content is the editor's JSON document; ContentText its plain text, kept\nfor search and previews.",
                     "type": "string"
@@ -15401,6 +15546,12 @@ const docTemplate = `{
                 "restricted": {
                     "description": "Restricted: only AllowedUsers (JSON []user id) see it and what's\nunder it (api/page_access.go).",
                     "type": "boolean"
+                },
+                "sealed": {
+                    "type": "boolean"
+                },
+                "sealed_by": {
+                    "type": "string"
                 },
                 "tags": {
                     "type": "array",
@@ -15466,6 +15617,10 @@ const docTemplate = `{
                 },
                 "restricted": {
                     "description": "only some people see it (and what's under it)",
+                    "type": "boolean"
+                },
+                "sealed": {
+                    "description": "locked: its text sealed with someone's PIN",
                     "type": "boolean"
                 },
                 "tags": {
@@ -16538,6 +16693,9 @@ const docTemplate = `{
         "api.updatePageRequest": {
             "type": "object",
             "properties": {
+                "cipher": {
+                    "type": "string"
+                },
                 "content": {
                     "type": "string"
                 },
@@ -16562,6 +16720,10 @@ const docTemplate = `{
                 "icon": {
                     "type": "string",
                     "maxLength": 64
+                },
+                "lock": {
+                    "description": "Lock: true locks the page (with Cipher: its Markdown, sealed in the\napp) — its text, search words, history and editing-together state are\ncleared; false opens it for good (Content sent again). Cipher alone: a\nlocked page's text, changed (with Version, as Content).",
+                    "type": "boolean"
                 },
                 "props": {
                     "type": "object"

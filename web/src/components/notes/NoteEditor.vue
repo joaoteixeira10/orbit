@@ -2,7 +2,10 @@
 import Attachments from '@/components/ui/Attachments.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush, Maximize2, Minimize2 } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush, Maximize2, Minimize2, LockKeyhole, LockKeyholeOpen } from 'lucide-vue-next'
+import { seal, unseal, unlocked } from '@/lib/lock'
+import { askUnlock } from '@/lib/lockPrompt'
+import { useAuthStore } from '@/stores/auth'
 import { noteWide } from './noteWide'
 import DrawingSheet from '@/components/draw/DrawingSheet.vue'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
@@ -31,6 +34,39 @@ const toast = useToastStore()
 const { t } = useI18n()
 
 const note = computed(() => notes.notesOf(props.ws).find((n) => n.id === props.noteId))
+const auth = useAuthStore()
+
+// A locked note (lib/lock): its text only sealed. Opened with the PIN, its
+// text lives here (opened) and saves sealed; someone else's stays shut.
+type Plain = { body: string; checklist: boolean; items: Note['items'] }
+const opened = ref<Note | null>(null)
+const sealed = computed(() => !!note.value?.sealed)
+const sealedMine = computed(() => sealed.value && note.value?.sealed_by === auth.user?.id)
+const shut = computed(() => sealed.value && !opened.value)
+// What the draft is compared with: the note, or its opened text.
+const src = computed<Note | undefined>(() => (sealed.value ? (opened.value ?? undefined) : note.value))
+const canEdit = computed(() => props.editable && (!sealed.value || (sealedMine.value && !!opened.value)))
+async function openSealed() {
+  const n = note.value
+  if (!n?.cipher || !sealedMine.value || !(await askUnlock())) return
+  try {
+    const p = await unseal<Plain>(n.cipher)
+    opened.value = { ...n, body: p.body, checklist: p.checklist, items: p.items }
+    draft.value = draftOf(opened.value)
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+// Locked again (by hand, or after a while): shut it.
+watch(unlocked, (u) => {
+  if (!u && opened.value) {
+    void save().then(() => {
+      opened.value = null
+      draft.value = draftOf({ ...note.value!, body: '', items: [] })
+    })
+  }
+})
+const withIds = (items: Note['items']) => items.map((i) => ({ ...i, id: i.id || Math.random().toString(36).slice(2, 10) }))
 const files = ref<InstanceType<typeof Attachments> | null>(null)
 const draft = ref<Draft>(draftOf())
 const fields = ref<InstanceType<typeof NoteFields> | null>(null)
@@ -45,7 +81,9 @@ watch(
   ([o, id]) => {
     if (!o || !id || id === loadedId) return
     loadedId = id
+    opened.value = null
     draft.value = draftOf(note.value)
+    if (note.value?.sealed && unlocked.value) void openSealed()
   },
   { immediate: true },
 )
@@ -58,6 +96,7 @@ watch(
 // Someone else changed it: take their version unless we're typing in it.
 watch(note, (n, prev) => {
   if (!n || !prev || n.id !== prev.id || n.updated_at === prev.updated_at || timer) return
+  if (n.sealed) return // its text is ours to open
   if (root.value?.contains(document.activeElement)) return
   if (!sameContent(draft.value, n)) draft.value = draftOf(n)
 })
@@ -65,7 +104,7 @@ watch(note, (n, prev) => {
 watch(
   draft,
   () => {
-    if (!props.editable || !note.value || sameContent(draft.value, note.value)) return
+    if (!canEdit.value || !src.value || sameContent(draft.value, src.value)) return
     clearTimeout(timer)
     timer = setTimeout(() => void save(), 600)
   },
@@ -77,10 +116,20 @@ async function save() {
   timer = undefined
   const n = note.value
   const d = draft.value
-  if (!props.editable || !n || isEmptyDraft(d) || sameContent(d, n)) return
+  const base = src.value
+  if (!canEdit.value || !n || !base || isEmptyDraft(d) || sameContent(d, base)) return
   const body = inputOf(d)
   const run = saving.then(async () => {
     try {
+      if (n.sealed) {
+        // Locked: the text goes sealed; the rest (title, colour…) as it is.
+        const plain: Plain = { body: body.body ?? '', checklist: !!body.checklist, items: withIds(body.items ?? []) }
+        const { body: _b, items: _i, ...rest } = body
+        await notes.update(props.ws, n.id, { ...rest, cipher: await seal(plain) })
+        opened.value = { ...n, ...rest, ...plain } as Note
+        d.items.forEach((i, x) => (i.id ||= plain.items[x]?.id ?? ''))
+        return
+      }
       const saved = await notes.update(props.ws, n.id, body)
       // New rows get their server ids (by position among the non-empty ones).
       const kept = d.items.filter((i) => i.text.trim())
@@ -96,7 +145,7 @@ async function save() {
 async function close() {
   menu.value = ''
   const n = note.value
-  if (props.editable && n && isEmptyDraft(draft.value)) {
+  if (props.editable && n && !sealed.value && isEmptyDraft(draft.value)) {
     clearTimeout(timer)
     timer = undefined
     emit('close')
@@ -187,6 +236,37 @@ function toggleChecklist() {
   else toChecklist(draft.value)
   void fields.value?.focus('end')
 }
+// Lock it with my PIN (set one first, if there's none), or take the lock off.
+async function lockNote() {
+  menu.value = ''
+  const n = note.value
+  if (!n || !(await askUnlock())) return
+  await save()
+  const d = inputOf(draft.value)
+  const plain: Plain = { body: d.body ?? '', checklist: !!d.checklist, items: withIds(d.items ?? []) }
+  try {
+    await notes.update(props.ws, n.id, { lock: true, cipher: await seal(plain) })
+    opened.value = { ...n, ...plain, sealed: true, sealed_by: auth.user?.id }
+    toast.success(t('lock.lockedDone'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function unlockNote() {
+  menu.value = ''
+  const n = note.value
+  const o = opened.value
+  if (!n || !o) return
+  await save()
+  try {
+    await notes.update(props.ws, n.id, { lock: false, body: o.body, checklist: o.checklist, items: o.items })
+    opened.value = null
+    toast.info(t('lock.unlockedDone'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 async function act(kind: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   menu.value = ''
   if (kind !== 'remove') await save()
@@ -215,7 +295,13 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
   <Overlay :open="open && !!note" :size="noteWide ? 'xl' : 'md'" @close="close">
     <div v-if="note" ref="root" class="note-sheet" :class="{ wide: noteWide }" :data-note="draft.color">
       <div class="relative">
-        <NoteFields ref="fields" v-model="draft" big :readonly="!editable" @submit="close" />
+        <div v-if="shut" class="sealed-note" data-testid="note-locked">
+          <input v-if="draft.title" class="sealed-title" :value="draft.title" readonly :aria-label="t('lock.locked')" />
+          <LockKeyhole class="h-7 w-7 text-text-3" />
+          <p class="text-[13px] text-text-2">{{ sealedMine ? t('lock.lockedHint') : t('lock.lockedOther') }}</p>
+          <button v-if="sealedMine" class="btn btn-sm" data-testid="note-unlock" @click="openSealed">{{ t('lock.openIt') }}</button>
+        </div>
+        <NoteFields v-else ref="fields" v-model="draft" big :readonly="!canEdit" @submit="close" />
         <Attachments
           v-if="editable || note.attachments?.length"
           ref="files"
@@ -248,7 +334,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
     </div>
     <template v-if="note" #footer>
       <div class="note-sheet flex min-w-0 flex-1 items-center gap-1" :data-note="draft.color">
-        <template v-if="editable">
+        <template v-if="canEdit">
           <button ref="colorBtn" class="tb" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">
             <Palette class="h-[18px] w-[18px]" />
           </button>
@@ -285,9 +371,13 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
       <DrawingSheet :open="!!drawingId" :id="drawingId" :title="draft.title" :readonly="!editable" @close="drawingClosed" @saved="drawn" @remove="removeDrawing" />
       <Popover v-if="menu === 'more'" :anchor="moreBtn" placement="top-start" :width="210" @close="menu = ''">
         <button class="menu-item" @click="act('move')"><FolderInput class="h-4 w-4 text-text-2" />{{ t('notes.mine.moveTo') }}</button>
-        <button class="menu-item" @click="act('page')"><FileText class="h-4 w-4 text-text-2" />{{ t('notes.toPage') }}</button>
-        <button v-if="canTasks" class="menu-item" @click="act('tasks')"><ListChecks class="h-4 w-4 text-text-2" />{{ t('notes.toTasks') }}</button>
-        <button class="menu-item" @click="act('copy')"><Copy class="h-4 w-4 text-text-2" />{{ t('notes.copy') }}</button>
+        <template v-if="!sealed">
+          <button class="menu-item" @click="act('page')"><FileText class="h-4 w-4 text-text-2" />{{ t('notes.toPage') }}</button>
+          <button v-if="canTasks" class="menu-item" @click="act('tasks')"><ListChecks class="h-4 w-4 text-text-2" />{{ t('notes.toTasks') }}</button>
+          <button class="menu-item" @click="act('copy')"><Copy class="h-4 w-4 text-text-2" />{{ t('notes.copy') }}</button>
+          <button class="menu-item" data-testid="note-lock" @click="lockNote"><LockKeyhole class="h-4 w-4 text-text-2" />{{ t('lock.lock') }}</button>
+        </template>
+        <button v-else class="menu-item" data-testid="note-unlock-for-good" @click="unlockNote"><LockKeyholeOpen class="h-4 w-4 text-text-2" />{{ t('lock.unlockFor') }}</button>
         <div class="menu-sep" />
         <button class="menu-item danger" @click="act('remove')"><Trash2 class="h-4 w-4" />{{ t('common.delete') }}</button>
       </Popover>
@@ -296,6 +386,22 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
 </template>
 
 <style scoped>
+.sealed-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 8px 22px;
+  text-align: center;
+}
+.sealed-title {
+  align-self: stretch;
+  background: transparent;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  outline: none;
+}
 .note-sheet.wide :deep(.note-fields .cm-content) {
   min-height: 50vh;
 }

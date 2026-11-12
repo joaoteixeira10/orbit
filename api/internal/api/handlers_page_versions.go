@@ -143,6 +143,10 @@ func (h *Handlers) restorePageVersion(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "the page is in the trash; restore it first"})
 		return
 	}
+	if p.Sealed {
+		c.JSON(http.StatusConflict, gin.H{"error": "the page is locked: open it first"})
+		return
+	}
 	uid := auth.UserID(c)
 	prev := p
 	err := h.db.Model(&models.Page{}).Where("id = ?", p.ID).Updates(map[string]any{

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellRing } from 'lucide-vue-next'
+import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellRing, LockKeyhole } from 'lucide-vue-next'
 import { fmtDate, fmtTime } from '@/lib/dates'
 import { previewSrc } from '@/components/draw/drawing'
 import { uploadBlobUrl } from '@/lib/uploads'
@@ -111,6 +111,8 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     <img v-if="cover" :src="cover" alt="" class="n-cover" />
     <img v-if="note.drawing?.preview" :src="previewSrc(note.drawing.preview)" alt="" class="n-drawing" data-testid="card-drawing" draggable="false" />
     <h3 v-if="note.title" class="n-title" :class="{ 'pr-7': editable }">{{ note.title }}</h3>
+    <!-- Locked: its text is sealed (lib/lock); only a lock shows. -->
+    <p v-if="note.sealed" class="n-sealed" data-testid="card-locked"><LockKeyhole class="h-4 w-4" />{{ t('lock.locked') }}</p>
 
     <!-- eslint-disable-next-line vue/no-v-html -- escaped by tokensHtml -->
     <div v-if="!note.checklist && note.body && coloured" ref="bodyEl" class="n-body" :class="{ clamped, code: isCodeLang(lang) }" data-testid="card-coloured" v-html="coloured" />
@@ -167,6 +169,15 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
 </template>
 
 <style scoped>
+.n-sealed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--note-ink, var(--text-2));
+  opacity: 0.75;
+}
 .n-drawing {
   display: block;
   width: calc(100% + 24px);

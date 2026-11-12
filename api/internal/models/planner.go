@@ -99,6 +99,7 @@ type Page struct {
 	// the workspace's other pages use them.
 	Glossary     bool   `gorm:"not null;default:false" json:"glossary"`
 	AllowedUsers string `gorm:"type:text" json:"-"`
+	Sealing
 }
 
 // PageVersion is a page as it was after a save: its title and Markdown, and
@@ -279,6 +280,30 @@ type Note struct {
 	// RemindAt: a one-off reminder (to RemindBy, who set it); cleared once sent.
 	RemindAt *time.Time `gorm:"index" json:"remind_at,omitempty"`
 	RemindBy string     `gorm:"size:36" json:"-"`
+	Sealing
+}
+
+// Sealing is a note's or a page's lock ("Lock" in the app): sealed, its text
+// is kept only as Cipher — encrypted in SealedBy's browser with their lock
+// key (LockKey), which their PIN opens — and its readable text, search words
+// and history are gone. Only SealedBy opens or changes it; the title stays.
+type Sealing struct {
+	Sealed   bool   `gorm:"not null;default:false" json:"sealed"`
+	SealedBy string `gorm:"size:36;not null;default:''" json:"sealed_by,omitempty"`
+	Cipher   string `gorm:"type:text" json:"cipher,omitempty"`
+}
+
+// LockKey is someone's key for what they lock: a random key, kept only
+// wrapped (AES-GCM) by a key their PIN makes (PBKDF2, Salt, Iterations) —
+// done in their browser. Orbit never sees the PIN or the key itself; a new
+// PIN wraps the same key again.
+type LockKey struct {
+	UserID     string    `gorm:"primaryKey;size:36" json:"-"`
+	Salt       string    `gorm:"size:64;not null" json:"salt"`
+	Iterations int       `gorm:"not null" json:"iterations"`
+	IV         string    `gorm:"size:32;not null" json:"iv"`
+	Wrapped    string    `gorm:"size:128;not null" json:"wrapped"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // ---- Habits -----------------------------------------------------------------

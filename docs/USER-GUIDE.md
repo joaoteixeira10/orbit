@@ -698,6 +698,35 @@ or unclear notes stay plain. The corner of an open note says which it is
 automatically** to go back to guessing. The choice is kept with the note.
 **Turn into page** makes a code note one code block of its language.
 
+### Locked notes and pages
+
+Like a locked note on an iPhone: **⋯ → Lock** on a note or a page keeps its
+text to you, encrypted with **your lock PIN** — even in a shared workspace.
+The first time, Orbit asks you to set the PIN (Settings → **Locked notes and
+pages**); after that one PIN locks and opens everything you lock.
+
+- **What's encrypted:** a note's text and checklist, a page's text. It's
+  encrypted **in your browser**; Orbit keeps only that. When you lock
+  something, Orbit throws away its readable text, its search words, a page's
+  history and its editing-together copy. Nobody can read it without your
+  PIN: not the others in the workspace, not an admin, not a backup, search,
+  the assistant or an app through MCP.
+- **What isn't:** the title (it still shows, with a lock), a note's colour
+  and pin, attachments and a note's drawing.
+- **Opening it:** click it and enter your PIN. It stays open in that tab
+  while you use it — until you reload, choose **Lock again** (Settings), or
+  leave it alone for 10 minutes. Edits save encrypted. A locked page is
+  edited by you alone (not together), and can't be shared by link, exported,
+  made a template or a database.
+- **Others** in the workspace see only that it's locked; they can't open,
+  change, move or delete it.
+- **⋯ → Remove lock** makes it ordinary again (readable to Orbit, searchable).
+- **Forgot your PIN?** It can't be reset — that's the point. **Forget PIN**
+  in Settings deletes the key and what it locked (locked notes are deleted,
+  locked pages go to the trash, still locked).
+- Locking needs Orbit opened over **HTTPS** (or on localhost): browsers only
+  encrypt on a secure page. Over plain http Orbit says so.
+
 ### Quick Notes (your own)
 
 **Quick Notes** (under Today and Calendar in the sidebar) is your scratchpad:
@@ -1636,6 +1665,8 @@ language you last used Orbit in. The bell keeps 90 days.
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
 - **Account** — photo, display name, email.
+- **Locked notes and pages** — set, change or forget your lock PIN (see
+  [Locked notes and pages](#locked-notes-and-pages)).
 - **Appearance** — **Light**, **Dark** or **Automatic**; a personal **accent
   colour**. **Editors**: **Sheets**, **Diagrams (draw.io)** and
   **Whiteboards** each **As the theme**, or always **Light** / **Dark** —

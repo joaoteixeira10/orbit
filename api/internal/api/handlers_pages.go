@@ -36,6 +36,7 @@ type pageSummary struct {
 	Favorite    bool       `json:"favorite"`
 	Template    bool       `json:"template"`
 	Restricted  bool       `json:"restricted,omitempty"` // only some people see it (and what's under it)
+	Sealed      bool       `json:"sealed,omitempty"`     // locked: its text sealed with someone's PIN
 	Glossary    bool       `json:"glossary,omitempty"`   // its terms are explained in the other pages
 	// A database's properties and views; a row's values (JSON objects).
 	DB    json.RawMessage `json:"db,omitempty" swaggertype:"object"`
@@ -78,7 +79,7 @@ func (h *Handlers) favoriteSet(uid string) map[string]bool {
 }
 
 func summarize(p models.Page, fav map[string]bool) pageSummary {
-	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, Glossary: p.Glossary, DB: rawJSON(p.DB), Props: rawJSON(p.Props), Tags: tagsOf(p.Tags)}
+	return pageSummary{ID: p.ID, WorkspaceID: p.WorkspaceID, ParentID: p.ParentID, FolderID: p.FolderID, Title: p.Title, Icon: p.Icon, Rank: p.Rank, UpdatedAt: p.UpdatedAt, TrashedAt: p.TrashedAt, Favorite: fav[p.ID], Template: p.Template, Restricted: p.Restricted, Glossary: p.Glossary, DB: rawJSON(p.DB), Props: rawJSON(p.Props), Tags: tagsOf(p.Tags), Sealed: p.Sealed}
 }
 
 // tagsOf: a page's tags (nil: none, left out).
@@ -400,6 +401,12 @@ type updatePageRequest struct {
 	// Version is the version the editor started from; required with content.
 	// A newer save by someone else makes this a 409 with the current page.
 	Version int `json:"version"`
+	// Lock: true locks the page (with Cipher: its Markdown, sealed in the
+	// app) — its text, search words, history and editing-together state are
+	// cleared; false opens it for good (Content sent again). Cipher alone: a
+	// locked page's text, changed (with Version, as Content).
+	Lock   *bool   `json:"lock"`
+	Cipher *string `json:"cipher"`
 }
 
 // updatePage saves a page (editors). Saving the document needs the version
@@ -426,6 +433,14 @@ func (h *Handlers) updatePage(c *gin.Context) {
 	}
 	var req updatePageRequest
 	if !bindJSON(c, &req) {
+		return
+	}
+	if sealedByOther(c, p.Sealing) {
+		return
+	}
+	sealing, msg := h.sealPage(req, p, auth.UserID(c))
+	if msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 	wasUntitled := p.Title == ""
@@ -490,8 +505,11 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		up["content_text"] = planner.DocText(*req.Content)
 		up["version"] = gorm.Expr("version + 1")
 	}
+	for k, v := range sealing {
+		up[k] = v
+	}
 	q := h.db.Model(&models.Page{}).Where("id = ?", p.ID)
-	if req.Content != nil {
+	if req.Content != nil || req.Cipher != nil {
 		q = q.Where("version = ?", req.Version)
 	}
 	res := q.Updates(up)
@@ -505,10 +523,16 @@ func (h *Handlers) updatePage(c *gin.Context) {
 		return
 	}
 	h.publishWS(c, p.WorkspaceID, "pages")
+	if req.Lock != nil && *req.Lock && p.Sealed {
+		// Locked: nothing readable is left — no history, no shared document.
+		h.db.Where("page_id = ?", p.ID).Delete(&models.PageVersion{})
+		h.collabReset("page:" + p.ID)
+		h.tell("page:"+p.ID, gin.H{"type": "collab", "doc": "page:" + p.ID, "reset": true})
+	}
 	if req.Content != nil {
 		h.collabSaved(c, "page:"+p.ID, p.Version) // editing together: in step, or starts over
 	}
-	if req.Content != nil || req.Title != nil {
+	if (req.Content != nil || req.Title != nil) && !p.Sealed {
 		recordVersion(h.db, p, auth.UserID(c), viaOf(c), &prev, 0)
 	}
 	if req.Title != nil && p.Title != prev.Title {
@@ -601,7 +625,7 @@ func descendants(db *gorm.DB, id string) []string {
 //	@Router		/pages/{id} [delete]
 func (h *Handlers) trashPage(c *gin.Context) {
 	p, _, ok := h.pageAccess(c, models.WSEditor)
-	if !ok {
+	if !ok || sealedByOther(c, p.Sealing) {
 		return
 	}
 	ids := append(descendants(h.db, p.ID), p.ID)
@@ -665,7 +689,7 @@ func (h *Handlers) restorePage(c *gin.Context) {
 //	@Router		/pages/{id}/duplicate [post]
 func (h *Handlers) duplicatePage(c *gin.Context) {
 	p, _, ok := h.pageAccess(c, models.WSEditor)
-	if !ok {
+	if !ok || sealedByOther(c, p.Sealing) {
 		return
 	}
 	uid := auth.UserID(c)
@@ -674,7 +698,8 @@ func (h *Handlers) duplicatePage(c *gin.Context) {
 		Restricted: p.Restricted, AllowedUsers: p.AllowedUsers, // a copy is no wider
 		Content: p.Content, ContentText: p.ContentText, CreatedBy: uid, UpdatedBy: uid, DB: p.DB, Props: p.Props,
 		Tags: p.Tags, Fields: p.Fields, FieldsText: p.FieldsText,
-		Rank: h.siblingRank(h.db, p.WorkspaceID, p.ParentID, p.ID, ""),
+		Rank:    h.siblingRank(h.db, p.WorkspaceID, p.ParentID, p.ID, ""),
+		Sealing: p.Sealing, // a locked page's copy is locked too, the same person's
 	}
 	if err := h.db.Create(&cp).Error; err != nil {
 		h.internalError(c, err, "could not duplicate the page")
@@ -914,4 +939,48 @@ func fileName(title string) string {
 		return "Untitled"
 	}
 	return name
+}
+
+// sealPage reads a request's lock: what to set when locking (the sealed text;
+// the readable text and its search words cleared, a new version), opening,
+// or changing a locked page's sealed text. A database or a template isn't
+// locked (others read and use them).
+func (h *Handlers) sealPage(req updatePageRequest, p models.Page, uid string) (map[string]any, string) {
+	switch {
+	case req.Lock != nil && *req.Lock && !p.Sealed:
+		if req.Cipher == nil || !validCipher(*req.Cipher) {
+			return nil, "locking takes the page's text, sealed (cipher)"
+		}
+		if req.Content != nil {
+			return nil, "locking sends the text only sealed (cipher), never as it is"
+		}
+		if p.DB != "" || p.Template {
+			return nil, "a database or a template can't be locked"
+		}
+		if !h.hasLockKey(uid) {
+			return nil, "set a lock PIN first (Settings → Locked notes and pages)"
+		}
+		return map[string]any{"sealed": true, "sealed_by": uid, "cipher": *req.Cipher, "content": "", "content_text": "", "version": gorm.Expr("version + 1")}, ""
+	case req.Lock != nil && !*req.Lock && p.Sealed:
+		if req.Content == nil {
+			return nil, "opening a locked page sends its text again (content)"
+		}
+		return map[string]any{"sealed": false, "sealed_by": "", "cipher": ""}, ""
+	case p.Sealed:
+		if req.Content != nil {
+			return nil, "a locked page's text is sent sealed (cipher)"
+		}
+		if req.Template != nil && *req.Template || len(req.DB) > 0 {
+			return nil, "a locked page can't be a template or a database"
+		}
+		if req.Cipher != nil {
+			if !validCipher(*req.Cipher) {
+				return nil, "cipher: the page's text, sealed"
+			}
+			return map[string]any{"cipher": *req.Cipher, "version": gorm.Expr("version + 1")}, ""
+		}
+	case req.Cipher != nil:
+		return nil, "cipher is for a locked page (lock: true to lock it)"
+	}
+	return nil, ""
 }

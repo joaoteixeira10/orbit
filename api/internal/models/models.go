@@ -349,6 +349,7 @@ func AllModels() []any {
 		&Role{},
 		&User{},
 		&UserPrefs{},
+		&LockKey{},
 		&RefreshToken{},
 		&APIToken{},
 		&WebAuthnCredential{},

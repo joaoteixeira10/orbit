@@ -3179,6 +3179,79 @@ test('MCP writes what people open: a whiteboard with sticky notes draws them; a 
   await expect(page.getByText('200', { exact: true })).toBeVisible() // worked out
 })
 
+test('locked notes and pages: a PIN set, a note and a page locked — Orbit keeps only sealed text; the PIN opens them', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Private', kind: 'personal', starter: false, modules: ['home', 'notes', 'pages'] } })).json()
+  const note = await (await request.post(`/api/v1/workspaces/${ws.id}/notes`, { headers: H, data: { title: 'Wifi', body: 'secret cheese 2468' } })).json()
+  const pg = await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data: { title: 'Diary', content: 'page secret pumpkin' } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  // The PIN, once.
+  await page.goto('/settings#lock')
+  await page.getByTestId('lock-set').click()
+  await page.getByTestId('lock-pin-input').fill('2468-lock')
+  await page.getByTestId('lock-pin-again').fill('2468-lock')
+  await page.getByTestId('lock-pin-ok').click()
+  await expect(page.getByText('Lock PIN set.')).toBeVisible()
+
+  // The note: locked from its menu; its card shows only a lock; Orbit keeps it sealed.
+  await page.goto(`/w/${ws.id}/notes`)
+  await page.locator('.note-card', { hasText: 'Wifi' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'More options' }).click()
+  await page.getByTestId('note-lock').click()
+  // A new page load: the key is open in memory only, so the PIN is asked again.
+  await page.getByTestId('lock-pin-input').fill('2468-lock')
+  await page.getByTestId('lock-pin-ok').click()
+  await expect(page.getByText('Locked. Only your PIN opens it now.')).toBeVisible()
+  const stored = await (await request.get(`/api/v1/workspaces/${ws.id}/notes`, { headers: H })).json()
+  const n = stored.find((x: any) => x.id === note.id)
+  expect(n.sealed).toBe(true)
+  expect(n.body).toBe('')
+  expect(n.cipher).not.toContain('cheese')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.note-card', { hasText: 'Wifi' }).getByTestId('card-locked')).toBeVisible()
+
+  // A fresh tab knows no key: the PIN opens it again.
+  await page.reload()
+  await page.locator('.note-card', { hasText: 'Wifi' }).click()
+  await expect(page.getByTestId('note-locked')).toBeVisible()
+  await page.getByTestId('note-unlock').click()
+  await page.getByTestId('lock-pin-input').fill('1111')
+  await page.getByTestId('lock-pin-ok').click()
+  await expect(page.getByText('That isn’t your lock PIN.')).toBeVisible()
+  await page.getByTestId('lock-pin-input').fill('2468-lock')
+  await page.getByTestId('lock-pin-ok').click()
+  await expect(page.locator('.note-sheet').first()).toContainText('secret cheese 2468')
+  await page.keyboard.press('Escape')
+
+  // The page: locked from its menu; no history, no text on the server.
+  await page.goto(`/w/${ws.id}/p/${pg.id}`)
+  await expect(page.locator('.md-view')).toContainText('page secret pumpkin')
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-lock').click()
+  await page.getByTestId('lock-pin-input').fill('2468-lock')
+  await page.getByTestId('lock-pin-ok').click()
+  await expect(page.getByText('Locked. Only your PIN opens it now.')).toBeVisible()
+  const sp = await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()
+  expect(sp.sealed).toBe(true)
+  expect(sp.content ?? '').toBe('')
+  expect(sp.cipher).not.toContain('pumpkin')
+  await expect(page.getByTestId('tree-sealed')).toBeVisible()
+  await page.reload()
+  await expect(page.getByTestId('page-locked')).toBeVisible()
+  await page.getByTestId('page-unlock').click()
+  await page.getByTestId('lock-pin-input').fill('2468-lock')
+  await page.getByTestId('lock-pin-ok').click()
+  await expect(page.locator('.md-view')).toContainText('page secret pumpkin')
+  // The lock taken off: readable again on the server.
+  await page.getByRole('button', { name: 'Page options' }).click()
+  await page.getByTestId('page-unlock-for-good').click()
+  await expect(page.getByText('Lock removed.')).toBeVisible()
+  expect((await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content).toContain('pumpkin')
+})
+
 test('guest links and forms: a page read and edited by its link, no account; a public form adds a row', async ({ page, browser, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

@@ -28,6 +28,7 @@ import InboxButton from '@/components/InboxButton.vue'
 import HolidayEffectsRow from '@/components/holiday/HolidayEffectsRow.vue'
 import HolidayParticles from '@/components/holiday/HolidayParticles.vue'
 import AssistantPanel from '@/components/assistant/AssistantPanel.vue'
+import LockPinDialog from '@/components/LockPinDialog.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import QuickNoteSheet from '@/components/notes/QuickNoteSheet.vue'
 import { pagesApi, workspacesApi, type Workspace } from '@/api/planner'
@@ -634,6 +635,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 
     <HolidayParticles v-if="holiday.active && prefs.holidayEffects && motionOk" />
     <AssistantPanel />
+    <LockPinDialog />
     <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
     <QuickNoteSheet :open="quickNoteOpen" @close="quickNoteOpen = false" />
     <NewWorkspaceSheet :open="newWsOpen" @close="newWsOpen = false" />

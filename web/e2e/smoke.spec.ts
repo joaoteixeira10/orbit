@@ -3201,7 +3201,9 @@ test('locked notes and pages: a PIN set, a note and a page locked — Orbit keep
   await page.locator('.note-card', { hasText: 'Wifi' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'More options' }).click()
   await page.getByTestId('note-lock').click()
-  // A new page load: the key is open in memory only, so the PIN is asked again.
+  // A new page load: the key is open in memory only, so the PIN is asked again
+  // — in a dialog over the note (a real click: nothing covers it).
+  await page.getByTestId('lock-pin-input').click()
   await page.getByTestId('lock-pin-input').fill('2468-lock')
   await page.getByTestId('lock-pin-ok').click()
   await expect(page.getByText('Locked. Only your PIN opens it now.')).toBeVisible()

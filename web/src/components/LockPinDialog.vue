@@ -76,7 +76,7 @@ async function submit() {
 </script>
 
 <template>
-  <Overlay :open="!!mode" :title="title" size="sm" @close="answerPin(false)">
+  <Overlay :open="!!mode" :title="title" size="sm" top @close="answerPin(false)">
     <div v-if="!lockPossible()" class="space-y-4" data-testid="lock-insecure">
       <p class="rounded-xl bg-warn-bg px-3 py-2 text-[13px] text-warn-text">{{ t('lock.insecure') }}</p>
       <div class="flex justify-end"><button type="button" class="btn" @click="answerPin(false)">{{ t('common.close') }}</button></div>

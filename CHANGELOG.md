@@ -66,6 +66,8 @@ merge, not at release time.
 
 ### Fixed
 
+- The lock PIN dialog opens on top of the note or page being locked, not
+  behind it.
 - On a phone, a board's title shows whole, its tools on a line of their own
   under it, all one height.
 - Typing into a task's empty notes no longer drops out of editing after the

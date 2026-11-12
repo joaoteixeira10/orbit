@@ -8,7 +8,9 @@ import { X } from 'lucide-vue-next'
 // The title row is optional; #actions sits at its right (e.g. Done). bare:
 // the content lays itself out (its own scrolling, header and footer).
 const props = withDefaults(
-  defineProps<{ open: boolean; title?: string; mode?: 'side' | 'centered'; wide?: boolean; size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl'; bare?: boolean }>(),
+  // top: above the other sheets (one asked for from inside them, as the lock
+  // PIN — mounted once by the app shell, before them); popovers stay above.
+  defineProps<{ open: boolean; title?: string; mode?: 'side' | 'centered'; wide?: boolean; size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl'; bare?: boolean; top?: boolean }>(),
   { mode: 'centered', wide: false, size: 'md', bare: false },
 )
 const emit = defineEmits<{ close: [] }>()
@@ -45,7 +47,7 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div v-if="open" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style="background: var(--backdrop)" @mousedown.self="emit('close')">
+      <div v-if="open" class="fixed inset-0 flex items-end justify-center sm:items-center" :class="top ? 'z-[55]' : 'z-50'" style="background: var(--backdrop)" @mousedown.self="emit('close')">
         <!-- Sheet -->
         <div
           v-if="mode === 'centered'"

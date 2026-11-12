@@ -344,12 +344,50 @@ type AuditLog struct {
 }
 
 // AllModels is the ordered AutoMigrate list.
+// Group is a set of people (a team, a class): it carries instance roles
+// (GroupRole) and is added to workspaces (WorkspaceGroup) with a role, so
+// joining or leaving it gives or takes all of that at once. Source: "" made
+// in Orbit; "oidc" / "scim" kept by the identity provider (ExternalID its
+// name or id there), not changed by hand.
+type Group struct {
+	Base
+	Name        string `gorm:"size:120;not null;uniqueIndex" json:"name"`
+	Description string `gorm:"size:500" json:"description"`
+	Source      string `gorm:"size:16;not null;default:''" json:"source"`
+	ExternalID  string `gorm:"size:255;index" json:"external_id,omitempty"`
+}
+
+// GroupMember: a person in a group.
+type GroupMember struct {
+	GroupID   string    `gorm:"primaryKey;size:36" json:"group_id"`
+	UserID    string    `gorm:"primaryKey;size:36;index" json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// GroupRole: an instance role a group's members hold.
+type GroupRole struct {
+	GroupID string `gorm:"primaryKey;size:36" json:"group_id"`
+	RoleID  string `gorm:"primaryKey;size:36;index" json:"role_id"`
+}
+
+// WorkspaceGroup: a group in a workspace, its members there with Role.
+type WorkspaceGroup struct {
+	WorkspaceID string    `gorm:"primaryKey;size:36" json:"workspace_id"`
+	GroupID     string    `gorm:"primaryKey;size:36;index" json:"group_id"`
+	Role        string    `gorm:"size:10;not null" json:"role"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 func AllModels() []any {
 	return []any{
 		&Role{},
 		&User{},
 		&UserPrefs{},
 		&LockKey{},
+		&Group{},
+		&GroupMember{},
+		&GroupRole{},
+		&WorkspaceGroup{},
 		&RefreshToken{},
 		&APIToken{},
 		&WebAuthnCredential{},

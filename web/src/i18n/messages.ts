@@ -25,6 +25,7 @@ import { lifeEn, lifePt } from './life'
 import { embedsEn, embedsPt } from './embeds'
 import { holidayEn, holidayPt } from './holiday'
 import { lockEn, lockPt } from './lock'
+import { groupsEn, groupsPt } from './groups'
 import { assistantEn, assistantPt } from './assistant'
 
 export const SUPPORTED_LOCALES = [
@@ -56,6 +57,7 @@ const en = {
   ...embedsEn,
   ...holidayEn,
   ...lockEn,
+  ...groupsEn,
   ...assistantEn,
   common: {
     save: 'Save',
@@ -345,6 +347,7 @@ const pt: typeof en = {
   ...embedsPt,
   ...holidayPt,
   ...lockPt,
+  ...groupsPt,
   ...assistantPt,
   common: {
     save: 'Guardar',

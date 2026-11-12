@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GroupsAdmin from '@/components/admin/GroupsAdmin.vue'
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
@@ -23,7 +24,7 @@ import {
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
   Info, Workflow, CalendarDays,
-  History,
+  History, UsersRound,
 } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { api as apiCall } from '@/lib/api'
@@ -48,7 +49,7 @@ function ago(iso: string): string {
   return rtf.format(0, 'minute')
 }
 
-type Tab = 'users' | 'roles' | 'tokens' | 'branding' | 'notifications' | 'security' | 'sso' | 'owner'
+type Tab = 'users' | 'groups' | 'roles' | 'tokens' | 'branding' | 'notifications' | 'security' | 'sso' | 'owner'
 
 // This view backs two top-level sections: the admin area (/admin) and the
 // owner-only area (/owner), selected by the route's `area` meta. Each area
@@ -73,6 +74,7 @@ const navGroups = computed(() => {
   }
   const mgmt: { id: Tab; label: string; icon: any; count?: number }[] = []
   if (auth.can(P.usersManage)) mgmt.push({ id: 'users', label: t('admin.users'), icon: Users, count: users.value.length })
+  if (auth.can(P.usersManage)) mgmt.push({ id: 'groups', label: t('groups.title'), icon: UsersRound })
   if (auth.can(P.rolesManage)) mgmt.push({ id: 'roles', label: t('admin.roles'), icon: ShieldCheck, count: roles.value.length })
   if (auth.can(P.usersManage)) mgmt.push({ id: 'tokens', label: t('admin.apiTokens'), icon: Terminal })
   const sys: { id: Tab; label: string; icon: any; count?: number }[] = []
@@ -965,6 +967,10 @@ function switchTab(t: Tab) {
     </section>
 
     <!-- ===== Roles: v0's group cards (members | access) ===== -->
+    <section v-else-if="tab === 'groups'">
+      <GroupsAdmin :roles="roles" :users="users" />
+    </section>
+
     <section v-else-if="tab === 'roles'">
       <div class="mb-3 flex justify-end">
         <button class="btn-primary" @click="openCreateRole"><Plus class="h-4 w-4" /> {{ t('admin.newRole') }}</button>

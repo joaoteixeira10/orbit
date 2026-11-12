@@ -82,6 +82,10 @@ func Migrate(gdb *gorm.DB) error {
 	if err := migrateListFolders(gdb); err != nil {
 		return err
 	}
+	// Members from before groups: their role is their own.
+	if err := gdb.Exec("UPDATE workspace_members SET direct_role = role WHERE direct_role = '' AND NOT EXISTS (SELECT 1 FROM workspace_groups WHERE workspace_groups.workspace_id = workspace_members.workspace_id)").Error; err != nil {
+		return fmt.Errorf("direct roles: %w", err)
+	}
 	// Files from before versions: each its own first.
 	if err := gdb.Exec("UPDATE uploads SET lineage = id WHERE lineage IS NULL OR lineage = ''").Error; err != nil {
 		return fmt.Errorf("file versions: %w", err)

@@ -199,6 +199,7 @@ curl -s "${auth[@]}" "$ORBIT/api/v1/search?q=essay" | jq -r '.[] | "\(.kind)\t\(
 |---|---|
 | Overview | `GET /home?today=&from=&to=[&ws=]`, `GET /search?q=[&ws=]`, `GET /catalog` (modules and templates) |
 | Workspaces | `GET/POST /workspaces`, `GET/PUT/DELETE /workspaces/{ws}`, `PUT /me/workspace-order` |
+| Groups | `GET/POST /groups`, `GET/PUT/DELETE /groups/{id}` (`name`, `description`, `role_ids`), `POST /groups/{id}/members` (`user`: username or email), `DELETE /groups/{id}/members/{uid}` — `users.manage`; a group with an admin role, the owner only. A workspace's: `GET/POST /workspaces/{ws}/groups` (`group_id`, `role`), `PUT/DELETE /workspaces/{ws}/groups/{gid}` (its owners); `GET /group-names` to pick one. Members say `direct_role` and `groups`. |
 | Members | `GET/POST /workspaces/{ws}/members`, `PUT/DELETE /workspaces/{ws}/members/{uid}` (your own id to leave), `GET /users/lookup?q=` (exact username or email) |
 | Activity | `GET /workspaces/{ws}/activity` (`?before=` an RFC 3339 time for older ones): newest first, 60 at a time, with `actor_name`; kept 90 days |
 | Invite links | `GET/POST /workspaces/{ws}/invites` (owners; `{role: editor\|viewer, days: 1–30, max_uses: 1–100}`, the answer carries the token once), `DELETE /workspaces/{ws}/invites/{id}`; public, rate-limited: `GET /invites/{token}` (what it's for), `POST /invites/{token}/signup` (`{username, password, display_name?, email?}` → signed in); signed in: `POST /invites/{token}/accept` |

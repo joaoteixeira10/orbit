@@ -563,8 +563,15 @@ func (h *Handlers) userIsSuperuser(userID string) bool {
 	var n int64
 	h.db.Table("user_roles").
 		Joins("JOIN roles ON roles.id = user_roles.role_id").
-		Where("user_roles.user_id = ? AND roles.superuser = ?", userID, true).
-		Count(&n)
+		Where("user_roles.user_id = ? AND roles.superuser = ?", userID, true).Count(&n)
+	if n > 0 {
+		return true
+	}
+	// Or through a group of theirs.
+	h.db.Table("group_members").
+		Joins("JOIN group_roles ON group_roles.group_id = group_members.group_id").
+		Joins("JOIN roles ON roles.id = group_roles.role_id").
+		Where("group_members.user_id = ? AND roles.superuser = ?", userID, true).Count(&n)
 	return n > 0
 }
 

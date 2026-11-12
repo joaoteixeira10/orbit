@@ -1743,6 +1743,105 @@ definitions:
           $ref: '#/definitions/api.graphNode'
         type: array
     type: object
+  api.groupDetail:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: string
+      in:
+        items:
+          $ref: '#/definitions/api.groupWorkspace'
+        type: array
+      members:
+        type: integer
+      name:
+        type: string
+      people:
+        items:
+          $ref: '#/definitions/api.groupMember'
+        type: array
+      role_ids:
+        items:
+          type: string
+        type: array
+      source:
+        type: string
+      updated_at:
+        type: string
+      workspaces:
+        type: integer
+    type: object
+  api.groupMember:
+    properties:
+      avatar_url:
+        type: string
+      display_name:
+        type: string
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
+  api.groupMemberRequest:
+    properties:
+      user:
+        description: username or email
+        type: string
+    required:
+    - user
+    type: object
+  api.groupRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 120
+        type: string
+      role_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  api.groupResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: string
+      members:
+        type: integer
+      name:
+        type: string
+      role_ids:
+        items:
+          type: string
+        type: array
+      source:
+        type: string
+      updated_at:
+        type: string
+      workspaces:
+        type: integer
+    type: object
+  api.groupWorkspace:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    type: object
   api.guestEditRequest:
     properties:
       content:
@@ -2143,8 +2242,16 @@ definitions:
     properties:
       avatar_url:
         type: string
+      direct_role:
+        description: their own ("" in only through groups)
+        type: string
       display_name:
         type: string
+      groups:
+        description: the groups that bring them in
+        items:
+          type: string
+        type: array
       joined_at:
         type: string
       role:
@@ -3888,6 +3995,30 @@ definitions:
       updated_at:
         type: string
       workspace_id:
+        type: string
+    type: object
+  api.wsGroupRequest:
+    properties:
+      group_id:
+        type: string
+      role:
+        enum:
+        - owner
+        - editor
+        - viewer
+        type: string
+    required:
+    - role
+    type: object
+  api.wsGroupResponse:
+    properties:
+      group_id:
+        type: string
+      members:
+        type: integer
+      name:
+        type: string
+      role:
         type: string
     type: object
   assistant.Action:
@@ -6960,6 +7091,173 @@ paths:
       summary: Update a grade
       tags:
       - school
+  /group-names:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.wsGroupResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Groups to add to a workspace
+      tags:
+      - groups
+  /groups:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.groupResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Groups
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The group
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.groupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.groupResponse'
+      security:
+      - BearerAuth: []
+      summary: New group
+      tags:
+      - groups
+  /groups/{id}:
+    delete:
+      parameters:
+      - description: Group id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a group
+      tags:
+      - groups
+    get:
+      parameters:
+      - description: Group id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.groupDetail'
+      security:
+      - BearerAuth: []
+      summary: A group
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.groupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.groupDetail'
+      security:
+      - BearerAuth: []
+      summary: Change a group
+      tags:
+      - groups
+  /groups/{id}/members:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Who
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.groupMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.groupDetail'
+      security:
+      - BearerAuth: []
+      summary: Add someone to a group
+      tags:
+      - groups
+  /groups/{id}/members/{uid}:
+    delete:
+      parameters:
+      - description: Group id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User id
+        in: path
+        name: uid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.groupDetail'
+      security:
+      - BearerAuth: []
+      summary: Remove someone from a group
+      tags:
+      - groups
   /habits/{id}:
     delete:
       parameters:
@@ -11323,6 +11621,82 @@ paths:
       summary: How a workspace's things connect
       tags:
       - pages
+  /workspaces/{ws}/groups:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.wsGroupResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's groups
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Which, with which role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.wsGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.wsGroupResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Add a group to a workspace
+      tags:
+      - groups
+  /workspaces/{ws}/groups/{gid}:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Group id
+        in: path
+        name: gid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.wsGroupResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Remove a group from a workspace
+      tags:
+      - groups
   /workspaces/{ws}/habits:
     get:
       parameters:

@@ -107,6 +107,9 @@ func (e Effective) Narrow(privs []string, readOnly bool) Effective {
 	return out
 }
 
+// ParseStrings reads a JSON list of strings (a role's privileges).
+func ParseStrings(s string) []string { return parseStrings(s) }
+
 func parseStrings(s string) []string {
 	if s == "" {
 		return nil

@@ -10,6 +10,7 @@ import WsIcon from './ui/WsIcon.vue'
 import IconColorPicker from './ui/IconColorPicker.vue'
 import Avatar from './ui/Avatar.vue'
 import InviteLinks from './InviteLinks.vue'
+import WorkspaceGroups from './WorkspaceGroups.vue'
 import { ICONS } from '@/lib/icons'
 import { useSortable } from '@/lib/sortable'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -279,7 +280,7 @@ async function destroy() {
             <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="32" />
             <span class="min-w-0 flex-1">
               <span class="block truncate text-[14px]">{{ m.display_name || m.username }}<span v-if="m.user_id === auth.user?.id" class="text-text-3"> · {{ t('ws.you') }}</span></span>
-              <span class="block truncate text-[12px] text-text-3">@{{ m.username }}</span>
+              <span class="block truncate text-[12px] text-text-3">@{{ m.username }}<template v-if="m.groups?.length"> · {{ t('groups.via', { names: m.groups.join(', ') }) }}</template></span>
             </span>
             <select v-if="isOwner" class="input !w-auto !py-1 text-[13px]" :value="m.role" @change="setRole(m.user_id, ($event.target as HTMLSelectElement).value as WSRole)">
               <option value="owner">{{ t('roles.owner') }}</option>
@@ -287,10 +288,11 @@ async function destroy() {
               <option value="viewer">{{ t('roles.viewer') }}</option>
             </select>
             <span v-else class="text-[13px] text-text-2">{{ t(`roles.${m.role}`) }}</span>
-            <button v-if="isOwner && m.user_id !== auth.user?.id" class="icon-btn !text-danger" :title="t('ws.remove')" @click="removeMember(m.user_id)"><Trash2 class="h-4 w-4" /></button>
+            <button v-if="isOwner && m.user_id !== auth.user?.id && (m.direct_role || !m.groups?.length)" class="icon-btn !text-danger" :title="t('ws.remove')" @click="removeMember(m.user_id)"><Trash2 class="h-4 w-4" /></button>
           </div>
         </div>
         <p class="footnote px-1">{{ t('ws.rolesHint') }}</p>
+        <WorkspaceGroups :ws-id="wsId" :is-owner="isOwner" />
         <InviteLinks v-if="isOwner && auth.features.workspace_invites !== false" :ws-id="wsId" />
       </div>
     </template>

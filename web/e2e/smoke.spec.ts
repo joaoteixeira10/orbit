@@ -3252,6 +3252,40 @@ test('locked notes and pages: a PIN set, a note and a page locked — Orbit keep
   expect((await (await request.get(`/api/v1/pages/${pg.id}`, { headers: H })).json()).content).toContain('pumpkin')
 })
 
+test('groups: made in Admin with people; a workspace’s owner adds one — its people are members through it', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  await request.post('/api/v1/users', { headers: H, data: { username: 'gina', display_name: 'Gina Lopes', password: 'gina-e2e-password-42' } })
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Studio Team', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await page.goto('/admin')
+  await page.locator('.subtab', { hasText: 'Groups' }).click()
+  await page.getByTestId('group-new').click()
+  await page.getByTestId('group-name').fill('Design')
+  await page.getByTestId('group-save').click()
+  await expect(page.getByText('Group saved.')).toBeVisible()
+  const card = page.getByTestId('group-card').filter({ hasText: 'Design' })
+  await card.getByTestId('group-add-person').selectOption({ label: 'gina' })
+  await card.getByTestId('group-add').click()
+  await expect(card.getByTestId('group-person')).toHaveText(/gina/)
+  await page.screenshot({ path: 'test-results/groups-admin.png' })
+
+  // The workspace's owner adds the group as editors: Gina is a member through it.
+  await page.goto(`/w/${ws.id}`)
+  await page.getByRole('button', { name: 'Workspace settings' }).click()
+  await page.getByRole('button', { name: 'Members', exact: true }).click()
+  await page.getByTestId('ws-group-pick').selectOption({ label: 'Design (1)' })
+  await page.getByTestId('ws-group-add').click()
+  await expect(page.getByTestId('ws-group')).toContainText('Design')
+  await expect(page.getByText('@gina · through Design')).toBeVisible()
+  await page.screenshot({ path: 'test-results/groups-ws.png' })
+  const gina = await (await request.post('/api/v1/auth/login', { data: { username: 'gina', password: 'gina-e2e-password-42' } })).json()
+  const mine = await (await request.get('/api/v1/workspaces', { headers: { Authorization: `Bearer ${gina.access_token}` } })).json()
+  expect(mine.map((w: any) => w.name)).toContain('Studio Team')
+})
+
 test('guest links and forms: a page read and edited by its link, no account; a public form adds a row', async ({ page, browser, request }) => {
   const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
   const H = { Authorization: `Bearer ${login.access_token}` }

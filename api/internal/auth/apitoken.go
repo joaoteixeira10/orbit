@@ -80,7 +80,7 @@ func (m *Manager) requireAPIToken(c *gin.Context, raw string) {
 	c.Set(ctxUserID, u.ID)
 	c.Set(ctxViaKey, true)
 	// The token's own scope narrows the owner's rights; it never widens them.
-	c.Set(ctxEff, rbac.Build(u.Roles).Narrow(rbac.DecodeStrings(t.ScopePrivileges), t.ReadOnly))
+	c.Set(ctxEff, rbac.Build(append(u.Roles, GroupRoles(m.db, u.ID)...)).Narrow(rbac.DecodeStrings(t.ScopePrivileges), t.ReadOnly))
 	c.Next()
 }
 

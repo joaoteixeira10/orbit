@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
@@ -145,6 +146,8 @@ type memberResponse struct {
 	DisplayName string    `json:"display_name"`
 	AvatarURL   string    `json:"avatar_url"`
 	Role        string    `json:"role"`
+	DirectRole  string    `json:"direct_role"`      // their own ("" in only through groups)
+	Groups      []string  `json:"groups,omitempty"` // the groups that bring them in
 	JoinedAt    time.Time `json:"joined_at"`
 }
 
@@ -183,9 +186,18 @@ func (h *Handlers) membersOf(wsID string) []memberResponse {
 		Joins("JOIN users ON users.id = workspace_members.user_id").
 		Where("workspace_members.workspace_id = ?", wsID).
 		Order("workspace_members.created_at").Scan(&rows)
+	var via []struct{ UserID, Name string }
+	h.db.Table("workspace_groups").Select("group_members.user_id, groups.name").
+		Joins("JOIN groups ON groups.id = workspace_groups.group_id").
+		Joins("JOIN group_members ON group_members.group_id = workspace_groups.group_id").
+		Where("workspace_groups.workspace_id = ?", wsID).Order("groups.name").Scan(&via)
+	groups := map[string][]string{}
+	for _, v := range via {
+		groups[v.UserID] = append(groups[v.UserID], v.Name)
+	}
 	out := make([]memberResponse, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, memberResponse{UserID: r.UserID, Username: r.Username, DisplayName: r.DisplayName, AvatarURL: r.AvatarURL, Role: r.Role, JoinedAt: r.CreatedAt})
+		out = append(out, memberResponse{UserID: r.UserID, Username: r.Username, DisplayName: r.DisplayName, AvatarURL: r.AvatarURL, Role: r.Role, DirectRole: r.DirectRole, Groups: groups[r.UserID], JoinedAt: r.CreatedAt})
 	}
 	return out
 }
@@ -294,7 +306,7 @@ func (h *Handlers) createWorkspace(c *gin.Context) {
 		// New workspaces go to the bottom of the creator's sidebar.
 		var last struct{ Max *float64 }
 		tx.Model(&models.WorkspaceMember{}).Select("MAX(position) AS max").Where("user_id = ?", uid).Scan(&last)
-		member = models.WorkspaceMember{WorkspaceID: ws.ID, UserID: uid, Role: models.WSOwner, Position: planner.Rank(last.Max, nil)}
+		member = models.WorkspaceMember{WorkspaceID: ws.ID, UserID: uid, Role: models.WSOwner, DirectRole: models.WSOwner, Position: planner.Rank(last.Max, nil)}
 		if err := tx.Create(&member).Error; err != nil {
 			return err
 		}
@@ -560,6 +572,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceInvite{}).Error },
 		func() error { return deleteCourses(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceMember{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.WorkspaceGroup{}).Error },
 		func() error { return tx.Where("id = ?", wsID).Delete(&models.Workspace{}).Error },
 	}
 	for _, s := range steps {
@@ -678,18 +691,26 @@ func (h *Handlers) addMember(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no account with that username or email"})
 		return
 	}
-	var n int64
-	h.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ? AND user_id = ?", ws.ID, u.ID).Count(&n)
-	if n > 0 {
+	var cur models.WorkspaceMember
+	inAlready := h.db.Where("workspace_id = ? AND user_id = ?", ws.ID, u.ID).Limit(1).Find(&cur).RowsAffected > 0
+	if inAlready && cur.DirectRole != "" {
 		c.JSON(http.StatusConflict, gin.H{"error": u.Username + " is already a member"})
 		return
 	}
-	var last struct{ Max *float64 }
-	h.db.Model(&models.WorkspaceMember{}).Select("MAX(position) AS max").Where("user_id = ?", u.ID).Scan(&last)
-	m := models.WorkspaceMember{WorkspaceID: ws.ID, UserID: u.ID, Role: req.Role, Position: planner.Rank(last.Max, nil)}
-	if err := h.db.Create(&m).Error; err != nil {
-		h.internalError(c, err, "could not add the member")
-		return
+	if inAlready { // in through a group: now a role of their own too
+		if _, err := h.regroup([]string{ws.ID}, func(tx *gorm.DB) error {
+			return tx.Model(&cur).Update("direct_role", req.Role).Error
+		}); h.regroupFailed(c, err) {
+			return
+		}
+	} else {
+		var last struct{ Max *float64 }
+		h.db.Model(&models.WorkspaceMember{}).Select("MAX(position) AS max").Where("user_id = ?", u.ID).Scan(&last)
+		m := models.WorkspaceMember{WorkspaceID: ws.ID, UserID: u.ID, Role: req.Role, DirectRole: req.Role, Position: planner.Rank(last.Max, nil)}
+		if err := h.db.Create(&m).Error; err != nil {
+			h.internalError(c, err, "could not add the member")
+			return
+		}
 	}
 	h.recordCtx(c, "workspace.member_add", "workspace", ws.ID, gin.H{"user": u.Username, "role": req.Role})
 	h.events.Publish(u.ID, liveEvent("workspaces"))
@@ -697,13 +718,6 @@ func (h *Handlers) addMember(c *gin.Context) {
 	h.notifyMembership(c, ws, u.ID, "added", req.Role)
 	h.notifyJoined(c, ws, u, req.Role)
 	c.JSON(http.StatusCreated, h.membersOf(ws.ID))
-}
-
-// ownerCount counts a workspace's owners.
-func (h *Handlers) ownerCount(wsID string) int64 {
-	var n int64
-	h.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ? AND role = ?", wsID, models.WSOwner).Count(&n)
-	return n
 }
 
 // setMemberRole changes a member's role (owners). The last owner stays one.
@@ -732,12 +746,14 @@ func (h *Handlers) setMemberRole(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not a member"})
 		return
 	}
-	if m.Role == models.WSOwner && req.Role != models.WSOwner && h.ownerCount(ws.ID) == 1 {
-		c.JSON(http.StatusConflict, gin.H{"error": "a workspace needs at least one owner; make someone else an owner first"})
+	before := m.Role
+	if _, err := h.regroup([]string{ws.ID}, func(tx *gorm.DB) error {
+		return tx.Model(&m).Update("direct_role", req.Role).Error
+	}); h.regroupFailed(c, err) {
 		return
 	}
-	changed := m.Role != req.Role
-	h.db.Model(&m).Update("role", req.Role)
+	h.db.First(&m, "id = ?", m.ID)
+	changed := m.Role != before
 	h.recordCtx(c, "workspace.member_role", "workspace", ws.ID, gin.H{"user_id": m.UserID, "role": req.Role})
 	if changed {
 		h.notifyMembership(c, ws, m.UserID, "role_changed", req.Role)
@@ -770,11 +786,27 @@ func (h *Handlers) removeMember(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not a member"})
 		return
 	}
-	if m.Role == models.WSOwner && h.ownerCount(ws.ID) == 1 {
-		c.JSON(http.StatusConflict, gin.H{"error": "the last owner can't leave; make someone else an owner, or delete the workspace"})
+	if m.DirectRole == "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "they're in it through a group: take the group out of the workspace, or them out of the group"})
 		return
 	}
-	h.db.Delete(&m)
+	if _, err := h.regroup([]string{ws.ID}, func(tx *gorm.DB) error {
+		return tx.Model(&m).Update("direct_role", "").Error
+	}); err != nil {
+		if errors.Is(err, planner.ErrNoOwner) {
+			c.JSON(http.StatusConflict, gin.H{"error": "the last owner can't leave; make someone else an owner, or delete the workspace"})
+			return
+		}
+		h.internalError(c, err, "could not remove the member")
+		return
+	}
+	if h.db.Where("workspace_id = ? AND user_id = ?", ws.ID, target).Limit(1).Find(&models.WorkspaceMember{}).RowsAffected > 0 {
+		// Still in through a group: only their own role went.
+		h.recordCtx(c, "workspace.member_remove", "workspace", ws.ID, gin.H{"user_id": target, "still_via_group": true})
+		h.publishWS(c, ws.ID, "members", target)
+		c.Status(http.StatusNoContent)
+		return
+	}
 	h.db.Where("user_id = ? AND page_id IN (?)", target, h.db.Model(&models.Page{}).Select("id").Where("workspace_id = ?", ws.ID)).Delete(&models.PageFavorite{})
 	// Their own smart lists go with them; shared ones stay for the others.
 	h.db.Where("workspace_id = ? AND owner_id = ? AND shared = ?", ws.ID, target, false).Delete(&models.SmartList{})
@@ -824,7 +856,7 @@ func releaseWorkspaces(tx *gorm.DB, userID string) error {
 	if err := tx.Where("owner_id = ? AND shared = ?", userID, false).Delete(&models.SmartList{}).Error; err != nil {
 		return err
 	}
-	for _, q := range []any{&models.WorkspaceMember{}, &models.PageFavorite{}, &models.CalendarFeed{}} {
+	for _, q := range []any{&models.WorkspaceMember{}, &models.PageFavorite{}, &models.CalendarFeed{}, &models.GroupMember{}} {
 		if err := tx.Where("user_id = ?", userID).Delete(q).Error; err != nil {
 			return err
 		}

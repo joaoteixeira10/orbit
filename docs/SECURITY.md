@@ -141,6 +141,15 @@ dangerous actions need a fresh password or passkey check within the last 5
 minutes: feature flags, security policy, SSO settings, owner transfer and
 starting an impersonation.
 
+**Groups.** A group carries instance roles (added to its members' own when
+privileges are worked out, on every request) and workspace roles (kept as
+the members' rows: the higher of their own and their groups'). Managing
+groups needs `users.manage`; a group with a superuser role or an owner-gated
+privilege is changed — roles, people, deletion — only by the owner, and
+someone who is an admin through a group counts as one (another admin can't
+manage their account). No group change may leave a workspace without an
+owner (refused, nothing changed).
+
 **Locked notes and pages.** A person can lock a note or a page with a PIN.
 The text is encrypted in their browser (AES-GCM, 256-bit) with their lock
 key — random, kept on the server only wrapped by a key derived from the PIN

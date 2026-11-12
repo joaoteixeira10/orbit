@@ -532,7 +532,7 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 		for uid, role := range members {
 			var last struct{ Max *float64 }
 			tx.Model(&models.WorkspaceMember{}).Select("MAX(position) AS max").Where("user_id = ?", uid).Scan(&last)
-			if err := tx.Create(&models.WorkspaceMember{WorkspaceID: ws.ID, UserID: uid, Role: role, Position: planner.Rank(last.Max, nil)}).Error; err != nil {
+			if err := tx.Create(&models.WorkspaceMember{WorkspaceID: ws.ID, UserID: uid, Role: role, DirectRole: role, Position: planner.Rank(last.Max, nil)}).Error; err != nil {
 				return err
 			}
 			if uid != me.ID {

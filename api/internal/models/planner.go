@@ -48,10 +48,14 @@ type Workspace struct {
 // user's own order of their workspaces in the sidebar.
 type WorkspaceMember struct {
 	Base
-	WorkspaceID string  `gorm:"size:36;not null;uniqueIndex:idx_ws_member" json:"workspace_id"`
-	UserID      string  `gorm:"size:36;not null;uniqueIndex:idx_ws_member;index" json:"user_id"`
-	Role        string  `gorm:"size:10;not null" json:"role"`
-	Position    float64 `gorm:"not null;default:0" json:"position"`
+	WorkspaceID string `gorm:"size:36;not null;uniqueIndex:idx_ws_member" json:"workspace_id"`
+	UserID      string `gorm:"size:36;not null;uniqueIndex:idx_ws_member;index" json:"user_id"`
+	Role        string `gorm:"size:10;not null" json:"role"`
+	// DirectRole is the role given to the person themselves ("" none: they're
+	// in only through groups); Role is the highest of it and their groups'
+	// (planner.SyncGroupAccess keeps it so).
+	DirectRole string  `gorm:"size:10;not null;default:''" json:"direct_role"`
+	Position   float64 `gorm:"not null;default:0" json:"position"`
 	// Muted stops notifications about other members' activity in it.
 	Muted bool `gorm:"not null;default:false" json:"muted"`
 }

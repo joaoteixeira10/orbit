@@ -259,6 +259,14 @@ func New(d Deps) *gin.Engine {
 
 			// Global-privilege routes.
 			authed.GET("/users", h.auth.RequireGlobal(rbac.PUsersManage), h.listUsers)
+			// Groups: sets of people with instance roles and workspaces.
+			authed.GET("/groups", h.auth.RequireGlobal(rbac.PUsersManage), h.listGroups)
+			authed.POST("/groups", h.auth.RequireGlobal(rbac.PUsersManage), h.createGroup)
+			authed.GET("/groups/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.getGroup)
+			authed.PUT("/groups/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.updateGroup)
+			authed.DELETE("/groups/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.deleteGroup)
+			authed.POST("/groups/:id/members", h.auth.RequireGlobal(rbac.PUsersManage), h.addGroupMember)
+			authed.DELETE("/groups/:id/members/:uid", h.auth.RequireGlobal(rbac.PUsersManage), h.removeGroupMember)
 			authed.POST("/users", h.auth.RequireGlobal(rbac.PUsersManage), h.createUser)
 			authed.GET("/users/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.getUser)
 			authed.PUT("/users/:id", h.auth.RequireGlobal(rbac.PUsersManage), h.updateUser)
@@ -304,6 +312,11 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/workspaces/:ws", h.updateWorkspace)
 			authed.DELETE("/workspaces/:ws", h.deleteWorkspace)
 			authed.GET("/workspaces/:ws/members", h.listMembers)
+			authed.GET("/workspaces/:ws/groups", h.listWorkspaceGroups)
+			authed.POST("/workspaces/:ws/groups", h.addWorkspaceGroup)
+			authed.PUT("/workspaces/:ws/groups/:gid", h.addWorkspaceGroup)
+			authed.DELETE("/workspaces/:ws/groups/:gid", h.removeWorkspaceGroup)
+			authed.GET("/group-names", h.groupNames)
 			authed.POST("/workspaces/:ws/members", h.addMember)
 			authed.PUT("/workspaces/:ws/members/:uid", h.setMemberRole)
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)

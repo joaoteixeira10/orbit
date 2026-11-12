@@ -221,6 +221,11 @@ it you only see workspaces you're invited to.
   deleted) and drag them to change their order in the sidebar.
 - **Members** — invite an existing account by **username or email** as
   **Owner**, **Editor** or **Viewer**; change roles; remove members.
+  **Groups** below: add a group (made by an admin) as owners, editors or
+  viewers, and everyone in it is a member — "through Design" under their
+  name. Someone in a group *and* added themselves has the higher of the two
+  roles; taking the group out leaves them their own. Someone in only through
+  a group leaves when the group goes or they leave it.
 
 ### Moving a workspace to another Orbit
 
@@ -1874,6 +1879,21 @@ roles (can't be edited):
 workspaces**, **Manage users**, **Manage roles**, **View audit log**, and —
 granted only by the owner — **Impersonate users**, **Manage branding**,
 **Manage notifications**. Add or remove members from a role's card.
+
+### Groups
+
+Teams, classes, departments: **Admin → Groups** (needs **Manage users**).
+**New group**: a name, a description, and **roles** its people hold — on top
+of their own. Add and remove **people** on its card. A workspace's owners
+add the group to the workspace with a role (its Settings → Members →
+**Groups**); the card lists where it is. Someone who joins the group gets
+all of it at once; who leaves loses it (what they have of their own stays).
+
+- Only the **owner** can give a group the `admin` role (or an owner-only
+  privilege), or change a group that has one — as making admins is theirs.
+- A change that would leave a workspace without an owner is refused.
+- Groups from your identity provider (marked **From sign-in**) keep their
+  people from there.
 
 ### API tokens
 

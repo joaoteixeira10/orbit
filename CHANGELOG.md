@@ -8,6 +8,10 @@ merge, not at release time.
 
 ### Added
 
+- **Groups** — Admin → Groups: sets of people that carry roles; a
+  workspace's owners add a group with a role, and everyone in it is a member
+  ("through Design"). Joining or leaving a group gives or takes all of it.
+  Only the owner makes a group of admins.
 - **Locked notes and pages** — ⋯ → Lock keeps a note's or a page's text to
   you, encrypted in your browser with your lock PIN (Settings → Locked notes
   and pages): Orbit keeps only that — not the text, its search words, a

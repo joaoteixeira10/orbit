@@ -59,6 +59,8 @@ export interface Member {
   display_name: string
   avatar_url: string
   role: WSRole
+  direct_role?: WSRole | '' // their own ("" in only through groups)
+  groups?: string[] // the groups that bring them in
   joined_at: string
 }
 

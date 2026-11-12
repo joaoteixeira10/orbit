@@ -218,7 +218,9 @@ func (h *Handlers) join(c *gin.Context, inv models.WorkspaceInvite, ws models.Wo
 		found := tx.Where("workspace_id = ? AND user_id = ?", ws.ID, u.ID).First(&m).Error == nil
 		already = found
 		raise := found && m.Role == models.WSViewer && inv.Role == models.WSEditor
-		if found && !raise {
+		// In only through a group: the invite gives them a role of their own.
+		own := found && m.DirectRole == ""
+		if found && !raise && !own {
 			return nil
 		}
 		// Spend a use (still usable: the update is the check, against races).
@@ -230,12 +232,16 @@ func (h *Handlers) join(c *gin.Context, inv models.WorkspaceInvite, ws models.Wo
 		if res.RowsAffected == 0 {
 			return badRequest("this invite link has just been used up; ask for a new one")
 		}
-		if raise {
-			return tx.Model(&m).Update("role", models.WSEditor).Error
+		if raise || own {
+			if err := tx.Model(&m).Update("direct_role", planner.HigherRole(m.DirectRole, inv.Role)).Error; err != nil {
+				return err
+			}
+			_, err := planner.SyncGroupAccess(tx, ws.ID)
+			return err
 		}
 		var last struct{ Max *float64 }
 		tx.Model(&models.WorkspaceMember{}).Select("MAX(position) AS max").Where("user_id = ?", u.ID).Scan(&last)
-		return tx.Create(&models.WorkspaceMember{WorkspaceID: ws.ID, UserID: u.ID, Role: inv.Role, Position: planner.Rank(last.Max, nil)}).Error
+		return tx.Create(&models.WorkspaceMember{WorkspaceID: ws.ID, UserID: u.ID, Role: inv.Role, DirectRole: inv.Role, Position: planner.Rank(last.Max, nil)}).Error
 	})
 	if err != nil {
 		return false, err

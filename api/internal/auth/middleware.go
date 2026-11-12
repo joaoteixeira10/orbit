@@ -9,6 +9,7 @@ import (
 	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Context keys for the authenticated principal.
@@ -95,7 +96,7 @@ func (m *Manager) Required() gin.HandlerFunc {
 		}
 
 		c.Set(ctxUserID, uid)
-		c.Set(ctxEff, rbac.Build(u.Roles))
+		c.Set(ctxEff, rbac.Build(append(u.Roles, GroupRoles(m.db, uid)...)))
 		c.Set(ctxOwner, u.Owner)
 		c.Set(ctxSid, claims.Sid)
 		c.Set(ctxImp, claims.Imp)
@@ -243,4 +244,12 @@ func (m *Manager) sessionActive(sid string) bool {
 	var n int64
 	m.db.Model(&models.RefreshToken{}).Where("session_id = ? AND revoked = ? AND expires_at > ?", sid, false, time.Now()).Count(&n)
 	return n > 0
+}
+
+// GroupRoles are the instance roles someone holds through their groups.
+func GroupRoles(db *gorm.DB, userID string) []models.Role {
+	var roles []models.Role
+	db.Where("id IN (?)", db.Model(&models.GroupRole{}).Select("role_id").
+		Where("group_id IN (?)", db.Model(&models.GroupMember{}).Select("group_id").Where("user_id = ?", userID))).Find(&roles)
+	return roles
 }

@@ -107,7 +107,8 @@ export interface Branding {
 export interface OIDCConfig {
   id?: string // a-z, 0-9, -
   name?: string // on the login button: "Sign in with <name>"
-  kind?: 'oidc' | 'google'
+  kind?: 'oidc' | 'google' | 'saml'
+  metadata_xml?: string // SAML: the identity provider's metadata, pasted
   group_claim?: string // the IdP's groups, kept as Orbit groups
   domains?: string[] // only verified emails of these domains
   enabled: boolean

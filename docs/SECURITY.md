@@ -150,6 +150,15 @@ email of them (Google: its `hd` claim must agree). A provider's groups
 claim keeps that provider's groups only (others' and Orbit's own are never
 touched); a sync that would leave a workspace without an owner is skipped.
 
+**SAML 2.0 sign-in** (a provider of kind `saml`; gosaml2). Orbit is the
+service provider, its key made once and kept sealed. A response is accepted
+only signed by a certificate in the identity provider's metadata, from its
+entity ID, for Orbit's audience and reply URL, within its time window, and
+answering a request Orbit made in that browser's sign-in (its RelayState,
+single use, and the assertion's InResponseTo) — so no unsolicited
+(IdP-initiated) or replayed sign-ins. Metadata fetched by URL goes through
+the guarded client. Accounts are per provider (`<id>|<NameID>`).
+
 **SCIM provisioning** (`/scim/v2`, off by default). The identity provider
 authenticates with a bearer token the owner makes (step-up), kept only as a
 SHA-256 hash, compared in constant time. It can create accounts (never with

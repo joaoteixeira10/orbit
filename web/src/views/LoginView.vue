@@ -64,13 +64,16 @@ function done() {
 }
 
 // Start SSO: full-page redirect to the backend, which redirects to the IdP.
-function signInWithSSO(provider = '') {
+function signInWithSSO(provider = '', kind = '') {
   try {
     if (typeof route.query.redirect === 'string') sessionStorage.setItem(AFTER_SSO, route.query.redirect)
   } catch {
     /* no storage */
   }
-  window.location.href = '/api/v1/auth/oidc/login' + (provider ? `?provider=${encodeURIComponent(provider)}` : '')
+  window.location.href =
+    kind === 'saml'
+      ? `/api/v1/auth/saml/${encodeURIComponent(provider)}/login`
+      : '/api/v1/auth/oidc/login' + (provider ? `?provider=${encodeURIComponent(provider)}` : '')
 }
 
 // Conditional-UI passkey autofill: armed on mount, cancelled on submit/unmount.
@@ -239,7 +242,7 @@ function backToCredentials() {
             </button>
             <!-- One button per identity provider ("Sign in with Google"…). -->
             <template v-if="branding.ssoProviders.length > 1 || branding.ssoProviders[0]?.name !== 'SSO'">
-              <button v-for="p in branding.ssoProviders" :key="p.id" type="button" :disabled="loading" class="alt" :data-testid="`sso-${p.id}`" @click="signInWithSSO(p.id)">
+              <button v-for="p in branding.ssoProviders" :key="p.id" type="button" :disabled="loading" class="alt" :data-testid="`sso-${p.id}`" @click="signInWithSSO(p.id, p.kind)">
                 <LogIn :size="16" /> {{ t('login.withProvider', { name: p.name }) }}
               </button>
             </template>

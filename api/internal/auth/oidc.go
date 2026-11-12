@@ -46,7 +46,7 @@ var (
 type OIDCSettings struct {
 	ID                 string `json:"id"`   // in URLs and subjects: [a-z0-9-]
 	Name               string `json:"name"` // on the button: "Sign in with <Name>"
-	Kind               string `json:"kind"` // oidc | google
+	Kind               string `json:"kind"` // oidc | google | saml
 	Enabled            bool   `json:"enabled"`
 	Issuer             string `json:"issuer"`
 	ClientID           string `json:"client_id"`
@@ -64,6 +64,9 @@ type OIDCSettings struct {
 	// Domains: only accounts with a verified email of these domains sign in
 	// ("" any). For Google, its hd claim must match too.
 	Domains []string `json:"domains"`
+	// SAML: the identity provider's metadata, from Issuer (its metadata URL)
+	// or pasted here (MetadataXML). Role and group claims are attribute names.
+	MetadataXML string `json:"metadata_xml,omitempty"`
 }
 
 // ValidProviderID: what a provider's id may be.
@@ -129,7 +132,12 @@ func (o *OIDC) Provider(id string) (OIDCSettings, bool) {
 }
 
 // Usable: turned on, and enough set to sign in with.
-func (s OIDCSettings) Usable() bool { return s.Enabled && s.Issuer != "" && s.ClientID != "" }
+func (s OIDCSettings) Usable() bool {
+	if s.Kind == "saml" {
+		return s.Enabled && (s.Issuer != "" || s.MetadataXML != "")
+	}
+	return s.Enabled && s.Issuer != "" && s.ClientID != ""
+}
 
 // Enabled reports whether any provider can be signed in with.
 func (o *OIDC) Enabled() bool { return len(o.Usable()) > 0 }
@@ -328,6 +336,12 @@ func (o *OIDC) Finish(ctx context.Context, state, code string) (*OIDCUserInfo, e
 		}
 	}
 	return info, nil
+}
+
+// DomainAllowed is domainAllowed for an email the provider vouches for
+// (SAML: what the identity provider asserts is verified).
+func DomainAllowed(s OIDCSettings, email string) bool {
+	return domainAllowed(s, email, map[string]any{"email_verified": true})
 }
 
 // domainAllowed: with domains set, the email is verified and of one of them

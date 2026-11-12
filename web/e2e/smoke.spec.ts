@@ -3297,6 +3297,15 @@ test('sign-in providers: the owner adds Google kept to a domain; the login page 
   await page.getByTestId('sso-save').click()
   const row = page.getByTestId('sso-provider').filter({ hasText: 'Google' })
   await expect(row).toContainText('school.edu')
+  // A SAML provider: its metadata pasted; Orbit's side shown to give it.
+  await page.getByTestId('sso-add-saml').click()
+  await page.getByTestId('sso-name').fill('Okta')
+  await page.getByTestId('sso-id').fill('okta')
+  await page.locator('textarea').fill('<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://okta.test"><IDPSSODescriptor/></EntityDescriptor>')
+  await expect(page.getByTestId('sso-saml-sp')).toContainText('/api/v1/auth/saml/okta/acs')
+  await page.screenshot({ path: 'test-results/sso-saml.png' })
+  await page.getByTestId('sso-save').click()
+  await expect(page.getByTestId('sso-provider').filter({ hasText: 'Okta' })).toContainText('SAML')
   // Provisioning: on, a token made — shown once.
   await page.getByTestId('scim-on').click()
   await expect(page.getByText('Provisioning saved.')).toBeVisible()
@@ -3309,11 +3318,12 @@ test('sign-in providers: the owner adds Google kept to a domain; the login page 
   const anon = await ctx.newPage()
   await anon.goto('/login')
   await expect(anon.getByRole('button', { name: 'Sign in with Google' })).toBeVisible()
+  await expect(anon.getByRole('button', { name: 'Sign in with Okta' })).toBeVisible()
   await ctx.close()
   // Removed: the button goes.
   await row.getByRole('button', { name: 'Delete' }).click()
   await page.getByRole('button', { name: 'Delete' }).last().click()
-  await expect(page.getByTestId('sso-provider')).toHaveCount(0)
+  await expect(page.getByTestId('sso-provider')).toHaveCount(1)
 })
 
 test('guest links and forms: a page read and edited by its link, no account; a public form adds a row', async ({ page, browser, request }) => {

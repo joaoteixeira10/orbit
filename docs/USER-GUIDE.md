@@ -2087,7 +2087,11 @@ Reminders). Click **Save**.
 
 **Single sign-on**: the identity providers people sign in with, each its own
 button on the login page. **Google** adds Google sign-in; **OpenID Connect**
-adds any other (Authentik, Microsoft Entra, Keycloak…). For each: a **name**
+adds any other (Authentik, Microsoft Entra, Keycloak…); **SAML** adds one
+that speaks SAML 2.0 (ADFS, Okta, Entra, Shibboleth…) — give it the
+identity provider's **metadata URL** (or paste its metadata), and give the
+identity provider the **Entity ID** and **Reply URL (ACS)** shown; its
+**groups** and **roles attributes** work as the claims below. For each: a **name**
 for its button and an **id**, the on/off switch, **Issuer URL** with **Test**
 (not for Google), **Client ID**, **Client secret** (write-only), **Redirect
 URL** (register this exact URL at the provider, for example

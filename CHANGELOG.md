@@ -8,6 +8,9 @@ merge, not at release time.
 
 ### Added
 
+- **SAML 2.0 sign-in** — Owner → SSO → SAML: ADFS, Okta, Entra, Shibboleth…
+  from their metadata; groups and roles from attributes, as with OpenID
+  Connect.
 - **SCIM provisioning** — Owner → SSO → Provisioning: Okta or Microsoft
   Entra make, change and deactivate accounts and groups through `/scim/v2`
   with a token made here. It changes only what it made.

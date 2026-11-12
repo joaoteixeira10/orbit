@@ -165,6 +165,9 @@ func New(d Deps) *gin.Engine {
 		v1.POST("/auth/refresh", h.refresh)
 		v1.POST("/auth/logout", h.logout)
 		v1.GET("/auth/oidc/login", h.oidcLogin)
+		v1.GET("/auth/saml/:id/metadata", h.samlMetadataOut)
+		v1.GET("/auth/saml/:id/login", h.samlLogin)
+		v1.POST("/auth/saml/:id/acs", authLimit, h.samlACS)
 		v1.GET("/auth/oidc/callback", h.oidcCallback)
 		v1.POST("/auth/oidc/exchange", authLimit, h.oidcExchange)
 		// Invite links: what one is for, and an account made through it.

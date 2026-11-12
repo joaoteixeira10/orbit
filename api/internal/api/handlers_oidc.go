@@ -75,9 +75,16 @@ func (h *Handlers) oidcCallback(c *gin.Context) {
 		ssoFail(c, "auth_failed")
 		return
 	}
+	h.ssoComplete(c, info, "auth.oidc_login")
+}
+
+// ssoComplete finishes any SSO sign-in (OpenID Connect or SAML) once the
+// provider vouched for the person: their account made or found, a session,
+// and a one-time code the login page exchanges for tokens.
+func (h *Handlers) ssoComplete(c *gin.Context, info *auth.OIDCUserInfo, action string) {
 	user, err := h.provisionOIDCUser(info)
 	if err != nil {
-		h.log.Warn("oidc provisioning failed", zap.Error(err))
+		h.log.Warn("sso provisioning failed", zap.Error(err))
 		ssoFail(c, "provisioning")
 		return
 	}
@@ -92,7 +99,7 @@ func (h *Handlers) oidcCallback(c *gin.Context) {
 		return
 	}
 	h.auth.RecordLoginSuccess(&user)
-	h.audit.Record(user.ID, "auth.oidc_login", "user", user.ID, c.ClientIP(), nil)
+	h.audit.Record(user.ID, action, "user", user.ID, c.ClientIP(), gin.H{"provider": info.Provider})
 	c.Redirect(http.StatusFound, "/login?sso="+code)
 }
 
@@ -318,7 +325,7 @@ func uniqueUsername(db *gorm.DB, want, subject string) string {
 type oidcConfigDTO struct {
 	ID           string   `json:"id"`
 	Name         string   `json:"name"`
-	Kind         string   `json:"kind"` // oidc | google
+	Kind         string   `json:"kind"` // oidc | google | saml
 	Enabled      bool     `json:"enabled"`
 	Issuer       string   `json:"issuer"`
 	ClientID     string   `json:"client_id"`
@@ -327,17 +334,18 @@ type oidcConfigDTO struct {
 	Scopes       string   `json:"scopes"`
 	RoleClaim    string   `json:"role_claim"`
 	DefaultRole  string   `json:"default_role"`
-	AllowAdmin   bool     `json:"allow_admin"` // the IdP may grant admin (superuser) roles
-	GroupClaim   string   `json:"group_claim"` // the IdP's groups, kept as Orbit groups
-	Domains      []string `json:"domains"`     // only verified emails of these domains
-	HasSecret    bool     `json:"has_secret"`  // response only
+	AllowAdmin   bool     `json:"allow_admin"`  // the IdP may grant admin (superuser) roles
+	GroupClaim   string   `json:"group_claim"`  // the IdP's groups, kept as Orbit groups
+	Domains      []string `json:"domains"`      // only verified emails of these domains
+	MetadataXML  string   `json:"metadata_xml"` // SAML: the IdP's metadata, pasted (else from Issuer, its URL)
+	HasSecret    bool     `json:"has_secret"`   // response only
 }
 
 func toOIDCDTO(s auth.OIDCSettings) oidcConfigDTO {
 	dto := oidcConfigDTO{
 		ID: s.ID, Name: s.Name, Kind: s.Kind, Enabled: s.Enabled, Issuer: s.Issuer, ClientID: s.ClientID,
 		RedirectURL: s.RedirectURL, Scopes: s.Scopes, RoleClaim: s.RoleClaim, DefaultRole: s.DefaultRole,
-		AllowAdmin: s.AllowAdmin, GroupClaim: s.GroupClaim, Domains: s.Domains, HasSecret: len(s.ClientSecretSealed) > 0,
+		AllowAdmin: s.AllowAdmin, GroupClaim: s.GroupClaim, Domains: s.Domains, MetadataXML: s.MetadataXML, HasSecret: len(s.ClientSecretSealed) > 0,
 	}
 	if dto.Domains == nil {
 		dto.Domains = []string{}
@@ -430,12 +438,16 @@ func (h *Handlers) saveOIDCProvider(c *gin.Context) {
 		cur = list[at]
 	}
 	kind := dto.Kind
-	if kind != "google" {
+	if kind != "google" && kind != "saml" {
 		kind = "oidc"
+	}
+	if len(dto.MetadataXML) > 1<<20 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "the metadata is too large (1 MB at most)"})
+		return
 	}
 	name := strings.TrimSpace(dto.Name)
 	if name == "" {
-		name = map[string]string{"google": "Google", "oidc": "SSO"}[kind]
+		name = map[string]string{"google": "Google", "oidc": "SSO", "saml": "SAML"}[kind]
 	}
 	issuer := strings.TrimSpace(dto.Issuer)
 	if kind == "google" {
@@ -453,6 +465,10 @@ func (h *Handlers) saveOIDCProvider(c *gin.Context) {
 		RoleClaim: strings.TrimSpace(dto.RoleClaim), DefaultRole: strings.TrimSpace(dto.DefaultRole),
 		AllowAdmin: dto.AllowAdmin, GroupClaim: strings.TrimSpace(dto.GroupClaim), Domains: domains,
 		ClientSecretSealed: cur.ClientSecretSealed,
+	}
+	if kind == "saml" {
+		s.MetadataXML = strings.TrimSpace(dto.MetadataXML)
+		s.ClientID, s.ClientSecretSealed, s.Scopes = "", nil, ""
 	}
 	if dto.ClientSecret != "" && dto.ClientSecret != oidcSecretPlaceholder {
 		sealed, err := h.oidc.SealSecret(dto.ClientSecret)

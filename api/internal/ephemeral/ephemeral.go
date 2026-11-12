@@ -27,6 +27,7 @@ const (
 	KindOIDCState = "oidc_state"
 	KindWebAuthn  = "webauthn"
 	KindSSOCode   = "sso_code"
+	KindSAMLState = "saml_state" // a SAML sign-in under way: its provider and request id
 	KindSSETicket = "sse_ticket" // must match events.ticketKind
 	KindGitOAuth  = "git_oauth"  // a "Sign in with Gitea" in progress
 	// A "Sign in with Google" for a calendar in progress; then done, waiting

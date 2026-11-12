@@ -1145,6 +1145,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/saml/{id}/acs": {
+            "post": {
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "SAML assertion consumer service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/auth/saml/{id}/login": {
+            "get": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Begin SAML login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/auth/saml/{id}/metadata": {
+            "get": {
+                "produces": [
+                    "text/xml"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "SAML service-provider metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/auth/step-up": {
             "post": {
                 "security": [
@@ -16096,7 +16156,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "description": "oidc | google",
+                    "description": "oidc | google | saml",
+                    "type": "string"
+                },
+                "metadata_xml": {
+                    "description": "SAML: the IdP's metadata, pasted (else from Issuer, its URL)",
                     "type": "string"
                 },
                 "name": {

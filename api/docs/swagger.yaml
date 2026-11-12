@@ -2568,7 +2568,10 @@ definitions:
       issuer:
         type: string
       kind:
-        description: oidc | google
+        description: oidc | google | saml
+        type: string
+      metadata_xml:
+        description: 'SAML: the IdP''s metadata, pasted (else from Issuer, its URL)'
         type: string
       name:
         type: string
@@ -5756,6 +5759,46 @@ paths:
               type: string
             type: object
       summary: Refresh access token
+      tags:
+      - auth
+  /auth/saml/{id}/acs:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      parameters:
+      - description: Provider id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      summary: SAML assertion consumer service
+      tags:
+      - auth
+  /auth/saml/{id}/login:
+    get:
+      parameters:
+      - description: Provider id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      summary: Begin SAML login
+      tags:
+      - auth
+  /auth/saml/{id}/metadata:
+    get:
+      parameters:
+      - description: Provider id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/xml
+      responses: {}
+      summary: SAML service-provider metadata
       tags:
       - auth
   /auth/step-up:

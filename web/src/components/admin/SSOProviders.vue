@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Pencil, Trash2, LogIn } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, LogIn, Copy } from 'lucide-vue-next'
 import Toggle from '@/components/ui/Toggle.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { oidcApi } from '@/api'
@@ -32,10 +32,10 @@ async function load() {
 }
 onMounted(load)
 
-function edit(p?: OIDCConfig, kind: 'oidc' | 'google' = 'oidc') {
+function edit(p?: OIDCConfig, kind: 'oidc' | 'google' | 'saml' = 'oidc') {
   const base: OIDCConfig = p ?? {
     id: '', name: kind === 'google' ? 'Google' : '', kind, enabled: true, issuer: '', client_id: '', client_secret: '',
-    redirect_url: callback, scopes: '', role_claim: '', default_role: '', allow_admin: false, group_claim: '', domains: [],
+    redirect_url: kind === 'saml' ? '' : callback, scopes: '', role_claim: '', default_role: '', allow_admin: false, group_claim: '', domains: [], metadata_xml: '',
   }
   if (!p && !list.value.length) base.id = 'default'
   else if (!p) base.id = kind === 'google' && !list.value.some((x) => x.id === 'google') ? 'google' : ''
@@ -70,6 +70,12 @@ async function remove() {
     toast.error(e.message)
   }
 }
+// Orbit's side of a SAML provider, for the identity provider.
+const spBase = (id?: string) => `${location.origin}/api/v1/auth/saml/${id || '<id>'}`
+async function copy(s: string) {
+  await navigator.clipboard?.writeText(s).catch(() => {})
+  toast.info(t('scim.copied'))
+}
 async function test() {
   const issuer = editing.value?.kind === 'google' ? 'https://accounts.google.com' : editing.value?.issuer
   if (!issuer) return
@@ -91,6 +97,7 @@ async function test() {
       </div>
       <div v-if="!editing" class="flex gap-2">
         <button class="btn btn-sm" data-testid="sso-add-google" @click="edit(undefined, 'google')"><Plus class="h-4 w-4" />Google</button>
+        <button class="btn btn-sm" data-testid="sso-add-saml" @click="edit(undefined, 'saml')"><Plus class="h-4 w-4" />SAML</button>
         <button class="btn-primary btn-sm" data-testid="sso-add" @click="edit()"><Plus class="h-4 w-4" />{{ t('adm.sso.add') }}</button>
       </div>
     </div>
@@ -101,7 +108,7 @@ async function test() {
         <div class="min-w-0 flex-1">
           <div class="text-[14px] font-semibold">{{ p.name }} <span class="font-mono text-[11.5px] font-normal text-text-3">{{ p.id }}</span></div>
           <div class="truncate text-[12px] text-text-3">
-            {{ p.kind === 'google' ? 'Google' : p.issuer }}<template v-if="p.domains?.length"> · {{ p.domains.join(', ') }}</template><template v-if="p.group_claim"> · {{ t('adm.sso.groupsFrom', { claim: p.group_claim }) }}</template>
+            {{ p.kind === 'google' ? 'Google' : p.kind === 'saml' ? `SAML · ${p.issuer || t('adm.sso.samlPasted')}` : p.issuer }}<template v-if="p.domains?.length"> · {{ p.domains.join(', ') }}</template><template v-if="p.group_claim"> · {{ t('adm.sso.groupsFrom', { claim: p.group_claim }) }}</template>
           </div>
         </div>
         <span class="text-[12px]" :class="p.enabled ? 'text-ok-text' : 'text-text-3'">{{ p.enabled ? t('adm.sso.on') : t('adm.sso.off') }}</span>
@@ -113,7 +120,7 @@ async function test() {
 
     <form v-else class="card flex flex-col gap-3 p-5" data-testid="sso-form" @submit.prevent="save">
       <div class="flex items-center justify-between gap-4">
-        <h3 class="text-[14px] font-semibold">{{ editing.kind === 'google' ? 'Google' : t('adm.sso.oidc') }}</h3>
+        <h3 class="text-[14px] font-semibold">{{ editing.kind === 'google' ? 'Google' : editing.kind === 'saml' ? 'SAML 2.0' : t('adm.sso.oidc') }}</h3>
         <Toggle v-model="editing.enabled" />
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -126,7 +133,29 @@ async function test() {
           <input v-model="editing.id" class="input font-mono" :disabled="!editing.isNew" pattern="[a-z0-9][a-z0-9-]*" maxlength="32" required data-testid="sso-id" />
         </div>
       </div>
-      <div v-if="editing.kind !== 'google'">
+      <!-- SAML: the identity provider's metadata; Orbit's side to give it. -->
+      <template v-if="editing.kind === 'saml'">
+        <div>
+          <label class="label">{{ t('adm.sso.samlMetadataUrl') }}</label>
+          <input v-model="editing.issuer" class="input" placeholder="https://login.microsoftonline.com/…/federationmetadata/2007-06/federationmetadata.xml" data-testid="sso-saml-url" />
+        </div>
+        <div>
+          <label class="label">{{ t('adm.sso.samlMetadataXml') }}</label>
+          <textarea v-model="editing.metadata_xml" class="input min-h-[80px] font-mono text-[11.5px]" spellcheck="false" />
+        </div>
+        <div class="rounded-xl bg-fill-2 p-3 text-[12px]" data-testid="sso-saml-sp">
+          <div class="mb-1 font-medium text-text-2">{{ t('adm.sso.samlGive') }}</div>
+          <div v-for="row in [
+            [t('adm.sso.samlEntity'), spBase(editing.id) + '/metadata'],
+            [t('adm.sso.samlAcs'), spBase(editing.id) + '/acs'],
+          ]" :key="row[0]" class="flex items-center gap-2 py-0.5">
+            <span class="w-40 shrink-0 text-text-3">{{ row[0] }}</span>
+            <code class="min-w-0 flex-1 truncate font-mono text-[11.5px]">{{ row[1] }}</code>
+            <button type="button" class="btn-ghost px-1.5 py-0.5" :aria-label="t('scim.copy')" @click="copy(row[1])"><Copy class="h-3.5 w-3.5" /></button>
+          </div>
+        </div>
+      </template>
+      <div v-else-if="editing.kind !== 'google'">
         <label class="label">{{ t('adm.sso.issuer') }}</label>
         <div class="flex gap-2">
           <input v-model="editing.issuer" class="input" placeholder="https://idp.example.com/realms/main" data-testid="sso-issuer" />
@@ -134,14 +163,14 @@ async function test() {
         </div>
       </div>
       <p v-else class="text-[12px] text-text-3">{{ t('adm.sso.googleHint', { callback }) }}</p>
-      <div class="grid grid-cols-2 gap-3">
+      <div v-if="editing.kind !== 'saml'" class="grid grid-cols-2 gap-3">
         <div><label class="label">{{ t('adm.sso.clientId') }}</label><input v-model="editing.client_id" class="input" data-testid="sso-client-id" /></div>
         <div>
           <label class="label">{{ t('adm.sso.clientSecret') }}</label>
           <input v-model="editing.client_secret" type="password" class="input" autocomplete="new-password" :placeholder="editing.has_secret ? t('adm.sso.secretUnchanged') : ''" />
         </div>
       </div>
-      <div>
+      <div v-if="editing.kind !== 'saml'">
         <label class="label">{{ t('adm.sso.redirect') }}</label>
         <input v-model="editing.redirect_url" class="input" :placeholder="callback" />
         <p class="mt-1 text-[11px] text-text-3">{{ t('adm.sso.redirectHint') }}</p>
@@ -152,9 +181,9 @@ async function test() {
         <p class="mt-1 text-[11px] text-text-3">{{ t('adm.sso.domainsHint') }}</p>
       </div>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div v-if="editing.kind !== 'google'"><label class="label">{{ t('adm.sso.scopes') }}</label><input v-model="editing.scopes" class="input" placeholder="groups" /></div>
-        <div v-if="editing.kind !== 'google'"><label class="label">{{ t('adm.sso.groupClaim') }}</label><input v-model="editing.group_claim" class="input" placeholder="groups" data-testid="sso-group-claim" /></div>
-        <div v-if="editing.kind !== 'google'"><label class="label">{{ t('adm.sso.roleClaim') }}</label><input v-model="editing.role_claim" class="input" placeholder="roles" /></div>
+        <div v-if="editing.kind === 'oidc'"><label class="label">{{ t('adm.sso.scopes') }}</label><input v-model="editing.scopes" class="input" placeholder="groups" /></div>
+        <div v-if="editing.kind !== 'google'"><label class="label">{{ editing.kind === 'saml' ? t('adm.sso.groupAttr') : t('adm.sso.groupClaim') }}</label><input v-model="editing.group_claim" class="input" placeholder="groups" data-testid="sso-group-claim" /></div>
+        <div v-if="editing.kind !== 'google'"><label class="label">{{ editing.kind === 'saml' ? t('adm.sso.roleAttr') : t('adm.sso.roleClaim') }}</label><input v-model="editing.role_claim" class="input" placeholder="roles" /></div>
         <div><label class="label">{{ t('adm.sso.defaultRole') }}</label><input v-model="editing.default_role" class="input" :placeholder="t('adm.sso.defaultRoleNone')" /></div>
       </div>
       <p class="text-[11px] text-text-3">{{ t('adm.sso.provisioning') }} {{ t('adm.sso.groupsHint') }}</p>

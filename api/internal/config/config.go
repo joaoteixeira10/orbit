@@ -29,6 +29,11 @@ type Config struct {
 	// Database
 	DBDriver string // "sqlite" (default) | "postgres"
 	DBURL    string // file path
+	// BackupBeforeMigrate copies an SQLite database (<db>.before-<version>)
+	// on the first start of a new version, before it's migrated
+	// (BACKUP_BEFORE_MIGRATE, off by default: a big database makes start-up
+	// wait and needs the room twice). Does nothing with PostgreSQL.
+	BackupBeforeMigrate bool
 
 	// Auth / crypto
 	JWTSecret string // HMAC secret for signing JWTs
@@ -175,32 +180,33 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	c := &Config{
-		HTTPAddr:         env("HTTP_ADDR", ":8080"),
-		GinMode:          env("GIN_MODE", "debug"),
-		DBDriver:         env("DB_DRIVER", "sqlite"),
-		DBURL:            dbURL,
-		JWTSecret:        jwtSecret,
-		MasterKey:        masterKey,
-		AdminUser:        env("ADMIN_USER", "admin"),
-		AdminPassword:    adminPassword,
-		CORSOrigins:      splitNonEmpty(env("CORS_ORIGINS", "")),
-		TrustedProxies:   splitNonEmpty(env("TRUSTED_PROXIES", "")),
-		GitServers:       splitNonEmpty(env("GIT_SERVERS", "")),
-		AIServers:        splitNonEmpty(env("AI_SERVERS", "")),
-		DrawioURL:        env("DRAWIO_URL", "https://embed.diagrams.net"),
-		MaxBodyBytes:     int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
-		UploadMaxBytes:   int64(envInt("UPLOAD_MAX_MB", 25)) << 20,
-		UploadQuotaBytes: int64(envInt("UPLOAD_QUOTA_MB", 2048)) << 20,
-		ImportMaxBytes:   int64(envInt("IMPORT_MAX_MB", 512)) << 20,
-		UploadStore:      env("UPLOAD_STORE", "db"),
-		UploadDir:        env("UPLOAD_DIR", ""),
-		UploadS3Bucket:   env("UPLOAD_S3_BUCKET", ""),
-		UploadS3Prefix:   env("UPLOAD_S3_PREFIX", ""),
-		UploadS3Endpoint: env("UPLOAD_S3_ENDPOINT", ""),
-		UploadS3Region:   env("UPLOAD_S3_REGION", ""),
-		UploadS3Insecure: envBool("UPLOAD_S3_INSECURE", false),
-		UploadS3Access:   s3Access,
-		UploadS3Secret:   s3Secret,
+		HTTPAddr:            env("HTTP_ADDR", ":8080"),
+		GinMode:             env("GIN_MODE", "debug"),
+		DBDriver:            env("DB_DRIVER", "sqlite"),
+		DBURL:               dbURL,
+		BackupBeforeMigrate: envBool("BACKUP_BEFORE_MIGRATE", false),
+		JWTSecret:           jwtSecret,
+		MasterKey:           masterKey,
+		AdminUser:           env("ADMIN_USER", "admin"),
+		AdminPassword:       adminPassword,
+		CORSOrigins:         splitNonEmpty(env("CORS_ORIGINS", "")),
+		TrustedProxies:      splitNonEmpty(env("TRUSTED_PROXIES", "")),
+		GitServers:          splitNonEmpty(env("GIT_SERVERS", "")),
+		AIServers:           splitNonEmpty(env("AI_SERVERS", "")),
+		DrawioURL:           env("DRAWIO_URL", "https://embed.diagrams.net"),
+		MaxBodyBytes:        int64(envInt("MAX_BODY_BYTES", 4<<20)), // 4 MiB
+		UploadMaxBytes:      int64(envInt("UPLOAD_MAX_MB", 25)) << 20,
+		UploadQuotaBytes:    int64(envInt("UPLOAD_QUOTA_MB", 2048)) << 20,
+		ImportMaxBytes:      int64(envInt("IMPORT_MAX_MB", 512)) << 20,
+		UploadStore:         env("UPLOAD_STORE", "db"),
+		UploadDir:           env("UPLOAD_DIR", ""),
+		UploadS3Bucket:      env("UPLOAD_S3_BUCKET", ""),
+		UploadS3Prefix:      env("UPLOAD_S3_PREFIX", ""),
+		UploadS3Endpoint:    env("UPLOAD_S3_ENDPOINT", ""),
+		UploadS3Region:      env("UPLOAD_S3_REGION", ""),
+		UploadS3Insecure:    envBool("UPLOAD_S3_INSECURE", false),
+		UploadS3Access:      s3Access,
+		UploadS3Secret:      s3Secret,
 
 		WebAuthnRPID:          env("WEBAUTHN_RP_ID", ""),
 		WebAuthnRPOrigins:     splitNonEmpty(env("WEBAUTHN_RP_ORIGINS", "")),

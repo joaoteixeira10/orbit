@@ -8,6 +8,10 @@ merge, not at release time.
 
 ### Added
 
+- **`BACKUP_BEFORE_MIGRATE`** (off by default) — with SQLite, on the first
+  start of a new version Orbit copies the database beside itself
+  (`orbit.db.before-<version>`) before changing it, to go back to if the new
+  version goes wrong. Does nothing with PostgreSQL.
 - **Tasks sorted by name or age** — the Group by menu also sorts each group:
   name (A–Z), newest or oldest first, or as before; remembered per browser.
 - **Sub-tasks can be renamed and reordered** in a task's details: click the

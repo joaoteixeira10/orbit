@@ -238,6 +238,19 @@ func main() {
 	if err != nil {
 		log.Fatal("database connection failed", zap.Error(err))
 	}
+	// A copy to go back to before a new version changes the database (when asked).
+	if cfg.BackupBeforeMigrate {
+		start := time.Now()
+		path, size, skipped, err := db.BackupBeforeMigrate(gdb, cfg.DBDriver, cfg.DBURL, version.Version)
+		switch {
+		case err != nil:
+			log.Fatal("backup before migrating failed (free some disk space, or unset BACKUP_BEFORE_MIGRATE)", zap.Error(err))
+		case skipped != "":
+			log.Info("no backup before migrating", zap.String("why", skipped))
+		default:
+			log.Info("database copied before migrating", zap.String("path", path), zap.Int64("bytes", size), zap.Duration("took", time.Since(start)))
+		}
+	}
 	if err := db.Migrate(gdb); err != nil {
 		log.Fatal("migration failed", zap.Error(err))
 	}

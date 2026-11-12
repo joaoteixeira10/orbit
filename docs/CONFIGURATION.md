@@ -95,6 +95,7 @@ Used once, when the database has no users. Later changes have no effect.
 |---|---|---|---|
 | `DB_DRIVER` | – | `sqlite` | `sqlite` (one file, the default) or `postgres`. Any other value stops start-up. |
 | `DB_URL` | – | `orbit.db` | SQLite: the file's path (the compose files set `/data/orbit.db`, the volume). PostgreSQL: a connection string, `postgres://orbit:secret@db:5432/orbit?sslmode=require` (`sslmode=disable` only on a private network). Goes through the secrets backend. |
+| `BACKUP_BEFORE_MIGRATE` | – | `false` | SQLite: on the first start of a new version, before it changes the database, copy it beside itself as `<DB_URL>.before-<version>` (e.g. `/data/orbit.db.before-0.6.0`), to go back to with the old version if the new one goes wrong (stop Orbit, put the copy back as the database, start the old image). Off by default: start-up waits while a big database is copied, and it needs the room twice. Copies are kept until you delete them. A failed copy stops start-up (nothing is migrated). Does nothing with PostgreSQL — back that up with `pg_dump` or your provider's snapshots (start-up says so). |
 
 **PostgreSQL** suits an instance whose database lives on its own server (or
 a managed one). Everything works the same — search uses PostgreSQL's full

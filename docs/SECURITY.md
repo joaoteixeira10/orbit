@@ -150,6 +150,16 @@ email of them (Google: its `hd` claim must agree). A provider's groups
 claim keeps that provider's groups only (others' and Orbit's own are never
 touched); a sync that would leave a workspace without an owner is skipped.
 
+**SCIM provisioning** (`/scim/v2`, off by default). The identity provider
+authenticates with a bearer token the owner makes (step-up), kept only as a
+SHA-256 hash, compared in constant time. It can create accounts (never with
+an admin role by default), change and deactivate only the accounts it
+created, and change only its own groups (source `scim`); a local account's
+userName is refused, not taken over. Deactivating ends the account's
+sessions. Every SCIM change is audited (`scim.*`). An account SCIM made is
+linked at its first SSO sign-in by email or username — only such accounts,
+never one made otherwise.
+
 **Groups.** A group carries instance roles (added to its members' own when
 privileges are worked out, on every request) and workspace roles (kept as
 the members' rows: the higher of their own and their groups'). Managing

@@ -2108,6 +2108,14 @@ New users are created at their first sign-in, one account per provider. The
 first provider (id `default`) is the one from before there could be
 several: its people keep their accounts.
 
+**Provisioning (SCIM)**: so Okta or Microsoft Entra make, change and
+deactivate accounts and groups here as in their directory (rather than at a
+first sign-in). Turn it on, give the identity provider the **SCIM base URL**
+and a token (**Make a token**, shown once), and the **role of a new
+account**. It changes only what it made — never someone's own account;
+removing someone there deactivates them here (their work stays). See
+[SSO-entra](SSO-entra.md#9-optional-provision-accounts-and-groups-with-scim).
+
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 

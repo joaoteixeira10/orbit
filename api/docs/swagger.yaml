@@ -3065,6 +3065,28 @@ definitions:
     required:
     - workspace_id
     type: object
+  api.scimConfigRequest:
+    properties:
+      default_role:
+        type: string
+      enabled:
+        type: boolean
+      new_token:
+        description: make a new token (the old one stops working)
+        type: boolean
+    type: object
+  api.scimConfigResponse:
+    properties:
+      default_role:
+        type: string
+      enabled:
+        type: boolean
+      has_token:
+        type: boolean
+      url:
+        description: the base URL to give the identity provider
+        type: string
+    type: object
   api.searchHit:
     properties:
       done:
@@ -4722,6 +4744,11 @@ definitions:
         items:
           $ref: '#/definitions/models.Role'
         type: array
+      scim:
+        description: |-
+          SCIMManaged: made by the identity provider through SCIM, which keeps it
+          (SCIMID its externalId there).
+        type: boolean
       updated_at:
         type: string
       username:
@@ -9874,6 +9901,43 @@ paths:
       summary: Update role
       tags:
       - roles
+  /scim-config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.scimConfigResponse'
+      security:
+      - BearerAuth: []
+      summary: SCIM provisioning settings
+      tags:
+      - auth
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.scimConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change SCIM provisioning settings
+      tags:
+      - auth
   /search:
     get:
       parameters:

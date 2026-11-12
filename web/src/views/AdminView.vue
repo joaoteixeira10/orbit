@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import GroupsAdmin from '@/components/admin/GroupsAdmin.vue'
 import SSOProviders from '@/components/admin/SSOProviders.vue'
+import SCIMSettings from '@/components/admin/SCIMSettings.vue'
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
@@ -1372,6 +1373,7 @@ function switchTab(t: Tab) {
     <!-- ===== SSO / OIDC ===== -->
     <section v-else-if="tab === 'sso'" class="max-w-3xl">
       <SSOProviders />
+      <SCIMSettings class="mt-4" />
     </section>
 
 

@@ -7907,6 +7907,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/scim-config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "SCIM provisioning settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.scimConfigResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Change SCIM provisioning settings",
+                "parameters": [
+                    {
+                        "description": "Settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.scimConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/search": {
             "get": {
                 "security": [
@@ -16740,6 +16801,39 @@ const docTemplate = `{
                 }
             }
         },
+        "api.scimConfigRequest": {
+            "type": "object",
+            "properties": {
+                "default_role": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "new_token": {
+                    "description": "make a new token (the old one stops working)",
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.scimConfigResponse": {
+            "type": "object",
+            "properties": {
+                "default_role": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "has_token": {
+                    "type": "boolean"
+                },
+                "url": {
+                    "description": "the base URL to give the identity provider",
+                    "type": "string"
+                }
+            }
+        },
         "api.searchHit": {
             "type": "object",
             "properties": {
@@ -19043,6 +19137,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.Role"
                     }
+                },
+                "scim": {
+                    "description": "SCIMManaged: made by the identity provider through SCIM, which keeps it\n(SCIMID its externalId there).",
+                    "type": "boolean"
                 },
                 "updated_at": {
                     "type": "string"

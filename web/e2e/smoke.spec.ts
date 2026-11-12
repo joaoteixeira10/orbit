@@ -3297,7 +3297,13 @@ test('sign-in providers: the owner adds Google kept to a domain; the login page 
   await page.getByTestId('sso-save').click()
   const row = page.getByTestId('sso-provider').filter({ hasText: 'Google' })
   await expect(row).toContainText('school.edu')
-  await page.screenshot({ path: 'test-results/sso-providers.png' })
+  // Provisioning: on, a token made — shown once.
+  await page.getByTestId('scim-on').click()
+  await expect(page.getByText('Provisioning saved.')).toBeVisible()
+  await expect(page.getByTestId('scim-url')).toHaveValue(/\/scim\/v2$/)
+  await page.getByTestId('scim-new-token').click()
+  await expect(page.getByTestId('scim-token')).toContainText('scim_')
+  await page.screenshot({ path: 'test-results/sso-providers.png', fullPage: true })
 
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL })
   const anon = await ctx.newPage()

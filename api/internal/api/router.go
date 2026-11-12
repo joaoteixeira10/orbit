@@ -150,6 +150,9 @@ func New(d Deps) *gin.Engine {
 		r.Use(cors.New(cc))
 	}
 
+	// SCIM 2.0 for identity providers (Okta, Entra): its own token, its own base URL.
+	h.scimRoutes(r)
+
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/healthz", h.health)
@@ -561,6 +564,8 @@ func New(d Deps) *gin.Engine {
 			authed.PUT("/auth/oidc/config", h.auth.RequireOwner(), h.requireStepUp(), h.updateOIDCConfig)
 			authed.POST("/auth/oidc/test", h.auth.RequireOwner(), h.testOIDCDiscovery)
 			authed.GET("/auth/oidc/providers", h.auth.RequireOwner(), h.listOIDCProviders)
+			authed.GET("/scim-config", h.auth.RequireOwner(), h.getSCIMConfig)
+			authed.PUT("/scim-config", h.auth.RequireOwner(), h.requireStepUp(), h.setSCIMConfig)
 			authed.PUT("/auth/oidc/providers/:id", h.auth.RequireOwner(), h.requireStepUp(), h.saveOIDCProvider)
 			authed.DELETE("/auth/oidc/providers/:id", h.auth.RequireOwner(), h.requireStepUp(), h.deleteOIDCProvider)
 		}

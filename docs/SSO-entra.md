@@ -220,6 +220,23 @@ Every SSO settings change is in the audit log (`auth.oidc_config`) and raises a
 **Security/SSO config changed** alert if security alerts are on. Every SSO
 sign-in is logged as `auth.oidc_login`.
 
+## 9. (Optional) Provision accounts and groups with SCIM
+
+So Entra makes Orbit accounts and groups as it assigns people to the app —
+and deactivates them when they leave — instead of at their first sign-in:
+
+1. In Orbit, **Owner → SSO → Provisioning (SCIM)**: turn it on, note the
+   **SCIM base URL** (`https://orbit.example.org/scim/v2`), and **Make a
+   token** (shown once).
+2. In Entra, the **Enterprise application** for Orbit → **Provisioning** →
+   **Automatic**: **Tenant URL** the SCIM base URL, **Secret Token** the
+   token; **Test Connection**, **Save**, then start provisioning.
+
+Entra's groups become Orbit groups ("From sign-in"): give them roles (Admin →
+Groups) or add them to workspaces. Orbit changes only what Entra made — never
+a local account. Someone removed in Entra is deactivated here (their work
+stays); their first SSO sign-in finds the account Entra made, by email.
+
 ## Troubleshooting
 
 - **Test says "discovery failed"** → Check the issuer URL: tenant GUID, `/v2.0`

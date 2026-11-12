@@ -151,6 +151,18 @@ func (h *Handlers) provisionOIDCUser(info *auth.OIDCUserInfo) (models.User, erro
 	// o_id_c_subject) instead of a hard-coded literal.
 	var u models.User
 	err := h.db.Where(&models.User{OIDCSubject: info.Subject}).First(&u).Error
+	// An account SCIM made before its first sign-in: found by email or username
+	// (only those: never someone's own account).
+	if errors.Is(err, gorm.ErrRecordNotFound) && (info.Email != "" || info.Username != "") {
+		var made models.User
+		if h.db.Where("scim_managed = ? AND (o_id_c_subject = '' OR o_id_c_subject IS NULL) AND ((? <> '' AND LOWER(email) = LOWER(?)) OR LOWER(username) = LOWER(?))",
+			true, info.Email, info.Email, info.Username).Limit(1).Find(&made).RowsAffected == 1 {
+			if h.db.Model(&made).Update("o_id_c_subject", info.Subject).Error == nil {
+				u, err = made, nil
+				u.OIDCSubject = info.Subject
+			}
+		}
+	}
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		u = models.User{

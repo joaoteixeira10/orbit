@@ -1,5 +1,19 @@
 // Groups (Admin → Groups; a workspace's Members). Portuguese is European Portuguese.
 export const groupsEn = {
+  scim: {
+    title: 'Provisioning (SCIM)',
+    hint: 'Let Okta or Microsoft Entra make, change and deactivate accounts and groups here, as in their directory.',
+    url: 'SCIM base URL (give it to the identity provider)',
+    token: 'Token',
+    makeToken: 'Make a token',
+    newToken: 'Make a new token',
+    once: 'The token — shown only now. Put it in the identity provider (the old one, if any, stops working).',
+    copy: 'Copy',
+    copied: 'Copied.',
+    defaultRole: 'Role of a new account',
+    saved: 'Provisioning saved.',
+    rules: 'It changes only what it made: accounts it created (signing in through SSO; the first sign-in finds the account by email) and its groups — never someone’s own account. A deleted account is deactivated, its work kept.',
+  },
   groups: {
     title: 'Groups',
     hint: 'A group carries roles and is added to workspaces with a role: who joins it gets all of that, who leaves loses it.',
@@ -29,6 +43,20 @@ export const groupsEn = {
 }
 
 export const groupsPt: typeof groupsEn = {
+  scim: {
+    title: 'Aprovisionamento (SCIM)',
+    hint: 'Deixe o Okta ou o Microsoft Entra criar, alterar e desativar contas e grupos aqui, como no diretório deles.',
+    url: 'URL base de SCIM (indique-o ao fornecedor de identidade)',
+    token: 'Token',
+    makeToken: 'Criar um token',
+    newToken: 'Criar um token novo',
+    once: 'O token — mostrado só agora. Ponha-o no fornecedor de identidade (o anterior, se houver, deixa de funcionar).',
+    copy: 'Copiar',
+    copied: 'Copiado.',
+    defaultRole: 'Função de uma conta nova',
+    saved: 'Aprovisionamento guardado.',
+    rules: 'Só altera o que criou: as contas que criou (que entram por SSO; o primeiro início de sessão encontra a conta pelo email) e os seus grupos — nunca a conta de alguém. Uma conta apagada é desativada, e o trabalho fica.',
+  },
   groups: {
     title: 'Grupos',
     hint: 'Um grupo tem funções e é adicionado a espaços com uma função: quem entra nele recebe tudo isso, quem sai perde.',

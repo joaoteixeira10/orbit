@@ -8,6 +8,9 @@ merge, not at release time.
 
 ### Added
 
+- **SCIM provisioning** — Owner → SSO → Provisioning: Okta or Microsoft
+  Entra make, change and deactivate accounts and groups through `/scim/v2`
+  with a token made here. It changes only what it made.
 - **Several sign-in providers** — Owner → SSO lists them, each its own button
   on the login page: Google, and any OpenID Connect one (Authentik, Entra,
   Keycloak…). A provider can be kept to **email domains** (verified; for

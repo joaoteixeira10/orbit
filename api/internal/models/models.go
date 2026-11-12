@@ -66,6 +66,10 @@ type User struct {
 	// is_owner, never in user lists.
 	Owner       bool   `gorm:"not null;default:false" json:"-"`
 	OIDCSubject string `gorm:"size:255;index" json:"-"` // sub claim, when SSO-provisioned
+	// SCIMManaged: made by the identity provider through SCIM, which keeps it
+	// (SCIMID its externalId there).
+	SCIMManaged bool   `gorm:"not null;default:false" json:"scim"`
+	SCIMID      string `gorm:"size:255;index" json:"-"`
 	// OIDC is a derived flag (set by AfterFind): true for SSO-provisioned
 	// accounts, whose identity fields are managed by the identity provider.
 	OIDC bool `gorm:"-" json:"oidc"`

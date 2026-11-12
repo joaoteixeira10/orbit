@@ -332,31 +332,35 @@ watch(
   <div class="flex min-w-0 flex-col">
     <!-- Header -->
     <header ref="headEl" class="px-4 pt-6 sm:px-8 sm:pt-8">
-      <div class="flex items-end gap-3">
-        <div class="min-w-0 flex-1">
+      <!-- The title and its count; the tools beside it, or — on a phone —
+           on a line of their own under it, all the same height. -->
+      <div class="flex flex-wrap items-end gap-x-3 gap-y-2.5">
+        <div class="min-w-0 basis-full sm:flex-1 sm:basis-0">
           <h1 class="large-title truncate" :style="list ? { color: list.color } : {}">{{ list?.name ?? t('modules.board') }}</h1>
           <p v-if="list" class="subhead mt-0.5 tabular-nums">{{ t('board.openCount', { n: list.open_count }) }}</p>
         </div>
-        <div v-if="loaded && list" class="mb-1 flex shrink-0 items-center gap-1">
-          <label class="lanes-pick" :title="t('board.lanes.title')">
-            <Rows3 class="h-3.5 w-3.5" />
-            <select v-model="laneBy" :aria-label="t('board.lanes.title')" data-testid="board-lanes-by">
-              <option value="">{{ t('board.lanes.none') }}</option>
-              <option value="person">{{ t('board.lanes.person') }}</option>
-              <option value="priority">{{ t('board.lanes.priority') }}</option>
-            </select>
-          </label>
-          <TaskFilter :ws="ws" />
+        <div v-if="loaded" class="head-tools sm:mb-1" data-testid="board-tools">
+          <template v-if="list">
+            <label class="lanes-pick" :title="t('board.lanes.title')">
+              <Rows3 class="h-3.5 w-3.5" />
+              <select v-model="laneBy" :aria-label="t('board.lanes.title')" data-testid="board-lanes-by">
+                <option value="">{{ t('board.lanes.none') }}</option>
+                <option value="person">{{ t('board.lanes.person') }}</option>
+                <option value="priority">{{ t('board.lanes.priority') }}</option>
+              </select>
+            </label>
+            <TaskFilter :ws="ws" />
+          </template>
+          <span v-if="readonly" class="pill shrink-0"><Eye class="h-3 w-3" />{{ t('board.readOnly') }}</span>
+          <template v-else>
+            <button v-if="list" class="btn btn-sm shrink-0 !px-2 sm:!px-2.5" :title="t('board.editList')" :aria-label="t('board.editList')" @click="openSheet(list.id)">
+              <SlidersHorizontal class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('board.editList') }}</span>
+            </button>
+            <button class="btn-tinted btn-sm shrink-0 !px-2 sm:!px-2.5" :title="t('board.newList')" :aria-label="t('board.newList')" @click="openSheet('')">
+              <Plus class="h-4 w-4" /><span class="hidden sm:inline">{{ t('board.newList') }}</span>
+            </button>
+          </template>
         </div>
-        <span v-if="readonly && loaded" class="pill mb-1 shrink-0"><Eye class="h-3 w-3" />{{ t('board.readOnly') }}</span>
-        <template v-else-if="loaded">
-          <button v-if="list" class="btn btn-sm mb-1 shrink-0 !px-2 sm:!px-2.5" :title="t('board.editList')" :aria-label="t('board.editList')" @click="openSheet(list.id)">
-            <SlidersHorizontal class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('board.editList') }}</span>
-          </button>
-          <button class="btn-tinted btn-sm mb-1 shrink-0 !px-2 sm:!px-2.5" :title="t('board.newList')" :aria-label="t('board.newList')" @click="openSheet('')">
-            <Plus class="h-4 w-4" /><span class="hidden sm:inline">{{ t('board.newList') }}</span>
-          </button>
-        </template>
       </div>
 
       <nav v-if="lists.length > 1" ref="stripEl" class="strip -mx-4 mt-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8" :aria-label="t('board.lists')">
@@ -476,6 +480,20 @@ watch(
 <style scoped>
 .strip {
   scrollbar-width: none;
+}
+.head-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+/* One height for the lanes picker, the filter and the buttons. */
+.head-tools :deep(.btn),
+.head-tools .btn-tinted {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
 }
 .lanes-pick {
   display: inline-flex;

@@ -41,6 +41,8 @@ merge, not at release time.
 
 ### Fixed
 
+- On a phone, a board's title shows whole, its tools on a line of their own
+  under it, all one height.
 - Typing into a task's empty notes no longer drops out of editing after the
   first character.
 - The comment box no longer draws a second focus ring inside its own.

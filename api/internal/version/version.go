@@ -35,7 +35,7 @@ var RepositoryURL = "https://github.com/joaoteixeira10/orbit"
 // also injects Version/Commit/BuildTime via -ldflags; the -ldflags Version wins
 // at runtime, and Commit/BuildTime are only set that way.
 var (
-	Version   = "0.6.0"
+	Version   = "0.6.1"
 	Commit    = ""
 	BuildTime = ""
 )

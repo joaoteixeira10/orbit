@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-13
+
 ### Changed
 
 - **One Orbit on Gitea and GitHub.** The same code and history are on both,

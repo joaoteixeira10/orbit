@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
+	"github.com/joaoteixeira10/orbit/api/internal/search"
 )
 
 // TestSearchIndex: with the full-text index, search finds by word start and

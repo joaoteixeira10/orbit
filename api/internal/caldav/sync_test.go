@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/keystore"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	ical "github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"

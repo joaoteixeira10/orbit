@@ -20,7 +20,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"github.com/joaoteixeira10/orbit/api/internal/safedial"
 )
 
 const (

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/version"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/version"
 
 	"github.com/gin-gonic/gin"
 )

@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/version"
+	"github.com/joaoteixeira10/orbit/api/internal/version"
 
 	"github.com/gin-gonic/gin"
 )

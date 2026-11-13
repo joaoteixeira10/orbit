@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	"github.com/golang-jwt/jwt/v5"
 )

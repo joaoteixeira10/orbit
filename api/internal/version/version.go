@@ -1,5 +1,5 @@
 // Package version exposes build/version info and a release checker that polls
-// the app's own (public) Gitea releases API for a newer version.
+// the app's own releases (GitHub's, or a Gitea's) for a newer version.
 package version
 
 import (
@@ -14,19 +14,21 @@ import (
 	"sync"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"github.com/joaoteixeira10/orbit/api/internal/safedial"
 )
 
 // RepositoryURL is the default upstream repo (shown in About + used for the
-// update check). It can be overridden via REPO_URL, or the check disabled
-// entirely via UPDATE_CHECK=false (see config + NewChecker).
-const RepositoryURL = "https://gitea.ubonito.org/jteixeira/Orbit"
+// update check): GitHub, unless the build stamps another (-ldflags -X …
+// RepositoryURL=…; Gitea's Build & Push stamps its own repo, so images from
+// there check its releases). REPO_URL overrides it at run time, and
+// UPDATE_CHECK=false turns the check off (see config + NewChecker).
+var RepositoryURL = "https://github.com/joaoteixeira10/orbit"
 
 // These are overridden at build time via -ldflags, e.g.:
 //
-//	-X gitea.ubonito.org/jteixeira/orbit/api/internal/version.Version=1.2.3
-//	-X gitea.ubonito.org/jteixeira/orbit/api/internal/version.Commit=abc1234
-//	-X gitea.ubonito.org/jteixeira/orbit/api/internal/version.BuildTime=2026-05-29T12:00:00Z
+//	-X github.com/joaoteixeira10/orbit/api/internal/version.Version=1.2.3
+//	-X github.com/joaoteixeira10/orbit/api/internal/version.Commit=abc1234
+//	-X github.com/joaoteixeira10/orbit/api/internal/version.BuildTime=2026-05-29T12:00:00Z
 //
 // Version is bumped per release by scripts/set-version.sh (committed before the
 // build) so the value is consistent across the repo. The build/release workflow
@@ -83,7 +85,7 @@ type Checker struct {
 
 // NewChecker builds a release checker. repoURL defaults to RepositoryURL when
 // empty; enabled=false disables the update check (the repo URL is still used for
-// the About link). The releases API URL is derived from the repo URL (Gitea).
+// the About link). The releases API URL is derived from the repo URL.
 func NewChecker(repoURL string, enabled bool) *Checker {
 	if repoURL == "" {
 		repoURL = RepositoryURL
@@ -96,16 +98,23 @@ func NewChecker(repoURL string, enabled bool) *Checker {
 	}
 }
 
-// releasesAPI derives the Gitea "latest release" API URL from a repo web URL:
-// https://host/owner/repo → https://host/api/v1/repos/owner/repo/releases/latest.
+// releasesAPI derives the "latest release" API URL from a repo web URL:
+//
+//	https://github.com/owner/repo → https://api.github.com/repos/owner/repo/releases/latest
+//	https://host/owner/repo       → https://host/api/v1/repos/owner/repo/releases/latest (Gitea/Forgejo)
+//
+// GitHub's latest release skips drafts and pre-releases.
 func releasesAPI(repoURL string) string {
 	u, err := url.Parse(repoURL)
 	if err != nil || u.Host == "" {
 		return ""
 	}
-	p := strings.Trim(u.Path, "/")
+	p := strings.TrimSuffix(strings.Trim(u.Path, "/"), ".git")
 	if p == "" {
 		return ""
+	}
+	if h := strings.ToLower(u.Host); h == "github.com" || h == "www.github.com" {
+		return "https://api.github.com/repos/" + p + "/releases/latest"
 	}
 	return u.Scheme + "://" + u.Host + "/api/v1/repos/" + p + "/releases/latest"
 }

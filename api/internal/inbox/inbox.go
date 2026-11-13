@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/events"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/notify"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"github.com/joaoteixeira10/orbit/api/internal/events"
+	"github.com/joaoteixeira10/orbit/api/internal/feature"
+	"github.com/joaoteixeira10/orbit/api/internal/keystore"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/notify"
+	"github.com/joaoteixeira10/orbit/api/internal/safedial"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"

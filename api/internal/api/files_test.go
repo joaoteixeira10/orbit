@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/search"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
+	"github.com/joaoteixeira10/orbit/api/internal/search"
+	"github.com/joaoteixeira10/orbit/api/internal/uploads"
 )
 
 type fileRow struct {

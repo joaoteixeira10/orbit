@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // Fixes from the 2026-10-15 security review (SECURITY-REVIEW-2026-10-15.md).

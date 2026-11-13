@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // TestGitHookEndpoint: turning instant updates on without a git account

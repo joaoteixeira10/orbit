@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
+	"github.com/joaoteixeira10/orbit/api/internal/rbac"
 )
 
 func TestOwnerOnlySetAndEquality(t *testing.T) {

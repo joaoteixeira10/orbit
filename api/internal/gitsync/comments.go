@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // Comments on a git-linked task follow the issue's comments both ways. One

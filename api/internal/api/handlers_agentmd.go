@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )

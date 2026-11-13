@@ -23,7 +23,7 @@ describe('guessNoteLang', () => {
     ['a shebang', '#!/bin/bash\nset -e\necho hi', 'bash'],
     ['python', 'import os\n\ndef main():\n    for f in os.listdir("."):\n        print(f)\n\nif __name__ == "__main__":\n    main()', 'python'],
     ['nginx', 'server {\n    listen 443 ssl;\n    server_name orbit.example.org;\n    location / {\n        proxy_pass http://127.0.0.1:8080;\n        proxy_set_header Host $host;\n    }\n}', 'nginx'],
-    ['yaml', 'services:\n  orbit:\n    image: harbor.ubonito.org/orbit/orbit:0.1.0\n    ports:\n      - "8080:8080"\n    environment:\n      PUBLIC_URL: https://orbit.example.org\n    volumes:\n      - data:/data', 'yaml'],
+    ['yaml', 'services:\n  orbit:\n    image: ghcr.io/joaoteixeira10/orbit:0.1.0\n    ports:\n      - "8080:8080"\n    environment:\n      PUBLIC_URL: https://orbit.example.org\n    volumes:\n      - data:/data', 'yaml'],
     ['sql', "SELECT id, title FROM tasks\nWHERE due < CURRENT_DATE AND completed_at IS NULL\nORDER BY due DESC\nLIMIT 20;", 'sql'],
     ['go', 'package main\n\nimport "fmt"\n\nfunc main() {\n\tfor i := 0; i < 3; i++ {\n\t\tfmt.Println(i)\n\t}\n}', 'go'],
     ['dockerfile', 'FROM node:22-alpine AS web\nWORKDIR /src\nCOPY package.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build', 'dockerfile'],

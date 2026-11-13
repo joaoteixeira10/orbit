@@ -8,7 +8,7 @@
 
 services:
   api:
-    image: ${ORBIT_IMAGE:-harbor.ubonito.org/orbit/orbit}:${ORBIT_VERSION:-latest}
+    image: ${ORBIT_IMAGE:-ghcr.io/joaoteixeira10/orbit}:${ORBIT_VERSION:-latest}
     ports:
       - "${ORBIT_PORT:-8080}:8080"
     # Pass the whole .env so every documented setting takes effect; the

@@ -1,7 +1,7 @@
 # How the blueprints apply to Orbit
 
-[PROJECT-BLUEPRINT.md](PROJECT-BLUEPRINT.md) and [AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md)
-come from the canonical copy in `../blueprint` (first copied from LB Admin,
+The project blueprint (no longer kept in this repo) and
+[AUTH-BLUEPRINT.md](AUTH-BLUEPRINT.md) come from the canonical copy in `../blueprint` (first copied from LB Admin,
 2026-10-13; synced with `../blueprint/sync.sh docs`); they describe PKI
 Management, the reference implementation. This page records what
 Orbit **adopts** (the code was ported), **adapts** (same design, Orbit's
@@ -30,7 +30,10 @@ domain), **skips**, and what it **adds**.
   developer themes are kept (added back 2026-10-14) as an owner's choice on
   top of it, with Orbit's own crests.
 
-## PROJECT-BLUEPRINT
+## Project blueprint
+
+The § numbers refer to `docs/PROJECT-BLUEPRINT.md`, removed from this repo
+(it's in the git history).
 
 | § | Item | Decision | Notes for Orbit |
 |---|---|---|---|

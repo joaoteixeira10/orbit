@@ -12,7 +12,7 @@ package rbac
 import (
 	"encoding/json"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // Global privileges. Backup export/restore, security policy and SSO config

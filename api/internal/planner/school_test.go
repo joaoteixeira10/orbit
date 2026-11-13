@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }

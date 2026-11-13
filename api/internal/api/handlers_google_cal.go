@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/feature"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/google"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/ephemeral"
+	"github.com/joaoteixeira10/orbit/api/internal/feature"
+	"github.com/joaoteixeira10/orbit/api/internal/google"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

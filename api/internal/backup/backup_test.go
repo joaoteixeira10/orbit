@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	dbpkg "gitea.ubonito.org/jteixeira/orbit/api/internal/db"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/uploads"
+	dbpkg "github.com/joaoteixeira10/orbit/api/internal/db"
+	"github.com/joaoteixeira10/orbit/api/internal/keystore"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/uploads"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

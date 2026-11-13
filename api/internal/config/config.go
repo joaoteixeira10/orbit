@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/secrets"
+	"github.com/joaoteixeira10/orbit/api/internal/secrets"
 )
 
 // minSecretLen is the minimum length enforced for JWT_SECRET and

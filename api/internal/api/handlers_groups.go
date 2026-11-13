@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/planner"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/rbac"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/planner"
+	"github.com/joaoteixeira10/orbit/api/internal/rbac"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

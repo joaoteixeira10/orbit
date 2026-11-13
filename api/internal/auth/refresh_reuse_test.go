@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // TestRefreshReuseWithinGrace: a just-rotated token presented again inside the

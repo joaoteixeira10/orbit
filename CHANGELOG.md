@@ -6,6 +6,19 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Changed
+
+- **One Orbit on Gitea and GitHub.** The same code and history are on both,
+  released on Gitea first and then on GitHub
+  (<https://github.com/joaoteixeira10/orbit>, image
+  `ghcr.io/joaoteixeira10/orbit`, now the default `ORBIT_IMAGE`). Each image
+  checks for updates where it was built: GitHub's images (and builds from
+  source) read GitHub's releases; Gitea's read that Gitea's. `REPO_URL` still
+  overrides it. If you run Orbit from your own registry, keep `ORBIT_IMAGE`
+  set in your `.env`. On GitHub this is the first release since 0.5.0: it
+  also brings everything in 0.6.0 below.
+- The Go module is now `github.com/joaoteixeira10/orbit/api`.
+
 ## [0.6.0] - 2026-11-13
 
 ### Added

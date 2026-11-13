@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/gitsync"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/ephemeral"
+	"github.com/joaoteixeira10/orbit/api/internal/gitsync"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

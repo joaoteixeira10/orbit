@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/safedial"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/safedial"
 )
 
 // Personal channels: a person's own Discord / Slack / Teams webhook, Telegram

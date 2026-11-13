@@ -8,8 +8,8 @@ import (
 	"sort"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/config"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // TestPagesBecomeMarkdown: a page still in the old JSON format is converted

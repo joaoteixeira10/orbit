@@ -237,8 +237,13 @@ test('quick notes colour their text as an editor would: Markdown, code, or plain
   await expect(page.getByTestId('note-body').locator('.md-heading')).toHaveCount(0)
   await page.getByRole('button', { name: 'Close' }).click()
   await expect(md.getByTestId('card-coloured')).toHaveCount(0)
-  const notes = (await (await request.get('/api/v1/me/notes', { headers: H })).json()) as { title: string; lang: string }[]
-  expect(notes.find((n) => n.title === 'Vault steps')?.lang).toBe('text')
+  // Saved a moment after the card changes.
+  await expect
+    .poll(async () => {
+      const notes = (await (await request.get('/api/v1/me/notes', { headers: H })).json()) as { title: string; lang: string }[]
+      return notes.find((n) => n.title === 'Vault steps')?.lang
+    })
+    .toBe('text')
 
   // Typed: a few lines of shell become Bash after a moment.
   await page.getByText('Take a note…').click()

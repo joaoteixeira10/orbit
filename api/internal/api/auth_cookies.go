@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"net/http"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/auth"
+	"github.com/joaoteixeira10/orbit/api/internal/auth"
 
 	"github.com/gin-gonic/gin"
 )

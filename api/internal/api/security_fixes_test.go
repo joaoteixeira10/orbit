@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // TestSSOAdminNeedsOwnerOptIn: a role claim naming admin (or an admin default

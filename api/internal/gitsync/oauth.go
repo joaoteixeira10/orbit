@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // "Sign in with Gitea": instead of pasting a personal access token, a person

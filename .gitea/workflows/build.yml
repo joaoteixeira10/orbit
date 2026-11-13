@@ -13,6 +13,9 @@
 # Gitea registry uses the built-in Actions token (needs package write) — or
 # set a PACKAGES_TOKEN secret to use a dedicated credential; its image path is
 # derived from the repo, nothing hard-coded.
+#
+# The image's update check (and About link) reads this Gitea repo's releases:
+# REPO_URL is stamped from the server and repo the workflow runs on.
 name: Build & Push
 
 on:
@@ -71,6 +74,7 @@ jobs:
             VERSION=${{ inputs.version }}
             COMMIT=${{ env.SHORT_SHA }}
             BUILD_TIME=${{ env.BUILD_TIME }}
+            REPO_URL=${{ github.server_url }}/${{ github.repository }}
           tags: |
             ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}:v${{ inputs.version }}
             ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}:latest

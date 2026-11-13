@@ -30,14 +30,18 @@ COPY docs/ CHANGELOG.md ./internal/helpdocs/files/
 ARG VERSION=""
 ARG COMMIT=""
 ARG BUILD_TIME=""
+# REPO_URL: the repo whose releases the update check reads (and About links);
+# empty keeps the default, GitHub. Gitea's Build & Push passes its own repo.
+ARG REPO_URL=""
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0 GOFLAGS=-buildvcs=false
-RUN VP=gitea.ubonito.org/jteixeira/orbit/api/internal/version; \
+RUN VP=github.com/joaoteixeira10/orbit/api/internal/version; \
     LDFLAGS="-s -w"; \
     [ -n "$VERSION" ]    && LDFLAGS="$LDFLAGS -X $VP.Version=$VERSION"; \
     [ -n "$COMMIT" ]     && LDFLAGS="$LDFLAGS -X $VP.Commit=$COMMIT"; \
     [ -n "$BUILD_TIME" ] && LDFLAGS="$LDFLAGS -X $VP.BuildTime=$BUILD_TIME"; \
+    [ -n "$REPO_URL" ]   && LDFLAGS="$LDFLAGS -X $VP.RepositoryURL=$REPO_URL"; \
     GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
     go build -ldflags "$LDFLAGS" -o /out/orbit ./cmd/server
 # An empty /data for the runtime image: distroless has no shell to mkdir, and a

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/keystore"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/keystore"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	"github.com/glebarez/sqlite"
 	"go.uber.org/zap"

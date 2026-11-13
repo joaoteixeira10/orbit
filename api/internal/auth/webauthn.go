@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/config"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/ephemeral"
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/config"
+	"github.com/joaoteixeira10/orbit/api/internal/ephemeral"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"

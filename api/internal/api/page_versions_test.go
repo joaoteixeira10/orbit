@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gitea.ubonito.org/jteixeira/orbit/api/internal/models"
+	"github.com/joaoteixeira10/orbit/api/internal/models"
 )
 
 // TestPageHistory: saves are kept as versions (one person's saves close

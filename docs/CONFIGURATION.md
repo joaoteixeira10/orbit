@@ -36,7 +36,7 @@ These are read by `docker compose`, not by Orbit.
 
 | Variable | Req | Default | Notes |
 |---|---|---|---|
-| `ORBIT_IMAGE` | – | `harbor.ubonito.org/orbit/orbit` | Image `docker-compose.yml` runs (a placeholder: point it at your registry). |
+| `ORBIT_IMAGE` | – | `ghcr.io/joaoteixeira10/orbit` | Image `docker-compose.yml` runs. Point it at your own registry to run a different build. |
 | `ORBIT_VERSION` | – | `latest` | Image tag. **Pin a release** (e.g. `v0.1.0`) for repeatable deploys. Update with `docker compose pull && docker compose up -d`. |
 | `ORBIT_PORT` | – | `8080` | Host port mapped to the container's `:8080`. |
 | `VERSION`, `COMMIT`, `BUILD_TIME` | – | from git | Build arguments for `docker-compose-build.yml` (`make up-build` fills them). They stamp the version shown in About. |
@@ -199,7 +199,7 @@ sync every 3 minutes; the `git_integration` feature flag turns all of it off.
 | `METRICS_ENABLED` | – | `false` | Serves Prometheus metrics at `/metrics`: HTTP requests and latency, sign-ins, and counts of users, workspaces, pages, open tasks and failing calendar subscriptions (see [deploy/](../deploy/README.md)). The endpoint has **no sign-in**: block it at your reverse proxy or keep it on an internal network. |
 | `SYSLOG_ADDR` | – | | Also sends every audit entry as one JSON line to syslog (facility AUTH), with its chain hash. `host:port` uses UDP (port 514 when left out); a path like `/dev/log` uses the local socket. If the address can't be reached at start-up, Orbit stops. |
 | `UPDATE_CHECK` | – | `true` | Checks for a newer release every 6 hours and shows it in About. `false` turns it off. |
-| `REPO_URL` | – | `https://gitea.ubonito.org/jteixeira/Orbit` | Repository for the About link and the update check (a Gitea repo URL). |
+| `REPO_URL` | – | the repo the image was built from (GitHub's images: `https://github.com/joaoteixeira10/orbit`, also for a build from source; Gitea's: that Gitea repo) | Repository for the About link and the update check. A `github.com` URL reads its latest GitHub release; any other host is treated as Gitea or Forgejo (`/api/v1/repos/…`). |
 
 ## Secrets backends (file and vault)
 

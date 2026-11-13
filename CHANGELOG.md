@@ -75,7 +75,10 @@ merge, not at release time.
   429 — Gemini's free keys often are) is asked again twice before the
   assistant says so, and what it said is in the server's log. Gemini's
   thought signatures go back with its tool calls, so it no longer refuses
-  the round after a tool ("missing a thought_signature").
+  the round after a tool ("missing a thought_signature"). In Agent mode the
+  assistant names what it lined up instead of linking it (it has no address
+  until approved), and a link a model leaves unclosed shows as its words, not
+  an address full of ids.
 - The lock PIN dialog opens on top of the note or page being locked, not
   behind it.
 - On a phone, a board's title shows whole, its tools on a line of their own

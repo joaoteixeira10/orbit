@@ -30,6 +30,7 @@ const assistantAgentRules = `This is Agent mode: besides looking things up, you 
 - Look up what you need first (their workspaces are listed at the end, by name and id), then line up every change the request needs, then answer in a sentence or two saying what you've lined up for them to approve. Never say it's done, and don't ask them to confirm: the approval is how they confirm.
 - Give each change a "summary" in their language that names the thing, e.g. Move "Book the room" to Friday.
 - A change that makes something (a task list, a page, a task…) gives back an id like new:1; use it in later changes that need it (tasks in the new list, say). It can't be read before it's made.
+- Something lined up isn't made yet, so it has no address: in your answer name it in bold, never as a link, and never write an id. Link only what already exists.
 - A change is lined up only by calling its tool. Writing that you've lined something up, made it or queued it does nothing: they'd see no changes to approve.
 - Line up only what they asked for.
 - A task, note or event can't move to another workspace. To move one, line up making it anew there (with its details) and deleting the old one, and say that's how.`

@@ -10,6 +10,7 @@ import { MAX_FILES, useAssistantStore } from '@/stores/assistant'
 import { useToastStore } from '@/stores/toast'
 import { downloadUpload, fileSize } from '@/lib/uploads'
 import { fmtTook, fmtWhen, relTime } from '@/lib/format'
+import { tidy } from '@/lib/assistantText'
 import type { AssistantFile, AssistantStep } from '@/api/assistant'
 
 // The assistant's chat window, floating at the bottom right — or large in the
@@ -254,7 +255,7 @@ onUnmounted(() => clearInterval(tick))
           <ul v-if="m.steps?.length" class="ai-steps">
             <li v-for="(s, k) in m.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
           </ul>
-          <div class="ai-bubble"><MarkdownView :content="m.text" :editable="false" plain class="ai-md" /></div>
+          <div class="ai-bubble"><MarkdownView :content="tidy(m.text)" :editable="false" plain class="ai-md" /></div>
           <div v-if="m.at" class="ai-meta" data-testid="assistant-took">
             {{ fmtWhen(m.at) }}<template v-if="m.took_ms"> · <span :title="t('assistant.tookFor', { d: fmtTook(m.took_ms) })">{{ t('assistant.took', { d: fmtTook(m.took_ms) }) }}</span></template>
           </div>
@@ -265,7 +266,7 @@ onUnmounted(() => clearInterval(tick))
         <ul v-if="store.steps.length" class="ai-steps">
           <li v-for="(s, k) in store.steps" :key="k"><Check class="h-3 w-3" />{{ stepText(s) }}</li>
         </ul>
-        <div v-if="store.draft" class="ai-bubble"><MarkdownView :content="store.draft" :editable="false" plain class="ai-md" /></div>
+        <div v-if="store.draft" class="ai-bubble"><MarkdownView :content="tidy(store.draft)" :editable="false" plain class="ai-md" /></div>
         <div v-else class="ai-bubble ai-typing" role="status" :aria-label="t('assistant.thinking')"><span /><span /><span /></div>
         <div class="ai-meta" data-testid="assistant-elapsed">{{ fmtTook(Math.max(0, now - store.askedAt)) }}</div>
       </div>

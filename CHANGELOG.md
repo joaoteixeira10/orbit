@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-13
+
 ### Added
 
 - **Gemini for the assistant** — Owner → Assistant (and Settings →
@@ -69,16 +71,16 @@ merge, not at release time.
 
 ### Fixed
 
-- The assistant on a phone: the message box stays above the keyboard (it
-  was hidden under it on iPhone), and errors show as a card. A key an
-  OpenAI-style service refuses says so, as Claude's does; a busy one (503,
-  429 — Gemini's free keys often are) is asked again twice before the
-  assistant says so, and what it said is in the server's log. Gemini's
-  thought signatures go back with its tool calls, so it no longer refuses
-  the round after a tool ("missing a thought_signature"). In Agent mode the
-  assistant names what it lined up instead of linking it (it has no address
-  until approved), and a link a model leaves unclosed shows as its words, not
-  an address full of ids.
+- **The assistant on a phone**: the message box stays above the keyboard (it
+  was hidden under it on iPhone); errors show as a card.
+- **The assistant with Gemini and other OpenAI-style services**: a refused key
+  says so, as with Claude; a busy service (503, 429 — Gemini's free keys
+  often are) is asked again twice before the assistant gives up, and what it
+  said goes to the server's log; Gemini's thought signatures go back with
+  its tool calls, so it no longer refuses the step after a tool.
+- **The assistant in Agent mode** names what it lined up instead of linking
+  it (it has no address until approved); a link a model leaves unclosed
+  shows as its words, not an address full of ids.
 - The lock PIN dialog opens on top of the note or page being locked, not
   behind it.
 - On a phone, a board's title shows whole, its tools on a line of their own

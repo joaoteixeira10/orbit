@@ -38,6 +38,9 @@ type oaToolCall struct {
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
 	} `json:"function"`
+	// ExtraContent: what a service adds to a call, given back as it came —
+	// Gemini's thought_signature, without which it refuses the next round.
+	ExtraContent json.RawMessage `json:"extra_content,omitempty"`
 }
 
 func str(s string) *string { return &s }
@@ -231,6 +234,7 @@ func (m *openAI) round(ctx context.Context, body any, delta func(string)) (oaCho
 							Name      string `json:"name"`
 							Arguments string `json:"arguments"`
 						} `json:"function"`
+						ExtraContent json.RawMessage `json:"extra_content"`
 					} `json:"tool_calls"`
 				} `json:"delta"`
 				FinishReason string `json:"finish_reason"`
@@ -248,15 +252,24 @@ func (m *openAI) round(ctx context.Context, body any, delta func(string)) (oaCho
 			}
 		}
 		for _, tc := range c.Delta.ToolCalls {
-			for len(out.Message.ToolCalls) <= tc.Index {
+			i := tc.Index
+			// A new call under an index already taken (Gemini may number
+			// calls sent whole, side by side, all 0): one more.
+			if i < len(out.Message.ToolCalls) && tc.ID != "" && out.Message.ToolCalls[i].ID != "" && out.Message.ToolCalls[i].ID != tc.ID {
+				i = len(out.Message.ToolCalls)
+			}
+			for len(out.Message.ToolCalls) <= i {
 				out.Message.ToolCalls = append(out.Message.ToolCalls, oaToolCall{Type: "function"})
 			}
-			call := &out.Message.ToolCalls[tc.Index]
+			call := &out.Message.ToolCalls[i]
 			if tc.ID != "" {
 				call.ID = tc.ID
 			}
 			call.Function.Name += tc.Function.Name
 			call.Function.Arguments += tc.Function.Arguments
+			if len(tc.ExtraContent) > 0 && string(tc.ExtraContent) != "null" {
+				call.ExtraContent = tc.ExtraContent
+			}
 		}
 		if c.FinishReason != "" {
 			out.FinishReason = c.FinishReason

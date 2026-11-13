@@ -2,9 +2,11 @@ package assistant
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -79,5 +81,42 @@ func TestOpenAIBusy(t *testing.T) {
 	var he *HTTPError
 	if !errors.As(err, &he) || !he.Busy() || calls != -7 {
 		t.Fatalf("still busy: %v after %d", err, calls)
+	}
+}
+
+// TestOpenAIThoughtSignature: what Gemini adds to a tool call (its thought
+// signature) goes back with the call; calls sent whole under one index are
+// kept apart.
+func TestOpenAIThoughtSignature(t *testing.T) {
+	var second map[string]any
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "text/event-stream")
+		if calls == 1 {
+			_, _ = w.Write([]byte(`data: {"choices":[{"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"c1","type":"function","function":{"name":"get_today","arguments":"{}"},"extra_content":{"google":{"thought_signature":"sig-1"}}}]}}]}` + "\n\n" +
+				`data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c2","type":"function","function":{"name":"list_tasks","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}` + "\n\ndata: [DONE]\n\n"))
+			return
+		}
+		_ = json.NewDecoder(r.Body).Decode(&second)
+		_, _ = w.Write([]byte(`data: {"choices":[{"delta":{"content":"Nothing today."},"finish_reason":"stop"}]}` + "\n\ndata: [DONE]\n\n"))
+	}))
+	defer srv.Close()
+	p, _ := Config{Provider: OpenAI, URL: srv.URL, Model: "m"}.New(srv.Client())
+	ran := []string{}
+	got, err := p.Answer(context.Background(), Request{
+		History: []Turn{{Role: "user", Text: "today?"}},
+		Tools:   []Tool{{Name: "get_today"}, {Name: "list_tasks"}},
+		Call: func(_ context.Context, name string, _ map[string]any) (string, bool) {
+			ran = append(ran, name)
+			return "ok", false
+		},
+	})
+	if err != nil || got != "Nothing today." || len(ran) != 2 {
+		t.Fatalf("%q %v ran %v", got, err, ran)
+	}
+	b, _ := json.Marshal(second["messages"])
+	if !strings.Contains(string(b), `"extra_content":{"google":{"thought_signature":"sig-1"}}`) || !strings.Contains(string(b), `"tool_call_id":"c2"`) {
+		t.Fatalf("second round: %s", b)
 	}
 }

@@ -73,7 +73,9 @@ merge, not at release time.
   was hidden under it on iPhone), and errors show as a card. A key an
   OpenAI-style service refuses says so, as Claude's does; a busy one (503,
   429 — Gemini's free keys often are) is asked again twice before the
-  assistant says so, and what it said is in the server's log.
+  assistant says so, and what it said is in the server's log. Gemini's
+  thought signatures go back with its tool calls, so it no longer refuses
+  the round after a tool ("missing a thought_signature").
 - The lock PIN dialog opens on top of the note or page being locked, not
   behind it.
 - On a phone, a board's title shows whole, its tools on a line of their own

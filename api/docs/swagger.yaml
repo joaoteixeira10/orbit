@@ -194,6 +194,7 @@ definitions:
       provider:
         enum:
         - anthropic
+        - gemini
         - openai
         - ollama
         type: string
@@ -263,6 +264,7 @@ definitions:
       provider:
         enum:
         - anthropic
+        - gemini
         - openai
         - ollama
         type: string

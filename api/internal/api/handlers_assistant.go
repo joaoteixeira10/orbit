@@ -91,7 +91,7 @@ type assistantConfigResponse struct {
 
 type assistantConfigRequest struct {
 	Enabled    bool   `json:"enabled"`
-	Provider   string `json:"provider" binding:"omitempty,oneof=anthropic openai ollama"`
+	Provider   string `json:"provider" binding:"omitempty,oneof=anthropic gemini openai ollama"`
 	Model      string `json:"model" binding:"max=120"`
 	URL        string `json:"url" binding:"max=300"`
 	Key        string `json:"key" binding:"max=500"` // "" keeps the one there is
@@ -144,6 +144,9 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 	if cfg.URL == "" && cfg.Provider == assistant.OpenAI {
 		cfg.URL = "https://api.openai.com/v1"
 	}
+	if !assistant.HasURL(cfg.Provider) {
+		cfg.URL = ""
+	}
 	if cfg.URL != "" {
 		if u, err := url.Parse(cfg.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "the address must be an http(s) address, with no query"})
@@ -162,7 +165,10 @@ func (h *Handlers) setAssistantConfig(c *gin.Context) {
 		case cfg.Provider == assistant.Anthropic && !hasKey:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Claude needs an API key"})
 			return
-		case cfg.Provider != assistant.Anthropic && cfg.URL == "":
+		case cfg.Provider == assistant.Gemini && !hasKey:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Gemini needs an API key (from Google AI Studio)"})
+			return
+		case assistant.HasURL(cfg.Provider) && cfg.URL == "":
 			c.JSON(http.StatusBadRequest, gin.H{"error": "give the server's address (…/v1)"})
 			return
 		case cfg.Model == "":
@@ -653,6 +659,20 @@ func (h *Handlers) assistantError(err error) string {
 			return "The model's service doesn't know that model: ask the owner to check its name."
 		}
 		return fmt.Sprintf("The model's service said no (HTTP %d).", ae.StatusCode)
+	}
+	var he *assistant.HTTPError
+	if errors.As(err, &he) {
+		switch {
+		case he.BadKey():
+			return "The model's service refused the API key: ask the owner to check it."
+		case he.Status == http.StatusTooManyRequests:
+			return "The model's service is over its limit right now; try again in a moment."
+		case he.Status >= 500:
+			return "The model's service is having trouble; try again in a moment."
+		case he.Status == http.StatusNotFound:
+			return "The model's service doesn't know that model: ask the owner to check its name."
+		}
+		return he.Error()
 	}
 	h.log.Debug("assistant: " + err.Error())
 	msg := err.Error()

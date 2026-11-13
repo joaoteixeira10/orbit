@@ -16,7 +16,9 @@ const assistant = useAssistantStore()
 const cfg = ref<AssistantConfig | null>(null)
 const form = reactive({ enabled: false, provider: 'anthropic' as AssistantProvider, model: '', url: '', key: '', clear_key: false, daily_limit: 0, context: 16384, allow_own: false })
 const saving = ref(false)
-const providers: AssistantProvider[] = ['anthropic', 'openai', 'ollama']
+const providers: AssistantProvider[] = ['anthropic', 'gemini', 'openai', 'ollama']
+// Claude and Gemini have their own address; the others are a server you name.
+const named = (p: AssistantProvider) => p === 'openai' || p === 'ollama'
 
 function fill(c: AssistantConfig) {
   cfg.value = c
@@ -26,7 +28,7 @@ onMounted(async () => fill(await assistantApi.config()))
 
 function pickProvider(p: AssistantProvider) {
   form.provider = p
-  form.model = p === 'anthropic' ? 'claude-opus-5-5' : ''
+  form.model = p === 'anthropic' ? 'claude-opus-5-5' : p === 'gemini' ? 'gemini-flash-latest' : ''
   form.url = p === 'openai' ? 'https://api.openai.com/v1' : ''
 }
 
@@ -67,7 +69,7 @@ async function save() {
         <input v-model="form.model" class="input" spellcheck="false" autocomplete="off" data-testid="assistant-model" />
         <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.modelHint') }}</span>
       </label>
-      <label v-if="form.provider !== 'anthropic'" class="flex flex-col gap-1.5">
+      <label v-if="named(form.provider)" class="flex flex-col gap-1.5">
         <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.url') }}</span>
         <input v-model="form.url" class="input" spellcheck="false" autocomplete="off" :placeholder="form.provider === 'ollama' ? 'http://ollama.lan:11434' : 'https://api.openai.com/v1'" data-testid="assistant-url" />
         <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.urlHint') }}</span>
@@ -80,7 +82,8 @@ async function save() {
       <label v-if="form.provider !== 'ollama'" class="flex flex-col gap-1.5">
         <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.key') }}</span>
         <input v-model="form.key" class="input" type="password" autocomplete="new-password" :placeholder="cfg.has_key ? '••••••••' : ''" data-testid="assistant-key" />
-        <span v-if="cfg.has_key" class="flex items-center justify-between text-[11.5px] text-text-3">
+        <span v-if="form.provider === 'gemini' && !cfg.has_key" class="text-[11.5px] text-text-3">{{ t('assistant.admin.geminiKey') }}</span>
+      <span v-if="cfg.has_key" class="flex items-center justify-between text-[11.5px] text-text-3">
           {{ t('assistant.admin.keySet') }}
           <button type="button" class="text-crit-text hover:underline" @click="form.clear_key = true; form.key = ''">{{ t('assistant.admin.keyClear') }}</button>
         </span>

@@ -8,6 +8,9 @@ merge, not at release time.
 
 ### Added
 
+- **Gemini for the assistant** — Owner → Assistant (and Settings →
+  Assistant for your own): **Gemini (Google AI Studio)** with an AI Studio
+  key, no address to give.
 - **SAML 2.0 sign-in** — Owner → SSO → SAML: ADFS, Okta, Entra, Shibboleth…
   from their metadata; groups and roles from attributes, as with OpenID
   Connect.
@@ -66,6 +69,9 @@ merge, not at release time.
 
 ### Fixed
 
+- The assistant on a phone: the message box stays above the keyboard (it
+  was hidden under it on iPhone), and errors show as a card. A key an
+  OpenAI-style service refuses says so, as Claude's does.
 - The lock PIN dialog opens on top of the note or page being locked, not
   behind it.
 - On a phone, a board's title shows whole, its tools on a line of their own

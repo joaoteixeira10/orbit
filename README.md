@@ -63,8 +63,8 @@ app.
   backups.
 - **Locked notes and pages** — a note or a page kept to you, encrypted in
   your browser with your own PIN: not even an admin can read it.
-- **An assistant** — built in (Claude, an OpenAI-style service or your
-  Ollama), answering from your own Orbit and making changes you approve;
+- **An assistant** — built in (Claude, Gemini, an OpenAI-style service
+  or your Ollama), answering from your own Orbit and making changes you approve;
   and an MCP server, so Claude, ChatGPT or Cursor work in Orbit as you.
 - **Anywhere** — light and dark, developer themes, English and Portuguese,
   and installable on a phone (Add to Home Screen) with a bottom tab bar and

@@ -121,7 +121,15 @@ const (
 	Anthropic = "anthropic"
 	OpenAI    = "openai" // OpenAI, or any server speaking its API
 	Ollama    = "ollama"
+	Gemini    = "gemini" // Google's Gemini API (an AI Studio key), through its OpenAI-style door
 )
+
+// GeminiURL is the Gemini API's OpenAI-style base.
+const GeminiURL = "https://generativelanguage.googleapis.com/v1beta/openai"
+
+// HasURL: the provider is a server the owner names (Claude and Gemini have
+// their own address).
+func HasURL(provider string) bool { return provider == OpenAI || provider == Ollama }
 
 // New makes the provider a Config describes; client makes its HTTP calls
 // (the owner's addresses may be on the local network, never loopback).
@@ -132,6 +140,11 @@ func (c Config) New(client *http.Client) (Provider, error) {
 			return nil, ErrNoConfig
 		}
 		return newClaude(c, client), nil
+	case Gemini:
+		if c.Key == "" || c.Model == "" {
+			return nil, ErrNoConfig
+		}
+		return &openAI{base: GeminiURL, key: c.Key, model: c.Model, http: client}, nil
 	case OpenAI, Ollama:
 		if c.URL == "" || c.Model == "" {
 			return nil, ErrNoConfig

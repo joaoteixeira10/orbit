@@ -1782,7 +1782,7 @@ A workspace's owners may keep the assistant out of it, or give it
 instructions for it, in its settings (General → **Assistant**).
 
 **Your own model.** When the owner lets people use their own, Settings →
-**Assistant** sets up yours: your Claude or OpenAI key, or your own Ollama
+**Assistant** sets up yours: your Claude, Gemini or OpenAI key, or your own Ollama
 (public, with https — or one of the servers on Orbit's network the address
 field suggests). **Use my own model** switches the assistant to it; the
 window then shows its name with "· yours". There's no daily limit on yours,
@@ -1924,7 +1924,10 @@ stop at their next run).
 
 **Assistant**: the model behind the built-in assistant (off by default).
 **Claude (Anthropic)** with an API key (the model starts as
-`claude-opus-5-5`), **OpenAI, or a server that speaks its API** (OpenAI's,
+`claude-opus-5-5`), **Gemini (Google AI Studio)** with a key made at
+aistudio.google.com → Get API key (the model starts as
+`gemini-flash-latest`; any Gemini model's name works, e.g. a Pro one),
+**OpenAI, or a server that speaks its API** (OpenAI's,
 LM Studio, vLLM… — its address ending in `/v1`, a key if it needs one), or
 **Ollama** (its address, e.g. `http://ollama.lan:11434`, the model's name,
 e.g. `qwen3.6:35b-a3b`, and the **context size** — how much of each request

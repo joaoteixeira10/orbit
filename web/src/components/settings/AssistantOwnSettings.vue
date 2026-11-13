@@ -15,7 +15,9 @@ const assistant = useAssistantStore()
 const own = ref<AssistantOwn | null>(null)
 const form = reactive({ use: false, provider: 'anthropic' as AssistantProvider, model: '', url: '', key: '', clear_key: false, context: 16384 })
 const saving = ref(false)
-const providers: AssistantProvider[] = ['anthropic', 'openai', 'ollama']
+const providers: AssistantProvider[] = ['anthropic', 'gemini', 'openai', 'ollama']
+// Claude and Gemini have their own address; the others are a server you name.
+const named = (p: AssistantProvider) => p === 'openai' || p === 'ollama'
 
 function fill(o: AssistantOwn) {
   own.value = o
@@ -25,7 +27,7 @@ onMounted(async () => fill(await assistantApi.own()))
 
 function pickProvider(p: AssistantProvider) {
   form.provider = p
-  form.model = p === 'anthropic' ? 'claude-opus-5-5' : ''
+  form.model = p === 'anthropic' ? 'claude-opus-5-5' : p === 'gemini' ? 'gemini-flash-latest' : ''
   form.url = p === 'openai' ? 'https://api.openai.com/v1' : ''
 }
 
@@ -69,7 +71,7 @@ async function save() {
       <input v-model="form.model" class="input" spellcheck="false" autocomplete="off" data-testid="assistant-own-model" />
       <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.modelHint') }}</span>
     </label>
-    <label v-if="form.provider !== 'anthropic'" class="flex flex-col gap-1.5">
+    <label v-if="named(form.provider)" class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.url') }}</span>
       <input v-model="form.url" class="input" spellcheck="false" autocomplete="off" list="assistant-own-servers" :placeholder="form.provider === 'ollama' ? 'https://ollama.example.org' : 'https://api.openai.com/v1'" data-testid="assistant-own-url" />
       <datalist id="assistant-own-servers"><option v-for="s in own.servers" :key="s" :value="s" /></datalist>
@@ -83,6 +85,7 @@ async function save() {
     <label v-if="form.provider !== 'ollama'" class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.key') }}</span>
       <input v-model="form.key" class="input" type="password" autocomplete="new-password" :placeholder="own.has_key ? '••••••••' : ''" data-testid="assistant-own-key" />
+      <span v-if="form.provider === 'gemini' && !own.has_key" class="text-[11.5px] text-text-3">{{ t('assistant.admin.geminiKey') }}</span>
       <span v-if="own.has_key" class="flex items-center justify-between text-[11.5px] text-text-3">
         {{ t('assistant.admin.keySet') }}
         <button type="button" class="text-crit-text hover:underline" @click="form.clear_key = true; form.key = ''">{{ t('assistant.admin.keyClear') }}</button>

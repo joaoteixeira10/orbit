@@ -15,9 +15,9 @@ import (
 // Config is the instance's assistant (Owner → Assistant).
 type Config struct {
 	Enabled  bool
-	Provider string // anthropic | openai | ollama
+	Provider string // anthropic | gemini | openai | ollama
 	Model    string
-	URL      string // the OpenAI-style API's base (…/v1), Ollama's address; Claude needs none
+	URL      string // the OpenAI-style API's base (…/v1), Ollama's address; Claude and Gemini need none
 	Key      string // the API key (sealed at rest); Ollama needs none
 	// DailyLimit: messages a person may send a day (0: no limit).
 	DailyLimit int
@@ -40,11 +40,14 @@ const (
 	keyOwn     = "assistant_allow_own"
 )
 
-// DefaultModel is the model a provider starts with (Claude's current Opus;
-// the others have none, the owner names theirs).
+// DefaultModel is the model a provider starts with (Claude's current Opus,
+// Gemini's latest Flash; the others have none, the owner names theirs).
 func DefaultModel(provider string) string {
-	if provider == Anthropic {
+	switch provider {
+	case Anthropic:
 		return "claude-opus-5-5"
+	case Gemini:
+		return "gemini-flash-latest"
 	}
 	return ""
 }

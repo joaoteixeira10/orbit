@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -38,6 +39,22 @@ type oaToolCall struct {
 }
 
 func str(s string) *string { return &s }
+
+// HTTPError: an OpenAI-style server said no.
+type HTTPError struct {
+	Status int
+	Msg    string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("the model's server said: %s (HTTP %d)", e.Msg, e.Status)
+}
+
+// BadKey: the server refused the key (Gemini says so with a 400).
+func (e *HTTPError) BadKey() bool {
+	return e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden ||
+		strings.Contains(strings.ToLower(e.Msg), "api key not valid")
+}
 
 func (m *openAI) Answer(ctx context.Context, r Request) (string, error) {
 	tools := make([]map[string]any, 0, len(r.Tools))
@@ -128,10 +145,17 @@ func (m *openAI) round(ctx context.Context, body any, delta func(string)) (oaCho
 	}
 	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode >= 300 {
-		var e struct {
+		type oaError struct {
 			Error any `json:"error"`
 		}
-		_ = json.NewDecoder(res.Body).Decode(&e)
+		var e oaError
+		raw, _ := io.ReadAll(io.LimitReader(res.Body, 64*1024))
+		if err := json.Unmarshal(raw, &e); err != nil {
+			var list []oaError // Gemini's: [{"error":{…}}]
+			if json.Unmarshal(raw, &list) == nil && len(list) > 0 {
+				e = list[0]
+			}
+		}
 		msg := http.StatusText(res.StatusCode)
 		switch v := e.Error.(type) {
 		case string:
@@ -141,7 +165,7 @@ func (m *openAI) round(ctx context.Context, body any, delta func(string)) (oaCho
 				msg = s
 			}
 		}
-		return oaChoice{}, fmt.Errorf("the model's server said: %s (HTTP %d)", strings.TrimSpace(msg), res.StatusCode)
+		return oaChoice{}, &HTTPError{Status: res.StatusCode, Msg: strings.TrimSpace(msg)}
 	}
 
 	if !strings.HasPrefix(res.Header.Get("Content-Type"), "text/event-stream") {

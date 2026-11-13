@@ -138,6 +138,31 @@ function onGlobalKey(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onUnmounted(() => window.removeEventListener('keydown', onGlobalKey))
 
+// On a phone the panel is the whole screen, but the keyboard covers the
+// bottom of it (iOS doesn't shrink the page for it): it takes the part
+// that's visible, so the message box stays above the keyboard.
+const fit = ref<{ top: number; height: number; keyboard: boolean } | null>(null)
+function fitScreen() {
+  const v = window.visualViewport
+  if (!v || window.innerWidth >= 640) {
+    fit.value = null
+    return
+  }
+  fit.value = { top: v.offsetTop, height: v.height, keyboard: window.innerHeight - v.height > 120 }
+}
+const fitStyle = computed(() => (fit.value ? { top: `${fit.value.top}px`, height: `${fit.value.height}px`, bottom: 'auto' } : undefined))
+onMounted(() => {
+  window.visualViewport?.addEventListener('resize', fitScreen)
+  window.visualViewport?.addEventListener('scroll', fitScreen)
+  window.addEventListener('resize', fitScreen)
+  fitScreen()
+})
+onUnmounted(() => {
+  window.visualViewport?.removeEventListener('resize', fitScreen)
+  window.visualViewport?.removeEventListener('scroll', fitScreen)
+  window.removeEventListener('resize', fitScreen)
+})
+
 const left = computed(() => store.left)
 
 // While an answer is on its way, how long it's been (a slow model can take
@@ -166,7 +191,8 @@ onUnmounted(() => clearInterval(tick))
   <aside
     v-if="store.open && store.enabled"
     class="ai-panel"
-    :class="{ big: store.big }"
+    :class="{ big: store.big, keyboard: fit?.keyboard }"
+    :style="fitStyle"
     :aria-label="t('assistant.title')"
     data-testid="assistant-panel"
     @dragover.prevent="onDrag"
@@ -243,7 +269,7 @@ onUnmounted(() => clearInterval(tick))
         <div v-else class="ai-bubble ai-typing" role="status" :aria-label="t('assistant.thinking')"><span /><span /><span /></div>
         <div class="ai-meta" data-testid="assistant-elapsed">{{ fmtTook(Math.max(0, now - store.askedAt)) }}</div>
       </div>
-      <p v-if="store.error" class="ai-error" role="alert" data-testid="assistant-error">{{ store.error }}</p>
+      <p v-if="store.error" class="ai-error" role="alert" data-testid="assistant-error"><TriangleAlert class="mt-px h-4 w-4 flex-none" />{{ store.error }}</p>
     </div>
 
     <footer v-if="view === 'chat'" class="ai-foot">
@@ -392,6 +418,13 @@ onUnmounted(() => clearInterval(tick))
   }
   .ai-foot {
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  /* The keyboard is up: no home bar to keep clear of. */
+  .ai-panel.keyboard .ai-foot {
+    padding-bottom: 8px;
+  }
+  .ai-body {
+    overscroll-behavior: contain;
   }
 }
 .ai-pop-enter-active,
@@ -544,8 +577,15 @@ onUnmounted(() => clearInterval(tick))
   }
 }
 .ai-error {
-  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--crit-bg);
+  box-shadow: inset 0 0 0 0.5px var(--crit-border);
   font-size: 13px;
+  line-height: 1.4;
   color: var(--crit-text);
 }
 .ai-chat {

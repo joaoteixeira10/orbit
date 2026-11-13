@@ -12762,6 +12762,7 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "anthropic",
+                        "gemini",
                         "openai",
                         "ollama"
                     ]
@@ -12857,6 +12858,7 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "anthropic",
+                        "gemini",
                         "openai",
                         "ollama"
                     ]

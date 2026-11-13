@@ -3,7 +3,7 @@ import { api, apiStream } from '@/lib/api'
 // The built-in assistant: the owner's set-up, each person's conversations,
 // and asking (an answer read as it comes: the tools it uses, then the text).
 
-export type AssistantProvider = 'anthropic' | 'openai' | 'ollama'
+export type AssistantProvider = 'anthropic' | 'gemini' | 'openai' | 'ollama'
 
 export interface AssistantStatus {
   enabled: boolean

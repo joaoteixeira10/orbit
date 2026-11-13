@@ -129,7 +129,7 @@ type assistantOwnResponse struct {
 
 type assistantOwnRequest struct {
 	Use      bool   `json:"use"`
-	Provider string `json:"provider" binding:"omitempty,oneof=anthropic openai ollama"`
+	Provider string `json:"provider" binding:"omitempty,oneof=anthropic gemini openai ollama"`
 	Model    string `json:"model" binding:"max=120"`
 	URL      string `json:"url" binding:"max=300"`
 	Key      string `json:"key" binding:"max=500"` // "" keeps the one there is
@@ -194,7 +194,7 @@ func (h *Handlers) setAssistantOwn(c *gin.Context) {
 	if o.URL == "" && o.Provider == assistant.OpenAI {
 		o.URL = "https://api.openai.com/v1"
 	}
-	if o.Provider == assistant.Anthropic {
+	if !assistant.HasURL(o.Provider) {
 		o.URL = ""
 	}
 	if o.URL != "" {
@@ -231,7 +231,10 @@ func (h *Handlers) setAssistantOwn(c *gin.Context) {
 		case o.Provider == assistant.Anthropic && len(o.KeySealed) == 0:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Claude needs an API key"})
 			return
-		case o.Provider != assistant.Anthropic && o.URL == "":
+		case o.Provider == assistant.Gemini && len(o.KeySealed) == 0:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Gemini needs an API key (from Google AI Studio)"})
+			return
+		case assistant.HasURL(o.Provider) && o.URL == "":
 			c.JSON(http.StatusBadRequest, gin.H{"error": "give the server's address"})
 			return
 		case o.Model == "":

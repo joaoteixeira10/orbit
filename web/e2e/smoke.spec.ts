@@ -4094,6 +4094,11 @@ test('the assistant: the owner sets up a model; a person asks, sees what it look
     await page.locator('.subtab', { hasText: 'Owner' }).click()
     const card = page.getByTestId('assistant-admin')
     await card.getByTestId('assistant-enabled').click()
+    // Gemini: a key from AI Studio, no address, its latest Flash.
+    await card.getByTestId('assistant-provider').selectOption('gemini')
+    await expect(card.getByTestId('assistant-model')).toHaveValue('gemini-flash-latest')
+    await expect(card.getByTestId('assistant-url')).toHaveCount(0)
+    await expect(card).toContainText('aistudio.google.com')
     await card.getByTestId('assistant-provider').selectOption('openai')
     await card.getByTestId('assistant-model').fill('fake-model')
     await card.getByTestId('assistant-url').fill(model.url)

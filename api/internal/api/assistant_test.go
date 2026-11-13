@@ -186,6 +186,13 @@ func TestAssistantConfig(t *testing.T) {
 		t.Fatalf("ollama: %+v", cfg)
 	}
 	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"ollama","url":"http://10.0.0.5:11434","model":"qwen3","context":100}`, owner), http.StatusBadRequest, "a tiny context")
+
+	// Gemini: a key from AI Studio, Google's own address, its latest Flash.
+	expect(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"gemini"}`, owner), http.StatusBadRequest, "Gemini with no key")
+	decode(t, authdo(r, "PUT", "/api/v1/assistant/config", `{"enabled":true,"provider":"gemini","key":"AIza-test","url":"http://10.0.0.5:11434"}`, owner), &cfg)
+	if !cfg.HasKey || cfg.Model != "gemini-flash-latest" || cfg.URL != "" {
+		t.Fatalf("gemini: %+v", cfg)
+	}
 }
 
 // TestAssistantAsk: a message is answered with the tools that read, run as

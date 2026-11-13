@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // TestOpenAIErrors: a refused key reads as one, Gemini's 400 included.
@@ -48,5 +49,35 @@ func TestGeminiConfig(t *testing.T) {
 	}
 	if o := p.(*openAI); o.base != GeminiURL {
 		t.Fatalf("base: %s", o.base)
+	}
+}
+
+// TestOpenAIBusy: a busy service is asked again, then its no is passed on.
+func TestOpenAIBusy(t *testing.T) {
+	old := retryWaits
+	retryWaits = []time.Duration{time.Millisecond, time.Millisecond}
+	defer func() { retryWaits = old }()
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		if calls < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"error":{"message":"This model is currently experiencing high demand."}}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"hello"},"finish_reason":"stop"}]}`))
+	}))
+	defer srv.Close()
+	p, _ := Config{Provider: OpenAI, URL: srv.URL, Model: "m"}.New(srv.Client())
+	got, err := p.Answer(context.Background(), Request{History: []Turn{{Role: "user", Text: "hi"}}})
+	if err != nil || got != "hello" || calls != 3 {
+		t.Fatalf("%q %v after %d calls", got, err, calls)
+	}
+	calls = -10 // busy for longer than it waits
+	_, err = p.Answer(context.Background(), Request{History: []Turn{{Role: "user", Text: "hi"}}})
+	var he *HTTPError
+	if !errors.As(err, &he) || !he.Busy() || calls != -7 {
+		t.Fatalf("still busy: %v after %d", err, calls)
 	}
 }

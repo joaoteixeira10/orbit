@@ -18,6 +18,7 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go/v2"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -662,11 +663,12 @@ func (h *Handlers) assistantError(err error) string {
 	}
 	var he *assistant.HTTPError
 	if errors.As(err, &he) {
+		h.log.Warn("assistant: the model's service said no", zap.Int("status", he.Status), zap.String("message", he.Msg))
 		switch {
 		case he.BadKey():
 			return "The model's service refused the API key: ask the owner to check it."
-		case he.Status == http.StatusTooManyRequests:
-			return "The model's service is over its limit right now; try again in a moment."
+		case he.Busy():
+			return "The model's service is too busy right now; try again in a moment, or ask the owner for another model."
 		case he.Status >= 500:
 			return "The model's service is having trouble; try again in a moment."
 		case he.Status == http.StatusNotFound:

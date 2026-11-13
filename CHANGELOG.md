@@ -71,7 +71,9 @@ merge, not at release time.
 
 - The assistant on a phone: the message box stays above the keyboard (it
   was hidden under it on iPhone), and errors show as a card. A key an
-  OpenAI-style service refuses says so, as Claude's does.
+  OpenAI-style service refuses says so, as Claude's does; a busy one (503,
+  429 — Gemini's free keys often are) is asked again twice before the
+  assistant says so, and what it said is in the server's log.
 - The lock PIN dialog opens on top of the note or page being locked, not
   behind it.
 - On a phone, a board's title shows whole, its tools on a line of their own

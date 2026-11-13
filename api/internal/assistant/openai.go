@@ -5,10 +5,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // openAI answers with a model behind an OpenAI-style chat API — OpenAI's
@@ -50,6 +52,11 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("the model's server said: %s (HTTP %d)", e.Msg, e.Status)
 }
 
+// Busy: the service is over its load or its limit for now.
+func (e *HTTPError) Busy() bool {
+	return e.Status == http.StatusServiceUnavailable || e.Status == http.StatusTooManyRequests
+}
+
 // BadKey: the server refused the key (Gemini says so with a 400).
 func (e *HTTPError) BadKey() bool {
 	return e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden ||
@@ -81,7 +88,7 @@ func (m *openAI) Answer(ctx context.Context, r Request) (string, error) {
 		if len(tools) > 0 {
 			body["tools"] = tools
 		}
-		ch, err := m.round(ctx, body, r.Delta)
+		ch, err := m.retried(ctx, body, r.Delta)
 		if err != nil {
 			return "", err
 		}
@@ -119,6 +126,26 @@ func (m *openAI) Answer(ctx context.Context, r Request) (string, error) {
 type oaChoice struct {
 	Message      oaMessage `json:"message"`
 	FinishReason string    `json:"finish_reason"`
+}
+
+// retryWaits: how long to wait before asking again when the service is
+// busy (503, 429) — before any of the answer has come.
+var retryWaits = []time.Duration{2 * time.Second, 5 * time.Second}
+
+// retried is round, asked again while the service is busy.
+func (m *openAI) retried(ctx context.Context, body any, delta func(string)) (oaChoice, error) {
+	for i := 0; ; i++ {
+		ch, err := m.round(ctx, body, delta)
+		var he *HTTPError
+		if i >= len(retryWaits) || !errors.As(err, &he) || !he.Busy() {
+			return ch, err
+		}
+		select {
+		case <-ctx.Done():
+			return ch, err
+		case <-time.After(retryWaits[i]):
+		}
+	}
 }
 
 // round is one chat/completions: streamed (each piece of text to delta, the

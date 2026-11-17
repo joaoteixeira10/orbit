@@ -9,13 +9,15 @@
 FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
+# A stand-in package the overrides point at (web/stubs/no-sass).
+COPY web/stubs ./stubs
 # npm ci: reproducible install from the lockfile (PKI used npm install).
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
 RUN npm run build
 
 # ---------- Stage 2: build the Go binary (SPA embedded) ----------
-FROM --platform=$BUILDPLATFORM golang:1.26.10 AS api
+FROM --platform=$BUILDPLATFORM golang:1.26.11 AS api
 WORKDIR /src/api
 COPY api/go.mod api/go.sum ./
 RUN go mod download

@@ -47,6 +47,18 @@ merge, not at release time.
 - The Konami card has the app's window look, the code lighting up and
   confetti.
 
+### Security
+
+- Go 1.26.11 (GO-2026-6859: a race in Go's HTTP server that could crash
+  it) and `klauspost/compress` 1.20.2 (GO-2026-6865).
+- The web app's tools and libraries updated past their advisories (Vite
+  7.3.7, Vitest 4.1.12, typescript-eslint 8.72.1, Scalar 1.76.4; js-yaml,
+  zod, undici, brace-expansion, minimatch, glob and others pinned to fixed
+  versions). Excalidraw's unused `sass` no longer brings `picomatch`
+  (no fix yet) into the app's dependencies. `npm audit --omit=dev`, govulncheck
+  and Trivy on the image are clean; picomatch remains only inside Vite's
+  build tooling until it's fixed.
+
 ### Fixed
 
 - The bell on a phone showed an old list after the app had been in the

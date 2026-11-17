@@ -2,8 +2,9 @@
 
 A self-hosted planner for every part of your life. Make a **workspace** for
 school, work, home, a shared household — each with only the **modules** it
-needs — and keep everything in one place that looks and feels like an Apple
-app.
+needs — and keep everything in one place, in a calm, clean interface you
+can make your own: light or dark, your accent colour, liquid glass, holiday
+and season themes.
 
 ![Orbit's Today page: overdue and today's tasks across workspaces, the day's events, an exam countdown and quick notes](docs/images/today-light.png)
 

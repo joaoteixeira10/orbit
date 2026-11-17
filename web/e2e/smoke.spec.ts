@@ -3912,17 +3912,14 @@ test('editors keep their own look: Sheets light in a dark Orbit', async ({ page,
   await page.getByRole('button', { name: 'Automatic', exact: true }).first().click()
 })
 
-test('two Konami cards: ↑↑↓↓←→←→ B A, and ↑↑↓↓←→←→ T N', async ({ page }) => {
+test('the Konami card: ↑↑↓↓←→←→ B A', async ({ page }) => {
   await signIn(page, NEW_PASSWORD)
   const arrows = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight']
-  for (const k of [...arrows, 't', 'n']) await page.keyboard.press(k)
-  await expect(page.getByTestId('egg-tn')).toContainText('Tomás Neto')
-  await expect(page.getByTestId('egg-tn').getByRole('link')).toHaveAttribute('href', 'https://github.com/Tomasneto404')
-  await page.keyboard.press('Escape')
-  await expect(page.getByTestId('egg-tn')).toHaveCount(0)
   for (const k of [...arrows, 'b', 'a']) await page.keyboard.press(k)
   await expect(page.getByText('João Teixeira')).toBeVisible()
-  await expect(page.getByTestId('egg-tn')).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'João Teixeira' }).getByRole('link')).toHaveAttribute('href', 'https://github.com/joaoteixeira10')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'João Teixeira' })).toHaveCount(0)
 })
 
 test('documentation: Orbit’s guides in one place — read, follow a link between guides, search', async ({ page }) => {

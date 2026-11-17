@@ -18,9 +18,9 @@ as in PKI Management. Client-certificate login (§5.4) is optional: a project
 may leave it out (LB Admin does).
 
 **Features from PKI, design from the blueprint.** Copy what PKI does, not how it
-looks: pages take the Apple-like look of PROJECT-BLUEPRINT §10.2 (Orbit is the
-reference; LB Admin keeps v0's neutral greys and PKI its own until they move
-over). The one PKI design every project keeps is **how the code is asked for**
+looks: pages take the look of PROJECT-BLUEPRINT §10.2 — shadcn-vue on the
+project's own colours (Orbit is the reference; LB Admin keeps v0's neutral
+greys and PKI its own until they move over). The one PKI design every project keeps is **how the code is asked for**
 — see "The two-factor code prompt" below.
 
 ### The two-factor code prompt (the design to keep)

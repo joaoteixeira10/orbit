@@ -11,7 +11,9 @@ Orbit's own parts: the planner.
    have only the modules they need.
 2. **Private by default, shared on purpose.** A workspace belongs to its
    members; instance administration never grants access to content.
-3. **Feels like an Apple app** on a laptop and on a phone.
+3. **Calm and clean** on a laptop and on a phone: shadcn-vue's components
+   on Orbit's own colours, each person's own look on top (light or dark,
+   accent, liquid glass, themes, animations).
 4. **One small artifact** (a Go binary with the app embedded, SQLite on a
    volume), self-hosted, nothing else to run.
 
@@ -117,11 +119,18 @@ The stores refetch what changed. Reminders arrive the same way
 
 ## Frontend
 
-- **Design system** in `styles/main.css`: Apple's system colours as CSS
-  variables (light in `:root`, dark in `html.dark`), the system font stack
-  (SF Pro on Apple devices), and component classes (`.btn*`, `.seg`, `.card`,
-  `.group`/`.group-row`, `.popover`, `.menu-item`, `.check`, `.tile`,
-  `.material`). `--ws` carries the current workspace's colour.
+- **Design system**: Tailwind CSS 4 and shadcn-vue's components
+  (`components/shadcn/`, `components.json`) on Orbit's own colours — CSS
+  variables in `styles/main.css` (light in `:root`, dark in `html.dark`),
+  mapped to shadcn's names in `styles/shadcn.css` — the system font stack,
+  and Orbit's component classes (`.seg`, `.card`, `.group`/`.group-row`,
+  `.popover`, `.menu-item`, `.check`, `.tile`, `.material`). Every window
+  (`components/ui/Overlay.vue` and the others) shares one look:
+  `--sheet-bg`, `--sheet-ring`. `--ws` carries the current workspace's
+  colour. On top, each person's look: liquid glass (`styles/glass.css`),
+  animations (`lib/motion.ts`, `styles/motion.css`; `html.no-motion` when
+  off or with reduced motion), holiday and season themes
+  (`lib/holidayThemes.ts`, `lib/seasonThemes.ts`, `stores/holiday.ts`).
 - **Shell**: a translucent sidebar (Today, Calendar, Favorites, each
   workspace with its modules and page tree), a drawer below 1024 px, a bottom
   tab bar below 640 px, ⌘K palette, ⌘\ to hide the sidebar.

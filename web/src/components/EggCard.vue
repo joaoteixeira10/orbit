@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// Orbit only: the card behind the Konami codes (KonamiEgg's ↑↑↓↓←→←→ B A,
-// TomasEgg's … T N). The app's own window (the sheet's ground, ring, radius
+// Orbit only: the card behind the Konami code (KonamiEgg's ↑↑↓↓←→←→ B A). The app's own window (the sheet's ground, ring, radius
 // and backdrop: every window looks the same), and the fun in it: the code
 // lights up key by key, the flag waves, the name shimmers, confetti bursts
 // from the card. Escape, a click outside or the close button put it away.

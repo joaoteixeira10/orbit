@@ -25,10 +25,11 @@ domain), **skips**, and what it **adds**.
 - **Installable now, offline later**: the blueprint's "no service worker" holds
   for v0.x; an offline cache with a sync queue is on the roadmap.
 - **English and European Portuguese**, with the parity test.
-- **An Apple look**: the system font, Apple's system colours, translucent
-  sidebar material, sheets, segmented controls, round checkboxes. The
-  developer themes are kept (added back 2026-10-14) as an owner's choice on
-  top of it, with Orbit's own crests.
+- **The look**: shadcn-vue's components on Tailwind 4, on Orbit's own
+  colours (since 2026-11-17; before, an Apple look), with liquid glass,
+  animations with a switch, and holiday and season themes each person may
+  choose. The developer themes are kept as an owner's choice on top of it,
+  with Orbit's own crests.
 
 ## Project blueprint
 

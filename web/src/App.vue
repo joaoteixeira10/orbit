@@ -7,7 +7,6 @@ import ForcePasswordChange from '@/components/ForcePasswordChange.vue'
 import ForceOtpSetup from '@/components/ForceOtpSetup.vue'
 import StepUpModal from '@/components/ui/StepUpModal.vue'
 import KonamiEgg from '@/components/KonamiEgg.vue'
-import TomasEgg from '@/components/TomasEgg.vue'
 import EmbedEditor from '@/components/embeds/EmbedEditor.vue'
 import FileViewerOverlay from '@/components/files/FileViewerOverlay.vue'
 
@@ -28,7 +27,6 @@ onMounted(() => {
   <ForceOtpSetup v-else-if="auth.isAuthenticated && auth.mustSetupOtp" />
   <StepUpModal />
   <KonamiEgg />
-  <TomasEgg />
   <EmbedEditor v-if="auth.isAuthenticated" />
   <FileViewerOverlay v-if="auth.isAuthenticated" />
 </template>

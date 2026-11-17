@@ -14,6 +14,8 @@ import { ago } from '@/components/notes/noteModel'
 import { locale } from '@/lib/dates'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // Settings → Notifications: push on this device (and the others), what each
 // kind of notification reaches besides the bell (devices, channels), the
@@ -142,15 +144,15 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
       </div>
       <div v-if="pushAvailable" class="flex shrink-0 items-center gap-2">
         <template v-if="pushState === 'on'">
-          <span class="pill !bg-ok-bg !text-ok-text">{{ t('notif.deviceOn') }}</span>
-          <button class="btn btn-sm" @click="test">{{ t('notif.sendTest') }}</button>
-          <button class="btn-plain !text-[13px]" :disabled="busy" @click="turnOff">{{ t('notif.turnOff') }}</button>
+          <span class="pill bg-ok-bg! text-ok-text!">{{ t('notif.deviceOn') }}</span>
+          <Button variant="secondary" size="sm" @click="test">{{ t('notif.sendTest') }}</Button>
+          <Button variant="link" class="text-[13px]!" :disabled="busy" @click="turnOff">{{ t('notif.turnOff') }}</Button>
         </template>
-        <button v-else-if="pushState === 'off'" class="btn-primary btn-sm" :disabled="busy" @click="turnOn">{{ t('notif.turnOn') }}</button>
+        <Button size="sm" v-else-if="pushState === 'off'" :disabled="busy" @click="turnOn">{{ t('notif.turnOn') }}</Button>
       </div>
     </div>
 
-    <div v-if="devices.length" class="rounded-xl bg-fill-2 px-3 py-2">
+    <div v-if="devices.length" class="rounded-lg border border-border px-3 py-2">
       <div class="cap mb-1">{{ t('notif.otherDevices') }}</div>
       <div v-for="d in devices" :key="d.id" class="flex items-center gap-2.5 py-1.5 text-[13px]">
         <Smartphone class="h-4 w-4 shrink-0 text-text-3" />
@@ -159,7 +161,7 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
           <span v-if="isThis(d)" class="text-text-3">· {{ t('notif.thisDevice') }}</span>
           <span v-if="d.last_used_at" class="text-[12px] text-text-3"> · {{ t('notif.lastUsed', { when: ago(d.last_used_at, locale()) }) }}</span>
         </span>
-        <button class="icon-btn h-6 w-6" :title="t('notif.removeDevice')" :aria-label="t('notif.removeDevice')" @click="removeDevice(d)"><X class="h-3.5 w-3.5" /></button>
+        <Button variant="ghost" size="icon" class="text-text-2 h-6 w-6" :title="t('notif.removeDevice')" :aria-label="t('notif.removeDevice')" @click="removeDevice(d)"><X class="h-3.5 w-3.5" /></Button>
       </div>
     </div>
 
@@ -172,7 +174,7 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
       <div class="flex shrink-0 items-center gap-2">
         <label v-if="prefs.digest_enabled" class="flex items-center gap-1.5 text-[13px] text-text-2">
           {{ t('notif.digestAt') }}
-          <input type="time" class="input !w-auto !py-1 text-[13px]" :value="prefs.digest_time" @change="save({ digest_time: ($event.target as HTMLInputElement).value })" />
+          <Input type="time" class="w-auto! py-1! text-[13px]" :model-value="prefs.digest_time" @change="save({ digest_time: ($event.target as HTMLInputElement).value })" />
         </label>
         <Toggle :model-value="prefs.digest_enabled" :aria-label="t('notif.digest')" @update:model-value="(v) => save({ digest_enabled: v })" />
       </div>
@@ -182,17 +184,17 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
     <div class="border-t border-border pt-5" data-testid="quiet-hours">
       <div class="flex items-center justify-between gap-4">
         <div class="min-w-0">
-          <div class="text-[13px] font-semibold">{{ t('quiet.title') }}<span v-if="prefs.quiet" class="pill ml-2 !py-0 text-[11px]">{{ t('quiet.now') }}</span></div>
+          <div class="text-[13px] font-semibold">{{ t('quiet.title') }}<span v-if="prefs.quiet" class="pill ml-2 py-0! text-[11px]">{{ t('quiet.now') }}</span></div>
           <div class="text-[12px] text-text-3">{{ t('quiet.hint') }}</div>
         </div>
         <Toggle :model-value="!!prefs.quiet_from" :aria-label="t('quiet.on')" @update:model-value="(v) => save(v ? { quiet_from: '22:00', quiet_to: '07:00' } : { quiet_from: '', quiet_to: '' })" />
       </div>
       <div v-if="prefs.quiet_from" class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-text-2">
         <label class="flex items-center gap-1.5">{{ t('quiet.from') }}
-          <input type="time" class="input !w-auto !py-1 text-[13px]" :value="prefs.quiet_from" @change="save({ quiet_from: ($event.target as HTMLInputElement).value })" />
+          <Input type="time" class="w-auto! py-1! text-[13px]" :model-value="prefs.quiet_from" @change="save({ quiet_from: ($event.target as HTMLInputElement).value })" />
         </label>
         <label class="flex items-center gap-1.5">{{ t('quiet.to') }}
-          <input type="time" class="input !w-auto !py-1 text-[13px]" :value="prefs.quiet_to" @change="save({ quiet_to: ($event.target as HTMLInputElement).value })" />
+          <Input type="time" class="w-auto! py-1! text-[13px]" :model-value="prefs.quiet_to" @change="save({ quiet_to: ($event.target as HTMLInputElement).value })" />
         </label>
         <label class="ml-auto flex items-center gap-2" :title="t('quiet.remindersHint')">
           {{ t('quiet.reminders') }}
@@ -231,7 +233,7 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
           </Checkbox>
         </div>
         <!-- Chats, topics and webhooks are the owner's: others may read them. -->
-        <div v-if="prefs.notify_channels.some((c) => c !== 'email')" class="mt-4 flex items-start gap-3 rounded-xl bg-fill-2 p-3" data-testid="channel-details">
+        <div v-if="prefs.notify_channels.some((c) => c !== 'email')" class="mt-4 flex items-start gap-3 rounded-lg border border-border p-3" data-testid="channel-details">
           <div class="min-w-0 flex-1">
             <div class="text-[13.5px]">{{ t('notif.details') }}</div>
             <div class="mt-0.5 text-[12px] text-text-3">{{ prefs.channel_details ? t('notif.detailsOn') : t('notif.detailsOff') }}</div>
@@ -239,7 +241,7 @@ const isThis = (d: PushDevice) => pushState.value === 'on' && d.user_agent === n
           <Toggle :model-value="prefs.channel_details" :aria-label="t('notif.details')" @update:model-value="(v) => save({ channel_details: v })" />
         </div>
       </template>
-      <p v-else-if="!ownOn" class="mt-2 rounded-xl bg-fill-2 p-3 text-[12px] text-text-3">{{ t('notif.noChannels') }}</p>
+      <p v-else-if="!ownOn" class="mt-2 rounded-lg border border-border p-3 text-[12px] text-text-3">{{ t('notif.noChannels') }}</p>
       <PersonalChannels v-if="ownOn" class="mt-5" :allowed="personalKinds" @count="(n) => (ownCount = n)" @added="onOwnAdded" />
     </div>
   </div>

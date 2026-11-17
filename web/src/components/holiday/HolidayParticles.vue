@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useHolidayStore } from '@/stores/holiday'
 import { particleLayout } from '@/lib/holidayThemes'
 
-// The holiday's snow, bats, confetti or petals over the window: never a
+// The holiday's or season's snow, bats, confetti, petals or leaves over the window: never a
 // click, as many as fit the window's size (the counts are for 1440 × 900),
 // still while the window is hidden. Mounted only with Effects on and motion
 // allowed (Home decides).
@@ -33,7 +33,7 @@ onUnmounted(() => {
   document.documentElement.classList.remove('holiday-paused')
 })
 
-const p = computed(() => holiday.active?.particles ?? null)
+const p = computed(() => holiday.look?.particles ?? null)
 const items = computed(() => (p.value ? particleLayout(p.value, 0, area.value) : []))
 </script>
 

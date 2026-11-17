@@ -14,6 +14,8 @@ import type { PptDeck } from '@/lib/pptx'
 import type { SheetData } from '@/lib/sheet'
 import { locale } from '@/lib/dates'
 import { ago } from '@/components/notes/noteModel'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A file shown in place: a PDF's pages, a Word document as a page to read,
 // a spreadsheet's tabs, a presentation's slides, a picture, a video or a
@@ -226,12 +228,12 @@ const sub = computed(() => {
         <div class="truncate text-[15px] font-semibold" data-testid="viewer-name">{{ meta?.name ?? '' }}</div>
         <div class="truncate text-[12px] text-text-3">{{ sub }}</div>
       </div>
-      <select v-if="versions.length > 1" v-model="version" class="input !w-auto !py-1 text-[12.5px]" :aria-label="t('drive.versions')" data-testid="viewer-version">
+      <NativeSelect size="sm" v-if="versions.length > 1" v-model="version" class="w-auto" :aria-label="t('drive.versions')" data-testid="viewer-version">
         <option v-for="(v, i) in versions" :key="v.id" :value="v.id">v{{ versions.length - i }} · {{ ago(v.created_at, loc) }}{{ v.current ? ` · ${t('drive.current')}` : '' }}</option>
-      </select>
-      <button v-if="meta?.on_id" type="button" class="btn btn-sm" data-testid="viewer-open-on" @click="openOn"><ExternalLink class="h-3.5 w-3.5" />{{ t(`drive.openOn.${meta.on_kind}`) }}</button>
-      <button type="button" class="btn btn-sm" data-testid="viewer-download" @click="download"><Download class="h-3.5 w-3.5" />{{ t('drive.download') }}</button>
-      <button v-if="closable" type="button" class="icon-btn h-8 w-8" :aria-label="t('common.close')" data-testid="viewer-close" @click="emit('close')"><X class="h-4 w-4" /></button>
+      </NativeSelect>
+      <Button variant="secondary" size="sm" v-if="meta?.on_id" type="button" data-testid="viewer-open-on" @click="openOn"><ExternalLink class="h-3.5 w-3.5" />{{ t(`drive.openOn.${meta.on_kind}`) }}</Button>
+      <Button variant="secondary" size="sm" type="button" data-testid="viewer-download" @click="download"><Download class="h-3.5 w-3.5" />{{ t('drive.download') }}</Button>
+      <Button variant="ghost" size="icon" v-if="closable" type="button" class="text-text-2 h-8 w-8" :aria-label="t('common.close')" data-testid="viewer-close" @click="emit('close')"><X class="h-4 w-4" /></Button>
     </header>
 
     <div class="v-body">
@@ -240,7 +242,7 @@ const sub = computed(() => {
       <div v-else-if="kind === 'none' && meta" class="v-note" data-testid="viewer-none">
         <FileIcon class="h-10 w-10 text-text-3" />
         <p>{{ t('viewer.none') }}</p>
-        <button type="button" class="btn-primary" @click="download"><Download class="h-4 w-4" />{{ t('drive.download') }}</button>
+        <Button type="button" @click="download"><Download class="h-4 w-4" />{{ t('drive.download') }}</Button>
       </div>
 
       <div v-else-if="kind === 'pdf'" ref="pdfEl" class="v-pdf" data-testid="viewer-pdf">
@@ -317,7 +319,7 @@ const sub = computed(() => {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 .v-body {
@@ -345,7 +347,7 @@ const sub = computed(() => {
 .v-pdf canvas {
   width: min(100%, 900px);
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border);
 }
 .v-paper {
   max-width: 820px;
@@ -354,7 +356,7 @@ const sub = computed(() => {
   border-radius: 4px;
   background: #fff;
   color: #1c1c1e;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border);
 }
 .v-paper {
   font-size: 15px;
@@ -471,13 +473,13 @@ const sub = computed(() => {
 .v-tabs button.on {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .v-grid {
   overflow: auto;
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .v-grid table {
   border-collapse: collapse;
@@ -488,7 +490,7 @@ const sub = computed(() => {
   min-width: 64px;
   max-width: 320px;
   padding: 4px 8px;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -514,7 +516,7 @@ const sub = computed(() => {
   overflow: hidden;
   container-type: inline-size;
   color: #1c1c1e;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 0 0 0.5px var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--border);
 }
 .v-shape {
   position: absolute;

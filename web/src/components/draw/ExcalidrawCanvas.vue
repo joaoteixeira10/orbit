@@ -164,5 +164,15 @@ defineExpose({ snapshot, replace, sceneNow })
 /* Excalidraw's own styles take over inside; keep its font stack. */
 .excalidraw-host :deep(.excalidraw) {
   --ui-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  /* Its controls in the app's look (shadcn's): the person's accent, shadcn's
+     corners and floating-panel shadow. Its light/dark grounds stay its own
+     (a whiteboard can be kept light or dark apart from the app). */
+  --color-primary: var(--accent);
+  --color-primary-darker: var(--accent-strong);
+  --color-primary-darkest: var(--accent-strong);
+  --color-primary-light: var(--accent-bg);
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  --shadow-island: 0 0 0 1px rgb(0 0 0 / 0.08), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 </style>

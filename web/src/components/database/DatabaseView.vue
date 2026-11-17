@@ -19,6 +19,8 @@ import { locale } from '@/lib/dates'
 import { fileName } from '@/lib/markdown'
 import { isGoogleSheet, sheetsApi } from '@/lib/sheetsApi'
 import type { SheetData } from '@/lib/sheet'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A database page's table: its rows (the pages inside it) with a column per
 // property, through the chosen view — a table or a board by a select
@@ -332,15 +334,15 @@ function drop(col: string) {
         >
           <component :is="v.type === 'board' ? Columns3 : Table2" class="h-3.5 w-3.5" />{{ v.name }}
         </button>
-        <button v-if="editable" ref="addAnchor" type="button" class="icon-btn h-7 w-7" :title="t('db.addView')" :aria-label="t('db.addView')" data-testid="db-add-view" @click="addOpen = !addOpen"><Plus class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" v-if="editable" ref="addAnchor" type="button" class="text-text-2 h-7 w-7" :title="t('db.addView')" :aria-label="t('db.addView')" data-testid="db-add-view" @click="addOpen = !addOpen"><Plus class="h-4 w-4" /></Button>
       </div>
       <div class="flex items-center gap-1.5">
-        <button v-if="editable && view.id !== '_'" type="button" class="icon-btn h-7 w-7" :aria-label="t('db.viewOptions')" @click="openViewMenu(view.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" v-if="editable && view.id !== '_'" type="button" class="text-text-2 h-7 w-7" :aria-label="t('db.viewOptions')" @click="openViewMenu(view.id, $event)"><MoreHorizontal class="h-4 w-4" /></Button>
         <span v-if="progress" class="flex items-center gap-1 text-[12px] text-text-3" data-testid="db-importing"><LoaderCircle class="h-3.5 w-3.5 animate-spin" />{{ progress.total ? t('db.sheet.progress', { done: progress.done, total: progress.total }) : t('db.sheet.reading') }}</span>
-        <button ref="fileAnchor" type="button" class="icon-btn h-7 w-7" :title="t('db.sheet.menu')" :aria-label="t('db.sheet.menu')" data-testid="db-sheet-menu" @click="fileMenu = !fileMenu"><FileSpreadsheet class="h-4 w-4" /></button>
-        <button type="button" class="icon-btn h-7 w-7" :title="t('forms.title')" :aria-label="t('forms.title')" data-testid="db-forms" @click="formsOpen = true"><ClipboardList class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" ref="fileAnchor" type="button" class="text-text-2 h-7 w-7" :title="t('db.sheet.menu')" :aria-label="t('db.sheet.menu')" data-testid="db-sheet-menu" @click="fileMenu = !fileMenu"><FileSpreadsheet class="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :title="t('forms.title')" :aria-label="t('forms.title')" data-testid="db-forms" @click="formsOpen = true"><ClipboardList class="h-4 w-4" /></Button>
         <ViewTools :db="db" :view="view" :editable="editable" :members="members" @update="saveView" />
-        <button v-if="editable" type="button" class="btn-primary btn-sm" data-testid="db-new-row" @click="startAdd(view.type === 'board' ? board[0]?.key ?? '' : 'table')"><Plus class="h-3.5 w-3.5" />{{ t('db.new') }}</button>
+        <Button size="sm" v-if="editable" type="button" data-testid="db-new-row" @click="startAdd(view.type === 'board' ? board[0]?.key ?? '' : 'table')"><Plus class="h-3.5 w-3.5" />{{ t('db.new') }}</Button>
       </div>
     </div>
 
@@ -360,8 +362,8 @@ function drop(col: string) {
           <button type="button" class="menu-item w-full" :disabled="!!progress" @click="fileEl?.click()"><Upload class="h-4 w-4 text-text-2" />{{ t('db.sheet.importFile') }}</button>
           <button v-if="!googleOpen" type="button" class="menu-item w-full" :disabled="!!progress" data-testid="db-google" @click="openGoogle"><Link class="h-4 w-4 text-text-2" />{{ t('db.sheet.importGoogle') }}</button>
           <form v-else class="flex gap-1.5 px-1 py-1" @submit.prevent="fromGoogle">
-            <input v-model="googleLink" ref="googleEl" class="field min-w-0 flex-1 !py-1 text-[13px]" :placeholder="t('db.sheet.googlePlaceholder')" :aria-label="t('db.sheet.importGoogle')" data-testid="db-google-link" />
-            <button type="submit" class="btn-primary btn-sm" :disabled="!googleLink.trim()">{{ t('db.sheet.bring') }}</button>
+            <input v-model="googleLink" ref="googleEl" class="field min-w-0 flex-1 py-1! text-[13px]" :placeholder="t('db.sheet.googlePlaceholder')" :aria-label="t('db.sheet.importGoogle')" data-testid="db-google-link" />
+            <Button size="sm" type="submit" :disabled="!googleLink.trim()">{{ t('db.sheet.bring') }}</Button>
           </form>
           <p class="px-2.5 pb-1 pt-1.5 text-[11.5px] leading-snug text-text-3">{{ t('db.sheet.hint') }}</p>
         </template>
@@ -369,13 +371,13 @@ function drop(col: string) {
     </Popover>
     <Popover v-if="viewMenu" :anchor="viewMenu.anchor" :width="240" @close="closeViewMenu">
       <div class="space-y-2 p-2.5">
-        <input v-model="viewName" class="field !py-1.5 text-[13.5px]" :aria-label="t('db.viewName')" maxlength="100" @keydown.enter.prevent="closeViewMenu" />
+        <input v-model="viewName" class="field py-1.5! text-[13.5px]" :aria-label="t('db.viewName')" maxlength="100" @keydown.enter.prevent="closeViewMenu" />
         <label v-if="views.find((v) => v.id === viewMenu!.id)?.type === 'board'" class="flex items-center gap-2 text-[13px] text-text-2">
           {{ t('db.groupBy') }}
-          <select class="input ml-auto !w-auto !py-1 text-[13px]" :value="views.find((v) => v.id === viewMenu!.id)?.group_by ?? ''" @change="saveView({ ...views.find((v) => v.id === viewMenu!.id)!, group_by: ($event.target as HTMLSelectElement).value || undefined })">
+          <NativeSelect size="sm" class="ml-auto w-auto" :model-value="views.find((v) => v.id === viewMenu!.id)?.group_by ?? ''" @change="saveView({ ...views.find((v) => v.id === viewMenu!.id)!, group_by: ($event.target as HTMLSelectElement).value || undefined })">
             <option value="">—</option>
             <option v-for="p in selects" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </select>
+          </NativeSelect>
         </label>
         <button v-if="db.views.length > 1" type="button" class="menu-item danger w-full" @click="deleteView(viewMenu!.id)"><Trash2 class="h-4 w-4" />{{ t('db.deleteView') }}</button>
       </div>
@@ -391,7 +393,7 @@ function drop(col: string) {
               <button type="button" class="th-btn" :disabled="!editable" data-testid="db-col" @click="openProp(p, $event)">{{ p.name }}</button>
             </th>
             <th v-if="editable" class="add-col">
-              <button type="button" class="icon-btn h-6 w-6" :title="t('db.addProp')" :aria-label="t('db.addProp')" data-testid="db-add-prop" @click="newProp"><Plus class="h-4 w-4" /></button>
+              <Button variant="ghost" size="icon" type="button" class="text-text-2 h-6 w-6" :title="t('db.addProp')" :aria-label="t('db.addProp')" data-testid="db-add-prop" @click="newProp"><Plus class="h-4 w-4" /></Button>
             </th>
           </tr>
         </thead>
@@ -410,8 +412,8 @@ function drop(col: string) {
           </tr>
           <tr v-if="editable">
             <td :colspan="columns.length + 2" class="add-row">
-              <input v-if="adding === 'table'" ref="addInput" v-model="draft" class="field !py-1 text-[13.5px]" :placeholder="t('db.rowName')" maxlength="300" data-testid="db-row-input" @keydown.enter="addRow()" @keydown.esc="adding = null" @blur="draft.trim() ? addRow() : (adding = null)" />
-              <button v-else type="button" class="btn-plain !text-[13px]" @click="startAdd('table')"><Plus class="h-4 w-4" />{{ t('db.new') }}</button>
+              <input v-if="adding === 'table'" ref="addInput" v-model="draft" class="field py-1! text-[13.5px]" :placeholder="t('db.rowName')" maxlength="300" data-testid="db-row-input" @keydown.enter="addRow()" @keydown.esc="adding = null" @blur="draft.trim() ? addRow() : (adding = null)" />
+              <Button variant="link" v-else type="button" class="text-[13px]!" @click="startAdd('table')"><Plus class="h-4 w-4" />{{ t('db.new') }}</Button>
             </td>
           </tr>
         </tbody>
@@ -466,8 +468,8 @@ function drop(col: string) {
             </template>
           </div>
         </div>
-        <input v-if="adding === c.key" ref="addInput" v-model="draft" class="field mt-1 !py-1 text-[13.5px]" :placeholder="t('db.rowName')" maxlength="300" @keydown.enter="addRow(c.key)" @keydown.esc="adding = null" @blur="draft.trim() ? addRow(c.key) : (adding = null)" />
-        <button v-else-if="editable" type="button" class="btn-plain mt-1 !text-[13px]" @click="startAdd(c.key)"><Plus class="h-4 w-4" />{{ t('db.new') }}</button>
+        <input v-if="adding === c.key" ref="addInput" v-model="draft" class="field mt-1 py-1! text-[13.5px]" :placeholder="t('db.rowName')" maxlength="300" @keydown.enter="addRow(c.key)" @keydown.esc="adding = null" @blur="draft.trim() ? addRow(c.key) : (adding = null)" />
+        <Button variant="link" v-else-if="editable" type="button" class="mt-1 text-[13px]!" @click="startAdd(c.key)"><Plus class="h-4 w-4" />{{ t('db.new') }}</Button>
       </div>
     </div>
 
@@ -497,7 +499,7 @@ function drop(col: string) {
   justify-content: space-between;
   gap: 8px;
   padding-bottom: 8px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .db-views {
   display: flex;
@@ -533,7 +535,7 @@ function drop(col: string) {
 }
 .db-table th {
   padding: 6px 4px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   text-align: left;
   font-size: 12px;
   font-weight: 600;
@@ -544,7 +546,7 @@ function drop(col: string) {
   min-width: 120px;
   max-width: 280px;
   padding: 1px 2px;
-  border-bottom: 0.5px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
   vertical-align: middle;
 }
 .db-table .name-col {
@@ -581,7 +583,7 @@ function drop(col: string) {
 }
 .total-cell {
   border-bottom: 0 !important;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .total {
   position: relative;
@@ -638,7 +640,7 @@ function drop(col: string) {
   padding: 8px 10px;
   border-radius: 9px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border), var(--shadow-sm);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-sm);
   cursor: pointer;
 }
 </style>

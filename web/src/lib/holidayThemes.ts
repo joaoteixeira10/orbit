@@ -60,6 +60,19 @@ export type Particles =
       count: number; path: string; size: [number, number]; dur: [number, number]; opacity: [number, number];
     };
 
+/** What colours and dresses the app: a holiday, or a season (a season has
+ *  no mark, countdown or moon: its colours, what hangs on Home, a card's
+ *  corner, and what falls). */
+export type LookArt = Pick<Art, 'tile' | 'tileIcon' | 'iconBoxes' | 'done' | 'bars' | 'festiveBar'> & Partial<Pick<Art, 'cardCorner'>>;
+export interface Look {
+  id: string;
+  tokens: Record<Mode, Tokens>;
+  art: LookArt;
+  decor?: Decor | null;
+  extraDecor?: Decor;
+  particles: Particles;
+}
+
 export interface Holiday {
   id: HolidayId;
   tokens: Record<Mode, Tokens>;
@@ -117,10 +130,9 @@ export function lightsLayout(n = 24) {
 }
 
 /** Santos Populares bunting: deep scallops with k flags along each curve. */
-export function buntingLayout(N = 6, Q = 40, k = 7, flagW = 14) {
+export function buntingLayout(N = 6, Q = 40, k = 7, flagW = 14, colors = ['#ff4d4d', '#ffd23f', '#3ccf6e', '#3fa9ff', '#ff7ac6', '#ff9f1c']) {
   let wire = 'M0,4';
   for (let i = 0; i < N; i++) wire += ` Q${i * 10 + 5},${Q} ${i * 10 + 10},4`;
-  const colors = ['#ff4d4d', '#ffd23f', '#3ccf6e', '#3fa9ff', '#ff7ac6', '#ff9f1c'];
   const flags: { leftPct: number; topPx: number; color: string; swayDur: number; swayDelay: number }[] = [];
   let c = 0;
   for (let i = 0; i < N; i++) for (let j = 0; j < k; j++) {
@@ -177,7 +189,7 @@ export function particleLayout(p: Particles, seed = 0, area = 1) {
 }
 
 /** Builds full tokens from an accent set (used by NYE, Easter, Santos, Lunar). */
-function fromAccents(mode: Mode, t: {
+export function fromAccents(mode: Mode, t: {
   bg: string; side: string; card: string; field: string; text: string; muted: string; faint: string;
   a1: string; a2: string; a3: string; late: string; check: string; switchOff: string; glow: string;
   thread: string; wire: string; chipBg: string; chipText: string; chipLine: string;
@@ -196,11 +208,17 @@ function fromAccents(mode: Mode, t: {
 const ring = (stroke: string, cx = 13, cy = 15, rot = -16, rx = 12, ry = 3.3) =>
   `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="${stroke}" stroke-width="1.5" transform="rotate(${rot} ${cx} ${cy})"/>`;
 
+// Snow along a card's top edge (Christmas, winter): one path per card.
+export const SNOWCAP: [string, string] = [
+  'M0,10 C30,2 60,4 90,6 S150,0 200,4 S270,2 320,5 S380,3 400,10 C380,14 360,11 340,13 S300,16 280,12 S240,15 220,12 S180,14 160,11 S120,15 100,12 S50,14 0,10 Z',
+  'M0,10 C40,3 70,6 110,4 S170,1 210,5 S260,1 300,4 S370,2 400,10 C370,14 350,11 320,13 S280,15 250,12 S200,15 180,12 S130,14 110,11 S60,15 0,10 Z',
+];
+
 // Shared particle shapes (path d)
 const RECT = 'M0 2h10v6H0z';                                      // viewBox 0 0 10 10
 const TRI = 'M0 0h8l-4 10z';                                       // viewBox 0 0 10 10
-const PETAL = 'M5 0C8.5 2 9.5 6 5 10C0.5 6 1.5 2 5 0z';            // viewBox 0 0 10 10
-const DOT = 'M5 0a5 5 0 1 0 0 10a5 5 0 1 0 0-10z';                 // viewBox 0 0 10 10
+export const PETAL = 'M5 0C8.5 2 9.5 6 5 10C0.5 6 1.5 2 5 0z';            // viewBox 0 0 10 10
+export const DOT = 'M5 0a5 5 0 1 0 0 10a5 5 0 1 0 0-10z';                 // viewBox 0 0 10 10
 const STAR = 'M10 1l2.6 5.6 6.1.7-4.5 4.2 1.2 6L10 14.6 4.6 17.5l1.2-6L1.3 7.3l6.1-.7z'; // viewBox 0 0 20 20
 export const BAT = 'M12 2.6L11.1 0.8L12 1.8L12.9 0.8L12 2.6C13.4 2.6 14 4 14 4C16 1.5 20 1 24 3C21.5 3.5 20.5 5.5 20.5 7C19 5.8 17.5 6.2 16.5 7.5C15.5 6.2 14 6.5 12 9C10 6.5 8.5 6.2 7.5 7.5C6.5 6.2 5 5.8 3.5 7C3.5 5.5 2.5 3.5 0 3C4 1 8 1.5 10 4C10 4 10.6 2.6 12 2.6Z'; // viewBox 0 0 24 12
 
@@ -248,10 +266,7 @@ export const HOLIDAYS: Holiday[] = [
       festiveBar: 'repeating-linear-gradient(160deg,#f0525a 0 5px,#f4f7f5 5px 10px)', // candy cane
       cardCorner: {
         kind: 'snowcap', // viewBox 0 0 400 18, preserveAspectRatio none; fill tokens.cap, stroke tokens.capLine
-        paths: [
-          'M0,10 C30,2 60,4 90,6 S150,0 200,4 S270,2 320,5 S380,3 400,10 C380,14 360,11 340,13 S300,16 280,12 S240,15 220,12 S180,14 160,11 S120,15 100,12 S50,14 0,10 Z',
-          'M0,10 C40,3 70,6 110,4 S170,1 210,5 S260,1 300,4 S370,2 400,10 C370,14 350,11 320,13 S280,15 250,12 S200,15 180,12 S130,14 110,11 S60,15 0,10 Z',
-        ],
+        paths: SNOWCAP,
       },
     },
     decor: { kind: 'lights', count: 24, colors: ['#ff4d5e', '#ffc94a', '#4fd18b', '#fff3d6'] },
@@ -308,7 +323,7 @@ export const HOLIDAYS: Holiday[] = [
       svg: () => `<svg viewBox="0 0 20 16" width="22" height="18"><path d="M7 7L2 3M7 8L1 8M7 9L2 13M8 10L5 15M13 7L18 3M13 8L19 8M13 9L18 13M12 10L15 15" stroke="var(--h-spider)" stroke-width="1.2" stroke-linecap="round" fill="none"/><ellipse cx="10" cy="9.5" rx="3.6" ry="4.2" fill="var(--h-spider)"/><circle cx="10" cy="4.6" r="2.3" fill="var(--h-spider)"/><circle cx="9.1" cy="4.4" r="0.6" fill="#ff7a1a"/><circle cx="10.9" cy="4.4" r="0.6" fill="#ff7a1a"/></svg>`,
     },
     particles: { kind: 'fly', count: 7, path: BAT, size: [18, 34], dur: [14, 26], opacity: [0.55, 0.95] }, // fill var(--h-bat); height = width/2
-    window: y => ({ start: d(y, 10, 15), end: d(y, 11, 1), peak: d(y, 10, 31) }),
+    window: y => ({ start: d(y, 10, 25), end: d(y, 10, 31), peak: d(y, 10, 31) }),
   },
 
   // ── New Year's Eve ──
@@ -398,7 +413,7 @@ export const HOLIDAYS: Holiday[] = [
     },
     decor: { kind: 'bunting', scallops: 6, depth: 40, perScallop: 7, colors: ['#ff4d4d', '#ffd23f', '#3ccf6e', '#3fa9ff', '#ff7ac6', '#ff9f1c'] },
     particles: { kind: 'fall', count: 45, viewBox: '0 0 10 10', shapes: [RECT, TRI], colors: ['#ff4d4d', '#ffd23f', '#3ccf6e', '#3fa9ff', '#ff7ac6'], size: [5, 9], dur: [9, 16], spin: 'fast', opacity: [0.6, 1] },
-    window: y => ({ start: d(y, 6, 1), end: d(y, 6, 30), peak: d(y, 6, 13) }),
+    window: y => ({ start: d(y, 6, 10), end: d(y, 6, 14), peak: d(y, 6, 13) }), // Santo António's days
   },
 
   // ── Lunar New Year ──
@@ -431,7 +446,7 @@ export const HOLIDAYS: Holiday[] = [
       const md = LUNAR_NEW_YEAR[y];
       if (!md) return { start: d(y, 1, 1), end: d(y, 1, 0), peak: d(y, 1, 1) }; // empty window
       const p = d(y, md[0], md[1]);
-      return { start: addDays(p, -7), end: addDays(p, 15), peak: p };
+      return { start: addDays(p, -3), end: addDays(p, 4), peak: p }; // the festival's first days
     },
   },
 ];
@@ -488,7 +503,7 @@ export function countdown(h: Holiday, now = new Date()): Countdown {
 }
 
 /** Tokens → CSS custom properties (prefix --h-). Apply on the app root. */
-export function cssVars(h: Holiday, mode: Mode): Record<string, string> {
+export function cssVars(h: Look, mode: Mode): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(h.tokens[mode])) out[`--h-${k}`] = v;
   return out;

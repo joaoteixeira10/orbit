@@ -13,6 +13,8 @@ import {
 } from '@/lib/sketch'
 import { useToastStore } from '@/stores/toast'
 import type { Snapshot } from './drawing'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // Quick Draw's own canvas: pens, a pencil, a marker, a highlighter and a
 // brush that answer a stylus's pressure; any colour; an eraser that takes
@@ -940,24 +942,23 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
     <Popover v-if="layersOpen" :anchor="layersEl" :width="290" placement="bottom-end" @close="(layersOpen = false), (renaming = '')">
       <div class="p-2" data-testid="sketch-layers-menu">
         <div v-for="l in layersTopFirst" :key="l.id" class="layer" :class="{ on: l.id === active }" data-testid="sketch-layer" @click="active = l.id">
-          <button type="button" class="icon-btn h-7 w-7 shrink-0" :aria-label="l.visible ? t('sketch.hide') : t('sketch.show')" @click.stop="setLayer(l.id, { visible: !l.visible })">
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7 shrink-0" :aria-label="l.visible ? t('sketch.hide') : t('sketch.show')" @click.stop="setLayer(l.id, { visible: !l.visible })">
             <Eye v-if="l.visible" class="h-4 w-4" /><EyeOff v-else class="h-4 w-4 text-text-3" />
-          </button>
-          <input
-            v-if="renaming === l.id"
-            class="input min-w-0 flex-1 !py-0.5 text-[13px]"
-            :value="l.name"
-            maxlength="60"
-            :aria-label="t('sketch.layerName')"
-            @click.stop
-            @keydown.enter="($event.target as HTMLInputElement).blur()"
-            @blur="(setLayer(l.id, { name: ($event.target as HTMLInputElement).value.trim() || l.name }), (renaming = ''))"
-          />
+          </Button>
+          <Input
+ v-if="renaming === l.id"
+ class="min-w-0 flex-1 py-0.5! text-[13px]"
+ :model-value="l.name"
+ maxlength="60"
+ :aria-label="t('sketch.layerName')"
+ @click.stop
+ @keydown.enter="($event.target as HTMLInputElement).blur()"
+ @blur="(setLayer(l.id, { name: ($event.target as HTMLInputElement).value.trim() || l.name }), (renaming = ''))" />
           <span v-else class="min-w-0 flex-1 truncate text-[13px]" @dblclick.stop="renaming = l.id">{{ l.name }}</span>
           <span class="text-[11px] tabular-nums text-text-3">{{ l.items.length }}</span>
-          <button type="button" class="icon-btn h-6 w-6 shrink-0" :aria-label="t('sketch.up')" @click.stop="shiftLayer(l.id, 1)"><ChevronUp class="h-3.5 w-3.5" /></button>
-          <button type="button" class="icon-btn h-6 w-6 shrink-0" :aria-label="t('sketch.down')" @click.stop="shiftLayer(l.id, -1)"><ChevronDown class="h-3.5 w-3.5" /></button>
-          <button v-if="sketch.layers.length > 1" type="button" class="icon-btn h-6 w-6 shrink-0" :aria-label="t('sketch.deleteLayer')" @click.stop="removeLayer(l.id)"><Trash2 class="h-3.5 w-3.5" /></button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-6 w-6 shrink-0" :aria-label="t('sketch.up')" @click.stop="shiftLayer(l.id, 1)"><ChevronUp class="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-6 w-6 shrink-0" :aria-label="t('sketch.down')" @click.stop="shiftLayer(l.id, -1)"><ChevronDown class="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" v-if="sketch.layers.length > 1" type="button" class="text-text-2 h-6 w-6 shrink-0" :aria-label="t('sketch.deleteLayer')" @click.stop="removeLayer(l.id)"><Trash2 class="h-3.5 w-3.5" /></Button>
         </div>
         <label v-if="layerOf()" class="mt-2 flex items-center gap-2 px-2 text-[12px] text-text-3">
           {{ t('sketch.layerOpacity') }}
@@ -972,9 +973,9 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
       <form class="space-y-2 p-3" @submit.prevent="pdf && placePdf(pdf.doc, pdf.page, pdf.name)">
         <label class="flex items-center gap-2 text-[13px]">
           {{ t('sketch.whichPage', { n: pdf.doc.numPages }) }}
-          <input class="input !w-20 !py-1" type="number" min="1" :max="pdf.doc.numPages" :value="pdf.page" data-testid="sketch-pdf-page" @input="pdf = { ...pdf!, page: Math.min(pdf!.doc.numPages, Math.max(1, Number(($event.target as HTMLInputElement).value) || 1)) }" />
+          <Input class="w-20! py-1!" type="number" min="1" :max="pdf.doc.numPages" :model-value="pdf.page" data-testid="sketch-pdf-page" @input="pdf = { ...pdf!, page: Math.min(pdf!.doc.numPages, Math.max(1, Number(($event.target as HTMLInputElement).value) || 1)) }" />
         </label>
-        <button type="submit" class="btn-primary btn-sm w-full justify-center">{{ t('sketch.putIn') }}</button>
+        <Button size="sm" type="submit" class="w-full justify-center">{{ t('sketch.putIn') }}</Button>
       </form>
     </Popover>
     <div v-if="alertText" class="snapped error" role="alert" @click="alertText = ''">{{ alertText }}</div>
@@ -1010,9 +1011,9 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   align-items: center;
   gap: 2px;
   padding: 4px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 0 0 0.5px var(--border), 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 16px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(12px);
 }
 .tools {
@@ -1043,16 +1044,17 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 8px;
   color: var(--text-2);
 }
 .tb:hover:not(:disabled) {
-  background: var(--fill-2);
+  background: var(--fill);
   color: var(--text);
 }
+/* The chosen tool: shadcn's toggle, on. */
 .tb.on {
-  background: var(--accent-bg, var(--fill));
-  color: var(--accent-text, var(--accent));
+  background: var(--fill);
+  color: var(--text);
 }
 .tb:disabled {
   opacity: 0.35;
@@ -1067,7 +1069,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   transform: translateX(-50%);
 }
 .sep {
-  width: 0.5px;
+  width: 1px;
   height: 22px;
   margin: 0 4px;
   flex: none;
@@ -1166,7 +1168,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   border-radius: 999px;
   transform: translateX(-50%);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
   font-size: 12.5px;
   color: var(--text-2);
   pointer-events: none;
@@ -1187,14 +1189,14 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   color: var(--text-2);
 }
 .paper-pick.on {
-  background: var(--accent-bg, var(--fill));
+  background: var(--fill);
   color: var(--accent-text, var(--accent));
 }
 .paper-sample {
   width: 40px;
   height: 40px;
   border-radius: 6px;
-  box-shadow: inset 0 0 0 0.5px var(--border);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 .paper-sample.lined {
   background-image: repeating-linear-gradient(to bottom, transparent 0 7px, rgba(0, 122, 255, 0.35) 7px 8px) !important;
@@ -1212,7 +1214,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
 }
 .cp-dot.on {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent);
@@ -1226,7 +1228,7 @@ const sizeLabel = computed(() => t('sketch.size', { n: size.value }))
   cursor: pointer;
 }
 .layer.on {
-  background: var(--accent-bg, var(--fill));
+  background: var(--fill);
 }
 .fade-enter-active,
 .fade-leave-active {

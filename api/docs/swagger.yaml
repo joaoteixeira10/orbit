@@ -550,6 +550,11 @@ definitions:
         description: 'HolidayTheme: off | auto | christmas | halloween | nye | easter
           | santos | lunar.'
         type: string
+      holiday_themes_personal:
+        description: |-
+          HolidayThemesPersonal / SeasonThemesPersonal: each person may choose
+          their own holiday / season theme (theirs wins over the owner's).
+        type: boolean
       login_message:
         type: string
       logo_data_url:
@@ -562,6 +567,12 @@ definitions:
         type: integer
       passwordless_enabled:
         description: SPA shows the "Sign in with a passkey" button
+        type: boolean
+      season_theme:
+        description: 'SeasonTheme: off | auto | spring | summer | autumn | winter
+          (a holiday in its days wins).'
+        type: string
+      season_themes_personal:
         type: boolean
       show_app_name:
         type: boolean
@@ -2873,6 +2884,9 @@ definitions:
     properties:
       accent_color:
         type: string
+      animations:
+        description: 'Animations: the app''s motion on, or off (still).'
+        type: boolean
       calendar_colors:
         additionalProperties:
           type: string
@@ -2899,11 +2913,18 @@ definitions:
         items:
           type: integer
         type: array
+      glass:
+        description: 'Glass: how much the sidebar, bars, windows and menus are liquid
+          glass (0–100; 0 = solid).'
+        type: integer
       holiday_effects:
         description: |-
           HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
           unless turned off; the theme itself is the owner's).
         type: boolean
+      holiday_theme:
+        description: '"" (as the instance) | off | auto | a holiday'
+        type: string
       locale:
         type: string
       notify_channels:
@@ -2934,6 +2955,9 @@ definitions:
         type: string
       remote_images:
         description: ask | always
+        type: string
+      season_theme:
+        description: '"" (as the instance) | off | auto | a season'
         type: string
       sketch_colors:
         description: their own palette in Quick Draw
@@ -3614,6 +3638,9 @@ definitions:
       accent_color:
         description: '#rrggbb or "" (validated in the handler)'
         type: string
+      animations:
+        description: 'Animations: the app''s motion on (default) or off.'
+        type: boolean
       calendar_colors:
         additionalProperties:
           type: string
@@ -3648,9 +3675,20 @@ definitions:
           type: integer
         maxItems: 8
         type: array
+      glass:
+        description: 'Glass: how much the sidebar, bars, windows and menus are liquid
+          glass (0 = solid).'
+        maximum: 100
+        minimum: 0
+        type: integer
       holiday_effects:
         description: A holiday theme's falling snow, bats, confetti… on or off.
         type: boolean
+      holiday_theme:
+        description: 'HolidayTheme / SeasonTheme: "" (as the instance), off, auto
+          or one of them.'
+        maxLength: 12
+        type: string
       locale:
         maxLength: 8
         type: string
@@ -3684,6 +3722,9 @@ definitions:
         enum:
         - ask
         - always
+        type: string
+      season_theme:
+        maxLength: 12
         type: string
       sketch_colors:
         items:
@@ -3755,6 +3796,10 @@ definitions:
         - santos
         - lunar
         type: string
+      holiday_themes_personal:
+        description: 'HolidayThemesPersonal / SeasonThemesPersonal: let each person
+          choose.'
+        type: boolean
       login_message:
         type: string
       logo_data_url:
@@ -3764,6 +3809,19 @@ definitions:
         maximum: 1000
         minimum: 5
         type: integer
+      season_theme:
+        description: 'SeasonTheme: off, auto (the season today is in) or one of them
+          now.'
+        enum:
+        - "off"
+        - auto
+        - spring
+        - summer
+        - autumn
+        - winter
+        type: string
+      season_themes_personal:
+        type: boolean
       show_app_name:
         type: boolean
       show_logo:
@@ -4766,6 +4824,11 @@ definitions:
           AccentColor is a personal #rrggbb accent that overrides the org accent for
           this user only (empty = follow the org/developer-theme accent).
         type: string
+      animations:
+        description: |-
+          Animations: the app's motion (switching theme, opening pages, finishing
+          a task…); off keeps it still. The system's reduced motion wins either way.
+        type: boolean
       calendar_colors:
         description: |-
           CalendarColors are this person's own colours for calendars (JSON
@@ -4809,11 +4872,22 @@ definitions:
           FocusLengths are this person's own lengths for the focus timer, in
           minutes (JSON []int), besides 15, 25 and 50.
         type: string
+      glass:
+        description: |-
+          Glass: how much the sidebar, bars, windows and menus are liquid glass,
+          0 (solid, the default) to 100.
+        type: integer
       holiday_effects:
         description: |-
           HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
           until turned off; the theme's colours and art are the owner's).
         type: boolean
+      holiday_theme:
+        description: |-
+          HolidayTheme / SeasonTheme: this user's own holiday and season themes,
+          when the owner lets each person choose: "" = as the instance, "off",
+          "auto" or one of them.
+        type: string
       id:
         type: string
       locale:
@@ -4847,6 +4921,8 @@ definitions:
           RemoteImages is whether pages show images from other sites at once
           ("always") or only after a click ("ask", the default): such an image
           tells its site who reads the page, and when.
+        type: string
+      season_theme:
         type: string
       sketch_colors:
         description: |-

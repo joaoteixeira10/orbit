@@ -13262,6 +13262,10 @@ const docTemplate = `{
                     "description": "HolidayTheme: off | auto | christmas | halloween | nye | easter | santos | lunar.",
                     "type": "string"
                 },
+                "holiday_themes_personal": {
+                    "description": "HolidayThemesPersonal / SeasonThemesPersonal: each person may choose\ntheir own holiday / season theme (theirs wins over the owner's).",
+                    "type": "boolean"
+                },
                 "login_message": {
                     "type": "string"
                 },
@@ -13278,6 +13282,13 @@ const docTemplate = `{
                 },
                 "passwordless_enabled": {
                     "description": "SPA shows the \"Sign in with a passkey\" button",
+                    "type": "boolean"
+                },
+                "season_theme": {
+                    "description": "SeasonTheme: off | auto | spring | summer | autumn | winter (a holiday in its days wins).",
+                    "type": "string"
+                },
+                "season_themes_personal": {
                     "type": "boolean"
                 },
                 "show_app_name": {
@@ -16591,6 +16602,10 @@ const docTemplate = `{
                 "accent_color": {
                     "type": "string"
                 },
+                "animations": {
+                    "description": "Animations: the app's motion on, or off (still).",
+                    "type": "boolean"
+                },
                 "calendar_colors": {
                     "description": "CalendarColors: own colours for calendars (a workspace id, list:\u003cid\u003e, sub:\u003cid\u003e, holidays).",
                     "type": "object",
@@ -16626,9 +16641,17 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "glass": {
+                    "description": "Glass: how much the sidebar, bars, windows and menus are liquid glass (0–100; 0 = solid).",
+                    "type": "integer"
+                },
                 "holiday_effects": {
                     "description": "HolidayEffects: a holiday theme's falling snow, bats, confetti… (on\nunless turned off; the theme itself is the owner's).",
                     "type": "boolean"
+                },
+                "holiday_theme": {
+                    "description": "\"\" (as the instance) | off | auto | a holiday",
+                    "type": "string"
                 },
                 "locale": {
                     "type": "string"
@@ -16669,6 +16692,10 @@ const docTemplate = `{
                 },
                 "remote_images": {
                     "description": "ask | always",
+                    "type": "string"
+                },
+                "season_theme": {
+                    "description": "\"\" (as the instance) | off | auto | a season",
                     "type": "string"
                 },
                 "sketch_colors": {
@@ -17620,6 +17647,10 @@ const docTemplate = `{
                     "description": "#rrggbb or \"\" (validated in the handler)",
                     "type": "string"
                 },
+                "animations": {
+                    "description": "Animations: the app's motion on (default) or off.",
+                    "type": "boolean"
+                },
                 "calendar_colors": {
                     "description": "Own colours for calendars: key → \"#rrggbb\", or \"\" to use the\ncalendar's own again.",
                     "type": "object",
@@ -17660,9 +17691,20 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "glass": {
+                    "description": "Glass: how much the sidebar, bars, windows and menus are liquid glass (0 = solid).",
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0
+                },
                 "holiday_effects": {
                     "description": "A holiday theme's falling snow, bats, confetti… on or off.",
                     "type": "boolean"
+                },
+                "holiday_theme": {
+                    "description": "HolidayTheme / SeasonTheme: \"\" (as the instance), off, auto or one of them.",
+                    "type": "string",
+                    "maxLength": 12
                 },
                 "locale": {
                     "type": "string",
@@ -17707,6 +17749,10 @@ const docTemplate = `{
                         "ask",
                         "always"
                     ]
+                },
+                "season_theme": {
+                    "type": "string",
+                    "maxLength": 12
                 },
                 "sketch_colors": {
                     "type": "array",
@@ -17808,6 +17854,10 @@ const docTemplate = `{
                         "lunar"
                     ]
                 },
+                "holiday_themes_personal": {
+                    "description": "HolidayThemesPersonal / SeasonThemesPersonal: let each person choose.",
+                    "type": "boolean"
+                },
                 "login_message": {
                     "type": "string"
                 },
@@ -17819,6 +17869,21 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 1000,
                     "minimum": 5
+                },
+                "season_theme": {
+                    "description": "SeasonTheme: off, auto (the season today is in) or one of them now.",
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "auto",
+                        "spring",
+                        "summer",
+                        "autumn",
+                        "winter"
+                    ]
+                },
+                "season_themes_personal": {
+                    "type": "boolean"
                 },
                 "show_app_name": {
                     "type": "boolean"
@@ -19223,6 +19288,10 @@ const docTemplate = `{
                     "description": "AccentColor is a personal #rrggbb accent that overrides the org accent for\nthis user only (empty = follow the org/developer-theme accent).",
                     "type": "string"
                 },
+                "animations": {
+                    "description": "Animations: the app's motion (switching theme, opening pages, finishing\na task…); off keeps it still. The system's reduced motion wins either way.",
+                    "type": "boolean"
+                },
                 "calendar_colors": {
                     "description": "CalendarColors are this person's own colours for calendars (JSON\n{key: \"#rrggbb\"}; keys: a workspace id, \"list:\u003cid\u003e\", \"sub:\u003cid\u003e\",\n\"holidays\"); absent = the calendar's own colour.",
                     "type": "string"
@@ -19257,9 +19326,17 @@ const docTemplate = `{
                     "description": "FocusLengths are this person's own lengths for the focus timer, in\nminutes (JSON []int), besides 15, 25 and 50.",
                     "type": "string"
                 },
+                "glass": {
+                    "description": "Glass: how much the sidebar, bars, windows and menus are liquid glass,\n0 (solid, the default) to 100.",
+                    "type": "integer"
+                },
                 "holiday_effects": {
                     "description": "HolidayEffects: a holiday theme's falling snow, bats, confetti… (on\nuntil turned off; the theme's colours and art are the owner's).",
                     "type": "boolean"
+                },
+                "holiday_theme": {
+                    "description": "HolidayTheme / SeasonTheme: this user's own holiday and season themes,\nwhen the owner lets each person choose: \"\" = as the instance, \"off\",\n\"auto\" or one of them.",
+                    "type": "string"
                 },
                 "id": {
                     "type": "string"
@@ -19288,6 +19365,9 @@ const docTemplate = `{
                 },
                 "remote_images": {
                     "description": "RemoteImages is whether pages show images from other sites at once\n(\"always\") or only after a click (\"ask\", the default): such an image\ntells its site who reads the page, and when.",
+                    "type": "string"
+                },
+                "season_theme": {
                     "type": "string"
                 },
                 "sketch_colors": {

@@ -82,7 +82,7 @@ function onPaste(e: ClipboardEvent) {
       :name="i === 0 ? 'one-time-code' : undefined"
       :aria-label="t('acct.digit', { n: i + 1 })"
       maxlength="1"
-      class="h-12 w-11 rounded-xl border border-border bg-surface-2 text-center text-[18px] font-semibold outline-none focus:border-accent"
+      class="rounded-lg h-12 w-11 text-center text-[18px] font-semibold outline-hidden border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       @input="onInput(i, $event)"
       @keydown="onKeydown(i, $event)"
       @focus="(e) => (e.target as HTMLInputElement).select()"

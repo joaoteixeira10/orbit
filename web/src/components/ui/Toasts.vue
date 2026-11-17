@@ -31,23 +31,21 @@ const { t: tr } = useI18n()
   gap: 8px;
   width: min(400px, calc(100vw - 32px));
 }
+/* A toast: shadcn-vue's (Sonner's) — a card, the text, a close. */
 .toast {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 10px 10px 10px 14px;
+  padding: 14px 10px 14px 16px;
   border-radius: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--ok);
-  box-shadow: var(--shadow);
-  font-size: 13px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  font-size: 13.5px;
 }
 .toast.error {
-  border-left-color: var(--crit);
-}
-.toast.info {
-  border-left-color: var(--accent);
+  border-color: var(--crit-border);
+  color: var(--crit-text);
 }
 .toast-text {
   flex: 1;

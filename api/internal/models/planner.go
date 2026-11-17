@@ -560,8 +560,13 @@ type Event struct {
 	Color       string     `gorm:"size:9" json:"color"`
 	// RemindMinutes reminds the workspace's members this many minutes before
 	// each occurrence (nil = no reminder).
-	RemindMinutes *int   `json:"remind_minutes"`
-	CreatedBy     string `gorm:"size:36" json:"created_by"`
+	RemindMinutes *int `json:"remind_minutes"`
+	// RemindedThrough is the start of the last occurrence reminded of: a
+	// reminder whose minute was missed (the event made or moved too late, the
+	// server restarted) is still sent before the event starts, and none twice.
+	// Cleared when the timing or the reminder changes.
+	RemindedThrough *time.Time `json:"-"`
+	CreatedBy       string     `gorm:"size:36" json:"created_by"`
 	// CourseID: a class of a course's timetable. The course owns it (its
 	// slots make and change it); only single classes can be cancelled here.
 	CourseID string `gorm:"size:36;index" json:"course_id,omitempty"`

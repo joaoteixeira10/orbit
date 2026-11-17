@@ -33,7 +33,7 @@ function done() {
     <span ref="el" class="status-badge" :data-status="node.attrs.color" role="button" tabindex="0" data-testid="status-badge" @click="edit">{{ node.attrs.text }}</span>
     <Popover v-if="open" :anchor="el" :width="220" @close="done">
       <form class="p-2" @submit.prevent="done">
-        <input ref="input" v-model="text" class="field !py-1 text-[13px]" maxlength="40" :aria-label="t('blocks.statusText')" data-testid="status-text" />
+        <input ref="input" v-model="text" class="field py-1! text-[13px]" maxlength="40" :aria-label="t('blocks.statusText')" data-testid="status-text" />
         <div class="mt-2 flex flex-wrap gap-1.5">
           <button v-for="c in STATUS_COLORS" :key="c" type="button" class="status-badge" :data-status="c" :aria-label="c" @click="set({ color: c })">{{ c === node.attrs.color ? '✓' : '·' }}</button>
         </div>

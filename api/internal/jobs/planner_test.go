@@ -104,6 +104,47 @@ func TestReminders(t *testing.T) {
 	}
 }
 
+// TestLateEventReminder: a reminder whose minute was missed (the event made
+// inside its lead time, the server down then) goes out at the next minute,
+// with the time really left, once; never for an event already started; and a
+// moved event is reminded again for its new time.
+func TestLateEventReminder(t *testing.T) {
+	db := plannerDB(t)
+	hub := events.New()
+	s := &Scheduler{db: db, log: zap.NewNop(), hub: hub, inbox: inbox.New(db, hub, nil, nil, zap.NewNop(), "")}
+	db.Create(&models.WorkspaceMember{WorkspaceID: "w", UserID: "u1", Role: models.WSOwner})
+	fifteen := 15
+	start := time.Date(2026, 11, 16, 12, 0, 0, 0, time.UTC)
+	ev := models.Event{WorkspaceID: "w", Title: "Dentist", StartsAt: start, EndsAt: start.Add(time.Hour), RemindMinutes: &fifteen}
+	db.Create(&ev)
+	gone := time.Date(2026, 11, 16, 11, 0, 0, 0, time.UTC)
+	db.Create(&models.Event{WorkspaceID: "w", Title: "Started", StartsAt: gone, EndsAt: gone.Add(2 * time.Hour), RemindMinutes: &fifteen})
+
+	u1, stop := hub.Subscribe("u1")
+	defer stop()
+	// 11:45 was missed; at 11:50 it goes out, saying 10 min.
+	s.remindAt(time.Date(2026, 11, 16, 11, 50, 0, 0, time.UTC))
+	got := drain(u1)
+	if len(got) != 1 || !strings.Contains(got[0], "Dentist") || !strings.Contains(got[0], "10 min") {
+		t.Fatalf("late reminder: %v", got)
+	}
+	s.remindAt(time.Date(2026, 11, 16, 11, 51, 0, 0, time.UTC))
+	if got := drain(u1); len(got) != 0 {
+		t.Errorf("reminded twice: %v", got)
+	}
+	// Moved to 12:30 (the API clears what was reminded): reminded at 12:15.
+	later := start.Add(30 * time.Minute)
+	db.Model(&models.Event{}).Where("id = ?", ev.ID).Updates(map[string]any{"starts_at": later, "ends_at": later.Add(time.Hour), "reminded_through": nil})
+	s.remindAt(time.Date(2026, 11, 16, 12, 14, 0, 0, time.UTC))
+	if got := drain(u1); len(got) != 0 {
+		t.Errorf("moved event reminded early: %v", got)
+	}
+	s.remindAt(time.Date(2026, 11, 16, 12, 15, 0, 0, time.UTC))
+	if got := drain(u1); len(got) != 1 || !strings.Contains(got[0], "15 min") {
+		t.Errorf("moved event: %v", got)
+	}
+}
+
 // TestDigest: the summary goes out at the chosen local time, once a day,
 // with the day's events and the tasks due (overdue ones first marked), and
 // not at all when the day is empty.

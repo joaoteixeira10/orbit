@@ -8,6 +8,9 @@ import { COLORS } from '@/lib/icons'
 import { goalsApi, pct, type Goal, type GoalInput } from '@/lib/goals'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A goal: its name, emoji, colour, date and why; its tasks (tick them, add
 // one, take one away), or — with none — how far along it is by hand; mark
@@ -122,13 +125,13 @@ async function remove() {
     <form class="space-y-4" data-testid="goal-sheet" @submit.prevent="save">
       <div class="group">
         <div class="group-row">
-          <input v-model="icon" class="w-10 shrink-0 bg-transparent text-center text-[20px] outline-none" maxlength="8" placeholder="🎯" :disabled="!editable" aria-label="Emoji" />
-          <input v-model="title" class="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-none placeholder:text-text-faint" :placeholder="t('goals.namePh')" :aria-label="t('goals.name')" maxlength="200" :disabled="!editable" autofocus />
+          <input v-model="icon" class="w-10 shrink-0 bg-transparent text-center text-[20px] outline-hidden" maxlength="8" placeholder="🎯" :disabled="!editable" aria-label="Emoji" />
+          <input v-model="title" class="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-hidden placeholder:text-text-faint" :placeholder="t('goals.namePh')" :aria-label="t('goals.name')" maxlength="200" :disabled="!editable" autofocus />
         </div>
         <label class="group-row">
           <span class="flex-1 text-[14px]">{{ t('goals.due') }}</span>
-          <input v-model="due" type="date" class="input !w-auto !py-1 text-[13.5px]" :disabled="!editable" />
-          <button v-if="due && editable" type="button" class="icon-btn" :aria-label="t('goals.noDue')" @click="due = ''"><X class="h-4 w-4" /></button>
+          <Input v-model="due" type="date" class="w-auto! py-1! text-[13.5px]" :disabled="!editable" />
+          <Button variant="ghost" size="icon" v-if="due && editable" type="button" class="text-text-2" :aria-label="t('goals.noDue')" @click="due = ''"><X class="h-4 w-4" /></Button>
         </label>
         <div class="group-row flex-wrap">
           <div class="flex flex-wrap items-center gap-1.5" role="radiogroup">
@@ -138,7 +141,7 @@ async function remove() {
           </div>
         </div>
       </div>
-      <textarea v-model="notes" rows="2" class="w-full resize-y rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint" :placeholder="t('goals.notes')" :disabled="!editable" maxlength="20000" />
+      <textarea v-model="notes" rows="2" class="rounded-lg w-full resize-y px-3 py-2.5 text-[14px] outline-hidden placeholder:text-text-faint border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50" :placeholder="t('goals.notes')" :disabled="!editable" maxlength="20000" />
 
       <section v-if="current">
         <h3 class="cap mb-1.5 px-1">{{ t('goals.tasks') }} · {{ pct(current) }}%</h3>
@@ -148,17 +151,17 @@ async function remove() {
               <Check class="h-2.5 w-2.5" :stroke-width="4" />
             </button>
             <span class="min-w-0 flex-1 truncate text-[14px]" :class="{ 'text-text-3 line-through': x.done }">{{ x.title }}</span>
-            <button v-if="editable" type="button" class="icon-btn h-7 w-7" :title="t('goals.remove')" :aria-label="t('goals.remove')" @click="setTask(x.id, { goal_id: '' })"><X class="h-3.5 w-3.5" /></button>
+            <Button variant="ghost" size="icon" v-if="editable" type="button" class="text-text-2 h-7 w-7" :title="t('goals.remove')" :aria-label="t('goals.remove')" @click="setTask(x.id, { goal_id: '' })"><X class="h-3.5 w-3.5" /></Button>
           </div>
           <div v-if="editable" class="group-row">
             <Plus class="h-4 w-4 shrink-0 text-text-3" />
-            <input v-model="newTask" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-text-faint" :placeholder="t('goals.newTask')" data-testid="goal-new-task" @keydown.enter.prevent="addTask" />
+            <input v-model="newTask" class="min-w-0 flex-1 bg-transparent text-[14px] outline-hidden placeholder:text-text-faint" :placeholder="t('goals.newTask')" data-testid="goal-new-task" @keydown.enter.prevent="addTask" />
           </div>
           <label v-if="editable && others.length" class="group-row">
-            <select class="input min-w-0 flex-1 !py-1 text-[13.5px]" :value="''" @change="setTask(($event.target as HTMLSelectElement).value, { goal_id: current.id }); ($event.target as HTMLSelectElement).value = ''">
+            <NativeSelect size="sm" class="min-w-0 flex-1 w-full" :model-value="''" @change="setTask(($event.target as HTMLSelectElement).value, { goal_id: current.id }); ($event.target as HTMLSelectElement).value = ''">
               <option value="" disabled>{{ t('goals.addTask') }}</option>
               <option v-for="x in others" :key="x.id" :value="x.id">{{ x.title }}</option>
-            </select>
+            </NativeSelect>
           </label>
         </div>
       </section>
@@ -175,26 +178,17 @@ async function remove() {
     </form>
     <template #footer>
       <template v-if="current && editable">
-        <button class="btn-ghost !text-danger" :title="t('goals.delete')" :aria-label="t('goals.delete')" @click="confirmDelete = true"><Trash2 class="h-4 w-4" /></button>
-        <button class="btn-ghost mr-auto" @click="setAchieved(!current.achieved_at)"><Trophy class="h-4 w-4" />{{ current.achieved_at ? t('goals.reopen') : t('goals.markAchieved') }}</button>
+        <Button variant="ghost" class="text-danger!" :title="t('goals.delete')" :aria-label="t('goals.delete')" @click="confirmDelete = true"><Trash2 class="h-4 w-4" /></Button>
+        <Button variant="ghost" class="mr-auto" @click="setAchieved(!current.achieved_at)"><Trophy class="h-4 w-4" />{{ current.achieved_at ? t('goals.reopen') : t('goals.markAchieved') }}</Button>
       </template>
-      <button class="btn" @click="emit('close')">{{ editable ? t('common.cancel') : t('common.close') }}</button>
-      <button v-if="editable" class="btn-primary" :disabled="!title.trim() || busy" @click="save">{{ goal ? t('common.save') : t('common.add') }}</button>
+      <Button variant="secondary" @click="emit('close')">{{ editable ? t('common.cancel') : t('common.close') }}</Button>
+      <Button v-if="editable" :disabled="!title.trim() || busy" @click="save">{{ goal ? t('common.save') : t('common.add') }}</Button>
     </template>
   </Overlay>
   <Confirm :open="confirmDelete" :title="t('goals.deleteTitle', { name: current?.title ?? '' })" :message="t('goals.deleteBody')" :confirm-label="t('common.delete')" danger @confirm="remove" @close="confirmDelete = false" />
 </template>
 
 <style scoped>
-.swatch {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--sw);
-  color: #fff;
-}
 .swatch[aria-checked='true'] {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--sw);
 }

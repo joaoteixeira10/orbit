@@ -13,6 +13,9 @@ import {
   REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset, toLocalInput, utcMidnight, allDayDate, dateStr, parseDate,
   addDays, deviceTZ, toZoneInput, fromZoneInput, zoneName, allZones, sameZoneTime, fmtTime, fmtDate,
 } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Calendar's event sheet: title and location, all-day, when it starts and
 // ends (typed in the event's time zone — the device's unless changed; the
@@ -299,10 +302,10 @@ async function remove(onlyThis: boolean, following = false) {
     <form class="space-y-4" :class="{ 'pointer-events-none opacity-60': loading }" @submit.prevent="save" @keydown.meta.enter="save" @keydown.ctrl.enter="save">
       <div class="group">
         <div class="group-row">
-          <input ref="titleEl" v-model="title" class="w-full bg-transparent text-[16px] font-semibold outline-none placeholder:text-text-faint focus-visible:!shadow-none" :placeholder="t('cal.titlePlaceholder')" maxlength="300" />
+          <input ref="titleEl" v-model="title" class="w-full bg-transparent text-[16px] font-semibold outline-hidden placeholder:text-text-faint focus-visible:shadow-none!" :placeholder="t('cal.titlePlaceholder')" maxlength="300" />
         </div>
         <div class="group-row">
-          <input v-model="location" class="w-full bg-transparent text-[14px] outline-none placeholder:text-text-faint focus-visible:!shadow-none" :placeholder="t('cal.location')" maxlength="300" />
+          <input v-model="location" class="w-full bg-transparent text-[14px] outline-hidden placeholder:text-text-faint focus-visible:shadow-none!" :placeholder="t('cal.location')" maxlength="300" />
         </div>
       </div>
 
@@ -311,30 +314,29 @@ async function remove(onlyThis: boolean, following = false) {
           <span class="flex-1 text-[14px]">{{ t('cal.allDay') }}</span>
           <Toggle :model-value="allDay" @update:model-value="setAllDay" />
         </div>
-        <label class="group-row flex-wrap !gap-y-1">
+        <label class="group-row flex-wrap gap-y-1!">
           <span class="flex-1 text-[14px]">{{ t('cal.starts') }}</span>
-          <input :type="allDay ? 'date' : 'datetime-local'" class="input !w-auto !py-1 text-[13.5px]" :value="startIn" required @change="setStart(($event.target as HTMLInputElement).value)" />
+          <Input :type="allDay ? 'date' : 'datetime-local'" class="w-auto! py-1! text-[13.5px]" :model-value="startIn" required @change="setStart(($event.target as HTMLInputElement).value)" />
         </label>
-        <label class="group-row flex-wrap !gap-y-1">
+        <label class="group-row flex-wrap gap-y-1!">
           <span class="flex-1 text-[14px]">{{ t('cal.ends') }}</span>
-          <input
-            v-model="endIn"
-            :type="allDay ? 'date' : 'datetime-local'"
-            class="input !w-auto !py-1 text-[13.5px]"
-            :class="{ '!text-crit-text line-through': endBeforeStart }"
-            :min="allDay ? startIn : undefined"
-            required
-          />
+          <Input
+ v-model="endIn"
+ :type="allDay ? 'date' : 'datetime-local'"
+ class="w-auto! py-1! text-[13.5px]"
+ :class="{ 'text-crit-text! line-through': endBeforeStart }"
+ :min="allDay ? startIn : undefined"
+ required />
         </label>
         <label v-if="!allDay" class="group-row">
           <span class="flex-1 text-[14px]">{{ t('cal.timeZone') }}</span>
-          <select v-model="tz" class="input !w-auto max-w-[60%] !py-1 text-[13.5px]" data-testid="event-tz">
+          <NativeSelect size="sm" v-model="tz" class="w-auto max-w-[60%]" data-testid="event-tz">
             <option v-for="z in zones" :key="z" :value="z">{{ z === deviceTZ() ? t('cal.tzHere', { zone: zoneName(z) }) : z.replace(/_/g, ' ') }}</option>
-          </select>
+          </NativeSelect>
         </label>
         <label class="group-row">
           <span class="flex-1 text-[14px]">{{ t('cal.repeat') }}</span>
-          <select v-model="repeat" class="input !w-auto !py-1 text-[13.5px]">
+          <NativeSelect size="sm" v-model="repeat" class="w-auto">
             <option value="">{{ t('repeat.never') }}</option>
             <option value="daily">{{ t('repeat.daily') }}</option>
             <option value="weekdays">{{ t('repeat.weekdays') }}</option>
@@ -343,7 +345,7 @@ async function remove(onlyThis: boolean, following = false) {
             <option value="monthly">{{ t('repeat.monthly') }}</option>
             <option value="yearly">{{ t('repeat.yearly') }}</option>
             <option v-if="customRule && repeatPreset(customRule) === 'custom'" value="custom">{{ repeatLabel(customRule) }}</option>
-          </select>
+          </NativeSelect>
         </label>
       </div>
       <p v-if="endBeforeStart" class="-mt-2 px-1 text-[12.5px] text-crit-text">{{ t('cal.endBeforeStart') }}</p>
@@ -353,15 +355,15 @@ async function remove(onlyThis: boolean, following = false) {
         <label v-if="showPicker" class="group-row">
           <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: wsColor }" />
           <span class="flex-1 text-[14px]">{{ t('cal.workspace') }}</span>
-          <select v-model="wsSel" class="input !w-auto max-w-[60%] !py-1 text-[13.5px]">
+          <NativeSelect size="sm" v-model="wsSel" class="w-auto max-w-[60%]">
             <option v-for="w in choices" :key="w.id" :value="w.id">{{ w.name }}</option>
-          </select>
+          </NativeSelect>
         </label>
         <label class="group-row">
           <span class="flex-1 text-[14px]">{{ t('cal.alert') }}</span>
-          <select v-model="remind" class="input !w-auto !py-1 text-[13.5px]">
+          <NativeSelect size="sm" v-model="remind" class="w-auto">
             <option v-for="o in remindOptions" :key="o.v" :value="o.v">{{ o.label }}</option>
-          </select>
+          </NativeSelect>
         </label>
         <div class="group-row flex-wrap">
           <span class="flex-1 text-[14px]">{{ t('cal.color') }}</span>
@@ -397,7 +399,7 @@ async function remove(onlyThis: boolean, following = false) {
       <textarea
         v-model="notes"
         rows="3"
-        class="w-full resize-y rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
+        class="rounded-lg w-full resize-y px-3 py-2.5 text-[14px] outline-hidden placeholder:text-text-faint border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         :placeholder="t('cal.notes')"
         maxlength="20000"
       />
@@ -407,9 +409,9 @@ async function remove(onlyThis: boolean, following = false) {
     </form>
 
     <template #footer>
-      <button v-if="editing" class="btn-ghost mr-auto !text-danger" :disabled="loading" @click="askDelete = true"><Trash2 class="h-4 w-4" />{{ t('common.delete') }}</button>
-      <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button class="btn-primary" :disabled="!canSave" @click="save">{{ editing ? t('common.save') : t('common.add') }}</button>
+      <Button variant="ghost" v-if="editing" class="mr-auto text-danger!" :disabled="loading" @click="askDelete = true"><Trash2 class="h-4 w-4" />{{ t('common.delete') }}</Button>
+      <Button variant="secondary" @click="emit('close')">{{ t('common.cancel') }}</Button>
+      <Button :disabled="!canSave" @click="save">{{ editing ? t('common.save') : t('common.add') }}</Button>
     </template>
   </Overlay>
 
@@ -429,10 +431,10 @@ async function remove(onlyThis: boolean, following = false) {
       <p class="mt-1.5 text-[13px] leading-relaxed text-text-2">{{ t('cal.deleteRecurringBody') }}</p>
     </div>
     <div class="mt-5 grid gap-2">
-      <button class="btn-danger" data-testid="delete-this" @click="remove(true)">{{ t('cal.deleteThis') }}</button>
-      <button class="btn !text-danger" data-testid="delete-following" @click="remove(false, true)">{{ t('cal.deleteFollowing') }}</button>
-      <button class="btn !text-danger" data-testid="delete-all" @click="remove(false)">{{ t('cal.deleteAll') }}</button>
-      <button class="btn" @click="askDelete = false">{{ t('common.cancel') }}</button>
+      <Button variant="destructive" data-testid="delete-this" @click="remove(true)">{{ t('cal.deleteThis') }}</Button>
+      <Button variant="secondary" class="text-danger!" data-testid="delete-following" @click="remove(false, true)">{{ t('cal.deleteFollowing') }}</Button>
+      <Button variant="secondary" class="text-danger!" data-testid="delete-all" @click="remove(false)">{{ t('cal.deleteAll') }}</Button>
+      <Button variant="secondary" @click="askDelete = false">{{ t('common.cancel') }}</Button>
     </div>
   </Overlay>
   <Overlay :open="askScope" size="sm" @close="(askScope = false), (pending = null)">
@@ -441,31 +443,17 @@ async function remove(onlyThis: boolean, following = false) {
       <p class="mt-1.5 text-[13px] leading-relaxed text-text-2">{{ t('cal.scopeBody') }}</p>
     </div>
     <div class="mt-5 grid gap-2" data-testid="event-scope">
-      <button class="btn-primary justify-center" :disabled="ruleChanged" :title="ruleChanged ? t('cal.scopeThisNoRepeat') : ''" data-testid="scope-this" @click="saveScope('this')">{{ t('cal.scopeThis') }}</button>
-      <button class="btn justify-center" data-testid="scope-following" @click="saveScope('following')">{{ t('cal.scopeFollowing') }}</button>
-      <button class="btn justify-center" data-testid="scope-all" @click="saveScope('all')">{{ t('cal.scopeAll') }}</button>
-      <button class="btn justify-center" @click="(askScope = false), (pending = null)">{{ t('common.cancel') }}</button>
+      <Button class="justify-center" :disabled="ruleChanged" :title="ruleChanged ? t('cal.scopeThisNoRepeat') : ''" data-testid="scope-this" @click="saveScope('this')">{{ t('cal.scopeThis') }}</Button>
+      <Button variant="secondary" class="justify-center" data-testid="scope-following" @click="saveScope('following')">{{ t('cal.scopeFollowing') }}</Button>
+      <Button variant="secondary" class="justify-center" data-testid="scope-all" @click="saveScope('all')">{{ t('cal.scopeAll') }}</Button>
+      <Button variant="secondary" class="justify-center" @click="(askScope = false), (pending = null)">{{ t('common.cancel') }}</Button>
     </div>
   </Overlay>
 </template>
 
 <style scoped>
-.swatch {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--sw);
-  color: #fff;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s var(--spring);
-}
 .swatch:hover {
   transform: scale(1.12);
-}
-.swatch[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--sw);
 }
 /* "Workspace colour": the colour with a ring, as Calendar's default. */
 .swatch.auto {

@@ -7,6 +7,7 @@ import LocalGraph from '@/components/graph/LocalGraph.vue'
 import { outlineOf } from '@/lib/outline'
 import { ALERTS } from '@/components/editor/alerts'
 import { rail, railFocus, setRailOpen } from '@/lib/rail'
+import { Button } from '@/components/shadcn/button'
 
 // The side panel (as Folio's), where something is open — a page, a sheet,
 // a diagram, a whiteboard, a task list, a folder: its graph, 1–3 links
@@ -64,7 +65,7 @@ function fold(p: Part) {
   <div class="rail-body" data-testid="outline">
     <div class="mb-1 flex items-center">
       <span class="flex-1 text-[12px] font-semibold text-text-2">{{ t('outline.title') }}</span>
-      <button type="button" class="icon-btn h-7 w-7" :aria-label="t('common.close')" data-testid="rail-close" @click="setRailOpen(false)"><X class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :aria-label="t('common.close')" data-testid="rail-close" @click="setRailOpen(false)"><X class="h-4 w-4" /></Button>
     </div>
 
     <button type="button" class="ol-part" :aria-expanded="!folded.has('graph')" @click="fold('graph')"><ChevronDown class="chev" :class="{ shut: folded.has('graph') }" />{{ t('graph.local') }}</button>

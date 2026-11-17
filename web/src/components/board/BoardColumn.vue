@@ -6,9 +6,12 @@ import Popover from '@/components/ui/Popover.vue'
 import BoardCard from './BoardCard.vue'
 import ColorDots from './ColorDots.vue'
 import { useSortable, type SortMove } from '@/lib/sortable'
+import { vFlip } from '@/lib/motion'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import type { Column, Member, Task } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // One column of the board: its header (colour, name, count and a ⋯ menu to
 // change the column), its cards — a drop target shared with every other
@@ -162,7 +165,7 @@ function onComposerBlur() {
         v-if="renaming"
         ref="nameInput"
         v-model="nameDraft"
-        class="min-w-0 flex-1 rounded-md bg-surface px-1.5 py-0.5 text-[14px] font-semibold outline-none shadow-[0_0_0_3px_var(--ring)]"
+        class="min-w-0 flex-1 rounded-md bg-surface px-1.5 py-0.5 text-[14px] font-semibold outline-hidden shadow-[0_0_0_3px_var(--ring)]"
         maxlength="60"
         :aria-label="t('board.columnName')"
         @blur="commitRename"
@@ -172,10 +175,10 @@ function onComposerBlur() {
       <h2 v-else class="col-name" :title="column.name" @dblclick="startRename">{{ column.name }}</h2>
       <span v-if="column.done && !renaming" class="grid shrink-0 place-items-center text-ok" :title="t('board.doneColumn')"><CircleCheck class="h-3.5 w-3.5" /></span>
       <span v-if="!renaming" class="count" :class="{ over }" :title="column.limit ? t('board.limitOf', { n: column.limit }) : ''" data-testid="column-count">{{ cards.length }}<template v-if="column.limit">/{{ column.limit }}</template></span>
-      <button
+      <Button variant="ghost" size="icon"
         v-if="!readonly"
         ref="menuBtn"
-        class="icon-btn ml-auto h-7 w-7"
+        class="text-text-2 ml-auto h-7 w-7"
         :class="{ on: menu }"
         :aria-label="t('board.columnMenu')"
         :title="t('board.columnMenu')"
@@ -184,12 +187,12 @@ function onComposerBlur() {
         @click="menu = !menu"
       >
         <MoreHorizontal class="h-[18px] w-[18px]" />
-      </button>
+      </Button>
     </header>
 
     <div ref="scroller" class="col-body" :class="{ composing: adding }">
       <div class="relative">
-        <div ref="cardsEl" class="cards" :data-group="column.id">
+        <div ref="cardsEl" v-flip class="cards" :data-group="column.id">
           <BoardCard
             v-for="c in cards"
             :key="c.id"
@@ -211,7 +214,7 @@ function onComposerBlur() {
           ref="composer"
           v-model="draft"
           rows="2"
-          class="w-full resize-none bg-transparent text-[14px] leading-snug outline-none placeholder:text-text-faint"
+          class="w-full resize-none bg-transparent text-[14px] leading-snug outline-hidden placeholder:text-text-faint"
           :placeholder="t('board.cardPlaceholder')"
           :aria-label="t('board.addCard')"
           maxlength="500"
@@ -220,8 +223,8 @@ function onComposerBlur() {
           @blur="onComposerBlur"
         />
         <div class="mt-1.5 flex items-center gap-1.5">
-          <button class="btn-primary btn-sm" :disabled="!draft.trim() || busy" @mousedown.prevent @click="addCard">{{ t('common.add') }}</button>
-          <button class="icon-btn h-7 w-7" :aria-label="t('common.close')" @mousedown.prevent @click="stopAdd"><X class="h-4 w-4" /></button>
+          <Button size="sm" :disabled="!draft.trim() || busy" @mousedown.prevent @click="addCard">{{ t('common.add') }}</Button>
+          <Button variant="ghost" size="icon" class="text-text-2 h-7 w-7" :aria-label="t('common.close')" @mousedown.prevent @click="stopAdd"><X class="h-4 w-4" /></Button>
           <span class="footnote ml-auto hidden truncate sm:inline">{{ t('board.cardHint') }}</span>
         </div>
       </div>
@@ -236,7 +239,7 @@ function onComposerBlur() {
       </button>
       <form class="flex items-center gap-2 px-2.5 py-1.5" @submit.prevent="setLimit">
         <span class="text-[13px] text-text-2">{{ t('board.limit') }}</span>
-        <input v-model="limitDraft" class="input ml-auto !w-16 !py-1 text-[13px]" type="number" min="0" max="999" :placeholder="t('board.noLimit')" :aria-label="t('board.limit')" data-testid="column-limit" @focus="limitDraft = column.limit ? String(column.limit) : ''" @keydown.enter.prevent="setLimit" />
+        <Input v-model="limitDraft" class="ml-auto w-16! py-1! text-[13px]" type="number" min="0" max="999" :placeholder="t('board.noLimit')" :aria-label="t('board.limit')" data-testid="column-limit" @focus="limitDraft = column.limit ? String(column.limit) : ''" @keydown.enter.prevent="setLimit" />
       </form>
       <div class="menu-sep" />
       <p class="cap px-2.5 pb-0.5 pt-1">{{ t('board.colour') }}</p>
@@ -263,7 +266,7 @@ function onComposerBlur() {
   flex-direction: column;
   width: 288px;
   max-height: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--fill-2);
   scroll-snap-align: start;
 }
@@ -351,7 +354,7 @@ html.dark .col {
   gap: 6px;
   margin: 2px 8px 8px;
   padding: 7px 6px;
-  border-radius: 9px;
+  border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--text-2);

@@ -219,7 +219,7 @@ const status = computed(() =>
   padding: 4px 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--bg) 85%, transparent);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
   font-size: 12px;
   color: var(--text-2);
   pointer-events: none;

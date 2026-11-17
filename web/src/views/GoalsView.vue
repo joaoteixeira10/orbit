@@ -10,6 +10,7 @@ import { onLiveEvent } from '@/lib/live'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // Goals: a card each — how far along (its tasks, or by hand), by when, and
 // whether it's on track. Achieved ones fold away below.
@@ -67,14 +68,14 @@ const when = (g: Goal) => {
         <h1 class="large-title">{{ t('modules.goals') }}</h1>
         <p class="subhead mt-0.5">{{ workspace?.name }} · {{ open.length }}</p>
       </div>
-      <button v-if="editable" class="btn-primary" data-testid="new-goal" @click="sheet = { open: true, goal: null }"><Plus class="h-4 w-4" />{{ t('goals.new') }}</button>
+      <Button v-if="editable" data-testid="new-goal" @click="sheet = { open: true, goal: null }"><Plus class="h-4 w-4" />{{ t('goals.new') }}</Button>
     </header>
 
     <div v-if="loaded && !goals.length" class="flex flex-col items-center py-16 text-center">
       <span class="tile h-14 w-14" style="--tile: #ff3b30"><Target class="h-7 w-7" /></span>
       <p class="mt-4 text-[15px] font-semibold">{{ t('goals.none') }}</p>
       <p class="mt-1 max-w-[360px] text-[13px] text-text-2">{{ t('goals.noneHint') }}</p>
-      <button v-if="editable" class="btn-primary mt-5" @click="sheet = { open: true, goal: null }"><Plus class="h-4 w-4" />{{ t('goals.new') }}</button>
+      <Button v-if="editable" class="mt-5" @click="sheet = { open: true, goal: null }"><Plus class="h-4 w-4" />{{ t('goals.new') }}</Button>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
@@ -144,6 +145,9 @@ const when = (g: Goal) => {
   border-radius: 999px;
   background: var(--c);
   transition: width 0.3s;
+  /* It fills up from empty when the page opens (styles/motion.css). */
+  transform-origin: left;
+  animation: fill-in 0.9s 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .status {
   flex: none;

@@ -8,6 +8,9 @@ import { groupsApi, type Group, type GroupDetail } from '@/api/groups'
 import type { Role } from '@/api/types'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Admin → Groups: sets of people that carry instance roles and that
 // workspaces' owners add with a role. Joining or leaving a group gives or
@@ -99,7 +102,7 @@ const roleChoices = computed(() => props.roles.filter((r) => auth.isOwner || !r.
   <div data-testid="groups-admin">
     <div class="mb-3 flex items-center justify-between gap-3">
       <p class="text-[13px] text-text-2">{{ t('groups.hint') }}</p>
-      <button class="btn-primary shrink-0" data-testid="group-new" @click="openForm()"><Plus class="h-4 w-4" /> {{ t('groups.new') }}</button>
+      <Button class="shrink-0" data-testid="group-new" @click="openForm()"><Plus class="h-4 w-4" /> {{ t('groups.new') }}</Button>
     </div>
     <p v-if="!groups.length" class="card p-6 text-center text-[13px] text-text-3">{{ t('groups.none') }}</p>
     <div class="flex flex-col gap-4">
@@ -108,13 +111,13 @@ const roleChoices = computed(() => props.roles.filter((r) => auth.isOwner || !r.
           <div class="min-w-0">
             <h3 class="flex items-center gap-1.5 text-[14px] font-semibold">
               <UsersRound class="h-4 w-4 text-text-2" />{{ g.name }}
-              <span v-if="g.source" class="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium uppercase text-text-3">{{ t('groups.fromIdp') }}</span>
+              <span v-if="g.source" class="pill">{{ t('groups.fromIdp') }}</span>
             </h3>
             <div v-if="g.description" class="text-[12px] text-text-3">{{ g.description }}</div>
           </div>
           <div v-if="canChange(g)" class="flex gap-1">
-            <button class="btn-ghost px-2 py-1" :title="t('admin.edit')" :aria-label="t('admin.edit')" @click="openForm(g)"><Pencil class="h-4 w-4" /></button>
-            <button class="btn-ghost px-2 py-1 text-crit-text" :title="t('common.delete')" :aria-label="t('common.delete')" @click="removing = g"><Trash2 class="h-4 w-4" /></button>
+            <Button variant="ghost" class="px-2 py-1" :title="t('admin.edit')" :aria-label="t('admin.edit')" @click="openForm(g)"><Pencil class="h-4 w-4" /></Button>
+            <Button variant="ghost" class="px-2 py-1 text-crit-text" :title="t('common.delete')" :aria-label="t('common.delete')" @click="removing = g"><Trash2 class="h-4 w-4" /></Button>
           </div>
         </div>
         <div class="grid md:grid-cols-3">
@@ -128,17 +131,17 @@ const roleChoices = computed(() => props.roles.filter((r) => auth.isOwner || !r.
               <span v-if="!g.people.length" class="text-[12px] text-text-3">{{ t('admin.noMembers') }}</span>
             </div>
             <div v-if="canChange(g) && !g.source && outsiders(g).length" class="flex gap-1.5">
-              <select v-model="adding[g.id]" class="input min-w-0 flex-1 py-1" data-testid="group-add-person">
+              <NativeSelect size="sm" v-model="adding[g.id]" class="min-w-0 flex-1 w-full" data-testid="group-add-person">
                 <option value="">{{ t('admin.addMember') }}</option>
                 <option v-for="u in outsiders(g)" :key="u.id" :value="u.id">{{ u.username }}</option>
-              </select>
-              <button class="btn-ghost" :disabled="!adding[g.id]" data-testid="group-add" @click="addPerson(g)">{{ t('admin.add') }}</button>
+              </NativeSelect>
+              <Button variant="ghost" :disabled="!adding[g.id]" data-testid="group-add" @click="addPerson(g)">{{ t('admin.add') }}</Button>
             </div>
           </div>
           <div class="min-w-0 border-border p-4 md:border-r">
             <span class="cap mb-2 block">{{ t('groups.roles') }}</span>
             <div class="flex flex-wrap gap-1">
-              <span v-for="id in g.role_ids" :key="id" class="rounded bg-surface-3 px-1.5 py-0.5 text-[11.5px] text-text-2">{{ roleName(id) }}</span>
+              <span v-for="id in g.role_ids" :key="id" class="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[11.5px] text-text-2">{{ roleName(id) }}</span>
               <span v-if="!g.role_ids.length" class="text-[12px] text-text-3">{{ t('groups.noRoles') }}</span>
             </div>
           </div>
@@ -155,11 +158,11 @@ const roleChoices = computed(() => props.roles.filter((r) => auth.isOwner || !r.
       <form class="space-y-4" @submit.prevent="save">
         <label class="block">
           <span class="mb-1 block text-[12px] font-medium text-text-2">{{ t('groups.name') }}</span>
-          <input v-model="form.name" class="input w-full" maxlength="120" required data-testid="group-name" />
+          <Input v-model="form.name" class="w-full" maxlength="120" required data-testid="group-name" />
         </label>
         <label class="block">
           <span class="mb-1 block text-[12px] font-medium text-text-2">{{ t('groups.description') }}</span>
-          <input v-model="form.description" class="input w-full" maxlength="500" />
+          <Input v-model="form.description" class="w-full" maxlength="500" />
         </label>
         <fieldset>
           <legend class="mb-1 text-[12px] font-medium text-text-2">{{ t('groups.roles') }}</legend>
@@ -169,8 +172,8 @@ const roleChoices = computed(() => props.roles.filter((r) => auth.isOwner || !r.
           <p class="mt-1 text-[12px] text-text-3">{{ t('groups.rolesHint') }}</p>
         </fieldset>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn" @click="form.open = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary" :disabled="busy || !form.name.trim()" data-testid="group-save">{{ t('common.save') }}</button>
+          <Button variant="secondary" type="button" @click="form.open = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" :disabled="busy || !form.name.trim()" data-testid="group-save">{{ t('common.save') }}</Button>
         </div>
       </form>
     </Overlay>

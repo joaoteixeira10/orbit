@@ -5,6 +5,9 @@ import Toggle from '@/components/ui/Toggle.vue'
 import { assistantApi, type AssistantOwn, type AssistantProvider } from '@/api/assistant'
 import { useAssistantStore } from '@/stores/assistant'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Settings → Assistant: my own model — my Claude or OpenAI key, or my own
 // Ollama — used instead of the instance's, when the owner lets people use
@@ -62,35 +65,35 @@ async function save() {
     </div>
     <label class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.provider') }}</span>
-      <select class="input" :value="form.provider" data-testid="assistant-own-provider" @change="pickProvider(($event.target as HTMLSelectElement).value as AssistantProvider)">
+      <NativeSelect class="w-full" :model-value="form.provider" data-testid="assistant-own-provider" @change="pickProvider(($event.target as HTMLSelectElement).value as AssistantProvider)">
         <option v-for="p in providers" :key="p" :value="p">{{ t(`assistant.admin.providers.${p}`) }}</option>
-      </select>
+      </NativeSelect>
     </label>
     <label class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.model') }}</span>
-      <input v-model="form.model" class="input" spellcheck="false" autocomplete="off" data-testid="assistant-own-model" />
+      <Input v-model="form.model" spellcheck="false" autocomplete="off" data-testid="assistant-own-model" />
       <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.modelHint') }}</span>
     </label>
     <label v-if="named(form.provider)" class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.url') }}</span>
-      <input v-model="form.url" class="input" spellcheck="false" autocomplete="off" list="assistant-own-servers" :placeholder="form.provider === 'ollama' ? 'https://ollama.example.org' : 'https://api.openai.com/v1'" data-testid="assistant-own-url" />
+      <Input v-model="form.url" spellcheck="false" autocomplete="off" list="assistant-own-servers" :placeholder="form.provider === 'ollama' ? 'https://ollama.example.org' : 'https://api.openai.com/v1'" data-testid="assistant-own-url" />
       <datalist id="assistant-own-servers"><option v-for="s in own.servers" :key="s" :value="s" /></datalist>
       <span class="text-[11.5px] text-text-3">{{ urlHint }}</span>
     </label>
     <label v-if="form.provider === 'ollama'" class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.context') }}</span>
-      <input v-model.number="form.context" class="input !w-32" type="number" min="2048" step="1024" />
+      <Input v-model.number="form.context" class="w-32!" type="number" min="2048" step="1024" />
       <span class="text-[11.5px] text-text-3">{{ t('assistant.admin.contextHint') }}</span>
     </label>
     <label v-if="form.provider !== 'ollama'" class="flex flex-col gap-1.5">
       <span class="text-[12px] font-medium text-text-2">{{ t('assistant.admin.key') }}</span>
-      <input v-model="form.key" class="input" type="password" autocomplete="new-password" :placeholder="own.has_key ? '••••••••' : ''" data-testid="assistant-own-key" />
+      <Input v-model="form.key" type="password" autocomplete="new-password" :placeholder="own.has_key ? '••••••••' : ''" data-testid="assistant-own-key" />
       <span v-if="form.provider === 'gemini' && !own.has_key" class="text-[11.5px] text-text-3">{{ t('assistant.admin.geminiKey') }}</span>
       <span v-if="own.has_key" class="flex items-center justify-between text-[11.5px] text-text-3">
         {{ t('assistant.admin.keySet') }}
         <button type="button" class="text-crit-text hover:underline" @click="form.clear_key = true; form.key = ''">{{ t('assistant.admin.keyClear') }}</button>
       </span>
     </label>
-    <div><button type="submit" class="btn-primary btn-sm" :disabled="saving" data-testid="assistant-own-save">{{ t('assistant.admin.save') }}</button></div>
+    <div><Button size="sm" type="submit" :disabled="saving" data-testid="assistant-own-save">{{ t('assistant.admin.save') }}</Button></div>
   </form>
 </template>

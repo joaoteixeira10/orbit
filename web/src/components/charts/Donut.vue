@@ -130,6 +130,10 @@ const label = (s: Slice) => `${s.label}: ${s.value} (${pct(s.value)}%)`
   position: relative;
   flex-shrink: 0;
 }
+/* The ring turns into place as the chart opens (styles/motion.css). */
+.donut svg {
+  animation: wind-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
 .arc {
   outline: none;
   transition:
@@ -155,7 +159,7 @@ const label = (s: Slice) => `${s.label}: ${s.value} (${pct(s.value)}%)`
   text-align: center;
 }
 .big {
-  font: 700 34px/1.05 var(--font-display);
+  font: 600 34px/1.05 var(--font-sans);
   letter-spacing: -0.02em;
   color: var(--text);
 }
@@ -184,7 +188,7 @@ const label = (s: Slice) => `${s.label}: ${s.value} (${pct(s.value)}%)`
     background 0.15s;
 }
 .legend li + li .legend-row {
-  box-shadow: 0 -0.5px 0 var(--line-soft);
+  box-shadow: 0 -1px 0 var(--line-soft);
 }
 .legend-row.click:hover {
   background: var(--surface-hover);

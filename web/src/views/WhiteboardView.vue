@@ -14,6 +14,7 @@ import type { Drawing } from '@/components/draw/drawing'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
+import { Button } from '@/components/shadcn/button'
 
 // One whiteboard, as big as the window: its name on top, Excalidraw below.
 // Embedded (ws and id given), it is the big editor over a page: it opens to
@@ -88,10 +89,10 @@ const leader = computed(() => {
 <template>
   <div class="board-view" :class="{ embedded }">
     <header class="mb-3 flex items-center gap-2">
-      <button v-if="!embedded" class="btn-plain -ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ personal ? t('draw.quick') : t('draw.back') }}</button>
+      <Button variant="link" v-if="!embedded" class="-ml-2 shrink-0" data-testid="whiteboard-back" @click="back"><ChevronLeft class="h-4 w-4" />{{ personal ? t('draw.quick') : t('draw.back') }}</Button>
       <input
         v-model="title"
-        class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[20px] font-bold outline-none hover:bg-fill-2 focus:bg-fill-2"
+        class="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-[20px] font-semibold outline-hidden hover:border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         :placeholder="t('draw.titlePh')"
         :readonly="readonly"
         maxlength="300"
@@ -104,8 +105,8 @@ const leader = computed(() => {
         <button type="button" :class="{ on: mode === 'edit' }" :aria-pressed="mode === 'edit'" data-testid="whiteboard-edit-mode" @click="mode = 'edit'">{{ t('embed.edit') }}</button>
       </div>
       <PresenceAvatars :people="here.others.value" class="shrink-0" />
-      <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
-      <button v-if="!embedded && !readonly" class="btn btn-sm shrink-0" :title="t('draw.moveTo')" data-testid="whiteboard-move" @click="moving = true"><FolderInput class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('draw.moveTo') }}</span></button>
+      <Button v-if="embedded" type="button" class="shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</Button>
+      <Button variant="secondary" size="sm" v-if="!embedded && !readonly" class="shrink-0" :title="t('draw.moveTo')" data-testid="whiteboard-move" @click="moving = true"><FolderInput class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('draw.moveTo') }}</span></Button>
     </header>
     <NotePlacePicker :open="moving" mode="move" drawing :current="personal ? 'me' : ws" @close="moving = false" @pick="moveTo" />
     <div ref="fill" class="board-frame">
@@ -130,7 +131,7 @@ const leader = computed(() => {
 }
 .board-frame {
   overflow: hidden;
-  border-radius: 14px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--border);
 }
 </style>

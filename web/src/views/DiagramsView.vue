@@ -12,6 +12,7 @@ import { bringIn } from '@/lib/fileOps'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // A workspace's diagrams (draw.io and Mermaid), in its folders, each with
 // its picture; a new one (in the folder shown), or one from a file (.drawio,
@@ -83,18 +84,18 @@ async function imported(e: Event) {
       </div>
       <template v-if="editable">
         <input ref="fileEl" type="file" class="hidden" accept=".drawio,.dio,.xml,.svg,.mmd,.mermaid,application/xml,image/svg+xml" data-testid="diagram-import-input" @change="imported" />
-        <button class="btn btn-ghost" :disabled="importing" :title="t('diagrams.importHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('diagrams.import') }}</button>
-        <button ref="newEl" class="btn-primary" data-testid="new-diagram" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('diagrams.new') }}<ChevronDown class="h-3.5 w-3.5" /></button>
+        <Button variant="ghost" :disabled="importing" :title="t('diagrams.importHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('diagrams.import') }}</Button>
+        <Button ref="newEl" data-testid="new-diagram" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('diagrams.new') }}<ChevronDown class="h-3.5 w-3.5" /></Button>
       </template>
     </header>
 
     <Popover v-if="newOpen" :anchor="newEl" placement="bottom-end" :width="260" @close="newOpen = false">
       <div class="p-1.5">
-        <button type="button" class="menu-item w-full !items-start" data-testid="new-drawio" @click="create('drawio')">
+        <button type="button" class="menu-item w-full items-start!" data-testid="new-drawio" @click="create('drawio')">
           <Workflow class="mt-0.5 h-4 w-4 text-text-2" />
           <span class="text-left"><span class="block">{{ t('mermaid.newDrawio') }}</span><span class="block text-[12px] text-text-3">{{ t('mermaid.newDrawioHint') }}</span></span>
         </button>
-        <button type="button" class="menu-item w-full !items-start" data-testid="new-mermaid" @click="create('mermaid')">
+        <button type="button" class="menu-item w-full items-start!" data-testid="new-mermaid" @click="create('mermaid')">
           <GitFork class="mt-0.5 h-4 w-4 text-text-2" />
           <span class="text-left"><span class="block">{{ t('mermaid.newMermaid') }}</span><span class="block text-[12px] text-text-3">{{ t('mermaid.newMermaidHint') }}</span></span>
         </button>

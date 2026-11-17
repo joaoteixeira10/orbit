@@ -104,9 +104,9 @@ function iconFor(name: string) {
     <!-- Floating dropdown (teleported) -->
     <Teleport to="body">
       <template v-if="open">
-        <div class="fixed inset-0 z-[60]" @click="close" />
+        <div class="fixed inset-0 z-60" @click="close" />
         <div
-          class="fixed z-[61] overflow-hidden rounded-xl border border-border bg-surface shadow-soft"
+          class="fixed z-61 overflow-hidden rounded-xl border border-border bg-surface shadow-soft"
           :style="{ top: menu.top + 'px', left: menu.left + 'px', width: menu.width + 'px' }"
         >
           <div class="border-b border-border p-2">
@@ -114,7 +114,7 @@ function iconFor(name: string) {
               <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3" />
               <input
                 v-model="query"
-                class="w-full rounded-lg border border-border bg-surface-2 py-1.5 pl-8 pr-2 text-[13px] outline-none focus:border-accent"
+                class="rounded-lg w-full py-1.5 pl-8 pr-2 text-[13px] outline-hidden border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 :placeholder="t('acct.roles.search')"
               />
             </div>

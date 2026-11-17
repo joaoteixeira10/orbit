@@ -6,6 +6,9 @@ import CopyButton from './ui/CopyButton.vue'
 import { invitesApi, type Invite } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
 import { fmtDate } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A workspace's invite links (its owners): make one — a role, how long it
 // lasts, how many people can use it — copy it (shown once), revoke it.
@@ -59,29 +62,29 @@ async function revoke(inv: Invite) {
       <div class="group-row flex-wrap gap-y-2">
         <label class="inline-flex items-center gap-2 text-[13px] text-text-2">
           {{ t('invites.role') }}
-          <select v-model="role" class="input !w-auto !py-1 text-[13px]">
+          <NativeSelect size="sm" v-model="role" class="w-auto">
             <option value="editor">{{ t('roles.editor') }}</option>
             <option value="viewer">{{ t('roles.viewer') }}</option>
-          </select>
+          </NativeSelect>
         </label>
         <label class="inline-flex items-center gap-2 text-[13px] text-text-2">
           {{ t('invites.days') }}
-          <select v-model.number="days" class="input !w-auto !py-1 text-[13px]">
+          <NativeSelect size="sm" v-model.number="days" class="w-auto">
             <option v-for="n in [1, 7, 14, 30]" :key="n" :value="n">{{ t('invites.daysN', { n }, n) }}</option>
-          </select>
+          </NativeSelect>
         </label>
         <label class="inline-flex items-center gap-2 text-[13px] text-text-2">
           {{ t('invites.uses') }}
-          <select v-model.number="uses" class="input !w-auto !py-1 text-[13px]">
+          <NativeSelect size="sm" v-model.number="uses" class="w-auto">
             <option v-for="n in [1, 5, 10, 25, 100]" :key="n" :value="n">{{ t('invites.usesN', { n }, n) }}</option>
-          </select>
+          </NativeSelect>
         </label>
-        <button class="btn ml-auto" :disabled="busy" @click="make"><Link2 class="h-4 w-4" />{{ t('invites.make') }}</button>
+        <Button variant="secondary" class="ml-auto" :disabled="busy" @click="make"><Link2 class="h-4 w-4" />{{ t('invites.make') }}</Button>
       </div>
-      <div v-if="fresh" class="group-row flex-col !items-stretch gap-2">
+      <div v-if="fresh" class="group-row flex-col items-stretch! gap-2">
         <span class="text-[12.5px] text-text-2">{{ t('invites.created') }}</span>
         <div class="flex items-center gap-2">
-          <input class="input flex-1 font-mono text-[12.5px]" :value="fresh" readonly data-testid="invite-url" @focus="($event.target as HTMLInputElement).select()" />
+          <Input class="flex-1 font-mono text-[12.5px]" :model-value="fresh" readonly data-testid="invite-url" @focus="($event.target as HTMLInputElement).select()" />
           <CopyButton :value="fresh" :title="t('invites.copy')" />
         </div>
       </div>
@@ -93,7 +96,7 @@ async function revoke(inv: Invite) {
             {{ t('invites.used', { uses: inv.uses, max: inv.max_uses }) }} · {{ t('invites.expires', { date: fmtDate(new Date(inv.expires_at)) }) }}
           </span>
         </span>
-        <button class="icon-btn !text-danger" :title="t('invites.revoke')" :aria-label="t('invites.revoke')" @click="revoke(inv)"><Trash2 class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" class="text-text-2 text-danger!" :title="t('invites.revoke')" :aria-label="t('invites.revoke')" @click="revoke(inv)"><Trash2 class="h-4 w-4" /></Button>
       </div>
       <div v-if="!links.length && !fresh" class="group-row text-[13px] text-text-3">{{ t('invites.none') }}</div>
     </div>

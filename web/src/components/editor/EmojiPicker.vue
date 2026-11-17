@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { Shuffle, Trash2 } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import { EMOJIS, randomEmoji } from './emojis'
+import { Button } from '@/components/shadcn/button'
 
 // An emoji grid in a popover, for a page icon or a callout. "Remove" only
 // shows when the caller allows an empty choice.
@@ -21,8 +22,8 @@ function pick(e: string) {
     <div class="flex items-center justify-between px-1.5 pb-1 pt-0.5">
       <span class="cap">{{ t('editor.emoji') }}</span>
       <div class="flex items-center gap-0.5">
-        <button class="btn-ghost btn-sm" type="button" @click="pick(randomEmoji())"><Shuffle class="h-3.5 w-3.5" />{{ t('editor.random') }}</button>
-        <button v-if="removable" class="btn-ghost btn-sm" type="button" @click="pick('')"><Trash2 class="h-3.5 w-3.5" />{{ t('editor.remove') }}</button>
+        <Button variant="ghost" size="sm" type="button" @click="pick(randomEmoji())"><Shuffle class="h-3.5 w-3.5" />{{ t('editor.random') }}</Button>
+        <Button variant="ghost" size="sm" v-if="removable" type="button" @click="pick('')"><Trash2 class="h-3.5 w-3.5" />{{ t('editor.remove') }}</Button>
       </div>
     </div>
     <div class="emoji-grid">

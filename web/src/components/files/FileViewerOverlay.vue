@@ -34,7 +34,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKey, true))
   z-index: 60; /* over the sheet it was opened from (sheets and dialogs are 50) */
   display: flex;
   padding: clamp(0px, 2.5vw, 28px);
-  background: var(--backdrop);
+  /* The backdrop: shadcn's dialog overlay (a light wash, the page blurred). */
+  background: rgb(0 0 0 / 0.1);
+  backdrop-filter: blur(4px);
 }
 .viewer-panel {
   display: flex;
@@ -42,8 +44,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKey, true))
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
-  background: var(--bg);
+  border-radius: 12px;
+  background: var(--sheet-bg);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
 }
 .viewer-panel > :deep(*) {
@@ -54,5 +56,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKey, true))
   .viewer-panel {
     border-radius: 0;
   }
+}
+html.dark .viewer-backdrop {
+  background: rgb(0 0 0 / 0.4);
 }
 </style>

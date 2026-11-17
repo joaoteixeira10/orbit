@@ -12,6 +12,7 @@ import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 import { countdown, dueLabel, fmtClock, locale, todayStr, weekdayNames, weekStart } from '@/lib/dates'
 import { fmtMark } from '@/lib/grades'
+import { Button } from '@/components/shadcn/button'
 
 // Courses: the week's timetable (every course's classes), then a card per
 // course — teacher, room, its classes, its open tasks (tagged #tag) and,
@@ -149,7 +150,7 @@ const mark = (v: number) => fmtMark(v, locale())
         <h1 class="large-title">{{ t('school.courses') }}</h1>
         <p class="subhead mt-1">{{ t('school.coursesLead') }}</p>
       </div>
-      <button v-if="editable" class="btn-primary shrink-0" @click="open(null)"><Plus class="h-4 w-4" />{{ t('school.newCourse') }}</button>
+      <Button v-if="editable" class="shrink-0" @click="open(null)"><Plus class="h-4 w-4" />{{ t('school.newCourse') }}</Button>
     </header>
 
     <template v-if="courses.length">
@@ -191,16 +192,16 @@ const mark = (v: number) => fmtMark(v, locale())
                 <span>{{ t('school.classesN', { n: c.slots.length }, c.slots.length) }}</span>
               </span>
             </span>
-            <button
+            <Button variant="ghost" size="icon"
               v-if="editable || c.page_id"
               type="button"
-              class="icon-btn shrink-0"
+              class="text-text-2 shrink-0"
               :title="t('school.notesPage')"
               :aria-label="t('school.notesPage')"
               @click.stop="openNotes(c)"
             >
               <FileText class="h-4 w-4" />
-            </button>
+            </Button>
             <span v-if="withGrades && c.average != null" class="avg" :class="{ low: c.average < scale / 2 }" :title="t('school.average')">{{ mark(c.average) }}</span>
           </button>
           <button v-if="nextExam(c)" type="button" class="exam-line" @click="openTask(nextExam(c)!)">
@@ -226,7 +227,7 @@ const mark = (v: number) => fmtMark(v, locale())
       <GraduationCap class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
       <p class="title-3">{{ t('school.noCourses') }}</p>
       <p class="subhead mx-auto mt-1 max-w-sm">{{ t('school.noCoursesHint') }}</p>
-      <button v-if="editable" class="btn-primary mt-5" @click="open(null)"><Plus class="h-4 w-4" />{{ t('school.newCourse') }}</button>
+      <Button v-if="editable" class="mt-5" @click="open(null)"><Plus class="h-4 w-4" />{{ t('school.newCourse') }}</Button>
     </div>
 
     <CourseSheet :open="sheetOpen" :ws="ws" :course="sheetFor" :editable="editable" @close="sheetOpen = false" @saved="onSaved" @deleted="onDeleted" />
@@ -240,8 +241,8 @@ const mark = (v: number) => fmtMark(v, locale())
 }
 .card {
   background: var(--surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow-sm), 0 0 0 0.5px var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
 }
 /* The timetable */
 .tt {
@@ -354,7 +355,7 @@ const mark = (v: number) => fmtMark(v, locale())
   padding: 4px 8px;
   border-radius: 10px;
   background: var(--fill-2);
-  font: 700 18px var(--font-display);
+  font: 600 18px var(--font-sans);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }

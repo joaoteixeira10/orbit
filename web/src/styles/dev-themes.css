@@ -36,7 +36,7 @@
     border: 1px solid var(--accent-soft);
   }
   .dev-master .dm-ico {
-    @apply grid h-[38px] w-[38px] flex-shrink-0 place-items-center rounded-xl;
+    @apply grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl;
     background: var(--accent-bg);
     color: var(--accent-text);
   }
@@ -73,7 +73,7 @@
     border-top: 1px solid var(--border);
   }
   .theme-foot .tf-dot {
-    @apply h-[14px] w-[14px] flex-shrink-0 rounded-full;
+    @apply h-[14px] w-[14px] shrink-0 rounded-full;
     background: var(--tc);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
@@ -100,12 +100,12 @@
     opacity: 0.55;
   }
   .src-ico {
-    @apply grid h-[34px] w-[34px] flex-shrink-0 place-items-center rounded-[9px] text-text-2;
+    @apply grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] text-text-2;
     background: var(--surface);
     border: 1px solid var(--border);
   }
   .src-badge {
-    @apply flex-shrink-0 rounded-[7px] px-[9px] py-[5px] text-[10.5px] font-semibold uppercase tracking-wide text-text-faint;
+    @apply shrink-0 rounded-[7px] px-[9px] py-[5px] text-[10.5px] font-semibold uppercase tracking-wide text-text-faint;
     background: var(--surface-3);
   }
 

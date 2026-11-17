@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, Loader2, Minus, X } from 'lucide-vue-next'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import type { AssistantAction } from '@/api/assistant'
+import { Button } from '@/components/shadcn/button'
 
 // The changes an answer lined up in Agent mode, in one card: each ticked to
 // start with; untick what you don't want and approve once (or discard them
@@ -47,11 +48,11 @@ const made = computed(() => props.actions.filter((a) => a.state === 'done').leng
       </li>
     </ul>
     <div v-if="open" class="plan-foot">
-      <button class="btn-ghost btn-sm" :disabled="busy" data-testid="assistant-discard" @click="emit('apply', [])">{{ t('assistant.plan.discard') }}</button>
-      <button class="btn-primary btn-sm" :disabled="busy || !chosen.length" data-testid="assistant-approve" @click="emit('apply', chosen)">
+      <Button variant="ghost" size="sm" :disabled="busy" data-testid="assistant-discard" @click="emit('apply', [])">{{ t('assistant.plan.discard') }}</Button>
+      <Button size="sm" :disabled="busy || !chosen.length" data-testid="assistant-approve" @click="emit('apply', chosen)">
         <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" />
         {{ t('assistant.plan.approve', { n: chosen.length }, chosen.length) }}
-      </button>
+      </Button>
     </div>
   </div>
 </template>
@@ -60,9 +61,9 @@ const made = computed(() => props.actions.filter((a) => a.state === 'done').leng
 .plan {
   margin-top: 8px;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: inset 0 0 0 0.5px var(--border-2);
+  border: 1px solid var(--border);
 }
 .plan-head {
   padding: 9px 12px 7px;
@@ -75,7 +76,7 @@ const made = computed(() => props.actions.filter((a) => a.state === 'done').leng
   align-items: flex-start;
   gap: 10px;
   padding: 7px 12px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .plan-row :deep(button) {
   margin-top: 1px;
@@ -121,6 +122,6 @@ const made = computed(() => props.actions.filter((a) => a.state === 'done').leng
   justify-content: flex-end;
   gap: 8px;
   padding: 9px 12px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 </style>

@@ -5,11 +5,12 @@ import { buntingLayout, lightsLayout, rnd, type Decor } from '@/lib/holidayTheme
 
 // What hangs along the top of Home's column: Christmas lights, things on
 // threads (spiders, stars, eggs, lanterns — in the right part only, clear
-// of the greeting and the capture box), Santos' bunting, Halloween's moon.
+// of the greeting and the capture box), Santos' bunting, Halloween's moon;
+// a season's blossoms, bunting, leaves or snowflakes.
 // Never a click; a narrow column keeps only the lights or bunting.
 const holiday = useHolidayStore()
 const decors = computed(() => {
-  const h = holiday.active
+  const h = holiday.look
   return h ? ([h.decor, h.extraDecor].filter(Boolean) as Decor[]) : []
 })
 
@@ -19,7 +20,7 @@ const lights = computed(() => {
 })
 const bunting = computed(() => {
   const d = decors.value.find((x) => x.kind === 'bunting')
-  return d?.kind === 'bunting' ? buntingLayout(d.scallops, d.depth, d.perScallop) : null
+  return d?.kind === 'bunting' ? buntingLayout(d.scallops, d.depth, d.perScallop, 14, d.colors) : null
 })
 
 function drops(d: Extract<Decor, { kind: 'drop' }>) {
@@ -36,7 +37,7 @@ function drops(d: Extract<Decor, { kind: 'drop' }>) {
 </script>
 
 <template>
-  <div v-if="holiday.active" class="holiday-hang" aria-hidden="true" data-testid="holiday-hang">
+  <div v-if="holiday.look" class="holiday-hang" aria-hidden="true" data-testid="holiday-hang">
     <template v-for="(d, n) in decors" :key="n">
       <template v-if="d.kind === 'lights' && lights">
         <svg class="h-wire" :viewBox="lights.viewBox" preserveAspectRatio="none">
@@ -79,7 +80,7 @@ function drops(d: Extract<Decor, { kind: 'drop' }>) {
         </span>
       </template>
     </template>
-    <span v-if="holiday.active.art.moon" class="h-moon">
+    <span v-if="holiday.active?.art.moon" class="h-moon">
       <span style="left: 38px; top: 16px; width: 12px; height: 12px; background: rgba(160, 140, 90, 0.25)" />
       <span style="left: 18px; top: 38px; width: 8px; height: 8px; background: rgba(160, 140, 90, 0.22)" />
       <span style="left: 44px; top: 44px; width: 6px; height: 6px; background: rgba(160, 140, 90, 0.2)" />

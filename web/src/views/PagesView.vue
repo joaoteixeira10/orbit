@@ -13,6 +13,7 @@ import { relDay } from '@/lib/dates'
 import { fileName } from '@/lib/markdown'
 import ImportSheet from '@/components/pages/ImportSheet.vue'
 import { downloadAuthed } from '@/lib/api'
+import { Button } from '@/components/shadcn/button'
 
 // A workspace's pages at a glance: a grid (or list) of every page, newest
 // edits first or by title, with a filter. The sidebar tree is for browsing
@@ -97,9 +98,9 @@ async function create() {
         <h1 class="large-title">{{ t('modules.pages') }}</h1>
         <p class="subhead mt-0.5">{{ workspace?.name }} · {{ (pages.byWs[ws] ?? []).length }}</p>
       </div>
-      <button v-if="editable" type="button" class="btn btn-ghost" data-testid="open-changes" @click="changesOpen = true"><Undo2 class="h-4 w-4" />{{ t('changes.title') }}</button>
-      <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="btn btn-ghost" data-testid="open-graph"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink>
-      <button v-if="editable" class="btn-primary" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</button>
+      <Button variant="ghost" v-if="editable" type="button" data-testid="open-changes" @click="changesOpen = true"><Undo2 class="h-4 w-4" />{{ t('changes.title') }}</Button>
+      <Button as-child variant="ghost"><RouterLink :to="{ name: 'ws-graph', params: { ws } }" data-testid="open-graph"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink></Button>
+      <Button v-if="editable" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</Button>
     </header>
 
     <div class="mb-5 flex flex-wrap items-center gap-2">
@@ -117,10 +118,10 @@ async function create() {
       </div>
       <span class="ml-auto" />
       <template v-if="editable">
-        <button class="btn btn-ghost" :title="t('pages.importHint')" data-testid="pages-import" @click="importing = true"><Upload class="h-4 w-4" />{{ t('pages.importMd') }}</button>
+        <Button variant="ghost" :title="t('pages.importHint')" data-testid="pages-import" @click="importing = true"><Upload class="h-4 w-4" />{{ t('pages.importMd') }}</Button>
       </template>
-      <button class="btn btn-ghost" @click="exportAll"><Download class="h-4 w-4" />{{ t('pages.exportAll') }}</button>
-      <RouterLink :to="{ name: 'ws-trash', params: { ws } }" class="btn btn-ghost"><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink>
+      <Button variant="ghost" @click="exportAll"><Download class="h-4 w-4" />{{ t('pages.exportAll') }}</Button>
+      <Button as-child variant="ghost"><RouterLink :to="{ name: 'ws-trash', params: { ws } }" ><Trash2 class="h-4 w-4" />{{ t('pages.trash') }}</RouterLink></Button>
     </div>
 
     <div v-if="tagCounts.length" class="tag-bar" data-testid="tag-bar">
@@ -159,7 +160,7 @@ async function create() {
       <FileText class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
       <p class="title-3">{{ q ? t('cmd.nothing') : t('pages.empty') }}</p>
       <p v-if="!q" class="subhead mx-auto mt-1 max-w-sm">{{ t('pages.emptyHint') }}</p>
-      <button v-if="editable && !q" class="btn-primary mt-4" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</button>
+      <Button v-if="editable && !q" class="mt-4" @click="create"><Plus class="h-4 w-4" />{{ t('pages.new') }}</Button>
     </div>
     <ImportSheet :open="importing" :ws="ws" @close="importing = false" />
     <RecentChanges :open="changesOpen" :ws="ws" @close="changesOpen = false" />
@@ -208,7 +209,7 @@ async function create() {
   place-items: center;
   height: 92px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--ws) 14%, var(--surface-2)), var(--surface-2));
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .empty {
   padding: 72px 16px;

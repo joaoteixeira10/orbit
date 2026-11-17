@@ -23,6 +23,7 @@ import { useToastStore } from '@/stores/toast'
 import { useTaskFilter, useTaskFilterStore, dueBucket, dueEdges, DUE_BUCKETS, type DueBucket, type Progress } from '@/lib/taskFilter'
 import { STATUSES, countBy, countStatus, statusOf, summary, totalOf, weekly, type Counts, type Status } from '@/lib/charts'
 import { todayStr, parseDate, addDays, fmtDate, locale } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
 
 // Charts: the workspace's tasks at a glance, like Planner's Charts. Summary
 // tiles, then status, lists, priority, people, tags and a weekly trend,
@@ -254,7 +255,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
         <p class="subhead mt-0.5 tabular-nums">{{ ready ? t('charts.count', shown.length) : ' ' }}</p>
       </div>
       <div class="mb-1 flex shrink-0 items-center gap-1">
-        <button v-if="ready && shown.length" type="button" class="icon-btn h-8 w-8" :title="t('charts.tasksCsv')" :aria-label="t('charts.tasksCsv')" data-testid="tasks-csv" @click="tasksCsv"><Sheet class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" v-if="ready && shown.length" type="button" class="text-text-2 h-8 w-8" :title="t('charts.tasksCsv')" :aria-label="t('charts.tasksCsv')" data-testid="tasks-csv" @click="tasksCsv"><Sheet class="h-4 w-4" /></Button>
         <TaskFilter :ws="ws" show-lists />
       </div>
     </header>
@@ -267,7 +268,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
       <ChartPie class="mx-auto h-10 w-10 text-text-3" :stroke-width="1.5" />
       <h2 class="title-3 mt-3">{{ filterOn ? t('charts.noMatch') : t('charts.empty') }}</h2>
       <p v-if="!filterOn" class="subhead mx-auto mt-1 max-w-sm">{{ t('charts.emptyHint') }}</p>
-      <button v-else class="btn btn-sm mt-4" @click="clear">{{ t('charts.clearFilter') }}</button>
+      <Button variant="secondary" size="sm" v-else class="mt-4" @click="clear">{{ t('charts.clearFilter') }}</Button>
     </div>
 
     <div v-else class="body" :class="{ busy }">
@@ -467,7 +468,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
 }
 .stat:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 0 0.5px var(--border), var(--shadow);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow);
 }
 .stat:active {
   transform: scale(0.985);
@@ -490,7 +491,7 @@ const tileDrill: Record<string, Parameters<typeof drill>[0]> = {
 }
 .stat-value {
   margin-top: 10px;
-  font: 700 34px/1 var(--font-display);
+  font: 600 34px/1 var(--font-sans);
   letter-spacing: -0.02em;
   color: var(--text);
 }

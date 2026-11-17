@@ -44,6 +44,8 @@ export function noteColorCss(): string {
     const sel = `[data-note="${key}"],.sheet-panel:has(.note-sheet[data-note="${key}"])`
     if (key === '') {
       rules.push(`${sel}{--note-bg:var(--surface);--note-ink:var(--ws);--note-line:var(--border)}`)
+      // Open, a plain note is a modal window like any other: the sheet ground.
+      rules.push('.sheet-panel:has(.note-sheet[data-note=""]),.sheet-panel [data-note=""]{--note-bg:var(--sheet-bg)}')
       continue
     }
     rules.push(`${sel}{--note-bg:${c.light};--note-ink:${c.ink};--note-line:rgba(0,0,0,.07)}`)

@@ -347,7 +347,7 @@ const canDown = computed(() => !!at.value && props.editor.state.doc.resolve(at.v
   color: var(--text);
 }
 .turn.on {
-  background: var(--accent-bg, var(--fill));
+  background: var(--fill);
   color: var(--accent-text, var(--accent));
 }
 .dot {

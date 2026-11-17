@@ -109,7 +109,7 @@ const covered = computed(() => {
   align-items: center;
 }
 .top .cell {
-  border-left: 0.5px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 .top .cell .lbl {
   /* The month's name stays in view while its days scroll by. */
@@ -129,7 +129,7 @@ const covered = computed(() => {
 }
 .low.months .cell,
 .low.quarters .cell {
-  border-left: 0.5px solid var(--line-soft);
+  border-left: 1px solid var(--line-soft);
 }
 .low.weeks .cell {
   flex-direction: column;

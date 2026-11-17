@@ -6,6 +6,8 @@ import Confirm from '@/components/ui/Confirm.vue'
 import { calendarApi, type CalDAVLink, type CalDAVCalendar } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
 import { locale } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // Two-way sync with a calendar on a CalDAV server: owners connect an account
 // (server, username, app password), pick one of its calendars and sync;
@@ -184,7 +186,7 @@ function ago(iso: string): string {
 
     <!-- Linked -->
     <div v-if="link" class="group">
-      <div class="group-row !items-start">
+      <div class="group-row items-start!">
         <ArrowLeftRight class="mt-1 h-4 w-4 shrink-0 text-accent" />
         <div class="min-w-0 flex-1">
           <div class="truncate text-[14.5px] font-medium">{{ link.calendar_name || link.host }}</div>
@@ -195,16 +197,16 @@ function ago(iso: string): string {
             <span>{{ link.synced_at ? t('cal.dav.synced', { when: ago(link.synced_at) }) : t('cal.dav.never') }}</span>
           </div>
           <p v-if="link.last_error" class="mt-1 flex items-start gap-1 text-[12.5px] text-crit-text">
-            <AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="break-words">{{ link.last_error }}</span>
+            <AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="wrap-break-word">{{ link.last_error }}</span>
           </p>
         </div>
         <div class="-mr-1.5 flex shrink-0 items-center">
-          <button class="icon-btn" :title="t('cal.dav.syncNow')" :aria-label="t('cal.dav.syncNow')" :disabled="syncing" @click="syncNow">
+          <Button variant="ghost" size="icon" class="text-text-2" :title="t('cal.dav.syncNow')" :aria-label="t('cal.dav.syncNow')" :disabled="syncing" @click="syncNow">
             <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': syncing }" />
-          </button>
+          </Button>
         </div>
       </div>
-      <button v-if="owner" class="group-row w-full text-left text-[14px] !text-danger" @click="stopping = true">{{ t('cal.dav.stop') }}</button>
+      <button v-if="owner" class="group-row w-full text-left text-[14px] text-danger!" @click="stopping = true">{{ t('cal.dav.stop') }}</button>
     </div>
 
 <!-- Back from Google: one of the account's calendars -->
@@ -221,10 +223,10 @@ function ago(iso: string): string {
       <p class="text-[12.5px] leading-relaxed text-text-3">{{ t('cal.dav.first') }}</p>
       <p v-if="error" class="text-[12.5px] text-crit-text">{{ error }}</p>
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn" :disabled="linking" @click="cancelGoogle">{{ t('common.cancel') }}</button>
-        <button type="submit" class="btn-primary" :disabled="!googleChosen || linking" data-testid="google-link">
+        <Button variant="secondary" type="button" :disabled="linking" @click="cancelGoogle">{{ t('common.cancel') }}</Button>
+        <Button type="submit" :disabled="!googleChosen || linking" data-testid="google-link">
           <RefreshCw v-if="linking" class="h-4 w-4 animate-spin" />{{ linking ? t('cal.dav.linking') : t('cal.dav.link') }}
-        </button>
+        </Button>
       </div>
     </form>
 
@@ -234,19 +236,19 @@ function ago(iso: string): string {
       <template v-if="!calendars">
         <div>
           <label class="label" for="dav-server">{{ t('cal.dav.server') }}</label>
-          <input id="dav-server" v-model="server" class="input" type="url" inputmode="url" autocomplete="off" spellcheck="false" :placeholder="t('cal.dav.serverPlaceholder')" :disabled="finding" />
+          <Input id="dav-server" v-model="server" type="url" inputmode="url" autocomplete="off" spellcheck="false" :placeholder="t('cal.dav.serverPlaceholder')" :disabled="finding" />
           <div class="mt-1.5 flex flex-wrap gap-1.5">
             <button v-for="p in presets" :key="p.name" type="button" class="pill hover:bg-fill" @click="server = p.url">{{ p.name }}</button>
           </div>
         </div>
         <div>
           <label class="label" for="dav-user">{{ t('cal.dav.username') }}</label>
-          <input id="dav-user" v-model="username" class="input" autocomplete="off" spellcheck="false" :disabled="finding" />
+          <Input id="dav-user" v-model="username" autocomplete="off" spellcheck="false" :disabled="finding" />
           <p class="mt-1 text-[12px] text-text-3">{{ t('cal.dav.usernameHint') }}</p>
         </div>
         <div>
           <label class="label" for="dav-pass">{{ t('cal.dav.password') }}</label>
-          <input id="dav-pass" v-model="password" class="input" type="password" autocomplete="new-password" :disabled="finding" />
+          <Input id="dav-pass" v-model="password" type="password" autocomplete="new-password" :disabled="finding" />
           <p class="mt-1 text-[12px] leading-relaxed text-text-3">{{ t('cal.dav.passwordHint') }}</p>
         </div>
       </template>
@@ -263,18 +265,18 @@ function ago(iso: string): string {
       </template>
       <p v-if="error" class="text-[12.5px] text-crit-text">{{ error }}</p>
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn" :disabled="finding || linking" @click="calendars ? (calendars = null) : (setup = false)">{{ calendars ? t('common.back') : t('common.cancel') }}</button>
-        <button v-if="!calendars" type="submit" class="btn-primary" :disabled="!canFind">
+        <Button variant="secondary" type="button" :disabled="finding || linking" @click="calendars ? (calendars = null) : (setup = false)">{{ calendars ? t('common.back') : t('common.cancel') }}</Button>
+        <Button v-if="!calendars" type="submit" :disabled="!canFind">
           <RefreshCw v-if="finding" class="h-4 w-4 animate-spin" />{{ finding ? t('cal.dav.finding') : t('cal.dav.find') }}
-        </button>
-        <button v-else type="submit" class="btn-primary" :disabled="!chosen || linking">
+        </Button>
+        <Button v-else type="submit" :disabled="!chosen || linking">
           <RefreshCw v-if="linking" class="h-4 w-4 animate-spin" />{{ linking ? t('cal.dav.linking') : t('cal.dav.link') }}
-        </button>
+        </Button>
       </div>
     </form>
     <template v-else>
-      <button v-if="googleOn" class="btn-tinted w-full" data-testid="google-start" @click="signInGoogle"><ArrowLeftRight class="h-4 w-4" />{{ t('cal.dav.googleStart') }}</button>
-      <button class="btn-tinted w-full" data-testid="caldav-start" @click="start"><ArrowLeftRight class="h-4 w-4" />{{ t('cal.dav.start') }}</button>
+      <Button variant="outline" v-if="googleOn" class="w-full" data-testid="google-start" @click="signInGoogle"><ArrowLeftRight class="h-4 w-4" />{{ t('cal.dav.googleStart') }}</Button>
+      <Button variant="outline" class="w-full" data-testid="caldav-start" @click="start"><ArrowLeftRight class="h-4 w-4" />{{ t('cal.dav.start') }}</Button>
       <p v-if="!googleOn" class="footnote px-1 leading-relaxed">{{ t('cal.dav.google') }}</p>
     </template>
   </section>

@@ -567,7 +567,7 @@ function commitAdd(listId: string) {
                   <input
                     ref="addInput"
                     v-model="draft"
-                    class="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none"
+                    class="min-w-0 flex-1 bg-transparent text-[13.5px] outline-hidden"
                     :placeholder="t('tasks.newTask')"
                     maxlength="500"
                     @keydown.enter="commitAdd(g.list.id)"
@@ -633,7 +633,7 @@ html.dark .tl {
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: inset 0 -0.5px 0 var(--border);
+  box-shadow: inset 0 -1px 0 var(--border);
 }
 .tl-corner {
   position: sticky;
@@ -645,7 +645,7 @@ html.dark .tl {
   width: var(--name-w);
   padding: 0 14px 9px;
   background: var(--bg);
-  box-shadow: inset -0.5px -0.5px 0 var(--border);
+  box-shadow: inset -1px -1px 0 var(--border);
 }
 
 /* ---- Dependencies ---- */
@@ -699,7 +699,7 @@ html.dark .tl {
 }
 .month-line {
   width: 0;
-  border-left: 0.5px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 .today-col {
   background: color-mix(in srgb, var(--crit) 5%, transparent);
@@ -742,7 +742,7 @@ html.dark .tl {
   width: var(--name-w);
   padding: 0 12px 0 14px;
   background: var(--bg);
-  box-shadow: inset -0.5px 0 0 var(--border), inset 0 -0.5px 0 var(--line-soft);
+  box-shadow: inset -1px 0 0 var(--border), inset 0 -1px 0 var(--line-soft);
   transition: box-shadow var(--speed) var(--ease);
 }
 /* Lifted over the grid once it scrolls beneath. */
@@ -764,7 +764,7 @@ html.dark .scrolled .tl-corner::after {
 .tr {
   position: relative;
   flex: 1;
-  box-shadow: inset 0 -0.5px 0 var(--line-soft);
+  box-shadow: inset 0 -1px 0 var(--line-soft);
 }
 
 /* A list's row. */
@@ -856,7 +856,7 @@ html.dark .scrolled .tl-corner::after {
 /* New task. */
 .add .nm,
 .filler .nm {
-  box-shadow: inset -0.5px 0 0 var(--border);
+  box-shadow: inset -1px 0 0 var(--border);
 }
 .add .tr,
 .filler .tr {

@@ -199,9 +199,23 @@ export const useAuthStore = defineStore('auth', {
       import('@/lib/live').then((m) => m.stopLiveUpdates())
       // Signed out: the instance's developer theme again (the sign-in page's).
       localStorage.removeItem('orbit_dev_theme')
+      localStorage.removeItem('orbit_holiday_theme')
+      localStorage.removeItem('orbit_season_theme')
+      // And solid and moving again (glass and animations are each person's;
+      // the next one's come with them).
+      localStorage.removeItem('orbit_glass')
+      localStorage.removeItem('orbit_animations')
+      import('@/stores/prefs').then((m) => {
+        const p = m.usePrefsStore()
+        p.glass = 0
+        p.animations = true
+        p.applyTheme()
+      })
       import('@/stores/branding').then((m) => {
         const b = m.useBrandingStore()
         b.userDevTheme = ''
+        b.userHolidayTheme = ''
+        b.userSeasonTheme = ''
         b.applyAccent()
         b.applyFavicon()
       })

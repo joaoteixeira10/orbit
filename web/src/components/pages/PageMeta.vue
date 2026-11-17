@@ -7,6 +7,7 @@ import Popover from '@/components/ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import type { PageField } from '@/lib/markdown'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // Any page's tags and properties, under its title: tags as chips (a click
 // lists the workspace's pages with it), properties as rows — a name and a
@@ -175,19 +176,19 @@ const shown = computed(() => props.editable || tags.value.length || fields.value
           <a v-else-if="f.type === 'url' && f.value" :href="String(f.value)" target="_blank" rel="noopener noreferrer" class="text-accent">{{ f.value }}</a>
           <span v-else class="read">{{ f.value ?? '—' }}</span>
         </span>
-        <button v-if="editable" type="button" class="icon-btn h-6 w-6 shrink-0 opacity-60" :aria-label="t('meta.removeField', { name: f.key })" @click="removeField(i)"><X class="h-3.5 w-3.5" /></button>
+        <Button variant="ghost" size="icon" v-if="editable" type="button" class="text-text-2 h-6 w-6 shrink-0 opacity-60" :aria-label="t('meta.removeField', { name: f.key })" @click="removeField(i)"><X class="h-3.5 w-3.5" /></Button>
       </div>
     </div>
 
     <Popover v-if="newOpen" :anchor="newEl" :width="260" placement="bottom-start" @close="newOpen = false">
       <form class="flex flex-col gap-2 p-2.5" @submit.prevent="addField">
-        <input ref="newNameEl" v-model="newName" class="field !py-1.5 text-[13.5px]" maxlength="60" :placeholder="t('meta.fieldName')" :aria-label="t('meta.fieldName')" data-testid="field-name" />
+        <input ref="newNameEl" v-model="newName" class="field py-1.5! text-[13.5px]" maxlength="60" :placeholder="t('meta.fieldName')" :aria-label="t('meta.fieldName')" data-testid="field-name" />
         <div class="kinds" role="radiogroup" :aria-label="t('meta.kind')">
           <button v-for="k in KINDS" :key="k.type" type="button" role="radio" :aria-checked="newType === k.type" :class="{ on: newType === k.type }" :data-testid="`field-kind-${k.type}`" @click="newType = k.type">
             <component :is="k.icon" class="h-3.5 w-3.5" />{{ t(`meta.kinds.${k.type}`) }}
           </button>
         </div>
-        <button type="submit" class="btn-primary btn-sm self-end" :disabled="!newName.trim()" data-testid="field-add">{{ t('meta.add') }}</button>
+        <Button size="sm" type="submit" class="self-end" :disabled="!newName.trim()" data-testid="field-add">{{ t('meta.add') }}</Button>
       </form>
     </Popover>
   </div>
@@ -253,7 +254,7 @@ const shown = computed(() => props.editable || tags.value.length || fields.value
   padding: 4px;
   border-radius: 10px;
   background: var(--surface);
-  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15)), 0 0 0 0.5px var(--border);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15)), 0 0 0 1px var(--border);
 }
 .suggest button {
   padding: 4px 8px;

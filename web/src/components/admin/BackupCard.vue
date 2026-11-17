@@ -5,6 +5,9 @@ import { Archive, Download, Play } from 'lucide-vue-next'
 import { api, downloadAuthedPost } from '@/lib/api'
 import { useToastStore } from '@/stores/toast'
 import Toggle from '@/components/ui/Toggle.vue'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Owner → Owner: encrypted backups — download one now (sealed with the master
 // key, or a passphrase to keep it elsewhere), and the automatic one (to a
@@ -95,8 +98,8 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
     <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Archive class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('bk.title') }}</h3></div>
     <div class="flex flex-col gap-5 p-5">
       <p class="text-[12px] text-text-3">{{ t('bk.intro') }}</p>
-      <p v-if="!supported" class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-postgres">{{ t('bk.postgres') }}</p>
-      <p v-if="filesStore !== 'db'" class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-files">{{ t(`bk.files.${filesStore}`) }}</p>
+      <p v-if="!supported" class="rounded-lg border border-border px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-postgres">{{ t('bk.postgres') }}</p>
+      <p v-if="filesStore !== 'db'" class="rounded-lg border border-border px-3 py-2.5 text-[12.5px] leading-relaxed text-text-2" data-testid="backup-files">{{ t(`bk.files.${filesStore}`) }}</p>
 
       <!-- Download now -->
       <div class="flex flex-col gap-3">
@@ -106,11 +109,11 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
           <label class="flex shrink-0 items-center gap-2 text-[12.5px]"><Toggle v-model="usePass" :aria-label="t('bk.usePass')" /> {{ t('bk.usePass') }}</label>
         </div>
         <div v-if="usePass" class="grid gap-3 sm:grid-cols-2">
-          <input v-model="pass" type="password" class="input" autocomplete="new-password" :placeholder="t('bk.pass')" :aria-label="t('bk.pass')" />
-          <input v-model="pass2" type="password" class="input" autocomplete="new-password" :placeholder="t('bk.pass2')" :aria-label="t('bk.pass2')" />
+          <Input v-model="pass" type="password" autocomplete="new-password" :placeholder="t('bk.pass')" :aria-label="t('bk.pass')" />
+          <Input v-model="pass2" type="password" autocomplete="new-password" :placeholder="t('bk.pass2')" :aria-label="t('bk.pass2')" />
         </div>
         <div class="flex justify-end">
-          <button class="btn-primary" :disabled="downloading || !passOk" @click="download"><Download class="h-4 w-4" /> {{ t('bk.download') }}</button>
+          <Button :disabled="downloading || !passOk" @click="download"><Download class="h-4 w-4" /> {{ t('bk.download') }}</Button>
         </div>
       </div>
 
@@ -121,31 +124,31 @@ const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medi
           <Toggle v-model="sched.enabled" :aria-label="t('bk.auto')" />
         </div>
         <div class="grid gap-3 sm:grid-cols-3">
-          <div><label class="label">{{ t('bk.every') }}</label><input v-model.number="sched.interval_hours" type="number" min="1" max="744" class="input" /></div>
-          <div><label class="label">{{ t('bk.keep') }}</label><input v-model.number="sched.keep" type="number" min="0" max="1000" class="input" /></div>
+          <div><label class="label">{{ t('bk.every') }}</label><Input v-model.number="sched.interval_hours" type="number" min="1" max="744" /></div>
+          <div><label class="label">{{ t('bk.keep') }}</label><Input v-model.number="sched.keep" type="number" min="0" max="1000" /></div>
           <div>
             <label class="label">{{ t('bk.dest') }}</label>
-            <select v-model="sched.dest" class="input"><option value="dir">{{ t('bk.dir') }}</option><option value="s3">S3</option></select>
+            <NativeSelect v-model="sched.dest" class="w-full"><option value="dir">{{ t('bk.dir') }}</option><option value="s3">S3</option></NativeSelect>
           </div>
         </div>
         <div v-if="sched.dest === 'dir'">
           <label class="label">{{ t('bk.dirPath') }}</label>
-          <input v-model="sched.dir" class="input font-mono" placeholder="/backups" />
+          <Input v-model="sched.dir" class="font-mono" placeholder="/backups" />
           <p class="mt-1 text-[11.5px] text-text-3">{{ t('bk.dirHint') }}</p>
         </div>
         <div v-else class="grid gap-3 sm:grid-cols-2">
-          <div><label class="label">{{ t('bk.bucket') }}</label><input v-model="sched.s3_bucket" class="input font-mono" /></div>
-          <div><label class="label">{{ t('bk.prefix') }}</label><input v-model="sched.s3_prefix" class="input font-mono" placeholder="orbit" /></div>
-          <div><label class="label">{{ t('bk.endpoint') }}</label><input v-model="sched.s3_endpoint" class="input font-mono" placeholder="minio.example.org:9000" /></div>
-          <div><label class="label">{{ t('bk.region') }}</label><input v-model="sched.s3_region" class="input font-mono" placeholder="eu-west-1" /></div>
+          <div><label class="label">{{ t('bk.bucket') }}</label><Input v-model="sched.s3_bucket" class="font-mono" /></div>
+          <div><label class="label">{{ t('bk.prefix') }}</label><Input v-model="sched.s3_prefix" class="font-mono" placeholder="orbit" /></div>
+          <div><label class="label">{{ t('bk.endpoint') }}</label><Input v-model="sched.s3_endpoint" class="font-mono" placeholder="minio.example.org:9000" /></div>
+          <div><label class="label">{{ t('bk.region') }}</label><Input v-model="sched.s3_region" class="font-mono" placeholder="eu-west-1" /></div>
           <p class="text-[11.5px] text-text-3 sm:col-span-2">{{ t('bk.s3Hint') }}</p>
         </div>
         <div v-if="last" class="rounded-xl border px-3 py-2 text-[12px]" :class="last.ok ? 'border-border bg-surface-2 text-text-2' : 'border-crit-border bg-crit-bg text-crit-text'">
           {{ last.ok ? t('bk.lastOk', { at: fmt(last.at), where: last.where }) + (last.files ? ' ' + t('bk.filesCopied', { n: last.files }, last.files) : '') : t('bk.lastFailed', { at: fmt(last.at), error: last.error }) }}
         </div>
         <div class="flex justify-end gap-2">
-          <button class="btn-ghost" :disabled="running" @click="runNow"><Play class="h-4 w-4" /> {{ t('bk.runNow') }}</button>
-          <button class="btn-primary" @click="save">{{ t('common.save') }}</button>
+          <Button variant="ghost" :disabled="running" @click="runNow"><Play class="h-4 w-4" /> {{ t('bk.runNow') }}</Button>
+          <Button @click="save">{{ t('common.save') }}</Button>
         </div>
       </div>
 

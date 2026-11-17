@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, MapPin, Plus, Repeat } from 'lucide-vue-next'
 import { fmtDate, fmtTime, fmtClock, parseDate, relDay } from '@/lib/dates'
 import { onDay, sortEntries, eventColor, type Entry, type TaskItem } from './model'
+import { Button } from '@/components/shadcn/button'
 
 // One day as a list, under the phone's month (as in iOS Calendar): all-day
 // events, then timed ones with their times on the left, then due tasks.
@@ -42,7 +43,7 @@ function times(e: Entry): [string, string] {
         <h3 class="title-3 truncate">{{ heading }}</h3>
         <p v-if="heading !== sub" class="subhead truncate">{{ sub }}</p>
       </div>
-      <button v-if="canCreate" class="icon-btn" :aria-label="t('cal.newEvent')" @click="emit('create', day)"><Plus class="h-5 w-5" /></button>
+      <Button variant="ghost" size="icon" v-if="canCreate" class="text-text-2" :aria-label="t('cal.newEvent')" @click="emit('create', day)"><Plus class="h-5 w-5" /></Button>
     </header>
 
     <div v-if="list.length || dayTasks.length" class="group">

@@ -40,6 +40,7 @@ import { askUnlock } from '@/lib/lockPrompt'
 import EmojiPicker from '@/components/editor/EmojiPicker.vue'
 import CoverPicker from '@/components/editor/CoverPicker.vue'
 import { coverBackground, randomCover } from '@/components/editor/covers'
+import { Button } from '@/components/shadcn/button'
 
 const route = useRoute()
 const router = useRouter()
@@ -504,9 +505,25 @@ async function useTemplate(tpl: PageTemplate | { id: string }) {
   if (src.icon && !p.icon) setIcon(src.icon)
   if (src.cover && !p.cover) setCover(src.cover)
   draft.value = content
+  hasText.value = true
+  if (together.value || joining.value) {
+    // Editing together, the shared document can't be replaced in place:
+    // the template is saved as the page's, and the shared document starts
+    // over from it (as after any save made another way).
+    try {
+      const saved = await pagesApi.update(p.id, { content, version: version.value })
+      version.value = saved.version
+      savedGen = editGen
+      if (page.value) page.value = { ...page.value, content, version: saved.version, updated_at: saved.updated_at, updated_by: saved.updated_by }
+    } catch (e: any) {
+      toast.error(e.message)
+      return
+    }
+    await rejoin()
+    return
+  }
   if (editing.value) editorRef.value?.setContent(content)
   else await startEdit(false)
-  hasText.value = true
   onEditorChange()
   schedule(0)
 }
@@ -926,16 +943,16 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
               <button role="tab" :aria-selected="mode === 'visual'" :class="{ on: mode === 'visual' }" @click="switchMode('visual')">{{ t('editor.modeVisual') }}</button>
               <button role="tab" :aria-selected="mode === 'markdown'" :class="{ on: mode === 'markdown' }" @click="switchMode('markdown')">{{ t('editor.modeMarkdown') }}</button>
             </div>
-            <button class="btn-primary btn-sm ml-1.5" @click="stopEdit"><Check class="h-3.5 w-3.5" />{{ t('editor.doneEditing') }}</button>
+            <Button size="sm" class="ml-1.5" @click="stopEdit"><Check class="h-3.5 w-3.5" />{{ t('editor.doneEditing') }}</Button>
           </template>
-          <button v-else class="btn btn-sm ml-2" :title="t('editor.edit') + ' (E)'" @click="startEdit()"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</button>
+          <Button variant="secondary" size="sm" v-else class="ml-2" :title="t('editor.edit') + ' (E)'" @click="startEdit()"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</Button>
         </template>
-        <button type="button" class="icon-btn ml-1" :class="{ 'text-accent': rail.open }" :title="t('outline.title')" :aria-label="t('outline.title')" :aria-pressed="rail.open" data-testid="outline-toggle" @click="setRailOpen(!rail.open)">
+        <Button variant="ghost" size="icon" type="button" class="text-text-2 ml-1" :class="{ 'text-accent': rail.open }" :title="t('outline.title')" :aria-label="t('outline.title')" :aria-pressed="rail.open" data-testid="outline-toggle" @click="setRailOpen(!rail.open)">
           <ListTree class="h-[18px] w-[18px]" />
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" size="icon"
           v-if="!page.trashed_at"
-          class="icon-btn ml-1"
+          class="text-text-2 ml-1"
           :class="{ 'fav-on': favorite }"
           :title="favorite ? t('pages.unfavorite') : t('pages.favorite')"
           :aria-label="favorite ? t('pages.unfavorite') : t('pages.favorite')"
@@ -943,11 +960,11 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
           @click="toggleFavorite"
         >
           <Star class="h-[18px] w-[18px]" :fill="favorite ? 'currentColor' : 'none'" />
-        </button>
+        </Button>
         <PresenceAvatars :people="here.others.value" class="mr-1" />
-        <button v-if="canEditWs && !page.trashed_at" ref="menuBtn" class="icon-btn" :title="t('editor.options')" :aria-label="t('editor.options')" @click="menuOpen = !menuOpen">
+        <Button variant="ghost" size="icon" v-if="canEditWs && !page.trashed_at" ref="menuBtn" class="text-text-2" :title="t('editor.options')" :aria-label="t('editor.options')" @click="menuOpen = !menuOpen">
           <MoreHorizontal class="h-[18px] w-[18px]" />
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -955,16 +972,16 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
     <div v-if="missing" class="empty-state mx-auto max-w-md px-4 pt-24">
       <FileText class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
       <p class="text-[15px] text-text-2">{{ t('editor.notFound') }}</p>
-      <RouterLink v-if="ws" class="btn-tinted btn-sm mt-4" :to="{ name: 'ws-pages', params: { ws: wsId } }">{{ t('editor.backToPages') }}</RouterLink>
+      <Button as-child variant="outline" size="sm"><RouterLink v-if="ws" class="mt-4" :to="{ name: 'ws-pages', params: { ws: wsId } }">{{ t('editor.backToPages') }}</RouterLink></Button>
     </div>
 
     <!-- Loading -->
     <div v-else-if="!page || !ready" class="page-col px-4 pt-16 sm:px-8" aria-busy="true">
       <div v-if="loading" class="skeleton">
-        <div class="sk sk-title" />
-        <div class="sk w-[92%]" />
-        <div class="sk w-[78%]" />
-        <div class="sk w-[85%]" />
+        <div class="sk sk-title shimmer" />
+        <div class="sk shimmer w-[92%]" />
+        <div class="sk shimmer w-[78%]" />
+        <div class="sk shimmer w-[85%]" />
       </div>
     </div>
 
@@ -974,7 +991,7 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
         <div v-if="page.trashed_at" class="banner banner-crit">
           <Trash2 class="h-4 w-4 shrink-0" />
           <span class="flex-1">{{ t('editor.trashed') }}</span>
-          <button v-if="canEditWs" class="btn btn-sm" @click="restore"><RotateCcw class="h-3.5 w-3.5" />{{ t('pages.restore') }}</button>
+          <Button variant="secondary" size="sm" v-if="canEditWs" @click="restore"><RotateCcw class="h-3.5 w-3.5" />{{ t('pages.restore') }}</Button>
         </div>
         <div v-else-if="ws?.archived_at" class="banner">
           <Archive class="h-4 w-4 shrink-0" />
@@ -984,8 +1001,8 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
           <AlertTriangle class="h-4 w-4 shrink-0" />
           <span class="flex-1">{{ t('editor.conflict') }}</span>
           <span class="flex shrink-0 gap-1.5">
-            <button class="btn btn-sm" @click="loadTheirs">{{ t('editor.loadTheirs') }}</button>
-            <button class="btn-primary btn-sm" @click="keepMine">{{ t('editor.keepMine') }}</button>
+            <Button variant="secondary" size="sm" @click="loadTheirs">{{ t('editor.loadTheirs') }}</Button>
+            <Button size="sm" @click="keepMine">{{ t('editor.keepMine') }}</Button>
           </span>
         </div>
         <div v-if="invalid" class="banner banner-warn">
@@ -1017,8 +1034,8 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
               {{ page.icon }}
             </button>
             <div v-if="editable && (!page.icon || !coverBg)" class="page-add">
-              <button v-if="!page.icon" class="btn-ghost btn-sm text-text-3" type="button" @click="openIcon"><Smile class="h-4 w-4" />{{ t('editor.addIcon') }}</button>
-              <button v-if="!coverBg" class="btn-ghost btn-sm text-text-3" type="button" @click="setCover(randomCover())"><Image class="h-4 w-4" />{{ t('editor.addCover') }}</button>
+              <Button variant="ghost" size="sm" v-if="!page.icon" class="text-text-3" type="button" @click="openIcon"><Smile class="h-4 w-4" />{{ t('editor.addIcon') }}</Button>
+              <Button variant="ghost" size="sm" v-if="!coverBg" class="text-text-3" type="button" @click="setCover(randomCover())"><Image class="h-4 w-4" />{{ t('editor.addCover') }}</Button>
             </div>
             <textarea
               ref="titleEl"
@@ -1039,13 +1056,13 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
 
           <div v-if="offerTemplates" class="templates" data-testid="page-templates">
             <span class="cap">{{ t('pages.startWith') }}</span>
-            <button v-for="b in builtInTemplates(currentLocale())" :key="b.key" type="button" class="btn btn-sm" @click="useTemplate(b)">
+            <Button variant="secondary" size="sm" v-for="b in builtInTemplates(currentLocale())" :key="b.key" type="button" @click="useTemplate(b)">
               <component :is="BUILT_IN_ICONS[b.key]" class="h-3.5 w-3.5" />{{ t(`pages.tpl.${b.key}`) }}
-            </button>
-            <button type="button" class="btn btn-sm" data-testid="make-database" @click="makeDatabase"><Table2 class="h-3.5 w-3.5" />{{ t('db.database') }}</button>
-            <button v-for="o in ownTemplates" :key="o.id" type="button" class="btn btn-sm" @click="useTemplate({ id: o.id })">
+            </Button>
+            <Button variant="secondary" size="sm" type="button" data-testid="make-database" @click="makeDatabase"><Table2 class="h-3.5 w-3.5" />{{ t('db.database') }}</Button>
+            <Button variant="secondary" size="sm" v-for="o in ownTemplates" :key="o.id" type="button" @click="useTemplate({ id: o.id })">
               <span v-if="o.icon">{{ o.icon }}</span><LayoutTemplate v-else class="h-3.5 w-3.5" />{{ o.title || t('pages.untitled') }}
-            </button>
+            </Button>
           </div>
           <PageMeta :ws="wsId" :page-id="page.id" :tags="page.tags ?? []" :fields="page.fields ?? []" :editable="editable" @saved="onMetaSaved" />
           <RowProps v-if="parentDb" :ws="wsId" :page-id="page.id" :db-id="parentDb" :editable="editable" />
@@ -1055,7 +1072,7 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
           <div v-if="shut" class="sealed-page" data-testid="page-locked">
             <LockKeyhole class="h-8 w-8 text-text-3" />
             <p class="text-[14px] text-text-2">{{ sealedMine ? t('lock.lockedHint') : t('lock.lockedOther') }}</p>
-            <button v-if="sealedMine" class="btn" data-testid="page-unlock" @click="openSealed">{{ t('lock.openIt') }}</button>
+            <Button variant="secondary" v-if="sealedMine" data-testid="page-unlock" @click="openSealed">{{ t('lock.openIt') }}</Button>
           </div>
           <p v-else-if="editing && togetherOn && !together && !joinFailed" class="py-6 text-center text-[13px] text-text-3" data-testid="together-joining">{{ t('presence.joining') }}</p>
           <component
@@ -1074,7 +1091,7 @@ function onMetaSaved(b: { tags?: string[]; fields?: PageField[] }) {
           <MarkdownView v-else-if="draft.trim()" :content="draft" :editable="editable" math :terms="glossary" @toggle="onToggle" @edit="startEdit()" />
           <p v-else-if="!isDb" class="empty-read">
             {{ t('editor.emptyRead') }}
-            <button v-if="editable" class="btn-plain" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</button>
+            <Button variant="link" v-if="editable" type="button" @click="startEdit()"><Pencil class="h-4 w-4" />{{ t('editor.edit') }}</Button>
           </p>
 
           <!-- Linked from -->
@@ -1277,8 +1294,7 @@ a.crumb:hover {
   background: var(--crit-bg);
   color: var(--crit-text);
 }
-.banner .btn,
-.banner .btn-primary {
+.banner [data-slot='button'] {
   white-space: nowrap;
 }
 
@@ -1415,7 +1431,7 @@ html.dark .cover-btn:hover {
 .subpages {
   margin-top: 28px;
   padding-top: 16px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .sub-row {
   display: flex;
@@ -1454,18 +1470,11 @@ html.dark .cover-btn:hover {
   height: 14px;
   margin-top: 14px;
   border-radius: 7px;
-  background: var(--fill-2);
-  animation: sk-pulse 1.4s ease-in-out infinite;
 }
 .skeleton .sk-title {
   height: 34px;
   width: 55%;
   margin: 0 0 28px;
   border-radius: 9px;
-}
-@keyframes sk-pulse {
-  50% {
-    opacity: 0.5;
-  }
 }
 </style>

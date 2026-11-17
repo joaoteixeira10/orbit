@@ -293,16 +293,23 @@ func applyEvent(req eventRequest, ev *models.Event) string {
 		ev.Color = *req.Color
 	}
 	if req.RemindMinutes != nil {
+		was := ev.RemindMinutes
 		if *req.RemindMinutes < 0 {
 			ev.RemindMinutes = nil
 		} else {
 			m := *req.RemindMinutes
 			ev.RemindMinutes = &m
 		}
+		if (was == nil) != (ev.RemindMinutes == nil) || (was != nil && *was != *ev.RemindMinutes) {
+			// A new reminder: the coming occurrences are reminded afresh.
+			ev.RemindedThrough = nil
+		}
 	}
 	if timingChanged {
-		// Removed occurrences belong to the old timing.
+		// Removed occurrences belong to the old timing; the new times get
+		// their reminders.
 		ev.ExDates = ""
+		ev.RemindedThrough = nil
 	}
 	ev.Until = planner.SeriesUntil(*ev)
 	return ""

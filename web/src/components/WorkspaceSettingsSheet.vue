@@ -19,6 +19,10 @@ import { useToastStore } from '@/stores/toast'
 import { useAssistantStore } from '@/stores/assistant'
 import { workspacesApi, type ModuleKey, type WSRole } from '@/api/planner'
 import { downloadAuthed } from '@/lib/api'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
+import { Textarea } from '@/components/shadcn/textarea'
 
 // A workspace's settings: what it is (name, look, description), which
 // modules it has and in which order, who is in it, and archiving / deleting.
@@ -192,11 +196,11 @@ async function destroy() {
         <div class="flex items-center gap-4">
           <WsIcon :icon="icon" :color="color" :size="56" :name="name" />
           <div class="min-w-0 flex-1 space-y-2">
-            <input v-model="name" class="input text-[16px] font-semibold" :disabled="!isOwner" maxlength="120" />
-            <input v-model="description" class="input" :disabled="!isOwner" :placeholder="t('ws.descPlaceholder')" maxlength="500" />
+            <Input v-model="name" class="text-[16px] font-semibold" :disabled="!isOwner" maxlength="120" />
+            <Input v-model="description" :disabled="!isOwner" :placeholder="t('ws.descPlaceholder')" maxlength="500" />
           </div>
         </div>
-        <div v-if="isOwner" class="rounded-xl bg-fill-2 p-4">
+        <div v-if="isOwner" class="rounded-xl border border-border p-4">
           <IconColorPicker v-model:icon="icon" v-model:color="color" />
         </div>
         <div class="group">
@@ -224,25 +228,25 @@ async function destroy() {
           </div>
           <template v-if="!ws.assistant_off && (isOwner || notes)">
             <label class="mt-3 mb-1 block px-1 text-[13px] text-text-2" for="ws-assistant-notes">{{ t('ws.assistantNotes') }}</label>
-            <textarea id="ws-assistant-notes" v-model="notes" class="input min-h-[76px] resize-y" :disabled="!isOwner" :placeholder="t('ws.assistantNotesPlaceholder')" maxlength="2000" data-testid="ws-assistant-notes" />
+            <Textarea id="ws-assistant-notes" v-model="notes" class="min-h-[76px] resize-y" :disabled="!isOwner" :placeholder="t('ws.assistantNotesPlaceholder')" maxlength="2000" data-testid="ws-assistant-notes" />
             <p class="footnote mt-1.5 px-1">{{ t('ws.assistantNotesHint') }}</p>
           </template>
         </div>
 
         <div class="space-y-2">
           <template v-if="isOwner">
-            <button class="btn w-full justify-start" @click="archive(!ws.archived_at)">
+            <Button variant="secondary" class="w-full justify-start" @click="archive(!ws.archived_at)">
               <component :is="ws.archived_at ? ArchiveRestore : Archive" class="h-4 w-4" />
               {{ ws.archived_at ? t('ws.unarchive') : t('ws.archive') }}
               <span class="ml-auto text-[12px] font-normal text-text-3">{{ ws.archived_at ? '' : t('ws.archiveHint') }}</span>
-            </button>
-            <button class="btn w-full justify-start" data-testid="export-ws" @click="exportWs">
+            </Button>
+            <Button variant="secondary" class="w-full justify-start" data-testid="export-ws" @click="exportWs">
               <Download class="h-4 w-4" />{{ t('ws.export') }}
               <span class="ml-auto text-[12px] font-normal text-text-3">{{ t('ws.exportHint') }}</span>
-            </button>
-            <button class="btn w-full justify-start !text-danger" @click="confirmDelete = true"><Trash2 class="h-4 w-4" />{{ t('ws.delete') }}</button>
+            </Button>
+            <Button variant="secondary" class="w-full justify-start text-danger!" @click="confirmDelete = true"><Trash2 class="h-4 w-4" />{{ t('ws.delete') }}</Button>
           </template>
-          <button v-else class="btn w-full justify-start !text-danger" @click="removeMember(auth.user!.id)"><LogOut class="h-4 w-4" />{{ t('ws.leave') }}</button>
+          <Button variant="secondary" v-else class="w-full justify-start text-danger!" @click="removeMember(auth.user!.id)"><LogOut class="h-4 w-4" />{{ t('ws.leave') }}</Button>
         </div>
       </div>
 
@@ -267,13 +271,13 @@ async function destroy() {
       <!-- Members -->
       <div v-else class="space-y-4">
         <div v-if="isOwner" class="flex gap-2">
-          <input v-model="invite" class="input flex-1" :placeholder="t('ws.invitePlaceholder')" autocomplete="off" @keydown.enter="addMember" />
-          <select v-model="inviteRole" class="input !w-auto">
+          <Input v-model="invite" class="flex-1" :placeholder="t('ws.invitePlaceholder')" autocomplete="off" @keydown.enter="addMember" />
+          <NativeSelect v-model="inviteRole" class="w-auto">
             <option value="editor">{{ t('roles.editor') }}</option>
             <option value="viewer">{{ t('roles.viewer') }}</option>
             <option value="owner">{{ t('roles.owner') }}</option>
-          </select>
-          <button class="btn-primary" :disabled="!invite.trim()" @click="addMember"><UserPlus class="h-4 w-4" /><span class="hidden sm:inline">{{ t('ws.invite') }}</span></button>
+          </NativeSelect>
+          <Button :disabled="!invite.trim()" @click="addMember"><UserPlus class="h-4 w-4" /><span class="hidden sm:inline">{{ t('ws.invite') }}</span></Button>
         </div>
         <div class="group">
           <div v-for="m in members" :key="m.user_id" class="group-row">
@@ -282,13 +286,13 @@ async function destroy() {
               <span class="block truncate text-[14px]">{{ m.display_name || m.username }}<span v-if="m.user_id === auth.user?.id" class="text-text-3"> · {{ t('ws.you') }}</span></span>
               <span class="block truncate text-[12px] text-text-3">@{{ m.username }}<template v-if="m.groups?.length"> · {{ t('groups.via', { names: m.groups.join(', ') }) }}</template></span>
             </span>
-            <select v-if="isOwner" class="input !w-auto !py-1 text-[13px]" :value="m.role" @change="setRole(m.user_id, ($event.target as HTMLSelectElement).value as WSRole)">
+            <NativeSelect size="sm" v-if="isOwner" class="w-auto" :model-value="m.role" @change="setRole(m.user_id, ($event.target as HTMLSelectElement).value as WSRole)">
               <option value="owner">{{ t('roles.owner') }}</option>
               <option value="editor">{{ t('roles.editor') }}</option>
               <option value="viewer">{{ t('roles.viewer') }}</option>
-            </select>
+            </NativeSelect>
             <span v-else class="text-[13px] text-text-2">{{ t(`roles.${m.role}`) }}</span>
-            <button v-if="isOwner && m.user_id !== auth.user?.id && (m.direct_role || !m.groups?.length)" class="icon-btn !text-danger" :title="t('ws.remove')" @click="removeMember(m.user_id)"><Trash2 class="h-4 w-4" /></button>
+            <Button variant="ghost" size="icon" v-if="isOwner && m.user_id !== auth.user?.id && (m.direct_role || !m.groups?.length)" class="text-text-2 text-danger!" :title="t('ws.remove')" @click="removeMember(m.user_id)"><Trash2 class="h-4 w-4" /></Button>
           </div>
         </div>
         <p class="footnote px-1">{{ t('ws.rolesHint') }}</p>

@@ -7,6 +7,7 @@ import { diagramsApi, type DiagramDoc } from '@/lib/diagramsApi'
 import { svgUrl } from '@/lib/drawio'
 import { guestApi } from '@/lib/shareApi'
 import { renderMermaid } from '@/lib/mermaid'
+import { Button } from '@/components/shadcn/button'
 
 // A diagram shown in a page (a link to it alone on its line): its picture,
 // and a way to open it. A Mermaid one without a picture yet (written by an
@@ -38,7 +39,7 @@ const open = () => router.push({ name: 'ws-diagram', params: { ws: props.ws, id:
     <div class="de-head">
       <Workflow class="h-4 w-4 shrink-0 text-text-3" />
       <span class="min-w-0 flex-1 truncate font-medium">{{ failed ? t('diagrams.notFound') : doc?.title || t('diagrams.untitled') }}</span>
-      <button v-if="!failed && !guest" type="button" class="btn-plain !py-0.5 text-[12.5px]" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('diagrams.open') }}</button>
+      <Button variant="link" v-if="!failed && !guest" type="button" class="py-0.5! text-[12.5px]" @click="open"><ExternalLink class="h-3.5 w-3.5" />{{ t('diagrams.open') }}</Button>
     </div>
     <button v-if="doc" type="button" class="de-pic" :aria-label="t('diagrams.open')" :disabled="!!guest" @click="open">
       <img v-if="doc.preview" :src="svgUrl(doc.preview)" :alt="doc.title" />
@@ -51,7 +52,7 @@ const open = () => router.push({ name: 'ws-diagram', params: { ws: props.ws, id:
 .diagram-embed {
   margin: 12px 0;
   overflow: hidden;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 12px;
 }
 .de-head {

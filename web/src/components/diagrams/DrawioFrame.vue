@@ -124,7 +124,7 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
 }

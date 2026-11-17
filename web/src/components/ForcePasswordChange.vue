@@ -6,6 +6,8 @@ import { ShieldAlert } from 'lucide-vue-next'
 import { api, setAccessToken } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -60,21 +62,21 @@ async function submit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(15,23,42,.45)]">
-    <div class="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-soft">
+  <div class="fixed inset-0 z-200 flex items-center justify-center bg-[rgba(15,23,42,.45)]">
+    <div class="w-full max-w-sm rounded-xl border border-border bg-(--sheet-bg) p-6 shadow-soft">
       <div class="mb-4 flex flex-col items-center gap-2 text-center">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-warn-bg">
+        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-warn-bg">
           <ShieldAlert class="h-6 w-6 text-warn-text" />
         </div>
         <h2 class="text-[15px] font-semibold">{{ t('acct.password.forceTitle') }}</h2>
         <p class="text-[12px] text-text-2">{{ t('acct.password.forceHint') }}</p>
       </div>
       <form class="flex flex-col gap-3" @submit.prevent="submit">
-        <input v-model="oldPw" type="password" autocomplete="current-password" class="input" :placeholder="t('acct.password.current')" />
-        <input v-model="newPw" type="password" autocomplete="new-password" class="input" :placeholder="t('acct.password.newMin')" />
-        <input v-model="confirmPw" type="password" autocomplete="new-password" class="input" :placeholder="t('acct.password.confirm')" />
+        <Input v-model="oldPw" type="password" autocomplete="current-password" :placeholder="t('acct.password.current')" />
+        <Input v-model="newPw" type="password" autocomplete="new-password" :placeholder="t('acct.password.newMin')" />
+        <Input v-model="confirmPw" type="password" autocomplete="new-password" :placeholder="t('acct.password.confirm')" />
         <p v-if="err" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ err }}</p>
-        <button type="submit" :disabled="busy" class="btn-primary mt-1">{{ busy ? t('common.saving') : t('acct.password.update') }}</button>
+        <Button type="submit" :disabled="busy" class="mt-1">{{ busy ? t('common.saving') : t('acct.password.update') }}</Button>
         <button type="button" class="text-[12px] text-text-3 hover:text-text" @click="signOut">{{ t('acct.signOutInstead') }}</button>
       </form>
     </div>

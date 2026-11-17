@@ -9,6 +9,8 @@ import { COLORS } from '@/lib/icons'
 import { weekdayNames } from '@/lib/dates'
 import { habitsApi, type Habit, type HabitInput } from '@/lib/habits'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // A habit's details: its name and emoji, colour, how often (every day, some
 // weekdays, or a number of times a week) and a reminder time.
@@ -102,8 +104,8 @@ async function remove() {
     <form class="space-y-4" data-testid="habit-sheet" @submit.prevent="save">
       <div class="group">
         <div class="group-row">
-          <input v-model="icon" class="w-10 shrink-0 bg-transparent text-center text-[20px] outline-none" maxlength="8" :placeholder="'🙂'" :aria-label="t('habits.icon')" />
-          <input v-model="title" class="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-none placeholder:text-text-faint" :placeholder="t('habits.namePh')" :aria-label="t('habits.name')" maxlength="200" autofocus />
+          <input v-model="icon" class="w-10 shrink-0 bg-transparent text-center text-[20px] outline-hidden" maxlength="8" :placeholder="'🙂'" :aria-label="t('habits.icon')" />
+          <input v-model="title" class="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-hidden placeholder:text-text-faint" :placeholder="t('habits.namePh')" :aria-label="t('habits.name')" maxlength="200" autofocus />
         </div>
         <div class="group-row flex-wrap">
           <div class="flex flex-wrap items-center gap-1.5" role="radiogroup">
@@ -128,15 +130,15 @@ async function remove() {
         </div>
         <div v-if="mode === 'weekly'" class="group-row">
           <span class="flex-1 text-[14px]">{{ t('habits.timesWeek', { n: target }, target) }}</span>
-          <button type="button" class="icon-btn" :disabled="target <= 1" @click="target--"><Minus class="h-4 w-4" /></button>
-          <button type="button" class="icon-btn" :disabled="target >= 7" @click="target++"><Plus class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2" :disabled="target <= 1" @click="target--"><Minus class="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2" :disabled="target >= 7" @click="target++"><Plus class="h-4 w-4" /></Button>
         </div>
         <div class="group-row">
           <span class="flex-1">
             <span class="block text-[14px]">{{ t('habits.remind') }}</span>
             <span class="block text-[12px] text-text-3">{{ t('habits.remindHint') }}</span>
           </span>
-          <input v-if="remindOn" v-model="remindAt" type="time" class="input !w-auto !py-1 text-[13px]" />
+          <Input v-if="remindOn" v-model="remindAt" type="time" class="w-auto! py-1! text-[13px]" />
           <Toggle v-model="remindOn" :aria-label="t('habits.remind')" />
         </div>
       </div>
@@ -144,13 +146,13 @@ async function remove() {
     </form>
     <template #footer>
       <template v-if="habit">
-        <button class="btn-ghost !text-danger" @click="confirmDelete = true"><Trash2 class="h-4 w-4" /></button>
-        <button class="btn-ghost mr-auto" @click="archive(!habit.archived_at)">
+        <Button variant="ghost" class="text-danger!" @click="confirmDelete = true"><Trash2 class="h-4 w-4" /></Button>
+        <Button variant="ghost" class="mr-auto" @click="archive(!habit.archived_at)">
           <component :is="habit.archived_at ? ArchiveRestore : Archive" class="h-4 w-4" />{{ habit.archived_at ? t('habits.unarchive') : t('habits.archive') }}
-        </button>
+        </Button>
       </template>
-      <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button class="btn-primary" :disabled="!canSave" @click="save">{{ habit ? t('common.save') : t('common.add') }}</button>
+      <Button variant="secondary" @click="emit('close')">{{ t('common.cancel') }}</Button>
+      <Button :disabled="!canSave" @click="save">{{ habit ? t('common.save') : t('common.add') }}</Button>
     </template>
   </Overlay>
   <Confirm
@@ -165,28 +167,22 @@ async function remove() {
 </template>
 
 <style scoped>
-.swatch {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--sw);
-  color: #fff;
-}
 .swatch[aria-checked='true'] {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--sw);
 }
 .day {
   width: 34px;
   height: 34px;
-  border-radius: 999px;
-  background: var(--fill);
+  /* shadcn's ToggleGroup (outline). */
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+  background: transparent;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-2);
 }
 .day.on {
+  border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-fg, #fff);
 }

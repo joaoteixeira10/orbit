@@ -7,10 +7,10 @@ const byId = (id: string) => HOLIDAYS.find((h) => h.id === id)!
 
 describe('holiday themes', () => {
   it('auto picks the holiday whose window holds the day, and none outside', () => {
-    expect(auto(2026, 10, 14)).toBe(null)
-    expect(auto(2026, 10, 15)).toBe('halloween')
-    expect(auto(2026, 11, 1)).toBe('halloween')
-    expect(auto(2026, 11, 2)).toBe(null)
+    expect(auto(2026, 10, 24)).toBe(null)
+    expect(auto(2026, 10, 25)).toBe('halloween')
+    expect(auto(2026, 10, 31)).toBe('halloween')
+    expect(auto(2026, 11, 1)).toBe(null)
     expect(auto(2026, 11, 30)).toBe(null)
     expect(auto(2026, 12, 1)).toBe(null)
     expect(auto(2026, 12, 19)).toBe(null)
@@ -19,10 +19,10 @@ describe('holiday themes', () => {
     expect(auto(2026, 12, 27)).toBe('nye')
     expect(auto(2027, 1, 1)).toBe('nye') // the window that began the year before
     expect(auto(2027, 1, 2)).toBe(null)
-    expect(auto(2026, 5, 31)).toBe(null)
-    expect(auto(2026, 6, 1)).toBe('santos')
-    expect(auto(2026, 6, 30)).toBe('santos')
-    expect(auto(2026, 7, 1)).toBe(null)
+    expect(auto(2026, 6, 9)).toBe(null)
+    expect(auto(2026, 6, 10)).toBe('santos')
+    expect(auto(2026, 6, 14)).toBe('santos')
+    expect(auto(2026, 6, 15)).toBe(null)
   })
 
   it('Easter moves with the year: Palm Sunday to Easter Monday', () => {
@@ -35,12 +35,12 @@ describe('holiday themes', () => {
     expect(auto(2028, 4, 16)).toBe('easter')
   })
 
-  it('Lunar New Year: a week before to fifteen days after', () => {
-    expect(auto(2027, 1, 29)).toBe(null)
-    expect(auto(2027, 1, 30)).toBe('lunar')
+  it('Lunar New Year: three days before to four days after', () => {
+    expect(auto(2027, 2, 2)).toBe(null)
+    expect(auto(2027, 2, 3)).toBe('lunar')
     expect(auto(2027, 2, 6)).toBe('lunar')
-    expect(auto(2027, 2, 21)).toBe('lunar')
-    expect(auto(2027, 2, 22)).toBe(null)
+    expect(auto(2027, 2, 10)).toBe('lunar')
+    expect(auto(2027, 2, 11)).toBe(null)
     expect(auto(2031, 2, 1)).toBe(null) // no date known: no window
   })
 

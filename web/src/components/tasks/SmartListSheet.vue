@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { emptyFilter, type TaskFilter } from '@/lib/taskFilter'
 import type { SmartList } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // Creates or edits a smart list: a saved filter with a name, colour and icon,
 // your own or shared with the workspace. Its filter is set with the Filter
@@ -86,7 +87,7 @@ async function destroy() {
         <WsIcon :icon="icon" :color="color" :size="64" :name="name" />
         <input
           v-model="name"
-          class="w-full rounded-xl bg-fill-2 px-4 py-2.5 text-center text-[20px] font-semibold outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
+          class="rounded-lg w-full px-4 py-2.5 text-center text-[20px] font-semibold outline-hidden placeholder:text-text-faint border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           :style="{ color }"
           :placeholder="t('smartList.namePlaceholder')"
           :aria-label="t('smartList.namePlaceholder')"
@@ -96,7 +97,7 @@ async function destroy() {
           @keydown.enter.prevent="save"
         />
       </div>
-      <div v-if="editable" class="rounded-xl bg-fill-2 p-4">
+      <div v-if="editable" class="rounded-xl border border-border p-4">
         <IconColorPicker v-model:icon="icon" v-model:color="color" compact />
       </div>
       <div class="group">
@@ -112,14 +113,14 @@ async function destroy() {
     </div>
 
     <template #footer>
-      <button v-if="!creating && editable" type="button" class="btn-ghost mr-auto !px-2.5 !text-danger" @click="confirmDelete = true">
+      <Button variant="ghost" v-if="!creating && editable" type="button" class="mr-auto px-2.5! text-danger!" @click="confirmDelete = true">
         <Trash2 class="h-4 w-4" />{{ t('smartList.delete') }}
-      </button>
+      </Button>
       <template v-if="editable">
-        <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-        <button type="button" class="btn-primary" :disabled="!name.trim() || busy" data-testid="smart-save" @click="save">{{ creating ? t('smartList.create') : t('common.save') }}</button>
+        <Button variant="secondary" type="button" @click="emit('close')">{{ t('common.cancel') }}</Button>
+        <Button type="button" :disabled="!name.trim() || busy" data-testid="smart-save" @click="save">{{ creating ? t('smartList.create') : t('common.save') }}</Button>
       </template>
-      <button v-else type="button" class="btn-primary" @click="emit('close')">{{ t('common.close') }}</button>
+      <Button v-else type="button" @click="emit('close')">{{ t('common.close') }}</Button>
     </template>
   </Overlay>
 

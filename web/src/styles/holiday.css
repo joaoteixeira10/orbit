@@ -1,8 +1,9 @@
 /* Holiday themes (docs/design/holiday-themes): the holiday's colours, set as
-   --h-* on <html> by stores/holiday.ts, take over Orbit's own in the sidebar
-   and the main column, on every page (dialogs and popovers, outside them,
-   keep Orbit's look). Off: html has no .holiday and none of this applies. */
-html.holiday .side,
+   --h-* on <html> by stores/holiday.ts, take over Orbit's own in the sidebar,
+   the main column and every modal window, popover and menu (all of them
+   alike: the blueprint's uniform overlays). Off: html has no .holiday and
+   none of this applies. */
+html.holiday #sidebar,
 html.holiday .holiday-main,
 html.holiday .rail-col,
 html.holiday .rail-drawer {
@@ -16,7 +17,43 @@ html.holiday .rail-drawer {
   --surface-hover: var(--h-hover);
   --fill-2: var(--h-hover);
 }
-html.holiday .side {
+/* Every modal window (sheets, dialogs, the AI chat, the command palette,
+   viewers) and every popover and menu: the holiday's colours too, on the
+   holiday's ground (a coloured note keeps its own: its colour is its content). */
+html.holiday .sheet-panel,
+html.holiday .ai-panel,
+html.holiday .viewer-panel,
+html.holiday .embed-panel,
+html.holiday .hist-panel,
+html.holiday .draw-sheet,
+html.holiday .popover,
+html.holiday [data-slot="popover-content"],
+html.holiday [data-slot="select-content"],
+html.holiday [data-slot="dropdown-menu-content"] {
+  --text: var(--h-text);
+  --text-2: var(--h-muted);
+  --text-3: var(--h-muted);
+  --text-faint: var(--h-faint);
+  --surface: var(--h-card);
+  --border: var(--h-cardLine);
+  --line-soft: var(--h-rowLine);
+  --surface-hover: var(--h-hover);
+  --fill-2: var(--h-hover);
+  --surface-2: var(--h-field);
+  --bg: var(--h-bg);
+  --sheet-bg: var(--h-bg);
+  color: var(--text);
+}
+html.dark.holiday .sheet-panel,
+html.dark.holiday .ai-panel,
+html.dark.holiday .viewer-panel,
+html.dark.holiday .embed-panel,
+html.dark.holiday .hist-panel,
+html.dark.holiday .draw-sheet {
+  /* A step above the holiday's ground, as in plain dark mode. */
+  --sheet-bg: color-mix(in srgb, var(--h-card) 70%, var(--h-bg));
+}
+html.holiday #sidebar {
   --side: var(--h-side);
   --side-solid: var(--h-side);
 }
@@ -35,13 +72,13 @@ html.holiday .holiday-main {
   background: radial-gradient(ellipse 70% 40% at 45% -8%, var(--h-glow), transparent 70%), var(--h-bg);
 }
 /* The sidebar's icons and the inbox's count in the holiday's colours. */
-html.holiday .side .side-item svg {
+html.holiday #sidebar .side-item svg {
   color: var(--h-icon);
 }
-html.holiday .side .badge {
+html.holiday #sidebar .badge {
   background: var(--h-primary);
 }
-html.holiday .side .search-btn {
+html.holiday #sidebar .search-btn {
   background: var(--h-field);
 }
 

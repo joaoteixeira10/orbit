@@ -52,13 +52,26 @@ func (s *Scheduler) startPlanner() {
 		{"@every 5m", s.syncCalDAV, "CalDAV calendars"},
 	}
 	for _, j := range jobs {
-		if _, err := s.cron.AddFunc(j.spec, j.fn); err != nil {
+		if _, err := s.cron.AddFunc(j.spec, s.guard(j.name, j.fn)); err != nil {
 			s.log.Error("schedule job failed", zap.String("job", j.name), zap.Error(err))
 		}
 	}
 }
 
 // syncCalendars refreshes the subscriptions that are due.
+// guard runs a job so that a failure in it is logged, with where it
+// happened, and doesn't take the server down: the job runs again next time.
+func (s *Scheduler) guard(name string, fn func()) func() {
+	return func() {
+		defer func() {
+			if r := recover(); r != nil {
+				s.log.Error("job failed", zap.String("job", name), zap.Any("panic", r), zap.Stack("stack"))
+			}
+		}()
+		fn()
+	}
+}
+
 func (s *Scheduler) syncCalendars() {
 	if !feature.Enabled(s.db, feature.CalendarSubscriptions) {
 		return
@@ -155,7 +168,9 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		minute.UTC().Format(planner.DateLayout),
 		minute.AddDate(0, 0, 1).UTC().Format(planner.DateLayout),
 	}
-	s.db.Where("completed_at IS NULL AND due IN ? AND due_time IS NOT NULL AND "+models.InOpenList, days).Find(&tasks)
+	if err := s.db.Where("completed_at IS NULL AND due IN ? AND due_time IS NOT NULL AND "+models.InOpenList, days).Find(&tasks).Error; err != nil {
+		s.log.Error("task reminders: could not read the tasks", zap.Error(err))
+	}
 	for _, t := range tasks {
 		to := t.AssigneeList()
 		if len(to) == 0 {
@@ -199,7 +214,9 @@ func (s *Scheduler) remindAt(minute time.Time) {
 
 	// Habits: at their time on the days they count, unless done already.
 	var habits []models.Habit
-	s.db.Where("remind_at <> '' AND archived_at IS NULL").Find(&habits)
+	if err := s.db.Where("remind_at <> '' AND archived_at IS NULL").Find(&habits).Error; err != nil {
+		s.log.Error("habit reminders: could not read the habits", zap.Error(err))
+	}
 	for _, hb := range habits {
 		local := minute.In(userZone(prefs(hb.OwnerID)))
 		if local.Format("15:04") != hb.RemindAt || !habitDue(s.db, hb, local) {
@@ -212,28 +229,57 @@ func (s *Scheduler) remindAt(minute time.Time) {
 		})
 	}
 
-	// Events: an occurrence starting RemindMinutes after this minute.
+	// Events: an occurrence starting RemindMinutes after this minute — or,
+	// if that minute was missed (the event made or moved inside its lead
+	// time, the server down then), now, as long as it hasn't started. Each
+	// occurrence once (RemindedThrough).
 	var evs []models.Event
-	s.db.Where("remind_minutes IS NOT NULL AND starts_at < ? AND (until IS NULL OR until > ?)", end.AddDate(0, 0, 8), minute).Find(&evs)
+	if err := s.db.Where("remind_minutes IS NOT NULL AND starts_at < ? AND (until IS NULL OR until > ?)", end.AddDate(0, 0, 8), minute).Find(&evs).Error; err != nil {
+		s.log.Error("event reminders: could not read the events", zap.Error(err))
+	}
 	for _, ev := range evs {
-		lead := time.Duration(*ev.RemindMinutes) * time.Minute
-		for _, o := range planner.Occurrences(ev, minute.Add(lead), end.Add(lead)) {
-			if at := o.Add(-lead); at.Before(minute) || !at.Before(end) {
-				continue
-			}
-			verb, params := "event_now", map[string]any{"title": ev.Title, "ws": wsName(ev.WorkspaceID), "start": o.UTC().Format(time.RFC3339)}
-			if lead > 0 {
-				verb, params["lead"] = "event_soon", humanLead(lead)
-			}
-			var members []string
-			s.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ?", ev.WorkspaceID).Pluck("user_id", &members)
-			for _, uid := range members {
-				day := o.In(userZone(prefs(uid))).Format(planner.DateLayout)
-				s.inbox.Notify(inbox.Message{
-					UserID: uid, Kind: inbox.Reminder, Verb: verb, WorkspaceID: ev.WorkspaceID, Params: params,
-					Link: fmt.Sprintf("/w/%s/calendar?date=%s", ev.WorkspaceID, day),
-				})
-			}
+		s.remindEvent(ev, minute, end, prefs, wsName)
+	}
+}
+
+// remindEvent sends one event's due reminders. A failure is logged with the
+// event and stops only this one: the others are still reminded.
+func (s *Scheduler) remindEvent(ev models.Event, minute, end time.Time, prefs func(string) models.UserPrefs, wsName func(string) string) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.log.Error("event reminder failed", zap.String("event", ev.ID), zap.Any("panic", r), zap.Stack("stack"))
+		}
+	}()
+	lead := time.Duration(*ev.RemindMinutes) * time.Minute
+	var through *time.Time
+	for _, o := range planner.Occurrences(ev, minute, end.Add(lead)) {
+		if o.Before(minute) || !o.Add(-lead).Before(end) || (ev.RemindedThrough != nil && !o.After(*ev.RemindedThrough)) {
+			continue
+		}
+		// Late: say how long is really left.
+		left := lead
+		if o.Add(-lead).Before(minute) {
+			left = o.Sub(minute).Truncate(time.Minute)
+		}
+		verb, params := "event_now", map[string]any{"title": ev.Title, "ws": wsName(ev.WorkspaceID), "start": o.UTC().Format(time.RFC3339)}
+		if left > 0 {
+			verb, params["lead"] = "event_soon", humanLead(left)
+		}
+		var members []string
+		s.db.Model(&models.WorkspaceMember{}).Where("workspace_id = ?", ev.WorkspaceID).Pluck("user_id", &members)
+		for _, uid := range members {
+			day := o.In(userZone(prefs(uid))).Format(planner.DateLayout)
+			s.inbox.Notify(inbox.Message{
+				UserID: uid, Kind: inbox.Reminder, Verb: verb, WorkspaceID: ev.WorkspaceID, Params: params,
+				Link: fmt.Sprintf("/w/%s/calendar?date=%s", ev.WorkspaceID, day),
+			})
+		}
+		at := o
+		through = &at
+	}
+	if through != nil {
+		if err := s.db.Model(&models.Event{}).Where("id = ?", ev.ID).Update("reminded_through", *through).Error; err != nil {
+			s.log.Error("event reminder: could not record it", zap.String("event", ev.ID), zap.Error(err))
 		}
 	}
 }

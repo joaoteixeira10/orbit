@@ -1,31 +1,25 @@
 <script setup lang="ts">
-import { Check } from 'lucide-vue-next'
+import { computed, useAttrs } from 'vue'
+import { Checkbox } from '@/components/shadcn/checkbox'
 
-// A macOS-style square checkbox with an optional label.
+// A checkbox (shadcn-vue's, reka-ui) with an optional label beside it: a
+// class styles the label; the rest (aria-label, a test id) goes to the box.
+defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{ modelValue?: boolean; disabled?: boolean }>(), {
   modelValue: false,
   disabled: false,
 })
 const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
-
-function toggle() {
-  if (!props.disabled) emit('update:modelValue', !props.modelValue)
-}
+const attrs = useAttrs()
+const boxAttrs = computed(() => {
+  const { class: _c, style: _s, ...rest } = attrs
+  return rest
+})
 </script>
 
 <template>
-  <button
-    type="button"
-    class="flex items-center gap-2 text-left text-[13.5px] transition"
-    :class="disabled ? 'cursor-not-allowed opacity-50' : ''"
-    @click="toggle"
-  >
-    <span
-      class="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] transition-colors"
-      :class="modelValue ? 'bg-accent text-accent-fg' : 'bg-surface shadow-[inset_0_0_0_1px_var(--border-2)]'"
-    >
-      <Check v-if="modelValue" class="h-3 w-3" :stroke-width="3.2" />
-    </span>
+  <label class="flex items-center gap-2 text-left text-[13.5px]" :class="[attrs.class, disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer']" :style="attrs.style as any">
+    <Checkbox v-bind="boxAttrs" :model-value="props.modelValue" :disabled="props.disabled" @update:model-value="(v) => emit('update:modelValue', v === true)" />
     <span v-if="$slots.default"><slot /></span>
-  </button>
+  </label>
 </template>

@@ -9,9 +9,11 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
 import { usePrefsStore } from '@/stores/prefs'
 import { fmtTime } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // The focus timer: pick a task (or none) and a length (15, 25, 50 or one of
-// the person's own), Start; a ring counts down. Stopping early counts the time so far; either way it's logged on
+// the person's own), Start; a ring-3 counts down. Stopping early counts the time so far; either way it's logged on
 // the task. Below: what was focused on today.
 const route = useRoute()
 const focus = useFocusStore()
@@ -81,13 +83,13 @@ const open = computed(() => tasks.tasksOf(ws.value).filter((x) => !x.done && !x.
 const here = computed(() => focus.running && focus.running.workspace_id === ws.value)
 const elsewhere = computed(() => focus.running && focus.running.workspace_id !== ws.value)
 
-const stopBtn = ref<HTMLButtonElement | null>(null)
+const stopBtn = ref<{ $el: HTMLButtonElement } | null>(null)
 async function start() {
   try {
     await focus.start(ws.value, taskId.value, minutes.value)
     // Start is gone: keep the focus on what's there now.
     await nextTick()
-    stopBtn.value?.focus({ preventScroll: true })
+    stopBtn.value?.$el.focus({ preventScroll: true })
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -135,10 +137,10 @@ const shown = computed(() => (here.value ? clockOf(focus.left) : clockOf(minutes
       <template v-if="!here">
         <p v-if="elsewhere" class="mt-4 text-[13px] text-text-3">{{ t('focus.elsewhere') }}</p>
         <form v-if="adding" class="mt-6 flex items-center gap-2" data-testid="focus-custom" @submit.prevent="addLength">
-          <input ref="customEl" v-model.number="custom" type="number" min="1" max="180" step="1" class="input !w-24 !py-1.5 text-center text-[14px]" :aria-label="t('focus.lengthLabel')" :placeholder="t('focus.lengthLabel')" @keydown.esc.stop="adding = false" />
+          <input ref="customEl" v-model.number="custom" type="number" min="1" max="180" step="1" class="input w-24! py-1.5! text-center text-[14px]" :aria-label="t('focus.lengthLabel')" :placeholder="t('focus.lengthLabel')" @keydown.esc.stop="adding = false" />
           <span class="text-[13px] text-text-2">{{ t('focus.min') }}</span>
-          <button type="submit" class="btn-primary btn-sm">{{ t('focus.addLength') }}</button>
-          <button type="button" class="btn btn-sm" @click="adding = false">{{ t('common.cancel') }}</button>
+          <Button size="sm" type="submit" >{{ t('focus.addLength') }}</Button>
+          <Button variant="secondary" size="sm" type="button" @click="adding = false">{{ t('common.cancel') }}</Button>
         </form>
         <div v-else class="seg mt-6 max-w-full flex-wrap justify-center" role="radiogroup" :aria-label="t('focus.length')">
           <button v-for="m in lengths" :key="m" type="button" role="radio" :aria-checked="minutes === m" :class="{ on: minutes === m }" @click="minutes = m">{{ t('focus.minutes', { n: m }) }}</button>
@@ -148,15 +150,15 @@ const shown = computed(() => (here.value ? clockOf(focus.left) : clockOf(minutes
         <button v-if="own && !adding" type="button" class="mt-2 text-[12.5px] text-text-3 hover:text-text-2" data-testid="focus-forget-length" @click="forgetLength">{{ t('focus.forgetLength', { n: minutes }) }}</button>
         <label class="mt-4 flex w-full max-w-[380px] items-center gap-2">
           <span class="text-[13px] text-text-2">{{ t('focus.task') }}</span>
-          <select v-model="taskId" class="input min-w-0 flex-1 !py-1.5 text-[14px]" data-testid="focus-task">
+          <NativeSelect v-model="taskId" class="min-w-0 flex-1 w-full" data-testid="focus-task">
             <option value="">{{ t('focus.noTask') }}</option>
             <option v-for="x in open" :key="x.id" :value="x.id">{{ x.title }}</option>
-          </select>
+          </NativeSelect>
         </label>
-        <button class="btn-primary mt-6 !px-8" data-testid="focus-start" @click="start"><Play class="h-4 w-4" />{{ t('focus.start') }}</button>
+        <Button class="mt-6 px-8!" data-testid="focus-start" @click="start"><Play class="h-4 w-4" />{{ t('focus.start') }}</Button>
       </template>
       <template v-else>
-        <button ref="stopBtn" class="btn mt-8 !px-8" :title="t('focus.stopHint')" data-testid="focus-stop" @click="stop"><Square class="h-4 w-4" />{{ t('focus.stop') }}</button>
+        <Button variant="secondary" ref="stopBtn" class="mt-8 px-8!" :title="t('focus.stopHint')" data-testid="focus-stop" @click="stop"><Square class="h-4 w-4" />{{ t('focus.stop') }}</Button>
         <p class="mt-2 text-[12px] text-text-3">{{ t('focus.stopHint') }}</p>
       </template>
     </div>

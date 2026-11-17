@@ -1,5 +1,5 @@
-/* Sign-in, the way Apple's account pages look: the mark large and centred,
-   a clean card, filled fields, one prominent button. */
+/* Sign-in, as shadcn-vue's login block: the mark centred over a card with
+   its title, labelled inputs, the primary button and outline alternatives. */
 .login {
   min-height: 100%;
   display: grid;
@@ -7,10 +7,7 @@
   padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
   font-size: 14px;
   line-height: 1.5;
-  background:
-    radial-gradient(1200px 600px at 20% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, #af52de 14%, transparent), transparent 60%),
-    var(--grouped);
+  background: var(--grouped);
 }
 .wrap {
   width: min(380px, 100%);
@@ -23,15 +20,15 @@
   margin-bottom: 22px;
 }
 .brand b {
-  font: 700 26px var(--font-display);
-  letter-spacing: -0.02em;
+  font: 600 24px var(--font-sans);
+  letter-spacing: -0.025em;
 }
 .logo {
   width: 64px;
   height: 64px;
   flex: none;
-  border-radius: 15px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .brand b.brand-word {
   font: 700 34px "UnifrakturCook", serif;
@@ -46,22 +43,21 @@
   border-radius: 12px;
 }
 .lcard {
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  backdrop-filter: saturate(180%) blur(24px);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  border-radius: 18px;
-  padding: 28px 26px;
-  box-shadow: var(--shadow-lg);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 h1 {
   margin: 0 0 4px;
-  font: 700 22px var(--font-display);
-  letter-spacing: -0.015em;
+  font: 600 20px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
   text-align: center;
 }
 .lead {
-  margin: 0 0 18px;
+  margin: 0 0 20px;
   color: var(--text-2);
+  font-size: 14px;
   text-align: center;
 }
 .lead.center {
@@ -70,28 +66,32 @@ h1 {
 .fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
+/* shadcn's Label over its Input. */
 .fields label {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-2);
+  color: var(--text);
 }
 .fields input {
   width: 100%;
-  padding: 10px 13px;
-  font-size: 15px;
+  height: 36px;
+  padding: 4px 12px;
+  font-size: 14px;
   color: var(--text);
-  border-radius: 11px;
-  border: 0;
-  background: var(--fill-2);
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+  background: transparent;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   outline: none;
-  transition: box-shadow 0.2s var(--ease);
+  transition: box-shadow 0.15s, border-color 0.15s;
 }
 .fields input:focus {
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
 }
 .code {
@@ -99,6 +99,7 @@ h1 {
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
 }
+/* shadcn's Button: default (primary) and outline (the alternatives). */
 .primary,
 .alt {
   display: inline-flex;
@@ -106,13 +107,14 @@ h1 {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 11px 16px;
-  font-size: 15px;
-  font-weight: 600;
-  border-radius: 11px;
-  border: 0;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: filter 0.15s, transform 0.1s;
+  transition: background 0.15s, filter 0.15s;
 }
 .primary {
   margin-top: 4px;
@@ -120,16 +122,21 @@ h1 {
   color: var(--accent-fg);
 }
 .alt {
-  background: var(--fill);
+  border-color: var(--border-2);
+  background: transparent;
   color: var(--text);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
-.primary:hover:not(:disabled),
+.primary:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
 .alt:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: var(--fill);
 }
-.primary:active:not(:disabled),
-.alt:active:not(:disabled) {
-  transform: scale(0.985);
+.primary:focus-visible,
+.alt:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
 }
 .primary:disabled,
 .alt:disabled {
@@ -145,13 +152,15 @@ h1 {
 }
 .or span {
   flex: 1;
-  height: 0.5px;
+  height: 1px;
   background: var(--border);
 }
+/* shadcn's Alert (destructive). */
 .error {
   margin: 0;
   padding: 9px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--crit-border);
   background: var(--crit-bg);
   color: var(--crit-text);
   font-size: 13px;
@@ -162,6 +171,7 @@ h1 {
   gap: 8px;
   margin-top: 4px;
 }
+/* shadcn's link button. */
 .link {
   display: inline-flex;
   align-items: center;
@@ -171,6 +181,10 @@ h1 {
   background: none;
   border: 0;
   cursor: pointer;
+  text-underline-offset: 4px;
+}
+.link:hover {
+  text-decoration: underline;
 }
 .link.accent {
   color: var(--accent-text);

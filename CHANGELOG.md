@@ -6,6 +6,67 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Added
+
+- **Season themes** — Owner → Branding: Spring, Summer, Autumn and Winter,
+  off, automatic (the season today is in) or one always. The whole app in
+  the season's colours, petals, summer light, leaves or snow drifting
+  across, things hung on the overviews and a decoration on the cards. A
+  holiday theme in its days shows instead.
+- **Liquid glass** — Settings → Appearance, from Solid to Clear: the
+  sidebar, bars, windows, popovers and menus as glass over a soft wash of
+  colour. With a holiday or season theme on, a landscape of it sits behind
+  the cards (cherry trees in spring, a lake and a sailboat in summer, maples
+  in autumn, snowy pines in winter).
+- **Animations** — Settings → Appearance (on by default): light ↔ dark
+  sweeps up the window; pages rise in; ticked tasks pop; lists glide to
+  their new order and dropped cards settle; the sidebar's and every view
+  switch's highlight slides; Calendar's pages slide; counts tick up; bars
+  fill and charts turn in; habit check-ins and streaks pop; the bell shakes
+  for something new; confetti when the day's last task is done; loading
+  placeholders shimmer; folders open and close smoothly. Off (or reduced
+  motion on the device) keeps everything still; a theme's own effects
+  follow **Theme effects**.
+- **Your own holiday and season themes** — Owner → Branding: **Let each
+  person choose**, one switch for holidays and one for seasons (off by
+  default). Then Settings → Appearance has Holiday theme and Season theme:
+  as for everyone, off, automatic or one always.
+- Calendar's **Today** lights up today, also when you're already there.
+
+### Changed
+
+- **A new look across the app**: shadcn-vue's components (on Tailwind CSS
+  4) on Orbit's own colours — switches, checkboxes, buttons, fields,
+  selects, tabs, menus, grouped boxes, tables, toasts, tooltips, the command
+  palette, the task sheet, the assistant and the sign-in pages. Every
+  window, sheet and menu shares one look.
+- Holiday themes' automatic days: Halloween 25–31 October, Santos Populares
+  10–14 June, Lunar New Year three days before to four days after.
+- Snow (Christmas, winter) sits on every card of the overviews.
+- **Theme effects** (was Holiday effects) covers season themes too.
+- The Konami card has the app's window look, the code lighting up and
+  confetti.
+
+### Fixed
+
+- The bell on a phone showed an old list after the app had been in the
+  background (a reminder that came then wasn't there): it now catches up
+  when opened, when you come back to the app and after the connection
+  drops.
+- An event's reminder whose minute was missed (the event made or moved
+  inside its alert time, or the server restarting then) is now sent before
+  the event starts, once.
+- A failing background job is logged with where it failed, and no longer
+  stops the server or the other reminders.
+- iPhone and iPad no longer zoom in when a text field is tapped, or on a
+  quick double tap (pinching still zooms).
+- The priority flag and task rows under a developer theme no longer show a
+  box behind them.
+- A page template picked on a page already open for editing together
+  (another person there, or just connected) lost its text: it's now saved
+  and the editing starts again from it. Templates' empty list items no
+  longer upset a shared page.
+
 ## [0.6.1] - 2026-11-13
 
 ### Changed

@@ -8,6 +8,9 @@ import { oidcApi } from '@/api'
 import type { OIDCConfig } from '@/api/types'
 import { useToastStore } from '@/stores/toast'
 import { useBrandingStore } from '@/stores/branding'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { Textarea } from '@/components/shadcn/textarea'
 
 // Owner → SSO: the identity providers people sign in with, each its own
 // button on the login page — OpenID Connect ones (Authentik, Entra,
@@ -96,9 +99,9 @@ async function test() {
         <div class="text-[12px] text-text-3">{{ t('adm.sso.hintMany') }}</div>
       </div>
       <div v-if="!editing" class="flex gap-2">
-        <button class="btn btn-sm" data-testid="sso-add-google" @click="edit(undefined, 'google')"><Plus class="h-4 w-4" />Google</button>
-        <button class="btn btn-sm" data-testid="sso-add-saml" @click="edit(undefined, 'saml')"><Plus class="h-4 w-4" />SAML</button>
-        <button class="btn-primary btn-sm" data-testid="sso-add" @click="edit()"><Plus class="h-4 w-4" />{{ t('adm.sso.add') }}</button>
+        <Button variant="secondary" size="sm" data-testid="sso-add-google" @click="edit(undefined, 'google')"><Plus class="h-4 w-4" />Google</Button>
+        <Button variant="secondary" size="sm" data-testid="sso-add-saml" @click="edit(undefined, 'saml')"><Plus class="h-4 w-4" />SAML</Button>
+        <Button size="sm" data-testid="sso-add" @click="edit()"><Plus class="h-4 w-4" />{{ t('adm.sso.add') }}</Button>
       </div>
     </div>
 
@@ -112,8 +115,8 @@ async function test() {
           </div>
         </div>
         <span class="text-[12px]" :class="p.enabled ? 'text-ok-text' : 'text-text-3'">{{ p.enabled ? t('adm.sso.on') : t('adm.sso.off') }}</span>
-        <button class="btn-ghost px-2 py-1" :title="t('admin.edit')" :aria-label="t('admin.edit')" @click="edit(p)"><Pencil class="h-4 w-4" /></button>
-        <button class="btn-ghost px-2 py-1 text-crit-text" :title="t('common.delete')" :aria-label="t('common.delete')" @click="removing = p"><Trash2 class="h-4 w-4" /></button>
+        <Button variant="ghost" class="px-2 py-1" :title="t('admin.edit')" :aria-label="t('admin.edit')" @click="edit(p)"><Pencil class="h-4 w-4" /></Button>
+        <Button variant="ghost" class="px-2 py-1 text-crit-text" :title="t('common.delete')" :aria-label="t('common.delete')" @click="removing = p"><Trash2 class="h-4 w-4" /></Button>
       </div>
       <p v-if="!list.length" class="card p-6 text-center text-[13px] text-text-3">{{ t('adm.sso.none') }}</p>
     </template>
@@ -126,24 +129,24 @@ async function test() {
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="label">{{ t('adm.sso.name') }}</label>
-          <input v-model="editing.name" class="input" :placeholder="t('adm.sso.namePh')" data-testid="sso-name" />
+          <Input v-model="editing.name" :placeholder="t('adm.sso.namePh')" data-testid="sso-name" />
         </div>
         <div>
           <label class="label">{{ t('adm.sso.id') }}</label>
-          <input v-model="editing.id" class="input font-mono" :disabled="!editing.isNew" pattern="[a-z0-9][a-z0-9-]*" maxlength="32" required data-testid="sso-id" />
+          <Input v-model="editing.id" class="font-mono" :disabled="!editing.isNew" pattern="[a-z0-9][a-z0-9-]*" maxlength="32" required data-testid="sso-id" />
         </div>
       </div>
       <!-- SAML: the identity provider's metadata; Orbit's side to give it. -->
       <template v-if="editing.kind === 'saml'">
         <div>
           <label class="label">{{ t('adm.sso.samlMetadataUrl') }}</label>
-          <input v-model="editing.issuer" class="input" placeholder="https://login.microsoftonline.com/…/federationmetadata/2007-06/federationmetadata.xml" data-testid="sso-saml-url" />
+          <Input v-model="editing.issuer" placeholder="https://login.microsoftonline.com/…/federationmetadata/2007-06/federationmetadata.xml" data-testid="sso-saml-url" />
         </div>
         <div>
           <label class="label">{{ t('adm.sso.samlMetadataXml') }}</label>
-          <textarea v-model="editing.metadata_xml" class="input min-h-[80px] font-mono text-[11.5px]" spellcheck="false" />
+          <Textarea v-model="editing.metadata_xml" class="min-h-[80px] font-mono text-[11.5px]" spellcheck="false" />
         </div>
-        <div class="rounded-xl bg-fill-2 p-3 text-[12px]" data-testid="sso-saml-sp">
+        <div class="rounded-lg border border-border p-3 text-[12px]" data-testid="sso-saml-sp">
           <div class="mb-1 font-medium text-text-2">{{ t('adm.sso.samlGive') }}</div>
           <div v-for="row in [
             [t('adm.sso.samlEntity'), spBase(editing.id) + '/metadata'],
@@ -151,40 +154,40 @@ async function test() {
           ]" :key="row[0]" class="flex items-center gap-2 py-0.5">
             <span class="w-40 shrink-0 text-text-3">{{ row[0] }}</span>
             <code class="min-w-0 flex-1 truncate font-mono text-[11.5px]">{{ row[1] }}</code>
-            <button type="button" class="btn-ghost px-1.5 py-0.5" :aria-label="t('scim.copy')" @click="copy(row[1])"><Copy class="h-3.5 w-3.5" /></button>
+            <Button variant="ghost" type="button" class="px-1.5 py-0.5" :aria-label="t('scim.copy')" @click="copy(row[1])"><Copy class="h-3.5 w-3.5" /></Button>
           </div>
         </div>
       </template>
       <div v-else-if="editing.kind !== 'google'">
         <label class="label">{{ t('adm.sso.issuer') }}</label>
         <div class="flex gap-2">
-          <input v-model="editing.issuer" class="input" placeholder="https://idp.example.com/realms/main" data-testid="sso-issuer" />
-          <button type="button" class="btn-ghost shrink-0" @click="test">{{ t('adm.test') }}</button>
+          <Input v-model="editing.issuer" placeholder="https://idp.example.com/realms/main" data-testid="sso-issuer" />
+          <Button variant="ghost" type="button" class="shrink-0" @click="test">{{ t('adm.test') }}</Button>
         </div>
       </div>
       <p v-else class="text-[12px] text-text-3">{{ t('adm.sso.googleHint', { callback }) }}</p>
       <div v-if="editing.kind !== 'saml'" class="grid grid-cols-2 gap-3">
-        <div><label class="label">{{ t('adm.sso.clientId') }}</label><input v-model="editing.client_id" class="input" data-testid="sso-client-id" /></div>
+        <div><label class="label">{{ t('adm.sso.clientId') }}</label><Input v-model="editing.client_id" data-testid="sso-client-id" /></div>
         <div>
           <label class="label">{{ t('adm.sso.clientSecret') }}</label>
-          <input v-model="editing.client_secret" type="password" class="input" autocomplete="new-password" :placeholder="editing.has_secret ? t('adm.sso.secretUnchanged') : ''" />
+          <Input v-model="editing.client_secret" type="password" autocomplete="new-password" :placeholder="editing.has_secret ? t('adm.sso.secretUnchanged') : ''" />
         </div>
       </div>
       <div v-if="editing.kind !== 'saml'">
         <label class="label">{{ t('adm.sso.redirect') }}</label>
-        <input v-model="editing.redirect_url" class="input" :placeholder="callback" />
+        <Input v-model="editing.redirect_url" :placeholder="callback" />
         <p class="mt-1 text-[11px] text-text-3">{{ t('adm.sso.redirectHint') }}</p>
       </div>
       <div>
         <label class="label">{{ t('adm.sso.domains') }}</label>
-        <input v-model="editing.domainsText" class="input" :placeholder="editing.kind === 'google' ? 'example.org' : t('adm.sso.domainsAny')" data-testid="sso-domains" />
+        <Input v-model="editing.domainsText" :placeholder="editing.kind === 'google' ? 'example.org' : t('adm.sso.domainsAny')" data-testid="sso-domains" />
         <p class="mt-1 text-[11px] text-text-3">{{ t('adm.sso.domainsHint') }}</p>
       </div>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div v-if="editing.kind === 'oidc'"><label class="label">{{ t('adm.sso.scopes') }}</label><input v-model="editing.scopes" class="input" placeholder="groups" /></div>
-        <div v-if="editing.kind !== 'google'"><label class="label">{{ editing.kind === 'saml' ? t('adm.sso.groupAttr') : t('adm.sso.groupClaim') }}</label><input v-model="editing.group_claim" class="input" placeholder="groups" data-testid="sso-group-claim" /></div>
-        <div v-if="editing.kind !== 'google'"><label class="label">{{ editing.kind === 'saml' ? t('adm.sso.roleAttr') : t('adm.sso.roleClaim') }}</label><input v-model="editing.role_claim" class="input" placeholder="roles" /></div>
-        <div><label class="label">{{ t('adm.sso.defaultRole') }}</label><input v-model="editing.default_role" class="input" :placeholder="t('adm.sso.defaultRoleNone')" /></div>
+        <div v-if="editing.kind === 'oidc'"><label class="label">{{ t('adm.sso.scopes') }}</label><Input v-model="editing.scopes" placeholder="groups" /></div>
+        <div v-if="editing.kind !== 'google'"><label class="label">{{ editing.kind === 'saml' ? t('adm.sso.groupAttr') : t('adm.sso.groupClaim') }}</label><Input v-model="editing.group_claim" placeholder="groups" data-testid="sso-group-claim" /></div>
+        <div v-if="editing.kind !== 'google'"><label class="label">{{ editing.kind === 'saml' ? t('adm.sso.roleAttr') : t('adm.sso.roleClaim') }}</label><Input v-model="editing.role_claim" placeholder="roles" /></div>
+        <div><label class="label">{{ t('adm.sso.defaultRole') }}</label><Input v-model="editing.default_role" :placeholder="t('adm.sso.defaultRoleNone')" /></div>
       </div>
       <p class="text-[11px] text-text-3">{{ t('adm.sso.provisioning') }} {{ t('adm.sso.groupsHint') }}</p>
       <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
@@ -195,8 +198,8 @@ async function test() {
         <Toggle :model-value="!!editing.allow_admin" @update:model-value="(v) => editing && (editing.allow_admin = v)" />
       </div>
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn" @click="editing = null">{{ t('common.cancel') }}</button>
-        <button type="submit" class="btn-primary" :disabled="busy || !editing.id" data-testid="sso-save">{{ busy ? t('common.saving') : t('adm.sso.save') }}</button>
+        <Button variant="secondary" type="button" @click="editing = null">{{ t('common.cancel') }}</Button>
+        <Button type="submit" :disabled="busy || !editing.id" data-testid="sso-save">{{ busy ? t('common.saving') : t('adm.sso.save') }}</Button>
       </div>
     </form>
     <Confirm :open="!!removing" :title="t('adm.sso.removeTitle')" :message="t('adm.sso.removeAsk', { name: removing?.name ?? '' })" :confirm-label="t('common.delete')" danger @confirm="remove" @close="removing = null" />

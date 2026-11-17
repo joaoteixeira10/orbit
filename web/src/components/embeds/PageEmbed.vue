@@ -38,7 +38,7 @@ const open = () => !props.guest && openEmbed({ kind: props.kind, ws: props.ws, i
   place-items: center;
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
-  box-shadow: 0 0 0 0.5px var(--border), 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 3px rgba(0, 0, 0, 0.1);
   color: var(--text-2);
   opacity: 0;
   transition: opacity var(--speed);

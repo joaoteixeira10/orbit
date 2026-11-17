@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Trash2 } from 'lucide-vue-next'
 import DrawingEditor from './DrawingEditor.vue'
 import type { Drawing } from './drawing'
+import { Button } from '@/components/shadcn/button'
 
 // A note's drawing, nearly the whole window: Excalidraw with Done (which
 // saves first) and, for editors, Remove.
@@ -35,8 +36,8 @@ watch(
     <div v-if="open && id" class="draw-sheet" role="dialog" aria-modal="true" :aria-label="title || t('draw.noteTitle')" data-testid="drawing-sheet">
         <header class="flex items-center gap-2 px-4 py-2.5">
           <h2 class="min-w-0 flex-1 truncate text-[15px] font-semibold">{{ title || t('draw.noteTitle') }}</h2>
-          <button v-if="!readonly" class="btn-plain !text-danger" @click="emit('remove')"><Trash2 class="h-4 w-4" />{{ t('draw.removeNote') }}</button>
-          <button class="btn-primary btn-sm" @click="close">{{ t('common.done') }}</button>
+          <Button variant="link" v-if="!readonly" class="text-danger!" @click="emit('remove')"><Trash2 class="h-4 w-4" />{{ t('draw.removeNote') }}</Button>
+          <Button size="sm" @click="close">{{ t('common.done') }}</Button>
         </header>
         <div class="min-h-0 flex-1">
           <DrawingEditor ref="editor" :id="id" :readonly="readonly" @saved="(d) => emit('saved', d)" />
@@ -53,8 +54,8 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
-  background: var(--surface);
+  border-radius: 12px;
+  background: var(--sheet-bg);
   box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.35), 0 20px 60px rgb(0 0 0 / 0.3);
 }
 @media (max-width: 639px) {

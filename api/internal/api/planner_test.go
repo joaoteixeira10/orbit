@@ -336,6 +336,8 @@ func TestCalendar(t *testing.T) {
 	expect(t, w, http.StatusCreated, "create event")
 	decode(t, w, &ev)
 	expect(t, authdo(r, "POST", base+"/tasks", `{"title":"Essay","due":"2026-10-14"}`, alice), http.StatusCreated, "task due")
+	// Due tomorrow, for the feed (it carries the tasks of the last 30 days on).
+	expect(t, authdo(r, "POST", base+"/tasks", `{"title":"Homework","due":"`+time.Now().AddDate(0, 0, 1).Format("2006-01-02")+`"}`, alice), http.StatusCreated, "task due soon")
 	if w := authdo(r, "POST", base+"/events", `{"title":"x","starts_at":"2026-10-05T10:00:00Z","ends_at":"2026-10-05T09:00:00Z"}`, alice); w.Code != http.StatusBadRequest {
 		t.Errorf("ends before it starts: %d", w.Code)
 	}
@@ -376,7 +378,7 @@ func TestCalendar(t *testing.T) {
 	expect(t, w, 200, "feed")
 	ics := w.Body.String()
 	if !strings.Contains(w.Header().Get("Content-Type"), "text/calendar") || !strings.Contains(ics, "SUMMARY:Maths") ||
-		!strings.Contains(ics, "RRULE:FREQ=WEEKLY;BYDAY=MO") || !strings.Contains(ics, "EXDATE;TZID=Europe/Lisbon:20261012T090000") || !strings.Contains(ics, "☐ Essay") {
+		!strings.Contains(ics, "RRULE:FREQ=WEEKLY;BYDAY=MO") || !strings.Contains(ics, "EXDATE;TZID=Europe/Lisbon:20261012T090000") || !strings.Contains(ics, "☐ Homework") {
 		t.Errorf("feed content:\n%s", ics)
 	}
 	if w := do(r, "GET", "/ical/ocf_nope.ics", ""); w.Code != http.StatusNotFound {

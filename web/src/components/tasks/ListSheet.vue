@@ -19,6 +19,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { tasksApi, gitApi, type Column, type TaskList, type GitHookSetup } from '@/api/planner'
 import { filesApi, tree, type Folder } from '@/lib/filesApi'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Creates or edits a task list, as Reminders' list sheet: its name, colour
 // and icon, the folder it's the project of (with Files on), plus the board
@@ -320,7 +323,7 @@ async function destroy() {
         <WsIcon :icon="icon" :color="color" :size="64" :name="name" />
         <input
           v-model="name"
-          class="w-full rounded-xl bg-fill-2 px-4 py-2.5 text-center text-[20px] font-semibold outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
+          class="rounded-lg w-full px-4 py-2.5 text-center text-[20px] font-semibold outline-hidden placeholder:text-text-faint border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           :class="{ 'shadow-[0_0_0_2px_var(--crit-border)]': tried && !name.trim() }"
           :style="{ color }"
           :placeholder="t('lists.namePlaceholder')"
@@ -343,11 +346,11 @@ async function destroy() {
                 {{ gitMode }} · {{ git.synced_at ? t('git.link.synced', { when: ago(git.synced_at, locale()) }) : t('git.link.never') }}
               </div>
             </div>
-            <button type="button" class="btn-plain shrink-0" :disabled="syncing" @click="syncNow">
+            <Button variant="link" type="button" class="shrink-0" :disabled="syncing" @click="syncNow">
               <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': syncing }" />{{ t('git.link.syncNow') }}
-            </button>
+            </Button>
           </div>
-          <div v-if="git.last_error" class="group-row !min-h-0 !py-2 text-[12.5px] text-crit-text">
+          <div v-if="git.last_error" class="group-row min-h-0! py-2! text-[12.5px] text-crit-text">
             <TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.link.syncFailed', { error: git.last_error }) }}
           </div>
         </div>
@@ -361,7 +364,7 @@ async function destroy() {
                 {{ git.instant ? (git.hook_at ? t('git.link.instantOn', { when: ago(git.hook_at, locale()) }) : t('git.link.instantWaiting')) : t('git.link.instantOff') }}
               </div>
             </div>
-            <button v-if="editable" type="button" class="btn-plain shrink-0" :disabled="hookBusy" @click="setInstant(!git.instant)">{{ git.instant ? t('git.link.turnOff') : t('git.link.turnOn') }}</button>
+            <Button variant="link" v-if="editable" type="button" class="shrink-0" :disabled="hookBusy" @click="setInstant(!git.instant)">{{ git.instant ? t('git.link.turnOff') : t('git.link.turnOn') }}</Button>
           </div>
           <div v-if="hookSetup?.secret" class="space-y-2 px-3.5 py-3 text-[12.5px]">
             <p class="leading-snug text-text-2">{{ t('git.link.instantManual') }}</p>
@@ -372,26 +375,26 @@ async function destroy() {
 
         <!-- Members without their own account: read only, or as a bot — never as whoever linked it -->
         <div class="group mt-3" data-testid="git-bot">
-          <div class="group-row !items-start">
+          <div class="group-row items-start!">
             <div class="min-w-0 flex-1">
               <div class="text-[14px]">{{ t('git.bot.title') }}</div>
               <div class="text-[12px] text-text-3">
                 {{ git.bot_login ? t('git.bot.asBot', { bot: git.bot_login }) : t('git.bot.readOnly') }}
               </div>
             </div>
-            <button v-if="canBot && git.bot_login" type="button" class="btn-plain shrink-0 !text-danger" @click="saveBot('')">{{ t('git.bot.remove') }}</button>
+            <Button variant="link" v-if="canBot && git.bot_login" type="button" class="shrink-0 text-danger!" @click="saveBot('')">{{ t('git.bot.remove') }}</Button>
           </div>
-          <form v-if="canBot && !git.bot_login" class="group-row flex-wrap !gap-y-2" @submit.prevent="saveBot(botToken)">
-            <input v-model="botToken" type="password" class="input min-w-0 flex-1 !py-1 text-[13.5px]" :placeholder="t('git.bot.tokenPh')" autocomplete="off" :aria-label="t('git.bot.token')" />
-            <button class="btn btn-sm" :disabled="!botToken.trim() || botBusy">{{ t('git.bot.use') }}</button>
+          <form v-if="canBot && !git.bot_login" class="group-row flex-wrap gap-y-2!" @submit.prevent="saveBot(botToken)">
+            <Input v-model="botToken" type="password" class="min-w-0 flex-1 py-1! text-[13.5px]" :placeholder="t('git.bot.tokenPh')" autocomplete="off" :aria-label="t('git.bot.token')" />
+            <Button variant="secondary" size="sm" :disabled="!botToken.trim() || botBusy">{{ t('git.bot.use') }}</Button>
           </form>
         </div>
         <p class="footnote mt-1 px-1 leading-snug">{{ t('git.bot.hint', { host: hostOf(git.host) }) }}</p>
-        <p v-if="git.write === 'none'" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text">{{ t('git.bot.youRead', { host: hostOf(git.host) }) }}</p>
-        <button v-if="editable" type="button" class="btn-plain mt-1.5 !text-danger" @click="confirmUnlink = true">{{ t('git.link.unlink') }}</button>
+        <p v-if="git.write === 'none'" class="mt-2 rounded-lg border border-border px-3 py-2 text-[12.5px] text-warn-text">{{ t('git.bot.youRead', { host: hostOf(git.host) }) }}</p>
+        <Button variant="link" v-if="editable" type="button" class="mt-1.5 text-danger!" @click="confirmUnlink = true">{{ t('git.link.unlink') }}</Button>
       </section>
 
-      <div v-if="editable" class="rounded-xl bg-fill-2 p-4">
+      <div v-if="editable" class="rounded-xl border border-border p-4">
         <IconColorPicker v-model:icon="icon" v-model:color="color" compact />
       </div>
 
@@ -399,13 +402,13 @@ async function destroy() {
       <section v-if="hasFiles">
         <h3 class="cap mb-1.5 px-1">{{ t('lists.folder') }}</h3>
         <div class="group">
-          <label class="group-row !gap-2.5">
+          <label class="group-row gap-2.5!">
             <FolderOpen class="h-4 w-4 shrink-0 text-text-2" />
-            <select v-model="folderId" class="input min-w-0 flex-1 !py-1 text-[14px]" :disabled="!editable" :aria-label="t('lists.folder')" data-testid="list-folder-pick">
+            <NativeSelect size="sm" v-model="folderId" class="min-w-0 flex-1 w-full" :disabled="!editable" :aria-label="t('lists.folder')" data-testid="list-folder-pick">
               <option value="">{{ t('lists.noFolder') }}</option>
               <option v-for="o in folderOptions" :key="o.id" :value="o.id">{{ o.label }}</option>
               <option :value="NEW_FOLDER">{{ t('lists.newFolder', { name: name.trim() || t('lists.namePlaceholder') }) }}</option>
-            </select>
+            </NativeSelect>
           </label>
         </div>
         <p class="footnote mt-1 px-1 leading-snug">{{ t('lists.folderHint') }}</p>
@@ -415,7 +418,7 @@ async function destroy() {
       <section>
         <h3 class="cap mb-1.5 px-1">{{ t('lists.columns') }}</h3>
         <div ref="colsEl" class="group">
-          <div v-for="c in columns" :key="c.key" :data-id="c.key" class="col-row group-row !gap-2 !py-1.5 !pl-1.5 !pr-2">
+          <div v-for="c in columns" :key="c.key" :data-id="c.key" class="col-row group-row gap-2! py-1.5! pl-1.5! pr-2!">
             <span v-if="editable" class="drag grid h-8 w-6 shrink-0 cursor-grab place-items-center text-text-faint active:cursor-grabbing" :title="t('lists.reorder')">
               <GripVertical class="h-4 w-4" />
             </span>
@@ -431,8 +434,8 @@ async function destroy() {
             </button>
             <input
               v-model="c.name"
-              class="min-w-0 flex-1 bg-transparent py-1 text-[14.5px] outline-none placeholder:text-text-faint"
-              :class="{ 'placeholder:!text-crit-text': tried && !c.name.trim() }"
+              class="min-w-0 flex-1 bg-transparent py-1 text-[14.5px] outline-hidden placeholder:text-text-faint"
+              :class="{ 'placeholder:text-crit-text!': tried && !c.name.trim() }"
               :placeholder="t('lists.columnPlaceholder')"
               :aria-label="t('lists.columnPlaceholder')"
               :disabled="!editable"
@@ -450,44 +453,44 @@ async function destroy() {
             >
               <Check class="h-3 w-3" :stroke-width="3" />{{ t('lists.done') }}
             </button>
-            <button
+            <Button variant="ghost" size="icon"
               v-if="editable"
               type="button"
-              class="icon-btn h-7 w-7"
+              class="text-text-2 h-7 w-7"
               :title="t('lists.removeColumn')"
               :aria-label="t('lists.removeColumn')"
               :disabled="columns.length <= 1"
               @click="removeColumn(c.key)"
             >
               <X class="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
-        <button v-if="editable" type="button" class="btn-plain mt-1.5" :disabled="columns.length >= MAX_COLUMNS" @click="addColumn">
+        <Button variant="link" v-if="editable" type="button" class="mt-1.5" :disabled="columns.length >= MAX_COLUMNS" @click="addColumn">
           <Plus class="h-4 w-4" />{{ t('lists.addColumn') }}
-        </button>
+        </Button>
         <p v-if="problem" class="mt-1 px-1 text-[12.5px] text-crit-text">{{ problem }}</p>
         <p v-else class="footnote mt-1 px-1 leading-snug">{{ git ? t('git.link.columnsHint') : t('lists.columnsHint') }}</p>
       </section>
     </div>
 
     <template #footer>
-      <button v-if="creating && editable && gitOn" type="button" class="btn-ghost mr-auto !px-2.5" @click="fromGit = true">
+      <Button variant="ghost" v-if="creating && editable && gitOn" type="button" class="mr-auto px-2.5!" @click="fromGit = true">
         <GitBranch class="h-4 w-4" />{{ t('git.list.fromGit') }}
-      </button>
+      </Button>
       <span v-if="!creating && editable" class="mr-auto flex gap-1">
-        <button type="button" class="btn-ghost !px-2.5 !text-danger" @click="confirmDelete = true">
+        <Button variant="ghost" type="button" class="px-2.5! text-danger!" @click="confirmDelete = true">
           <Trash2 class="h-4 w-4" />{{ t('lists.delete') }}
-        </button>
-        <button type="button" class="btn-ghost !px-2.5" :title="list?.archived_at ? undefined : t('lists.archiveHint')" data-testid="list-archive" @click="archive(!list?.archived_at)">
+        </Button>
+        <Button variant="ghost" type="button" class="px-2.5!" :title="list?.archived_at ? undefined : t('lists.archiveHint')" data-testid="list-archive" @click="archive(!list?.archived_at)">
           <component :is="list?.archived_at ? ArchiveRestore : Archive" class="h-4 w-4" />{{ list?.archived_at ? t('lists.restore') : t('lists.archive') }}
-        </button>
+        </Button>
       </span>
       <template v-if="editable">
-        <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-        <button type="button" class="btn-primary" :disabled="!canSave" @click="save">{{ creating ? t('lists.create') : t('common.save') }}</button>
+        <Button variant="secondary" type="button" @click="emit('close')">{{ t('common.cancel') }}</Button>
+        <Button type="button" :disabled="!canSave" @click="save">{{ creating ? t('lists.create') : t('common.save') }}</Button>
       </template>
-      <button v-else type="button" class="btn-primary" @click="emit('close')">{{ t('common.close') }}</button>
+      <Button v-else type="button" @click="emit('close')">{{ t('common.close') }}</Button>
     </template>
   </Overlay>
 
@@ -520,9 +523,6 @@ async function destroy() {
 .col-row {
   min-height: 44px;
   background: var(--surface);
-}
-html.dark .col-row {
-  background: #2c2c2e;
 }
 .done-pill {
   display: inline-flex;

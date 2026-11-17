@@ -5,6 +5,8 @@ import { Trash2, UsersRound } from 'lucide-vue-next'
 import { groupsApi, type WorkspaceGroup } from '@/api/groups'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A workspace's groups (Settings → Members): everyone in a group is a member
 // with the group's role (or their own, if higher). Its owners add a group,
@@ -53,25 +55,25 @@ const add = () => pick.value && run(() => groupsApi.setInWorkspace(props.wsId, p
           <span class="block truncate text-[14px]">{{ g.name }}</span>
           <span class="block text-[12px] text-text-3">{{ t('groups.peopleN', { n: g.members }, g.members) }}</span>
         </span>
-        <select v-if="isOwner" class="input !w-auto !py-1 text-[13px]" :value="g.role" :aria-label="t('groups.roleIn')" @change="run(() => groupsApi.setInWorkspace(wsId, g.group_id, ($event.target as HTMLSelectElement).value))">
+        <NativeSelect size="sm" v-if="isOwner" class="w-auto" :model-value="g.role" :aria-label="t('groups.roleIn')" @change="run(() => groupsApi.setInWorkspace(wsId, g.group_id, ($event.target as HTMLSelectElement).value))">
           <option value="owner">{{ t('roles.owner') }}</option>
           <option value="editor">{{ t('roles.editor') }}</option>
           <option value="viewer">{{ t('roles.viewer') }}</option>
-        </select>
+        </NativeSelect>
         <span v-else class="text-[13px] text-text-2">{{ t(`roles.${g.role}`) }}</span>
-        <button v-if="isOwner" class="icon-btn !text-danger" :title="t('groups.takeOut')" :aria-label="t('groups.takeOut')" @click="run(() => groupsApi.removeFromWorkspace(wsId, g.group_id))"><Trash2 class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" v-if="isOwner" class="text-text-2 text-danger!" :title="t('groups.takeOut')" :aria-label="t('groups.takeOut')" @click="run(() => groupsApi.removeFromWorkspace(wsId, g.group_id))"><Trash2 class="h-4 w-4" /></Button>
       </div>
       <div v-if="isOwner && addable.length" class="group-row">
-        <select v-model="pick" class="input min-w-0 flex-1 !py-1 text-[13px]" data-testid="ws-group-pick">
+        <NativeSelect size="sm" v-model="pick" class="min-w-0 flex-1 w-full" data-testid="ws-group-pick">
           <option value="">{{ t('groups.addOne') }}</option>
           <option v-for="g in addable" :key="g.group_id" :value="g.group_id">{{ g.name }} ({{ g.members }})</option>
-        </select>
-        <select v-model="role" class="input !w-auto !py-1 text-[13px]" :aria-label="t('groups.roleIn')">
+        </NativeSelect>
+        <NativeSelect size="sm" v-model="role" class="w-auto" :aria-label="t('groups.roleIn')">
           <option value="editor">{{ t('roles.editor') }}</option>
           <option value="viewer">{{ t('roles.viewer') }}</option>
           <option value="owner">{{ t('roles.owner') }}</option>
-        </select>
-        <button class="btn btn-sm" :disabled="!pick" data-testid="ws-group-add" @click="add">{{ t('admin.add') }}</button>
+        </NativeSelect>
+        <Button variant="secondary" size="sm" :disabled="!pick" data-testid="ws-group-add" @click="add">{{ t('admin.add') }}</Button>
       </div>
       <p v-if="isOwner && !here.length && !addable.length" class="group-row text-[13px] text-text-3">{{ t('groups.noneYet') }}</p>
     </div>

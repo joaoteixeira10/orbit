@@ -457,17 +457,18 @@ const selLabel = computed(() => {
 .tg-dh:not(:disabled):hover .dn {
   background: var(--fill);
 }
+/* Today: the primary colour (shadcn's), not Apple Calendar's red. */
 .tg-dh.today .wd {
-  color: var(--crit);
+  color: var(--accent-text);
 }
 .tg-dh.today .dn,
 .tg-dh.today:not(:disabled):hover .dn {
-  background: var(--crit);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-fg);
 }
 .tg-allday {
-  border-top: 0.5px solid var(--border);
-  border-bottom: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .tg-allday .lbl {
   padding: 6px 8px 0 0;
@@ -481,7 +482,7 @@ const selLabel = computed(() => {
   min-width: 0;
   max-height: 128px;
   overflow-y: auto;
-  background-image: linear-gradient(to right, var(--border) 0.5px, transparent 0.5px);
+  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px);
   background-size: calc(100% / var(--cols)) 100%;
 }
 .tg-bar,
@@ -565,13 +566,13 @@ const selLabel = computed(() => {
   /* An hour line, and a fainter half-hour one (as Apple's). */
   background-image:
     linear-gradient(to bottom, var(--border) 1px, transparent 1px),
-    linear-gradient(to bottom, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+    linear-gradient(to bottom, transparent calc(50% - 1px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% - 1px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% + 1px), transparent calc(50% + 1px));
   border-top: 0;
 }
 .tg-col {
   position: relative;
   min-width: 0;
-  box-shadow: inset 0.5px 0 0 var(--border);
+  box-shadow: inset 1px 0 0 var(--border);
   touch-action: pan-y;
 }
 .tg-col.creatable {

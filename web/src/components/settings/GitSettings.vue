@@ -6,6 +6,8 @@ import { GitBranch, Trash2, ExternalLink, TriangleAlert, LogIn } from 'lucide-vu
 import Confirm from '@/components/ui/Confirm.vue'
 import { gitApi, type GitAccount } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // Settings → Git: the caller's accounts on Gitea / Forgejo servers, each a
 // personal access token checked against the server when added (and sealed
@@ -112,22 +114,22 @@ function host(u: string) {
           <div class="truncate text-[12px] text-text-3">{{ t('git.settings.as', { login: a.login }) }} · {{ a.via === 'oauth' ? t('git.settings.viaOAuth') : t('git.settings.viaToken') }}</div>
           <div v-if="a.last_error" class="flex items-center gap-1 text-[12px] text-crit-text"><TriangleAlert class="h-3 w-3" />{{ a.last_error }}</div>
         </div>
-        <button class="icon-btn !text-danger" :title="t('git.settings.disconnect')" :aria-label="t('git.settings.disconnect')" @click="removing = a">
+        <Button variant="ghost" size="icon" class="text-text-2 text-danger!" :title="t('git.settings.disconnect')" :aria-label="t('git.settings.disconnect')" @click="removing = a">
           <Trash2 class="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
     <p v-else class="text-[13px] text-text-3">{{ t('git.settings.none') }}</p>
 
     <div v-if="signIn.length" class="flex flex-wrap gap-2" data-testid="git-sign-in">
-      <button v-for="s in signIn" :key="s" type="button" class="btn" @click="startSignIn(s)"><LogIn class="h-4 w-4" />{{ t('git.settings.signInWith', { server: host(s) }) }}</button>
+      <Button variant="secondary" v-for="s in signIn" :key="s" type="button" @click="startSignIn(s)"><LogIn class="h-4 w-4" />{{ t('git.settings.signInWith', { server: host(s) }) }}</Button>
     </div>
     <p v-if="signIn.length" class="-mt-2 text-[12px] text-text-3">{{ t('git.settings.signInHint') }}</p>
 
-    <form class="flex flex-col gap-3 rounded-xl bg-fill-2 p-4" @submit.prevent="connect">
+    <form class="flex flex-col gap-3 rounded-lg border border-border p-4" @submit.prevent="connect">
       <label class="block">
         <span class="mb-1 block text-[12.5px] font-medium text-text-2">{{ t('git.settings.server') }}</span>
-        <input v-model="base" class="input" type="url" list="git-servers" :placeholder="servers[0] || t('git.settings.serverPlaceholder')" autocomplete="url" />
+        <Input v-model="base" type="url" list="git-servers" :placeholder="servers[0] || t('git.settings.serverPlaceholder')" autocomplete="url" />
         <datalist id="git-servers">
           <option v-for="s in servers" :key="s" :value="s" />
         </datalist>
@@ -138,7 +140,7 @@ function host(u: string) {
       </label>
       <label class="block">
         <span class="mb-1 block text-[12.5px] font-medium text-text-2">{{ t('git.settings.token') }}</span>
-        <input v-model="token" class="input font-mono" type="password" autocomplete="off" spellcheck="false" />
+        <Input v-model="token" class="font-mono" type="password" autocomplete="off" spellcheck="false" />
         <I18nT v-if="isGitHub" keypath="git.settings.tokenHintGitHub" tag="span" scope="global" class="mt-1 block text-[12px] leading-snug text-text-3">
           <template #link>
             <a :href="tokenPage" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-accent-text hover:underline">{{ t('git.settings.tokenPageGitHub') }}<ExternalLink class="h-3 w-3" /></a>
@@ -157,7 +159,7 @@ function host(u: string) {
         </I18nT>
       </label>
       <div class="flex justify-end">
-        <button type="submit" class="btn-primary" :disabled="!canConnect">{{ t('git.settings.connect') }}</button>
+        <Button type="submit" :disabled="!canConnect">{{ t('git.settings.connect') }}</Button>
       </div>
     </form>
   </div>

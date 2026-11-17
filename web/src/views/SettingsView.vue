@@ -5,6 +5,7 @@ import LockSettings from '@/components/settings/LockSettings.vue'
 import AssistantOwnSettings from '@/components/settings/AssistantOwnSettings.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import DevThemePicker from '@/components/DevThemePicker.vue'
+import HolidayThemePicker from '@/components/HolidayThemePicker.vue'
 import { useBrandingStore } from '@/stores/branding'
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
@@ -31,8 +32,14 @@ import { calendarApi, type Feed } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import type { APIToken } from '@/api/types'
 import { GLOBAL_PRIVILEGES, isOwnerOnlyPriv } from '@/lib/privileges'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
+import { Slider } from '@/components/shadcn/slider'
 
 const prefs = usePrefsStore()
+// The system's reduced motion holds the app still whatever the switch says.
+const systemStill = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const branding = useBrandingStore()
 const auth = useAuthStore()
 const wss = useWorkspacesStore()
@@ -451,12 +458,12 @@ onMounted(loadSessions)
       <!-- Left sub-nav -->
       <nav class="sticky top-0 hidden w-48 shrink-0 flex-col gap-4 self-start md:flex">
         <div v-for="grp in sections" :key="grp.group">
-          <div class="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-text-3">{{ grp.group }}</div>
+          <div class="mb-1.5 px-2 text-[12px] font-medium text-text-2">{{ grp.group }}</div>
           <div class="flex flex-col gap-1">
             <button
               v-for="it in grp.items"
               :key="it.id"
-              class="flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[13px] transition"
+              class="flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-[13px] transition"
               :class="active === it.id ? 'border-border-2 bg-surface text-text' : 'border-transparent text-text-2 hover:bg-surface-2 hover:text-text'"
               @click="go(it.id)"
             >
@@ -481,19 +488,19 @@ onMounted(loadSessions)
                   <div class="text-[12px] text-text-3">{{ auth.user?.username }}</div>
                 </div>
               </div>
-              <label class="btn-ghost cursor-pointer">
+              <Button as="label" variant="ghost" class="cursor-pointer">
                 <Upload class="h-4 w-4" /> {{ t('acct.account.uploadPhoto') }}
                 <input type="file" accept="image/*" class="hidden" @change="onAvatar" />
-              </label>
+              </Button>
             </div>
             <div v-if="auth.user?.oidc" class="rounded-xl border border-border bg-surface-2 px-3 py-2 text-[12px] text-text-3">
               {{ t('acct.account.ssoManaged') }}
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
-              <div><label class="label">{{ t('admin.displayName') }}</label><input v-model="displayName" class="input" :placeholder="t('acct.account.namePlaceholder')" :disabled="auth.user?.oidc" /></div>
-              <div><label class="label">{{ t('acct.account.email') }}</label><input v-model="email" type="email" class="input" placeholder="you@example.org" :disabled="auth.user?.oidc" /></div>
+              <div><label class="label">{{ t('admin.displayName') }}</label><Input v-model="displayName" :placeholder="t('acct.account.namePlaceholder')" :disabled="auth.user?.oidc" /></div>
+              <div><label class="label">{{ t('acct.account.email') }}</label><Input v-model="email" type="email" placeholder="you@example.org" :disabled="auth.user?.oidc" /></div>
             </div>
-            <div class="flex justify-end"><button class="btn-primary" @click="saveAccount">{{ t('acct.saveChanges') }}</button></div>
+            <div class="flex justify-end"><Button @click="saveAccount">{{ t('acct.saveChanges') }}</Button></div>
           </div>
         </section>
 
@@ -509,7 +516,32 @@ onMounted(loadSessions)
                 </button>
               </div>
             </div>
-            <div v-if="branding.holidayTheme !== 'off'" class="flex items-center justify-between gap-4 border-t border-border pt-5">
+            <!-- Liquid glass: 0 (off, solid) to 100 (clearest). -->
+            <div class="border-t border-border pt-5" data-testid="glass-setting">
+              <div class="flex items-center justify-between gap-4">
+                <div><div class="text-[13px] font-semibold">{{ t('acct.appearance.glass') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.glassHint') }}</div></div>
+                <span class="shrink-0 text-[13px] tabular-nums text-text-2" data-testid="glass-value">{{ prefs.glass ? `${prefs.glass}%` : t('acct.appearance.glassOff') }}</span>
+              </div>
+              <div class="mt-4 flex flex-wrap items-center gap-5">
+                <div class="glass-preview" aria-hidden="true">
+                  <span class="glass-preview-pane">{{ t('acct.appearance.glassPreview') }}</span>
+                </div>
+                <div class="flex min-w-[200px] flex-1 items-center gap-3">
+                  <span class="text-[12px] text-text-3">{{ t('acct.appearance.glassSolid') }}</span>
+                  <Slider :model-value="[prefs.glass]" :min="0" :max="100" :step="5" :aria-label="t('acct.appearance.glass')" class="flex-1" data-testid="glass-slider" @update:model-value="(v) => v && prefs.setGlass(v[0])" />
+                  <span class="text-[12px] text-text-3">{{ t('acct.appearance.glassClear') }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-4 border-t border-border pt-5" data-testid="animations-setting">
+              <div>
+                <div class="text-[13px] font-semibold">{{ t('acct.appearance.animations') }}</div>
+                <div class="text-[12px] text-text-3">{{ t('acct.appearance.animationsHint') }}</div>
+                <div v-if="systemStill" class="mt-1 text-[12px] text-text-2">{{ t('acct.appearance.animationsSystem') }}</div>
+              </div>
+              <Toggle :model-value="prefs.animations" :aria-label="t('acct.appearance.animations')" data-testid="animations-toggle" @update:model-value="prefs.setAnimations" />
+            </div>
+            <div v-if="branding.holidayTheme !== 'off' || branding.seasonTheme !== 'off'" class="flex items-center justify-between gap-4 border-t border-border pt-5">
               <div><div class="text-[13px] font-semibold">{{ t('holiday.effectsSetting') }}</div><div class="text-[12px] text-text-3">{{ t('holiday.effectsHint') }}</div></div>
               <Toggle :model-value="prefs.holidayEffects" :aria-label="t('holiday.effectsSetting')" data-testid="holiday-effects" @update:model-value="prefs.setHolidayEffects" />
             </div>
@@ -555,6 +587,15 @@ onMounted(loadSessions)
               <div class="mb-3"><div class="text-[13px] font-semibold">{{ t('acct.appearance.devTheme') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.devThemeHint') }}</div></div>
               <DevThemePicker :model-value="prefs.devTheme" :instance-theme="branding.instanceTheme?.id ?? null" :dark="branding.dark" @update:model-value="prefs.setDevTheme($event)" />
             </div>
+            <!-- Own holiday and season themes, each when the owner lets each person choose. -->
+            <div v-if="branding.holidaysPersonal" class="border-t border-border pt-5" data-testid="my-holiday-themes">
+              <div class="mb-3"><div class="text-[13px] font-semibold">{{ t('holiday.mine.holiday') }}</div><div class="text-[12px] text-text-3">{{ t('holiday.mine.holidayHint') }}</div></div>
+              <HolidayThemePicker kind="holiday" :model-value="prefs.holidayTheme" :everyone="branding.holidayTheme" @update:model-value="prefs.setHolidayTheme($event)" />
+            </div>
+            <div v-if="branding.seasonsPersonal" class="border-t border-border pt-5" data-testid="my-season-themes">
+              <div class="mb-3"><div class="text-[13px] font-semibold">{{ t('holiday.mine.season') }}</div><div class="text-[12px] text-text-3">{{ t('holiday.mine.seasonHint') }}</div></div>
+              <HolidayThemePicker kind="season" :model-value="prefs.seasonTheme" :everyone="branding.seasonTheme" @update:model-value="prefs.setSeasonTheme($event)" />
+            </div>
           </div>
         </section>
 
@@ -565,17 +606,17 @@ onMounted(loadSessions)
             <div>
               <div class="text-[13px] font-semibold">{{ t('settings.language') }}</div>
               <div class="mb-2 text-[12px] text-text-3">{{ t('settings.languageHint') }}</div>
-              <select :value="locale" class="input" @change="changeLocale(($event.target as HTMLSelectElement).value as LocaleCode)">
+              <NativeSelect :model-value="locale" class="w-full" @change="changeLocale(($event.target as HTMLSelectElement).value as LocaleCode)">
                 <option v-for="l in SUPPORTED_LOCALES" :key="l.code" :value="l.code">{{ l.label }}</option>
-              </select>
+              </NativeSelect>
             </div>
             <div class="border-t border-border pt-5">
               <div class="text-[13px] font-semibold">{{ t('settings.timezone') }}</div>
               <div class="mb-2 text-[12px] text-text-3">{{ t('settings.timezoneHint') }}</div>
-              <select :value="prefs.timezone" class="input" @change="prefs.setTimezone(($event.target as HTMLSelectElement).value)">
+              <NativeSelect :model-value="prefs.timezone" class="w-full" @change="prefs.setTimezone(($event.target as HTMLSelectElement).value)">
                 <option value="local">{{ t('settings.tzDevice', { tz: deviceTZ }) }}</option>
                 <option v-for="tz in explicitZones" :key="tz" :value="tz">{{ tz }}</option>
-              </select>
+              </NativeSelect>
             </div>
             <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
               <div><div class="text-[13px] font-semibold">{{ t('settings.weekStart') }}</div><div class="text-[12px] text-text-3">{{ t('settings.weekStartHint') }}</div></div>
@@ -625,7 +666,7 @@ onMounted(loadSessions)
           <div class="flex flex-col gap-4 p-5">
             <div class="flex items-center justify-between gap-4">
               <p class="text-[12.5px] text-text-3">{{ t('settings.feedsHint') }}</p>
-              <button class="btn-primary shrink-0" @click="openFeed"><Plus class="h-4 w-4" />{{ t('settings.newFeed') }}</button>
+              <Button class="shrink-0" @click="openFeed"><Plus class="h-4 w-4" />{{ t('settings.newFeed') }}</Button>
             </div>
             <div v-if="feeds.length" class="group">
               <div v-for="f in feeds" :key="f.id" class="group-row">
@@ -634,7 +675,7 @@ onMounted(loadSessions)
                   <div class="truncate text-[13.5px] font-medium">{{ f.name }} <span class="font-mono text-[11px] text-text-3">{{ f.prefix }}…</span></div>
                   <div class="truncate text-[12px] text-text-3">{{ feedWsNames(f) }}{{ f.include_tasks ? ' · ' + t('settings.feedWithTasks') : '' }}<span v-if="f.last_used_at"> · {{ t('settings.lastUsed', { when: fmtDate(f.last_used_at) }) }}</span></div>
                 </div>
-                <button class="icon-btn !text-danger" :title="t('common.revoke')" @click="confirmFeed = f"><Trash2 class="h-4 w-4" /></button>
+                <Button variant="ghost" size="icon" class="text-text-2 text-danger!" :title="t('common.revoke')" @click="confirmFeed = f"><Trash2 class="h-4 w-4" /></Button>
               </div>
             </div>
           </div>
@@ -650,7 +691,7 @@ onMounted(loadSessions)
             <div>
               <label class="label">{{ t('acct.password.current') }}</label>
               <div class="relative">
-                <input v-model="oldPw" :type="showOld ? 'text' : 'password'" autocomplete="current-password" class="input pr-10" :placeholder="t('acct.password.currentPlaceholder')" />
+                <Input v-model="oldPw" :type="showOld ? 'text' : 'password'" autocomplete="current-password" class="pr-10" :placeholder="t('acct.password.currentPlaceholder')" />
                 <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-3 hover:text-text" @click="showOld = !showOld"><component :is="showOld ? EyeOff : Eye" class="h-4 w-4" /></button>
               </div>
             </div>
@@ -658,21 +699,21 @@ onMounted(loadSessions)
               <div>
                 <label class="label">{{ t('acct.password.new') }}</label>
                 <div class="relative">
-                  <input v-model="newPw" :type="showNew ? 'text' : 'password'" autocomplete="new-password" class="input pr-10" :placeholder="t('acct.password.newPlaceholder')" />
+                  <Input v-model="newPw" :type="showNew ? 'text' : 'password'" autocomplete="new-password" class="pr-10" :placeholder="t('acct.password.newPlaceholder')" />
                   <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-3 hover:text-text" @click="showNew = !showNew"><component :is="showNew ? EyeOff : Eye" class="h-4 w-4" /></button>
                 </div>
               </div>
               <div>
                 <label class="label">{{ t('acct.password.confirm') }}</label>
                 <div class="relative">
-                  <input v-model="confirmPw" :type="showConfirm ? 'text' : 'password'" autocomplete="new-password" class="input pr-10" :placeholder="t('acct.password.confirmPlaceholder')" />
+                  <Input v-model="confirmPw" :type="showConfirm ? 'text' : 'password'" autocomplete="new-password" class="pr-10" :placeholder="t('acct.password.confirmPlaceholder')" />
                   <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-3 hover:text-text" @click="showConfirm = !showConfirm"><component :is="showConfirm ? EyeOff : Eye" class="h-4 w-4" /></button>
                 </div>
               </div>
             </div>
             <p v-if="pwErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ pwErr }}</p>
             <p v-if="pwMsg" class="rounded-lg bg-ok-bg px-3 py-2 text-[12px] text-ok-text">{{ pwMsg }}</p>
-            <div class="flex justify-end"><button type="submit" class="btn-primary">{{ t('acct.password.update') }}</button></div>
+            <div class="flex justify-end"><Button type="submit" >{{ t('acct.password.update') }}</Button></div>
           </form>
         </section>
 
@@ -694,7 +735,7 @@ onMounted(loadSessions)
             </div>
 
             <div v-if="!auth.user?.otp_enabled">
-              <button class="btn-primary" @click="showOtpSetup = true">{{ t('acct.otp.setUp') }}</button>
+              <Button @click="showOtpSetup = true">{{ t('acct.otp.setUp') }}</Button>
             </div>
             <template v-else>
               <!-- Recovery codes -->
@@ -703,7 +744,7 @@ onMounted(loadSessions)
                   <div class="text-[13px] font-semibold">{{ t('acct.otp.recoveryCodes') }}</div>
                   <div class="text-[12px] text-text-3">{{ t('acct.otp.remaining', auth.otpBackupRemaining) }}</div>
                 </div>
-                <button class="btn-ghost" @click="openRegen">{{ t('acct.otp.regenerate') }}</button>
+                <Button variant="ghost" @click="openRegen">{{ t('acct.otp.regenerate') }}</Button>
               </div>
               <!-- Disable -->
               <div class="border-t border-border pt-4">
@@ -712,7 +753,7 @@ onMounted(loadSessions)
                     <div class="text-[13px] font-semibold">{{ t('acct.otp.disableTitle') }}</div>
                     <div class="text-[12px] text-text-3">{{ t('acct.otp.disableHint') }}</div>
                   </div>
-                  <button class="btn-danger" @click="openDisable">{{ t('acct.otp.disable') }}</button>
+                  <Button variant="destructive" @click="openDisable">{{ t('acct.otp.disable') }}</Button>
                 </div>
               </div>
             </template>
@@ -728,7 +769,7 @@ onMounted(loadSessions)
                 <div class="text-[13px] font-semibold">{{ t('settings.passkeys') }}</div>
                 <div class="text-[12px] text-text-3">{{ t('acct.passkeys.hint') }}</div>
               </div>
-              <button class="btn-primary shrink-0" @click="openAddPasskey">{{ t('acct.passkeys.add') }}</button>
+              <Button class="shrink-0" @click="openAddPasskey">{{ t('acct.passkeys.add') }}</Button>
             </div>
 
             <div v-if="passkeys.length" class="flex flex-col divide-y divide-border rounded-xl border border-border">
@@ -772,7 +813,7 @@ onMounted(loadSessions)
                   <template #link><a href="/api/docs" target="_blank" rel="noopener" class="text-accent hover:underline">{{ t('nav.apiDocs') }}</a></template>
                 </I18nT>
               </div>
-              <button class="btn-primary shrink-0" @click="openCreateToken">{{ t('acct.tokens.new') }}</button>
+              <Button class="shrink-0" @click="openCreateToken">{{ t('acct.tokens.new') }}</Button>
             </div>
 
             <div v-if="tokens.length" class="flex flex-col divide-y divide-border rounded-xl border border-border">
@@ -781,8 +822,8 @@ onMounted(loadSessions)
                   <div class="text-[13px] font-medium">{{ tk.name }} <span class="font-mono text-[11px] text-text-3">{{ tk.prefix }}…</span></div>
                   <div v-if="tk.privileges?.length || tk.read_only" class="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-text-2">
                     <span class="cap">{{ t('settings.tokenLimited') }}</span>
-                    <span v-if="tk.read_only" class="pill !text-[11px]">{{ t('settings.tokenReadOnly') }}</span>
-                    <span v-for="p in tk.privileges ?? []" :key="p" class="pill !text-[11px]">{{ privLabel(p) }}</span>
+                    <span v-if="tk.read_only" class="pill text-[11px]!">{{ t('settings.tokenReadOnly') }}</span>
+                    <span v-for="p in tk.privileges ?? []" :key="p" class="pill text-[11px]!">{{ privLabel(p) }}</span>
                   </div>
                   <div class="text-[11px] text-text-3">
                     {{ t('acct.tokens.addedOn', { when: fmtDate(tk.created_at) }) }}<span v-if="tk.last_used_at"> · {{ t('acct.tokens.lastUsed', { when: fmtDate(tk.last_used_at) }) }}</span><span v-if="tk.expires_at"> · {{ t('acct.tokens.expiresOn', { when: fmtDate(tk.expires_at) }) }}</span><span v-else> · {{ t('acct.tokens.neverExpires') }}</span>
@@ -802,7 +843,7 @@ onMounted(loadSessions)
           <div class="flex items-center gap-2 border-b border-border px-5 py-3"><Bot class="h-[18px] w-[18px] text-text-2" /><h2 class="text-[14px] font-semibold">{{ t('mcp.title') }}</h2></div>
           <div class="flex flex-col gap-3 p-5 text-[13px]">
             <p class="text-text-2">{{ t('mcp.lead') }}</p>
-            <div class="flex items-center gap-2 rounded-lg bg-fill-2 px-3 py-2">
+            <div class="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
               <code class="min-w-0 flex-1 truncate font-mono text-[12.5px]" data-testid="mcp-url">{{ mcpUrl }}</code>
               <CopyButton :value="mcpUrl" />
             </div>
@@ -843,13 +884,13 @@ onMounted(loadSessions)
                   <div class="truncate text-[12px] text-text-3">{{ s.ip || t('acct.sessions.unknownIp') }} · {{ sessionRel(s) }}</div>
                 </div>
               </div>
-              <button v-if="!s.current" class="btn-ghost shrink-0" :disabled="sessionsBusy" @click="revokeSession(s.id)">{{ t('common.revoke') }}</button>
+              <Button variant="ghost" v-if="!s.current" class="shrink-0" :disabled="sessionsBusy" @click="revokeSession(s.id)">{{ t('common.revoke') }}</Button>
             </div>
             <div v-if="sessions.length === 0" class="px-5 py-6 text-center text-[13px] text-text-3">{{ t('acct.sessions.none') }}</div>
             <div v-if="sessions.length > 1" class="px-5 py-4">
-              <button class="btn-ghost w-full justify-center" :disabled="sessionsBusy" @click="revokeOtherSessions">
+              <Button variant="ghost" class="w-full justify-center" :disabled="sessionsBusy" @click="revokeOtherSessions">
                 <LogOut class="h-4 w-4" /> {{ t('acct.sessions.signOutOthers') }}
-              </button>
+              </Button>
             </div>
           </div>
         </section>
@@ -864,18 +905,18 @@ onMounted(loadSessions)
           <code class="flex-1 break-all font-mono text-[12px] select-all">{{ createdToken }}</code>
           <button class="rounded-lg p-1.5 text-text-3 hover:text-text" :title="t('settings.copy')" @click="copyToken"><Copy class="h-4 w-4" /></button>
         </div>
-        <div class="flex justify-end"><button class="btn-primary" @click="showTokenCreate = false">{{ t('common.done') }}</button></div>
+        <div class="flex justify-end"><Button @click="showTokenCreate = false">{{ t('common.done') }}</Button></div>
       </div>
       <form v-else class="flex flex-col gap-3" @submit.prevent="createToken">
-        <div><label class="label">{{ t('common.name') }}</label><input v-model="tkName" class="input" :placeholder="t('acct.tokens.namePlaceholder')" maxlength="128" autofocus /></div>
+        <div><label class="label">{{ t('common.name') }}</label><Input v-model="tkName" :placeholder="t('acct.tokens.namePlaceholder')" maxlength="128" autofocus /></div>
         <div>
           <label class="label">{{ t('admin.colExpires') }}</label>
-          <select v-model.number="tkExpiry" class="input">
+          <NativeSelect v-model.number="tkExpiry" class="w-full">
             <option :value="0">{{ t('acct.tokens.never') }}</option>
             <option :value="30">{{ t('acct.tokens.days', 30) }}</option>
             <option :value="90">{{ t('acct.tokens.days', 90) }}</option>
             <option :value="365">{{ t('acct.tokens.oneYear') }}</option>
-          </select>
+          </NativeSelect>
         </div>
         <Checkbox v-model="tkReadOnly" class="text-text-2">{{ t('settings.tokenReadOnlyLong') }}</Checkbox>
         <Checkbox v-model="tkLimit" class="text-text-2">{{ t('settings.tokenLimit') }}</Checkbox>
@@ -895,8 +936,8 @@ onMounted(loadSessions)
         </template>
         <p v-if="tkErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ tkErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showTokenCreate = false">{{ t('common.cancel') }}</button>
-          <button type="submit" :disabled="tkBusy" class="btn-primary">{{ tkBusy ? t('acct.tokens.creating') : t('acct.tokens.create') }}</button>
+          <Button variant="ghost" type="button" @click="showTokenCreate = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" :disabled="tkBusy" >{{ tkBusy ? t('acct.tokens.creating') : t('acct.tokens.create') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -905,18 +946,18 @@ onMounted(loadSessions)
     <Overlay :open="feedSheet" :title="t('settings.newFeed')" @close="feedSheet = false">
       <div v-if="feedResult" class="flex flex-col gap-3 text-[13px]">
         <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">{{ t('settings.feedOnce') }}</p>
-        <div class="flex items-center gap-2 rounded-xl bg-fill-2 p-3">
+        <div class="flex items-center gap-2 rounded-lg border border-border p-3">
           <code class="flex-1 break-all font-mono text-[12px] select-all">{{ feedResult.url }}</code>
-          <button class="icon-btn" :title="t('settings.copy')" @click="copyText(feedResult.url)"><Copy class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" class="text-text-2" :title="t('settings.copy')" @click="copyText(feedResult.url)"><Copy class="h-4 w-4" /></Button>
         </div>
         <p class="text-[12px] text-text-3">{{ t('settings.feedHow') }}</p>
         <div class="flex justify-end gap-2">
-          <a :href="feedResult.webcal" class="btn"><ExternalLink class="h-4 w-4" />{{ t('settings.feedOpen') }}</a>
-          <button class="btn-primary" @click="feedSheet = false">{{ t('common.done') }}</button>
+          <Button as="a" variant="secondary" :href="feedResult.webcal" ><ExternalLink class="h-4 w-4" />{{ t('settings.feedOpen') }}</Button>
+          <Button @click="feedSheet = false">{{ t('common.done') }}</Button>
         </div>
       </div>
       <form v-else class="flex flex-col gap-4" @submit.prevent="createFeed">
-        <div><label class="label">{{ t('common.name') }}</label><input v-model="feedName" class="input" maxlength="120" /></div>
+        <div><label class="label">{{ t('common.name') }}</label><Input v-model="feedName" maxlength="120" /></div>
         <div>
           <Checkbox v-model="feedAll">{{ t('settings.feedAllWs') }}</Checkbox>
           <div v-if="!feedAll" class="mt-2 grid grid-cols-2 gap-2 pl-6">
@@ -925,8 +966,8 @@ onMounted(loadSessions)
         </div>
         <Checkbox v-model="feedTasks">{{ t('settings.feedIncludeTasks') }}</Checkbox>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn" @click="feedSheet = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary" :disabled="!feedAll && !feedWs.length">{{ t('common.create') }}</button>
+          <Button variant="secondary" type="button" @click="feedSheet = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" :disabled="!feedAll && !feedWs.length">{{ t('common.create') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -954,11 +995,11 @@ onMounted(loadSessions)
     <Overlay :open="showPkName" :title="t('acct.passkeys.add')" mode="centered" @close="showPkName = false">
       <form class="flex flex-col gap-3" @submit.prevent="createPasskey">
         <p class="text-[13px] text-text-2">{{ t('acct.passkeys.nameHint') }}</p>
-        <input v-model="pkName" class="input" :placeholder="t('acct.passkeys.namePlaceholder')" maxlength="128" autofocus />
+        <Input v-model="pkName" :placeholder="t('acct.passkeys.namePlaceholder')" maxlength="128" autofocus />
         <p v-if="pkErr" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ pkErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showPkName = false">{{ t('common.cancel') }}</button>
-          <button type="submit" :disabled="pkBusy" class="btn-primary">{{ pkBusy ? t('acct.passkeys.waiting') : t('acct.passkeys.create') }}</button>
+          <Button variant="ghost" type="button" @click="showPkName = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" :disabled="pkBusy" >{{ pkBusy ? t('acct.passkeys.waiting') : t('acct.passkeys.create') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -987,15 +1028,15 @@ onMounted(loadSessions)
         <div class="grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface-2 p-3 font-mono">
           <span v-for="c in regenCodes" :key="c" class="select-all">{{ c }}</span>
         </div>
-        <div class="flex justify-end"><button class="btn-primary" @click="showRegen = false">{{ t('common.done') }}</button></div>
+        <div class="flex justify-end"><Button @click="showRegen = false">{{ t('common.done') }}</Button></div>
       </div>
       <form v-else class="flex flex-col gap-3" @submit.prevent="regenerate">
         <p class="text-center text-[13px] text-text-2">{{ t('acct.otp.regenPrompt') }}</p>
         <div class="flex justify-center"><CodeInput v-model="regenCode" @complete="regenerate" /></div>
         <p v-if="regenErr" class="rounded-lg bg-crit-bg px-3 py-2 text-center text-[12px] text-crit-text">{{ regenErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showRegen = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary" :disabled="regenCode.length < 6">{{ t('acct.otp.generate') }}</button>
+          <Button variant="ghost" type="button" @click="showRegen = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" :disabled="regenCode.length < 6">{{ t('acct.otp.generate') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -1007,8 +1048,8 @@ onMounted(loadSessions)
         <div class="flex justify-center"><CodeInput v-model="disableCode" @complete="disableOtp" /></div>
         <p v-if="otpErr" class="rounded-lg bg-crit-bg px-3 py-2 text-center text-[12px] text-crit-text">{{ otpErr }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showDisable = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-danger" :disabled="disableCode.length < 6">{{ t('acct.otp.disable') }}</button>
+          <Button variant="ghost" type="button" @click="showDisable = false">{{ t('common.cancel') }}</Button>
+          <Button variant="destructive" type="submit" :disabled="disableCode.length < 6">{{ t('acct.otp.disable') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -1016,6 +1057,40 @@ onMounted(loadSessions)
 </template>
 
 <style scoped>
+/* Liquid glass's preview: a pane over shapes, so the blur shows. */
+.glass-preview {
+  position: relative;
+  width: 176px;
+  height: 96px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 24% 34%, var(--accent) 0 16px, transparent 17px),
+    radial-gradient(circle at 74% 72%, oklch(from var(--accent) l c calc(h + 70)) 0 20px, transparent 21px),
+    radial-gradient(circle at 86% 18%, oklch(from var(--accent) l c calc(h - 80)) 0 10px, transparent 11px),
+    repeating-linear-gradient(45deg, var(--fill-strong) 0 5px, transparent 5px 11px),
+    var(--bg);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.glass-preview-pane {
+  position: absolute;
+  inset: 20px 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--sheet-bg);
+  box-shadow: 0 0 0 1px var(--sheet-ring), var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 0.08));
+}
+html.glass .glass-preview-pane {
+  background: var(--g-sheen), color-mix(in srgb, var(--sheet-bg) var(--g-alpha), transparent);
+  backdrop-filter: var(--g-filter);
+  -webkit-backdrop-filter: var(--g-filter);
+  box-shadow: inset 0 1px 0 0 var(--g-hi), inset 0 0 0 1px var(--g-rim), var(--g-shadow);
+}
 .settings-page {
   padding: 32px clamp(16px, 4vw, 48px) 64px;
 }

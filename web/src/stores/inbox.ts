@@ -81,4 +81,7 @@ export function wireInboxLive() {
   })
   // Read on another tab or device.
   onLiveEvent('notifications-read', () => void s.load().catch(() => {}))
+  // Back from a break (the app in the background, the connection down):
+  // what came meanwhile.
+  onLiveEvent('resync', () => void s.load().catch(() => {}))
 }

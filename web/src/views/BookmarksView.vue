@@ -12,6 +12,9 @@ import { onLiveEvent } from '@/lib/live'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { Textarea } from '@/components/shadcn/textarea'
 
 // Bookmarks: paste a link to keep it — Orbit reads its title, description
 // and picture. Cards open the link (a "read later" one is then read);
@@ -147,11 +150,11 @@ async function saveEdit() {
 
     <form v-if="editable" class="add card mb-5 flex flex-wrap items-center gap-3 px-4 py-2.5" @submit.prevent="add">
       <Link2 class="h-4 w-4 shrink-0 text-text-3" />
-      <input v-model="link" class="min-w-[200px] flex-1 bg-transparent py-1 text-[15px] outline-none placeholder:text-text-faint" :placeholder="t('bookmarks.add')" :disabled="adding" data-testid="bookmark-url" />
+      <input v-model="link" class="min-w-[200px] flex-1 bg-transparent py-1 text-[15px] outline-hidden placeholder:text-text-faint" :placeholder="t('bookmarks.add')" :disabled="adding" data-testid="bookmark-url" />
       <label class="flex items-center gap-2 text-[13px] text-text-2">{{ t('bookmarks.readLater') }}<Toggle v-model="later" :aria-label="t('bookmarks.readLater')" /></label>
-      <button class="btn-primary btn-sm" :disabled="!link.trim() || adding" data-testid="bookmark-add">
+      <Button size="sm" :disabled="!link.trim() || adding" data-testid="bookmark-add">
         <LoaderCircle v-if="adding" class="h-4 w-4 animate-spin" />{{ adding ? t('bookmarks.adding') : t('bookmarks.save') }}
-      </button>
+      </Button>
     </form>
 
     <div v-if="list.length" class="mb-4 flex flex-wrap items-center gap-2">
@@ -183,9 +186,9 @@ async function saveEdit() {
         </a>
         <div class="flex items-center gap-1.5 px-3.5 pb-2.5 pt-2">
           <span class="min-w-0 flex-1 truncate text-[12px] text-text-3">{{ b.site_name || hostOf(b.url) }}<template v-for="g in b.tags" :key="g"> · #{{ g }}</template></span>
-          <button
+          <Button variant="ghost" size="icon"
             v-if="editable"
-            class="icon-btn h-7 w-7"
+            class="text-text-2 h-7 w-7"
             :class="{ later: b.read_later && !b.read_at }"
             :title="b.read_later && !b.read_at ? t('bookmarks.markRead') : t('bookmarks.markUnread')"
             :aria-label="b.read_later && !b.read_at ? t('bookmarks.markRead') : t('bookmarks.markUnread')"
@@ -194,8 +197,8 @@ async function saveEdit() {
           >
             <BookmarkIcon v-if="b.read_later && !b.read_at" class="h-4 w-4" fill="currentColor" />
             <BookmarkCheck v-else class="h-4 w-4" />
-          </button>
-          <button v-if="editable" class="icon-btn h-7 w-7" :aria-label="t('common.more')" @click="menu = { b, el: $event.currentTarget as HTMLElement }"><MoreHorizontal class="h-4 w-4" /></button>
+          </Button>
+          <Button variant="ghost" size="icon" v-if="editable" class="text-text-2 h-7 w-7" :aria-label="t('common.more')" @click="menu = { b, el: $event.currentTarget as HTMLElement }"><MoreHorizontal class="h-4 w-4" /></Button>
         </div>
       </div>
     </div>
@@ -210,16 +213,16 @@ async function saveEdit() {
 
     <Overlay :open="!!editing" :title="t('bookmarks.edit')" size="md" @close="editing = null">
       <form class="space-y-3" @submit.prevent="saveEdit">
-        <label class="block"><span class="label">{{ t('bookmarks.title') }}</span><input v-model="form.title" class="input" maxlength="300" /></label>
-        <label class="block"><span class="label">{{ t('bookmarks.description') }}</span><textarea v-model="form.description" class="input" rows="2" maxlength="700" /></label>
-        <label class="block"><span class="label">{{ t('bookmarks.tags') }}</span><input v-model="form.tags" class="input" :placeholder="t('bookmarks.tagsPh')" /></label>
-        <label class="block"><span class="label">{{ t('bookmarks.notes') }}</span><textarea v-model="form.notes" class="input" rows="3" maxlength="20000" /></label>
+        <label class="block"><span class="label">{{ t('bookmarks.title') }}</span><Input v-model="form.title" maxlength="300" /></label>
+        <label class="block"><span class="label">{{ t('bookmarks.description') }}</span><Textarea v-model="form.description" rows="2" maxlength="700" /></label>
+        <label class="block"><span class="label">{{ t('bookmarks.tags') }}</span><Input v-model="form.tags" :placeholder="t('bookmarks.tagsPh')" /></label>
+        <label class="block"><span class="label">{{ t('bookmarks.notes') }}</span><Textarea v-model="form.notes" rows="3" maxlength="20000" /></label>
         <label class="flex items-center justify-between text-[14px]">{{ t('bookmarks.readLater') }}<Toggle v-model="form.read_later" :aria-label="t('bookmarks.readLater')" /></label>
         <button type="submit" class="hidden" />
       </form>
       <template #footer>
-        <button class="btn" @click="editing = null">{{ t('common.cancel') }}</button>
-        <button class="btn-primary" @click="saveEdit">{{ t('common.save') }}</button>
+        <Button variant="secondary" @click="editing = null">{{ t('common.cancel') }}</Button>
+        <Button @click="saveEdit">{{ t('common.save') }}</Button>
       </template>
     </Overlay>
   </div>
@@ -230,7 +233,7 @@ async function saveEdit() {
   padding: 32px clamp(16px, 4vw, 48px) 96px;
 }
 .add {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 .bm {
   overflow: hidden;

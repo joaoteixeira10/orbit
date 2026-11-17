@@ -32,6 +32,11 @@ const (
 
 	// Holiday themes: off, auto (each in its season) or one shown now.
 	keyHolidayTheme = "holiday_theme"
+	// Season themes: off, auto (the season today is in) or one shown now.
+	keySeasonTheme = "season_theme"
+	// Each person may pick their own holiday / season theme (Settings).
+	keyHolidaysPersonal = "holiday_themes_personal"
+	keySeasonsPersonal  = "season_themes_personal"
 )
 
 // validDevTheme / validAssetSource clamp stored values to the closed sets.
@@ -48,6 +53,16 @@ func validDevTheme(s string) string {
 func validHolidayTheme(s string) string {
 	switch s {
 	case "auto", "christmas", "halloween", "nye", "easter", "santos", "lunar":
+		return s
+	}
+	return "off"
+}
+
+// validSeasonTheme clamps the season setting to the closed set (the
+// seasons of web/src/lib/seasonThemes.ts); anything else is off.
+func validSeasonTheme(s string) string {
+	switch s {
+	case "auto", "spring", "summer", "autumn", "winter":
 		return s
 	}
 	return "off"
@@ -83,6 +98,12 @@ type brandingResponse struct {
 	AssetSourceFavicon      string `json:"asset_source_favicon"`  // theme | keep
 	// HolidayTheme: off | auto | christmas | halloween | nye | easter | santos | lunar.
 	HolidayTheme string `json:"holiday_theme"`
+	// SeasonTheme: off | auto | spring | summer | autumn | winter (a holiday in its days wins).
+	SeasonTheme string `json:"season_theme"`
+	// HolidayThemesPersonal / SeasonThemesPersonal: each person may choose
+	// their own holiday / season theme (theirs wins over the owner's).
+	HolidayThemesPersonal bool `json:"holiday_themes_personal"`
+	SeasonThemesPersonal  bool `json:"season_themes_personal"`
 
 	DrawioURL string `json:"drawio_url"` // where Diagrams load the draw.io editor from
 	// PageVersionsKept: how many versions each page's history keeps.
@@ -106,6 +127,11 @@ type updateSettingsRequest struct {
 	AssetSourceFavicon      *string `json:"asset_source_favicon"`
 	// HolidayTheme: off, auto (each holiday in its season) or one of them now.
 	HolidayTheme *string `json:"holiday_theme" binding:"omitempty,oneof=off auto christmas halloween nye easter santos lunar"`
+	// SeasonTheme: off, auto (the season today is in) or one of them now.
+	SeasonTheme *string `json:"season_theme" binding:"omitempty,oneof=off auto spring summer autumn winter"`
+	// HolidayThemesPersonal / SeasonThemesPersonal: let each person choose.
+	HolidayThemesPersonal *bool `json:"holiday_themes_personal"`
+	SeasonThemesPersonal  *bool `json:"season_themes_personal"`
 
 	DrawioURL *string `json:"drawio_url"` // "" goes back to DRAWIO_URL (or draw.io's own)
 	// PageVersionsKept: how many versions each page keeps (5–1000).
@@ -149,6 +175,9 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		AssetSourceWordmark:     validAssetSource(m[keyAssetSrcWordmark]),
 		AssetSourceFavicon:      validAssetSource(m[keyAssetSrcFavicon]),
 		HolidayTheme:            validHolidayTheme(m[keyHolidayTheme]),
+		SeasonTheme:             validSeasonTheme(m[keySeasonTheme]),
+		HolidayThemesPersonal:   m[keyHolidaysPersonal] == "true",
+		SeasonThemesPersonal:    m[keySeasonsPersonal] == "true",
 
 		DrawioURL:        h.refreshDrawio(),
 		PageVersionsKept: versionsKept(h.db),
@@ -250,6 +279,23 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 	}
 	if req.HolidayTheme != nil {
 		h.setSetting(keyHolidayTheme, validHolidayTheme(*req.HolidayTheme))
+	}
+	if req.SeasonTheme != nil {
+		h.setSetting(keySeasonTheme, validSeasonTheme(*req.SeasonTheme))
+	}
+	if req.HolidayThemesPersonal != nil {
+		v := "false"
+		if *req.HolidayThemesPersonal {
+			v = "true"
+		}
+		h.setSetting(keyHolidaysPersonal, v)
+	}
+	if req.SeasonThemesPersonal != nil {
+		v := "false"
+		if *req.SeasonThemesPersonal {
+			v = "true"
+		}
+		h.setSetting(keySeasonsPersonal, v)
 	}
 	h.recordCtx(c, "settings.update", "settings", "branding", nil)
 	h.getBranding(c)

@@ -6,6 +6,7 @@ import Popover from '@/components/ui/Popover.vue'
 import { useTaskFilterStore, activeCount, DUE_BUCKETS, PROGRESS, type TaskFilter } from '@/lib/taskFilter'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
+import { Button } from '@/components/shadcn/button'
 
 // The Filter button and its popover: keyword, due, priority, progress, who
 // it's for, tags and (where several lists show at once) lists. Every change
@@ -46,12 +47,12 @@ const prios = [3, 2, 1, 0]
 </script>
 
 <template>
-  <button ref="anchor" class="btn btn-sm shrink-0" :class="{ 'filter-on': count }" :aria-expanded="open" @click="open = !open">
+  <Button variant="secondary" size="sm" ref="anchor" class="shrink-0" :class="{ 'filter-on': count }" :aria-expanded="open" @click="open = !open">
     <ListFilter class="h-3.5 w-3.5" />
     <span>{{ t('filter.filter') }}</span>
     <span v-if="count" class="badge">{{ count }}</span>
-  </button>
-  <button v-if="count" class="icon-btn h-7 w-7 shrink-0" :title="t('filter.clear')" :aria-label="t('filter.clear')" @click="store.clear(key)"><X class="h-3.5 w-3.5" /></button>
+  </Button>
+  <Button variant="ghost" size="icon" v-if="count" class="text-text-2 h-7 w-7 shrink-0" :title="t('filter.clear')" :aria-label="t('filter.clear')" @click="store.clear(key)"><X class="h-3.5 w-3.5" /></Button>
 
   <Popover v-if="open" :anchor="anchor" placement="bottom-end" :width="320" @close="open = false">
     <div class="max-h-[70vh] overflow-y-auto p-3">
@@ -101,8 +102,8 @@ const prios = [3, 2, 1, 0]
       </template>
 
       <div class="flex justify-end gap-3 border-t border-line-soft pt-2.5">
-        <button v-if="canSave" class="btn-plain mr-auto !text-[13px]" :disabled="!count" data-testid="filter-save" @click="(open = false), emit('save')">{{ t('smartList.save') }}</button>
-        <button class="btn-plain !text-[13px]" :disabled="!count" @click="store.clear(key)">{{ t('filter.clear') }}</button>
+        <Button variant="link" v-if="canSave" class="mr-auto text-[13px]!" :disabled="!count" data-testid="filter-save" @click="(open = false), emit('save')">{{ t('smartList.save') }}</Button>
+        <Button variant="link" class="text-[13px]!" :disabled="!count" @click="store.clear(key)">{{ t('filter.clear') }}</Button>
       </div>
     </div>
   </Popover>
@@ -110,8 +111,8 @@ const prios = [3, 2, 1, 0]
 
 <style scoped>
 .filter-on {
-  background: var(--accent-bg);
-  color: var(--accent-text);
+  background: var(--fill);
+  color: var(--text);
 }
 .badge {
   display: inline-grid;

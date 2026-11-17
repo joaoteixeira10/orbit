@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { spotlight, slideIn } from '@/lib/motion'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarClock, PanelLeft, PanelRight } from 'lucide-vue-next'
@@ -28,6 +29,7 @@ import {
   monthGrid, monthTitle, startOfWeek, startOfDay, addDays, addMonths, dateStr, parseDate, fmtDate, relDay, utcMidnight,
   allDayDate, deviceTZ,
 } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
 
 // Calendar: one workspace (/w/:ws/calendar) or every workspace merged
 // (/calendar, events in their workspace's colour). Month, Week and Day like
@@ -255,9 +257,25 @@ function shift(n: number) {
     const now = new Date()
     cursor.value = m.getMonth() === now.getMonth() && m.getFullYear() === now.getFullYear() ? startOfDay(now) : m
   } else cursor.value = addDays(cursor.value, view.value === 'week' ? 7 * n : n)
+  // The new page slides in from the side it comes from.
+  void nextTick(() => slideIn(fill.value ?? calEl.value?.querySelector('.cal-fill, .mg'), n > 0 ? 1 : -1))
 }
+// Today: there, and today lit up (also when already there, where nothing
+// else would change): its date pulses, its day or column is washed, and the
+// week's red line comes into view.
+const calEl = ref<HTMLElement | null>(null)
 function goToday() {
   cursor.value = startOfDay(new Date())
+  void nextTick(() => {
+    const root = calEl.value
+    if (!root) return
+    root.querySelectorAll<HTMLElement>('.mg-num.today, .mg-cday.today .num, .tg-dh.today .dn').forEach((el) => spotlight(el))
+    spotlight(root.querySelector<HTMLElement>(`.mg-cell[data-day="${dateStr(new Date())}"]`), 'area')
+    const heads = [...root.querySelectorAll('.tg-dh')]
+    const i = heads.findIndex((h) => h.classList.contains('today'))
+    if (i >= 0 && heads.length > 1) spotlight(root.querySelectorAll<HTMLElement>('.tg-col')[i], 'area')
+    root.querySelector('.tg-now')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  })
 }
 function select(day: string) {
   cursor.value = parseDate(day)
@@ -562,7 +580,7 @@ const views: CalView[] = ['day', 'week', 'month']
 </script>
 
 <template>
-  <div class="cal-page px-4 pt-6 sm:px-8 sm:pt-8" :class="{ 'pb-6': agenda }">
+  <div ref="calEl" class="cal-page px-4 pt-6 sm:px-8 sm:pt-8" :class="{ 'pb-6': agenda }">
    <div class="cal-shell">
     <!-- Left: the small month and the calendars -->
     <div v-if="leftOpen && !phone" ref="leftEl" class="side left" :class="{ floating: !wide }">
@@ -590,7 +608,7 @@ const views: CalView[] = ['day', 'week', 'month']
       <!-- The title keeps room for "October 2026": the buttons wrap first. -->
       <div class="min-w-0 flex-1 basis-[250px]">
         <div class="flex min-w-0 items-center gap-2">
-          <button v-if="!phone" class="icon-btn shrink-0" :class="{ on: leftOpen }" :title="t('cal.toggleLeft')" :aria-label="t('cal.toggleLeft')" :aria-pressed="leftOpen" @click="toggleLeft"><PanelLeft class="h-[18px] w-[18px]" /></button>
+          <Button variant="ghost" size="icon" v-if="!phone" class="text-text-2 shrink-0" :class="{ on: leftOpen }" :title="t('cal.toggleLeft')" :aria-label="t('cal.toggleLeft')" :aria-pressed="leftOpen" @click="toggleLeft"><PanelLeft class="h-[18px] w-[18px]" /></Button>
           <h1 class="large-title cal-title truncate">{{ title }}</h1>
           <span v-if="readOnly" class="pill shrink-0">{{ t('cal.viewOnly') }}</span>
         </div>
@@ -598,19 +616,19 @@ const views: CalView[] = ['day', 'week', 'month']
       </div>
 
       <div class="flex shrink-0 items-center gap-1.5">
-        <button v-if="showSubs" class="btn btn-sm" :title="t('cal.calendars')" @click="subsOpen = true">
+        <Button variant="secondary" size="sm" v-if="showSubs" :title="t('cal.calendars')" @click="subsOpen = true">
           <CalendarDays class="h-4 w-4" /><span class="hidden sm:inline">{{ t('cal.calendars') }}</span>
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" size="icon"
           v-if="!readOnly"
-          class="icon-btn !text-accent-text"
+          class="text-text-2 text-accent-text!"
           :disabled="!canCreate"
           :title="canCreate ? t('cal.newEvent') : t('cal.noWritable')"
           :aria-label="t('cal.newEvent')"
           @click="createOn(selected)"
         >
           <Plus class="h-5 w-5" :stroke-width="2.2" />
-        </button>
+        </Button>
       </div>
 
       <div class="flex w-full items-center justify-between gap-2 sm:w-auto">
@@ -622,8 +640,8 @@ const views: CalView[] = ['day', 'week', 'month']
           <button @click="goToday">{{ t('dates.today') }}</button>
           <button :aria-label="t('cal.next')" :title="t('cal.next')" @click="shift(1)"><ChevronRight class="h-4 w-4" :stroke-width="2.4" /></button>
         </div>
-        <button v-if="view !== 'month' && !agenda && planWorkspaces.length" class="btn btn-sm shrink-0" :title="t('plan.button')" data-testid="plan-open" @click="planOpen = true"><CalendarClock class="h-3.5 w-3.5" /><span class="hidden lg:inline">{{ t('plan.button') }}</span></button>
-        <button v-if="!phone" class="icon-btn shrink-0" :class="{ on: rightOpen }" :title="t('cal.toggleRight')" :aria-label="t('cal.toggleRight')" :aria-pressed="rightOpen" data-testid="toggle-pane" @click="toggleRight"><PanelRight class="h-[18px] w-[18px]" /></button>
+        <Button variant="secondary" size="sm" v-if="view !== 'month' && !agenda && planWorkspaces.length" class="shrink-0" :title="t('plan.button')" data-testid="plan-open" @click="planOpen = true"><CalendarClock class="h-3.5 w-3.5" /><span class="hidden lg:inline">{{ t('plan.button') }}</span></Button>
+        <Button variant="ghost" size="icon" v-if="!phone" class="text-text-2 shrink-0" :class="{ on: rightOpen }" :title="t('cal.toggleRight')" :aria-label="t('cal.toggleRight')" :aria-pressed="rightOpen" data-testid="toggle-pane" @click="toggleRight"><PanelRight class="h-[18px] w-[18px]" /></Button>
       </div>
     </header>
 
@@ -777,7 +795,7 @@ const views: CalView[] = ['day', 'week', 'month']
   z-index: 39;
   background: rgba(0, 0, 0, 0.18);
 }
-.icon-btn.on {
+[data-slot='button'].on {
   color: var(--accent-text);
   background: var(--fill-2);
 }
@@ -820,10 +838,6 @@ const views: CalView[] = ['day', 'week', 'month']
   align-items: center;
   padding-left: 9px;
   padding-right: 9px;
-}
-.seg.nav button:hover,
-.seg button:not(.on):hover {
-  background: var(--surface-hover);
 }
 @media (max-width: 639px) {
   .cal-page {

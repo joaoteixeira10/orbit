@@ -103,7 +103,7 @@ function onKey(e: KeyboardEvent) {
   overflow: clip;
   border-radius: inherit;
   background: color-mix(in srgb, var(--c) 22%, var(--bg));
-  box-shadow: inset 3px 0 0 var(--c), inset 0 0 0 0.5px color-mix(in srgb, var(--c) 30%, transparent);
+  box-shadow: inset 3px 0 0 var(--c), inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent);
   color: color-mix(in srgb, var(--c) 62%, var(--text));
   transition: box-shadow var(--speed) var(--ease), filter var(--speed) var(--ease);
 }
@@ -160,7 +160,7 @@ html.dark .bar:hover .body {
 /* A day or two when zoomed out: a solid pill. */
 .narrow .body {
   background: color-mix(in srgb, var(--c) 85%, var(--bg));
-  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--c) 60%, #000);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 60%, #000);
 }
 .narrow.overdue .body {
   box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px var(--crit);
@@ -180,7 +180,7 @@ html.dark .bar:hover .body {
 }
 .dragging .body {
   filter: none;
-  box-shadow: inset 3px 0 0 var(--c), 0 0 0 0.5px color-mix(in srgb, var(--c) 50%, transparent), 0 6px 18px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 3px 0 0 var(--c), 0 0 0 1px color-mix(in srgb, var(--c) 50%, transparent), 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
 /* The edges that change the start and due dates: grips on hover. */

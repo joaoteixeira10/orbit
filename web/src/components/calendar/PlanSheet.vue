@@ -11,6 +11,9 @@ import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Plan these days: my open tasks (for me or no one; due by the end of the
 // days, or undated) fitted into the free time of my working hours —
@@ -171,15 +174,15 @@ const mine = computed(() => props.blocks.filter((b) => props.workspaceIds.includ
       <p class="text-[13px] leading-relaxed text-text-2">{{ t('plan.hint', { from: fmtDate(from, { weekday: 'short', day: 'numeric', month: 'short' }), to: fmtDate(addDays(to, -1), { weekday: 'short', day: 'numeric', month: 'short' }) }) }}</p>
 
       <div class="group">
-        <div class="group-row flex-wrap !gap-y-2">
+        <div class="group-row flex-wrap gap-y-2!">
           <span class="text-[14px]">{{ t('plan.hours') }}</span>
           <div class="ml-auto flex flex-wrap items-center gap-1">
             <button v-for="d in WEEK" :key="d" type="button" class="day" :class="{ on: hours.days.includes(d) }" :aria-pressed="hours.days.includes(d)" @click="toggleDay(d)">{{ dayName(d) }}</button>
           </div>
           <div class="flex items-center gap-1.5">
-            <input v-model="hours.from" type="time" class="input !w-auto !py-1 text-[13px]" :aria-label="t('plan.from')" data-testid="plan-from" />
+            <Input v-model="hours.from" type="time" class="w-auto! py-1! text-[13px]" :aria-label="t('plan.from')" data-testid="plan-from" />
             <span class="text-text-3">–</span>
-            <input v-model="hours.to" type="time" class="input !w-auto !py-1 text-[13px]" :aria-label="t('plan.to')" data-testid="plan-to" />
+            <Input v-model="hours.to" type="time" class="w-auto! py-1! text-[13px]" :aria-label="t('plan.to')" data-testid="plan-to" />
           </div>
         </div>
       </div>
@@ -188,7 +191,7 @@ const mine = computed(() => props.blocks.filter((b) => props.workspaceIds.includ
         <h3 class="cap mb-1.5">{{ t('plan.tasks') }}</h3>
         <p v-if="!candidates.length" class="text-[13px] text-text-3">{{ t('plan.noTasks') }}</p>
         <div class="group max-h-[260px] overflow-y-auto">
-          <div v-for="x in candidates" :key="x.id" class="group-row !py-1.5" data-testid="plan-task">
+          <div v-for="x in candidates" :key="x.id" class="group-row py-1.5!" data-testid="plan-task">
             <Checkbox :model-value="picked.has(x.id)" :disabled="!x.estimate" :aria-label="x.title" @update:model-value="(v) => pick(x.id, v)" />
             <div class="min-w-0 flex-1">
               <div class="truncate text-[13.5px]"><span v-if="x.priority" class="mr-1 font-semibold text-warn">{{ '!'.repeat(x.priority) }}</span>{{ x.title }}</div>
@@ -197,11 +200,11 @@ const mine = computed(() => props.blocks.filter((b) => props.workspaceIds.includ
                 <template v-if="workspaceIds.length > 1"> · {{ wsName(x.workspace_id) }}</template>
               </div>
             </div>
-            <select class="input !w-auto !py-0.5 text-[12.5px]" :value="String(x.estimate || 0)" :aria-label="t('tasks.estimate')" data-testid="plan-estimate" @change="estimate(x, Number(($event.target as HTMLSelectElement).value))">
+            <NativeSelect size="sm" class="w-auto" :model-value="String(x.estimate || 0)" :aria-label="t('tasks.estimate')" data-testid="plan-estimate" @change="estimate(x, Number(($event.target as HTMLSelectElement).value))">
               <option value="0">{{ t('plan.howLong') }}</option>
               <option v-for="m in ESTIMATES" :key="m" :value="String(m)">{{ estimateText(m) }}</option>
               <option v-if="x.estimate && !ESTIMATES.includes(x.estimate)" :value="String(x.estimate)">{{ estimateText(x.estimate) }}</option>
-            </select>
+            </NativeSelect>
           </div>
         </div>
       </div>
@@ -223,9 +226,9 @@ const mine = computed(() => props.blocks.filter((b) => props.workspaceIds.includ
       </div>
     </div>
     <template #footer>
-      <button v-if="mine" class="btn-ghost mr-auto" :disabled="saving" data-testid="plan-clear" @click="apply([])">{{ t('plan.clear') }}</button>
-      <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button class="btn-primary" :disabled="saving || !plan.blocks.length" data-testid="plan-apply" @click="apply(plan.blocks)">{{ t('plan.apply') }}</button>
+      <Button variant="ghost" v-if="mine" class="mr-auto" :disabled="saving" data-testid="plan-clear" @click="apply([])">{{ t('plan.clear') }}</Button>
+      <Button variant="secondary" @click="emit('close')">{{ t('common.cancel') }}</Button>
+      <Button :disabled="saving || !plan.blocks.length" data-testid="plan-apply" @click="apply(plan.blocks)">{{ t('plan.apply') }}</Button>
     </template>
   </Overlay>
 </template>
@@ -235,12 +238,15 @@ const mine = computed(() => props.blocks.filter((b) => props.workspaceIds.includ
   min-width: 38px;
   height: 28px;
   padding: 0 6px;
+  /* shadcn's ToggleGroup (outline). */
   border-radius: 8px;
   font-size: 12.5px;
   color: var(--text-2);
-  background: var(--fill-2);
+  border: 1px solid var(--border-2);
+  background: transparent;
 }
 .day.on {
+  border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-fg, #fff);
 }

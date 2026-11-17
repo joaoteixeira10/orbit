@@ -10,6 +10,7 @@ import { emptySheet, textOf } from '@/lib/sheet'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // A workspace's sheets, in its folders; a new one (in the folder shown),
 // or one from an Excel file (.xlsx), a CSV or a Google Sheets link.
@@ -104,9 +105,9 @@ async function fromGoogle() {
       </div>
       <template v-if="editable">
         <input ref="fileEl" type="file" class="hidden" accept=".xlsx,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-testid="sheet-import-input" @change="imported" />
-        <button class="btn btn-ghost" :disabled="importing" :title="t('sheets.importHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('sheets.import') }}</button>
-        <button ref="googleAnchor" class="btn btn-ghost" :disabled="importing" data-testid="sheet-google" @click="openGoogle"><Link class="h-4 w-4" />{{ t('sheets.google') }}</button>
-        <button class="btn-primary" data-testid="new-sheet" @click="create"><Plus class="h-4 w-4" />{{ t('sheets.new') }}</button>
+        <Button variant="ghost" :disabled="importing" :title="t('sheets.importHint')" @click="fileEl?.click()"><Upload class="h-4 w-4" />{{ t('sheets.import') }}</Button>
+        <Button variant="ghost" ref="googleAnchor" :disabled="importing" data-testid="sheet-google" @click="openGoogle"><Link class="h-4 w-4" />{{ t('sheets.google') }}</Button>
+        <Button data-testid="new-sheet" @click="create"><Plus class="h-4 w-4" />{{ t('sheets.new') }}</Button>
       </template>
     </header>
 
@@ -116,9 +117,9 @@ async function fromGoogle() {
 
     <Popover v-if="googleOpen" :anchor="googleAnchor" placement="bottom-end" :width="340" @close="googleOpen = false">
       <form class="space-y-2 p-2.5" @submit.prevent="fromGoogle">
-        <input ref="googleEl" v-model="googleLink" class="field !py-1.5 text-[13.5px]" :placeholder="t('db.sheet.googlePlaceholder')" :aria-label="t('sheets.google')" data-testid="sheet-google-link" />
+        <input ref="googleEl" v-model="googleLink" class="field py-1.5! text-[13.5px]" :placeholder="t('db.sheet.googlePlaceholder')" :aria-label="t('sheets.google')" data-testid="sheet-google-link" />
         <p class="text-[12px] leading-snug text-text-3">{{ t('sheets.googleHint') }}</p>
-        <button type="submit" class="btn-primary btn-sm w-full justify-center" :disabled="!googleLink.trim()">{{ t('sheets.googleBring') }}</button>
+        <Button size="sm" type="submit" class="w-full justify-center" :disabled="!googleLink.trim()">{{ t('sheets.googleBring') }}</Button>
       </form>
     </Popover>
   </div>

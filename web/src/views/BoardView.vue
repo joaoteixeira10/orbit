@@ -16,6 +16,7 @@ import { useToastStore } from '@/stores/toast'
 import { tasksApi, type Column, type Member, type Task, type TaskList } from '@/api/planner'
 import type { SortMove } from '@/lib/sortable'
 import { useTaskFilter } from '@/lib/taskFilter'
+import { Button } from '@/components/shadcn/button'
 
 // The Board: one list's tasks as kanban columns (its statuses). The lists
 // are a segmented strip at the top; the active one is in the URL. Cards are
@@ -336,7 +337,7 @@ watch(
            on a line of their own under it, all the same height. -->
       <div class="flex flex-wrap items-end gap-x-3 gap-y-2.5">
         <div class="min-w-0 basis-full sm:flex-1 sm:basis-0">
-          <h1 class="large-title truncate" :style="list ? { color: list.color } : {}">{{ list?.name ?? t('modules.board') }}</h1>
+          <h1 class="large-title truncate">{{ list?.name ?? t('modules.board') }}</h1>
           <p v-if="list" class="subhead mt-0.5 tabular-nums">{{ t('board.openCount', { n: list.open_count }) }}</p>
         </div>
         <div v-if="loaded" class="head-tools sm:mb-1" data-testid="board-tools">
@@ -353,12 +354,12 @@ watch(
           </template>
           <span v-if="readonly" class="pill shrink-0"><Eye class="h-3 w-3" />{{ t('board.readOnly') }}</span>
           <template v-else>
-            <button v-if="list" class="btn btn-sm shrink-0 !px-2 sm:!px-2.5" :title="t('board.editList')" :aria-label="t('board.editList')" @click="openSheet(list.id)">
+            <Button variant="secondary" size="sm" v-if="list" class="shrink-0 px-2! sm:px-2.5!" :title="t('board.editList')" :aria-label="t('board.editList')" @click="openSheet(list.id)">
               <SlidersHorizontal class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('board.editList') }}</span>
-            </button>
-            <button class="btn-tinted btn-sm shrink-0 !px-2 sm:!px-2.5" :title="t('board.newList')" :aria-label="t('board.newList')" @click="openSheet('')">
+            </Button>
+            <Button variant="outline" size="sm" class="shrink-0 px-2! sm:px-2.5!" :title="t('board.newList')" :aria-label="t('board.newList')" @click="openSheet('')">
               <Plus class="h-4 w-4" /><span class="hidden sm:inline">{{ t('board.newList') }}</span>
-            </button>
+            </Button>
           </template>
         </div>
       </div>
@@ -384,15 +385,15 @@ watch(
 
     <!-- Loading -->
     <div v-if="!loaded" class="track mt-5" aria-busy="true">
-      <div v-for="n in 3" :key="n" class="skeleton" :style="{ height: `${220 - n * 40}px` }" />
+      <div v-for="n in 3" :key="n" class="skeleton shimmer" :style="{ height: `${220 - n * 40}px` }" />
     </div>
 
     <!-- No lists -->
     <div v-else-if="!list" class="mx-auto mt-16 max-w-sm px-6 text-center sm:mt-24">
-      <span class="tile mx-auto h-16 w-16 !rounded-2xl" style="--tile: var(--ws)"><Columns3 class="h-8 w-8" :stroke-width="2" /></span>
+      <span class="tile mx-auto h-16 w-16 rounded-2xl!" style="--tile: var(--ws)"><Columns3 class="h-8 w-8" :stroke-width="2" /></span>
       <h2 class="title-2 mt-5">{{ t('board.emptyTitle') }}</h2>
       <p class="subhead mt-1.5 leading-relaxed">{{ readonly ? t('board.emptyReadOnly') : t('board.emptyHint') }}</p>
-      <button v-if="!readonly" class="btn-primary mt-6" @click="openSheet('')"><Plus class="h-4 w-4" />{{ t('board.createList') }}</button>
+      <Button v-if="!readonly" class="mt-6" @click="openSheet('')"><Plus class="h-4 w-4" />{{ t('board.createList') }}</Button>
     </div>
 
     <!-- Swimlanes -->
@@ -453,8 +454,8 @@ watch(
             @blur="onColBlur"
           />
           <div class="mt-2 flex items-center gap-1.5">
-            <button class="btn-primary btn-sm" :disabled="!colDraft.trim() || colBusy" @mousedown.prevent @click="addColumn">{{ t('board.addColumn') }}</button>
-            <button class="icon-btn h-7 w-7" :aria-label="t('common.close')" @mousedown.prevent @click="addingCol = false"><X class="h-4 w-4" /></button>
+            <Button size="sm" :disabled="!colDraft.trim() || colBusy" @mousedown.prevent @click="addColumn">{{ t('board.addColumn') }}</Button>
+            <Button variant="ghost" size="icon" class="text-text-2 h-7 w-7" :aria-label="t('common.close')" @mousedown.prevent @click="addingCol = false"><X class="h-4 w-4" /></Button>
           </div>
         </div>
         <button v-else class="add-col-btn" @click="startAddColumn"><Plus class="h-4 w-4" />{{ t('board.addColumn') }}</button>
@@ -488,23 +489,21 @@ watch(
   gap: 6px;
 }
 /* One height for the lanes picker, the filter and the buttons. */
-.head-tools :deep(.btn),
-.head-tools .btn-tinted {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 30px;
-}
+/* The lanes picker: shadcn's select box , its icon inside. */
 .lanes-pick {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 30px;
-  padding: 0 4px 0 9px;
-  border-radius: 9px;
-  background: var(--fill-2);
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
   color: var(--text-2);
   font-size: 13px;
+}
+.lanes-pick:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 .lanes-pick select {
   background: transparent;
@@ -584,8 +583,8 @@ watch(
   width: 100%;
   min-height: 44px;
   padding: 0 14px;
-  border-radius: 14px;
-  border: 1.5px dashed var(--border-2);
+  border-radius: 12px;
+  border: 1px dashed var(--border-2);
   font-size: 14px;
   font-weight: 500;
   color: var(--text-2);
@@ -600,21 +599,11 @@ watch(
 .skeleton {
   flex: none;
   width: 288px;
-  border-radius: 14px;
-  background: var(--fill-2);
-  animation: pulse 1.4s var(--ease) infinite alternate;
+  border-radius: 12px;
 }
 @media (max-width: 639px) {
   .skeleton {
     width: 85vw;
-  }
-}
-@keyframes pulse {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0.45;
   }
 }
 </style>

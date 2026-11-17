@@ -15,6 +15,8 @@ import { onLiveEvent } from '@/lib/live'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // A workspace's whiteboards, in its folders (the file browser) — or, with no
 // workspace in the address, Quick Draw: one's own sketches, a card each with
@@ -125,7 +127,7 @@ async function moveTo(target: string) {
         <h1 class="large-title">{{ personal ? t('draw.quick') : t('modules.whiteboards') }}</h1>
         <p class="subhead mt-0.5">{{ personal ? t('draw.quickSub') : workspace?.name }}</p>
       </div>
-      <button v-if="editable" class="btn-primary" data-testid="new-whiteboard" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</button>
+      <Button v-if="editable" data-testid="new-whiteboard" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</Button>
     </header>
 
     <FileBrowser v-if="!personal" ref="browser" :ws="ws" :kinds="['board']" :editable="editable" :root-name="t('modules.whiteboards')">
@@ -136,7 +138,7 @@ async function moveTo(target: string) {
       <span class="tile h-14 w-14" style="--tile: #ff9500"><Brush class="h-7 w-7" /></span>
       <p class="mt-4 text-[15px] font-semibold">{{ personal ? t('draw.noneMine') : t('draw.none') }}</p>
       <p class="mt-1 max-w-[340px] text-[13px] text-text-2">{{ t('draw.noneHint') }}</p>
-      <button v-if="editable" class="btn-primary mt-5" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</button>
+      <Button v-if="editable" class="mt-5" @click="create"><Plus class="h-4 w-4" />{{ personal ? t('draw.newSketch') : t('draw.new') }}</Button>
     </div>
 
     <div v-if="personal" class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
@@ -147,11 +149,11 @@ async function moveTo(target: string) {
         </div>
         <div class="flex items-start gap-2 px-3.5 py-2.5">
           <div class="min-w-0 flex-1">
-            <input v-if="renaming === d.id" v-model="name" class="input !py-0.5 text-[14px]" maxlength="300" autofocus @click.stop @keydown.enter="rename(d)" @keydown.esc="renaming = ''" @blur="rename(d)" />
+            <Input v-if="renaming === d.id" v-model="name" class="py-0.5! text-[14px]" maxlength="300" autofocus @click.stop @keydown.enter="rename(d)" @keydown.esc="renaming = ''" @blur="rename(d)" />
             <div v-else class="truncate text-[14px] font-medium">{{ d.title || t('draw.untitled') }}</div>
             <div class="text-[12px] text-text-3">{{ t('draw.edited', { when: ago(d.updated_at, locale()) }) }}</div>
           </div>
-          <button v-if="editable" class="icon-btn -mr-1.5 h-7 w-7 shrink-0" :aria-label="t('common.more')" @click.stop="menu = { d, el: $event.currentTarget as HTMLElement }"><MoreHorizontal class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" v-if="editable" class="text-text-2 -mr-1.5 h-7 w-7 shrink-0" :aria-label="t('common.more')" @click.stop="menu = { d, el: $event.currentTarget as HTMLElement }"><MoreHorizontal class="h-4 w-4" /></Button>
         </div>
       </div>
     </div>
@@ -194,7 +196,7 @@ async function moveTo(target: string) {
   overflow: hidden;
   padding: 10px;
   background: #fff;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 /* The picture fills the box and is scaled to fit it (a sketch's picture is
    drawn at its full size). */

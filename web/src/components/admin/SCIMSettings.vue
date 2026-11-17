@@ -5,6 +5,8 @@ import { Copy, KeyRound } from 'lucide-vue-next'
 import Toggle from '@/components/ui/Toggle.vue'
 import { api } from '@/lib/api'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // Owner → SSO → Provisioning (SCIM): Okta or Microsoft Entra make, change and
 // deactivate accounts and groups here as in their directory. The base URL
@@ -63,27 +65,27 @@ async function copy(s: string) {
     <div>
       <label class="label">{{ t('scim.url') }}</label>
       <div class="flex gap-2">
-        <input :value="cfg.url" class="input font-mono text-[12.5px]" readonly data-testid="scim-url" />
-        <button type="button" class="btn-ghost shrink-0" :title="t('scim.copy')" :aria-label="t('scim.copy')" @click="copy(cfg.url)"><Copy class="h-4 w-4" /></button>
+        <Input :model-value="cfg.url" class="font-mono text-[12.5px]" readonly data-testid="scim-url" />
+        <Button variant="ghost" type="button" class="shrink-0" :title="t('scim.copy')" :aria-label="t('scim.copy')" @click="copy(cfg.url)"><Copy class="h-4 w-4" /></Button>
       </div>
     </div>
     <div class="grid gap-3 sm:grid-cols-2">
       <div>
         <label class="label">{{ t('scim.defaultRole') }}</label>
-        <input v-model="cfg.default_role" class="input" placeholder="none" @change="save()" />
+        <Input v-model="cfg.default_role" placeholder="none" @change="save()" />
       </div>
       <div>
         <label class="label">{{ t('scim.token') }}</label>
-        <button type="button" class="btn w-full" :disabled="busy" data-testid="scim-new-token" @click="save(true)">
+        <Button variant="secondary" type="button" class="w-full" :disabled="busy" data-testid="scim-new-token" @click="save(true)">
           <KeyRound class="h-4 w-4" />{{ cfg.has_token ? t('scim.newToken') : t('scim.makeToken') }}
-        </button>
+        </Button>
       </div>
     </div>
     <div v-if="shown" class="rounded-xl bg-warn-bg px-3 py-2 text-[12.5px] text-warn-text" data-testid="scim-token">
       {{ t('scim.once') }}
       <div class="mt-1.5 flex gap-2">
-        <code class="min-w-0 flex-1 break-all rounded bg-surface px-2 py-1 font-mono text-[12px] text-text">{{ shown }}</code>
-        <button type="button" class="btn-ghost shrink-0" :aria-label="t('scim.copy')" @click="copy(shown)"><Copy class="h-4 w-4" /></button>
+        <code class="min-w-0 flex-1 break-all rounded-sm bg-surface px-2 py-1 font-mono text-[12px] text-text">{{ shown }}</code>
+        <Button variant="ghost" type="button" class="shrink-0" :aria-label="t('scim.copy')" @click="copy(shown)"><Copy class="h-4 w-4" /></Button>
       </div>
     </div>
     <p class="text-[11px] text-text-3">{{ t('scim.rules') }}</p>

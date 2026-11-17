@@ -1676,15 +1676,25 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
 - **Locked notes and pages** — set, change or forget your lock PIN (see
   [Locked notes and pages](#locked-notes-and-pages)).
 - **Appearance** — **Light**, **Dark** or **Automatic**; a personal **accent
-  colour**. **Editors**: **Sheets**, **Diagrams (draw.io)** and
+  colour**. **Liquid glass**: from **Solid** to **Clear** — the sidebar, the
+  bars, windows, popovers and menus as glass over a soft wash of colour (and,
+  with a holiday or season theme on, a landscape behind the cards); what they
+  hold stays solid. **Animations** (on by default): motion as you work —
+  switching between light and dark, opening a page, ticking a task, lists
+  that rearrange, counts, windows and menus. Off keeps everything still (as
+  does reduced motion set on the device); a theme's own effects follow
+  **Theme effects** instead. **Editors**: **Sheets**, **Diagrams (draw.io)** and
   **Whiteboards** each **As the theme**, or always **Light** / **Dark** —
   say Sheets and draw.io light in a dark Orbit (draw.io takes it when it
   next opens).
   When the owner lets each person choose, **Developer theme**: as the
   instance (the default), none, or one of the five themes — for you only.
-  While the owner has holiday themes on, **Holiday effects**: the falling
-  snow, bats, confetti or petals on (the default) or off — the holiday's
-  colours stay. The same switch sits at the foot of the sidebar while a
+  Likewise, when the owner allows each, **Holiday theme** and **Season
+  theme**: your own — as for everyone, off, automatic (each in its days) or
+  one of them always.
+  While a holiday or season theme is on, **Theme effects**: what drifts
+  across — snow, bats, confetti, petals or leaves, and the landscape's mist —
+  on (the default) or off; the theme's colours stay. The same switch sits at the foot of the sidebar while a
   holiday shows (**Let it snow**, **Spooky effects**, **Confetti**…).
   **Images from other sites** in pages: **Ask first** (the default — they
   show as "Image from example.org — show" until you click; one click shows
@@ -2046,14 +2056,25 @@ petals; on the overviews (your Home and each workspace's) also lights,
 bunting or things on threads along the top and art on the cards, and by your
 greeting a countdown ("51 days to Christmas"; New Year's in hours on 31
 December). Pick **Off**, **Automatic** — each in its season:
-Halloween 15 October – 1 November, Christmas 20–26 December, New Year's Eve
+Halloween 25–31 October, Christmas 20–26 December, New Year's Eve
 27 December – 1 January, Easter Palm Sunday – Easter Monday, Santos Populares
-June, Lunar New Year a week before to two weeks after (the card says which
-shows now) — or one of the six, shown now whatever the date. It's saved at
-once. Nobody can turn the theme off for themselves; each person can turn off
-only the falling part (**Holiday effects**). Dialogs and menus keep Orbit's
+10–14 June, Lunar New Year three days before to four days after (the card
+says which shows now) — or one of the six, shown now whatever the date. It's saved at
+once. With **Let each person choose** on (each card, holidays and seasons,
+has its own), everyone can pick their own holiday or season theme, or none,
+in **Settings → Appearance** (yours stays the default); otherwise each person can turn off only the falling part (**Theme
+effects**). Dialogs and menus keep Orbit's
 look; with reduced motion set on the device, nothing falls and nothing
 moves.
+
+**Season themes** (off by default): the whole app in the season's colours,
+with petals, summer light, leaves or snow drifting across, things hung on the
+overviews and, with liquid glass on, a landscape of the season behind it.
+Pick **Off**, **Automatic** — spring 20 March – 20 June, summer 21 June –
+22 September, autumn 23 September – 20 December, winter 21 December –
+19 March — or one of the four, shown now whatever the date. A holiday theme
+in its days shows instead. With **Let each person choose** on, everyone can
+pick their own season theme, or none, in **Settings → Appearance**.
 
 > Try ↑ ↑ ↓ ↓ ← → ← → B A anywhere in Orbit.
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
@@ -27,6 +27,8 @@ import { refreshPush } from '@/lib/push'
 import InboxButton from '@/components/InboxButton.vue'
 import HolidayEffectsRow from '@/components/holiday/HolidayEffectsRow.vue'
 import HolidayParticles from '@/components/holiday/HolidayParticles.vue'
+import GlassScene from '@/components/holiday/GlassScene.vue'
+import { pageIn, glide, openUp, foldAway } from '@/lib/motion'
 import AssistantPanel from '@/components/assistant/AssistantPanel.vue'
 import LockPinDialog from '@/components/LockPinDialog.vue'
 import { useAssistantStore } from '@/stores/assistant'
@@ -42,6 +44,7 @@ import PageTree from '@/components/PageTree.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
 import NewWorkspaceSheet from '@/components/NewWorkspaceSheet.vue'
 import WorkspaceSettingsSheet from '@/components/WorkspaceSettingsSheet.vue'
+import { Button } from '@/components/shadcn/button'
 
 const auth = useAuthStore()
 const prefs = usePrefsStore()
@@ -52,7 +55,7 @@ const holiday = useHolidayStore()
 // The assistant (when the owner set one up): ✦ beside the inbox, ⌘J.
 const assistant = useAssistantStore()
 void assistant.loadStatus()
-watch(() => [holiday.active?.id, holiday.mode], () => holiday.apply(), { immediate: true })
+watch(() => [holiday.look?.id, holiday.mode], () => holiday.apply(), { immediate: true })
 const holidayClock = window.setInterval(() => holiday.tick(), 60_000)
 // Its falling snow, bats, confetti… over every page: each person's Effects,
 // never with reduced motion.
@@ -345,6 +348,36 @@ async function newSketch() {
   }
 }
 watch(() => route.fullPath, () => (drawerOpen.value = false))
+// Pages with a canvas or an editor (drawings, whiteboards, sheets, diagrams,
+// files, pages with their embeds): they measure where they are as they open,
+// so they only fade in, never move.
+const CANVAS = new Set(['my-drawing', 'ws-whiteboard', 'ws-sheet', 'ws-diagram', 'my-file', 'ws-file', 'ws-page'])
+// A page that opens fades and rises in (not a window opening over it: the
+// path only). The page itself moves, not the column it sits in.
+const contentEl = ref<HTMLElement | null>(null)
+watch(
+  () => route.path,
+  () => nextTick(() => pageIn(contentEl.value?.firstElementChild, !CANVAS.has(String(route.name)))),
+)
+// The sidebar's highlight glides from the page you left to the one you
+// opened (where it was is read before the sidebar redraws).
+const sideNav = ref<HTMLElement | null>(null)
+const SIDE_ON = '.smart-tile.on, .side-item.on, .ws-row.on'
+let sideFrom: DOMRect | null = null
+watch(
+  () => route.fullPath,
+  () => (sideFrom = sideNav.value?.querySelector(SIDE_ON)?.getBoundingClientRect() ?? null),
+  { flush: 'pre' },
+)
+watch(
+  () => route.fullPath,
+  () =>
+    nextTick(() => {
+      const to = sideNav.value?.querySelector<HTMLElement>(SIDE_ON)
+      if (sideFrom && to && sideNav.value) glide(sideNav.value, sideFrom, to)
+      sideFrom = null
+    }),
+)
 watch(drawerOpen, (open) => (document.documentElement.style.overflow = open ? 'hidden' : ''))
 
 // The bottom tab bar (phones): the current workspace's modules, else Today/Calendar.
@@ -404,9 +437,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
             <b v-else class="truncate">{{ branding.appName }}</b>
           </template>
           <span class="ml-auto" />
-          <button v-if="!narrow && assistant.enabled" class="icon-btn h-7 w-7" :class="{ 'text-accent': assistant.open }" :title="t('assistant.open') + (isMac ? ' (⌘J)' : ' (Ctrl+J)')" :aria-label="t('assistant.open')" data-testid="assistant-open" @click="assistant.open = !assistant.open"><Sparkles class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" v-if="!narrow && assistant.enabled" class="text-text-2 h-7 w-7" :class="{ 'text-accent': assistant.open }" :title="t('assistant.open') + (isMac ? ' (⌘J)' : ' (Ctrl+J)')" :aria-label="t('assistant.open')" data-testid="assistant-open" @click="assistant.open = !assistant.open"><Sparkles class="h-4 w-4" /></Button>
           <InboxButton v-if="!narrow" />
-          <button v-if="!narrow" class="icon-btn h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" v-if="!narrow" class="text-text-2 h-7 w-7" :title="t('nav.hideSidebar')" @click="toggleSide"><PanelLeft class="h-4 w-4" /></Button>
         </div>
         <button class="search-btn" @click="paletteOpen = true">
           <Search class="h-4 w-4" />
@@ -415,10 +448,10 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
         </button>
       </div>
 
-      <nav class="side-scroll" :aria-label="t('acct.mainNav')">
+      <nav ref="sideNav" class="side-scroll" :aria-label="t('acct.mainNav')">
         <div class="smart">
           <RouterLink :to="{ name: 'home' }" class="smart-tile today-tile" :class="{ on: route.name === 'home' }">
-            <span v-if="holiday.active && route.name === 'home'" class="h-tile-overlay" aria-hidden="true" />
+            <span v-if="holiday.look && route.name === 'home'" class="h-tile-overlay" aria-hidden="true" />
             <span class="tile h-7 w-7" style="--tile: #007aff"><House class="h-4 w-4" :stroke-width="2.4" /></span>
             <span>{{ t('nav.today') }}</span>
           </RouterLink>
@@ -491,19 +524,21 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
             <span v-if="w.member_count > 1" class="text-[11px] text-text-3">{{ w.member_count }}</span>
             <button class="more" :class="{ open: wsMenu === w.id }" :title="t('ws.settings')" @click.stop="openWsMenu(w.id, $event)"><MoreHorizontal class="h-4 w-4" /></button>
           </div>
+          <Transition :css="false" @enter="openUp" @leave="foldAway">
           <div v-if="expanded.has(w.id)" class="ws-mods">
             <template v-for="m in w.modules" :key="m">
               <div v-if="m === 'pages'">
                 <div class="side-item group/pg" :class="{ on: isModuleActive(w.id, 'pages') && route.name === 'ws-pages' }" @click="goModule(w.id, 'pages')">
-                  <button class="-ml-1 grid h-4 w-4 place-items-center rounded hover:bg-fill" @click.stop="togglePages(w.id)">
-                    <ChevronRight class="h-3 w-3 !text-text-3 transition-transform" :class="{ 'rotate-90': pagesOpen.has(w.id) }" :stroke-width="2.6" />
+                  <button class="-ml-1 grid h-4 w-4 place-items-center rounded-sm hover:bg-fill" @click.stop="togglePages(w.id)">
+                    <ChevronRight class="h-3 w-3 text-text-3! transition-transform" :class="{ 'rotate-90': pagesOpen.has(w.id) }" :stroke-width="2.6" />
                   </button>
                   <component :is="moduleIcon(m)" class="h-4 w-4" />
                   <span class="flex-1">{{ t('modules.pages') }}</span>
-                  <button v-if="canEdit(w)" class="hidden h-5 w-5 place-items-center rounded hover:bg-fill group-hover/pg:grid" :title="t('pages.new')" @click.stop="addPage(w.id, null)">
-                    <Plus class="h-3.5 w-3.5 !text-text-2" />
+                  <button v-if="canEdit(w)" class="hidden h-5 w-5 place-items-center rounded-sm hover:bg-fill group-hover/pg:grid pointer-coarse:grid" :title="t('pages.new')" @click.stop="addPage(w.id, null)">
+                    <Plus class="h-3.5 w-3.5 text-text-2!" />
                   </button>
                 </div>
+                <Transition :css="false" @enter="openUp" @leave="foldAway">
                 <div v-if="pagesOpen.has(w.id)" class="pl-3">
                   <PageTree
                     :ws="w.id"
@@ -514,6 +549,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
                   />
                   <div v-if="pages.byWs[w.id] && !pages.byWs[w.id].length" class="px-3 py-1 text-[12px] text-text-3">{{ t('pages.none') }}</div>
                 </div>
+                </Transition>
               </div>
               <button v-else-if="m !== 'home'" class="side-item" :class="{ on: isModuleActive(w.id, m) }" @click="goModule(w.id, m)">
                 <component :is="moduleIcon(m)" class="h-4 w-4" />
@@ -521,11 +557,12 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
               </button>
             </template>
           </div>
+          </Transition>
         </div>
 
         <div v-if="wss.loaded && !wss.active.length" class="empty-ws">
           <p>{{ t('nav.noWorkspaces') }}</p>
-          <button v-if="auth.canCreateWorkspaces" class="btn-tinted btn-sm mt-2" @click="newWsOpen = true"><Plus class="h-3.5 w-3.5" />{{ t('ws.new') }}</button>
+          <Button variant="outline" size="sm" v-if="auth.canCreateWorkspaces" class="mt-2" @click="newWsOpen = true"><Plus class="h-3.5 w-3.5" />{{ t('ws.new') }}</Button>
         </div>
 
         </div>
@@ -591,29 +628,29 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
       <button class="menu-item" @click="router.push({ name: 'ws-trash', params: { ws: wsMenu } }); wsMenu = ''"><Trash2 class="h-4 w-4 text-text-2" />{{ t('pages.trash') }}</button>
     </Popover>
 
-    <main class="main" :class="{ 'holiday-main': holiday.active }" :style="wsStyle">
+    <main class="main" :class="{ 'holiday-main': holiday.look }" :style="wsStyle">
       <div v-if="auth.impersonator" class="imp-banner">
         <VenetianMask class="h-4 w-4" />
         <span>{{ t('impersonate.banner', { user: displayName, admin: auth.impersonator.username }) }}</span>
-        <button class="btn btn-sm" @click="stopImpersonating">{{ t('impersonate.return') }}</button>
+        <Button variant="secondary" size="sm" @click="stopImpersonating">{{ t('impersonate.return') }}</Button>
       </div>
 
       <!-- Narrow screens: a slim bar with the menu and search. -->
       <header v-if="narrow || sideHidden" class="topbar">
-        <button class="icon-btn" :aria-label="t('nav.openMenu')" aria-controls="sidebar" :aria-expanded="drawerOpen" @click="toggleSide">
+        <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('nav.openMenu')" aria-controls="sidebar" :aria-expanded="drawerOpen" @click="toggleSide">
           <Menu v-if="narrow" class="h-5 w-5" />
           <PanelLeft v-else class="h-[18px] w-[18px]" />
-        </button>
+        </Button>
         <div class="flex min-w-0 flex-1 items-center justify-center gap-2 font-semibold">
           <WsIcon v-if="currentWs" :icon="currentWs.icon" :color="currentWs.color" :size="20" :name="currentWs.name" />
           <span class="truncate">{{ currentWs?.name ?? branding.appName }}</span>
         </div>
-        <button v-if="assistant.enabled" class="icon-btn" :aria-label="t('assistant.open')" @click="assistant.open = !assistant.open"><Sparkles class="h-[18px] w-[18px]" /></button>
+        <Button variant="ghost" size="icon" v-if="assistant.enabled" class="text-text-2" :aria-label="t('assistant.open')" @click="assistant.open = !assistant.open"><Sparkles class="h-[18px] w-[18px]" /></Button>
         <InboxButton placement="bottom-end" />
-        <button class="icon-btn" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></button>
+        <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></Button>
       </header>
 
-      <div class="content" :class="{ 'with-tabs': phone }">
+      <div ref="contentEl" class="content" :class="{ 'with-tabs': phone }">
         <RouterView v-if="ready" />
       </div>
 
@@ -633,7 +670,8 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
     </template>
     <button v-if="railHere && !rail.open && !phone" type="button" class="rail-tab" :title="t('outline.title')" :aria-label="t('outline.title')" data-testid="rail-open" @click="setRailOpen(true)"><PanelRight class="h-4 w-4" /></button>
 
-    <HolidayParticles v-if="holiday.active && prefs.holidayEffects && motionOk" />
+    <HolidayParticles v-if="holiday.look && prefs.holidayEffects && motionOk" />
+    <GlassScene v-if="holiday.look && prefs.glass > 0" />
     <AssistantPanel />
     <LockPinDialog />
     <CommandPalette :open="paletteOpen" @close="paletteOpen = false" @new-workspace="newWsOpen = true" @new-task="onNewTask" @quick-note="quickNoteOpen = true" />
@@ -677,7 +715,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   top: 0;
   height: 100dvh;
   overflow-y: auto;
-  border-left: 0.5px solid var(--border);
+  border-left: 1px solid var(--border);
   background: var(--bg);
 }
 .rail-drawer {
@@ -707,7 +745,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   place-items: center;
   border-radius: 8px 0 0 8px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border), 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 0 1px var(--border), 0 2px 8px rgba(0, 0, 0, 0.06);
   color: var(--text-2);
 }
 .rail-tab:hover {
@@ -722,7 +760,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  border-right: 0.5px solid var(--border);
+  border-right: 1px solid var(--border);
   padding-top: env(safe-area-inset-top);
   overflow: hidden;
   z-index: 30;
@@ -761,21 +799,23 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   object-fit: contain;
   border-radius: 6px;
 }
+/* shadcn's sidebar input. */
 .search-btn {
   display: flex;
   align-items: center;
   gap: 7px;
   width: 100%;
-  height: 30px;
+  height: 32px;
   padding: 0 8px;
   border-radius: 8px;
-  background: var(--fill);
+  border: 1px solid var(--border-2);
+  background: var(--bg);
   color: var(--text-3);
-  font-size: 13.5px;
+  font-size: 14px;
   transition: background 0.15s;
 }
 .search-btn:hover {
-  background: var(--fill-strong);
+  background: var(--fill-2);
 }
 .search-btn kbd {
   font: 500 11px var(--font-sans);
@@ -786,68 +826,58 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   overflow-y: auto;
   padding: 6px 10px 16px;
 }
+/* Today, Calendar, Quick Notes, Quick Draw, My files: shadcn sidebar menu
+   rows, each icon in its own colour (the tile's), a grey highlight when on. */
 .smart {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 4px 2px 6px;
-}
-.smart-tile {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 9px 10px;
-  border-radius: 11px;
-  background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border), 0 1px 2px rgba(0, 0, 0, 0.04);
-  font-size: 13.5px;
-  font-weight: 600;
-  transition: transform 0.15s var(--ease);
+  gap: 2px;
+  margin: 4px 0 6px;
 }
-html.dark .smart-tile {
-  background: rgba(255, 255, 255, 0.07);
-}
-/* Quick Notes spans the row: its name, and + for a new note. */
-.smart-tile.wide {
-  grid-column: span 2;
-  flex-direction: row;
+.smart-tile {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 7px 7px 10px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: background 0.12s var(--ease);
+}
+.smart-tile:hover,
+.smart-tile.on {
+  background: var(--fill);
+}
+.smart-tile.on {
+  font-weight: 500;
+}
+.smart-tile.wide {
+  padding: 0 4px 0 8px;
+}
+.smart-tile .tile {
+  width: 18px !important;
+  height: 18px !important;
+  background: none;
+  box-shadow: none;
+  color: var(--tile);
+}
+.smart-tile .tile svg {
+  width: 18px;
+  height: 18px;
 }
 .jot {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   color: var(--text-2);
 }
 .jot:hover {
-  background: var(--fill);
+  background: var(--fill-strong);
   color: var(--text);
 }
-.smart-tile.on .jot {
-  color: var(--accent-fg, #fff);
-}
-.smart-tile.on .jot:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-.smart-tile:active {
-  transform: scale(0.97);
-}
-.smart-tile.on,
-html.dark .smart-tile.on {
-  background: var(--accent);
-  color: var(--accent-fg, #fff);
-}
-.smart-tile.on .tile {
-  --tile: var(--accent-fg, #fff) !important;
-  color: var(--accent);
-}
-/* A holiday theme (styles/holiday.css): the Today tile in its colours (with
-   its pattern when it's the page you're on), the other tiles, the
-   workspaces' badges and the avatar in its icon colours. */
 html.holiday .smart-tile {
   background: var(--h-card);
 }
@@ -891,11 +921,12 @@ html.holiday .ws-row .tile {
 html.holiday span.me-avatar {
   background: var(--h-box-avatar) !important;
 }
+/* shadcn's sidebar group label. */
 .sec-title {
   padding: 16px 8px 5px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-3);
+  font-weight: 500;
+  color: var(--text-2);
 }
 .add-btn {
   display: grid;
@@ -915,17 +946,18 @@ html.holiday span.me-avatar {
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 34px;
+  height: 32px;
   padding: 0 6px 0 2px;
   border-radius: 8px;
   font-size: 14px;
   cursor: default;
 }
-.ws-row:hover {
-  background: var(--surface-hover);
+.ws-row:hover,
+.ws-row.on {
+  background: var(--fill);
 }
 .ws-row.on {
-  background: var(--fill-strong);
+  font-weight: 500;
 }
 .ws-row .chev {
   display: grid;
@@ -968,7 +1000,7 @@ html.holiday span.me-avatar {
 }
 .side-foot {
   padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .user-btn {
   display: flex;
@@ -979,7 +1011,7 @@ html.holiday span.me-avatar {
   border-radius: 9px;
 }
 .user-btn:hover {
-  background: var(--surface-hover);
+  background: var(--fill);
 }
 
 .main {
@@ -1007,7 +1039,7 @@ html.holiday span.me-avatar {
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .imp-banner {
   display: flex;
@@ -1027,7 +1059,7 @@ html.holiday span.me-avatar {
   display: flex;
   justify-content: space-around;
   padding: 6px 4px calc(4px + env(safe-area-inset-bottom));
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .tab {
   display: flex;

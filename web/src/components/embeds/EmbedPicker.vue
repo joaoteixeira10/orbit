@@ -49,7 +49,7 @@ function pick(x: FileItem) {
   <Overlay :open="open" :title="t('embed.pickTitle')" @close="emit('close')">
     <label class="relative mb-3 block">
       <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3" />
-      <input v-model="q" class="field !pl-8" :placeholder="t('embed.pickSearch')" data-testid="embed-pick-search" />
+      <input v-model="q" class="field pl-8!" :placeholder="t('embed.pickSearch')" data-testid="embed-pick-search" />
     </label>
     <p v-if="loading" class="py-6 text-center text-[13px] text-text-3">{{ t('common.loading') }}</p>
     <p v-else-if="!shown.length" class="py-6 text-center text-[13px] text-text-3">{{ t('embed.pickNone') }}</p>

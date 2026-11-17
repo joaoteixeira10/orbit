@@ -53,7 +53,7 @@ function pick(k: string) {
   border-radius: 8px;
   color: #fff;
   cursor: pointer;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
   transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
 }
 .swatch:hover {

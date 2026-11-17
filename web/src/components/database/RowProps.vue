@@ -66,7 +66,7 @@ async function addOption(propId: string, o: DBOption) {
 .row-props {
   margin: -6px 0 18px;
   padding: 8px 0 10px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .row-db {
   display: inline-flex;

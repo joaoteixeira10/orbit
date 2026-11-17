@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vCountUp, vFlip, celebrate } from '@/lib/motion'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -21,6 +22,7 @@ import { todayStr, relDay } from '@/lib/dates'
 import { tasksApi, type Member, type Task, type TaskList, type TaskInput } from '@/api/planner'
 import { useTaskFilter, useTaskFilterStore, dueBucket, dueEdges, emptyFilter, matchContext, matchTask, DUE_BUCKETS, type DueBucket, type TaskFilter as Filter } from '@/lib/taskFilter'
 import type { SmartList } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // Tasks, Reminders-style: smart lists (Today, Scheduled, All, Completed, and
 // saved filters) and the workspace's own lists on the left; the chosen one on the right, its open
@@ -331,8 +333,11 @@ async function toggle(x: Task) {
     setTimeout(() => justDone.value.delete(x.id), 1400)
   }
   try {
+    const forToday = !!x.due && x.due <= today && counts.value.today > 0
     const r = await tasks.update(ws.value, x.id, { completed: done })
     if (r.repeated) toast.success(t('tasks.repeated', { date: relDay(r.task.due!) }))
+    // The last one for today done: a little celebration.
+    else if (done && forToday && counts.value.today === 0) celebrate()
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -475,10 +480,10 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
       <div class="grid grid-cols-2 gap-2.5">
         <button v-for="k in SMART" :key="k" class="smart" :class="{ on: sel === k }" @click="pick(k)">
           <span class="flex items-start justify-between">
-            <span class="grid h-[30px] w-[30px] place-items-center rounded-full text-white" :style="{ background: smartColors[k] }"><component :is="smartIcons[k]" class="h-4 w-4" :stroke-width="2.4" /></span>
-            <span class="text-[22px] font-bold leading-none">{{ k === 'completed' ? '' : counts[k] }}</span>
+            <span class="grid size-8 place-items-center rounded-lg border border-border" :style="{ color: smartColors[k] }"><component :is="smartIcons[k]" class="size-4" /></span>
+            <span v-count-up="k === 'completed' ? '' : counts[k]" class="text-[22px] font-semibold leading-none tracking-tight tabular-nums" />
           </span>
-          <span class="mt-2 text-[14px] font-semibold text-text-2">{{ t(`tasks.smart.${k}`) }}</span>
+          <span class="mt-2 text-[14px] font-medium text-text-2">{{ t(`tasks.smart.${k}`) }}</span>
         </button>
       </div>
       <template v-if="smartLists.length">
@@ -515,31 +520,31 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         </div>
       </template>
       <div class="mt-2 flex flex-wrap gap-x-3">
-        <button v-if="editable" class="btn-plain" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</button>
-        <button v-if="canSmart" class="btn-plain" data-testid="smart-add" @click="newSmart"><ListFilter class="h-4 w-4" />{{ t('smartList.add') }}</button>
+        <Button variant="link" v-if="editable" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</Button>
+        <Button variant="link" v-if="canSmart" data-testid="smart-add" @click="newSmart"><ListFilter class="h-4 w-4" />{{ t('smartList.add') }}</Button>
       </div>
     </aside>
 
     <!-- Tasks pane -->
     <section v-if="!narrow || sel" ref="container" class="tasks-pane">
       <header class="mb-1 flex items-center gap-2">
-        <button v-if="narrow" class="btn-plain -ml-2" @click="router.push({ name: 'ws-tasks', params: { ws } })"><ChevronLeft class="h-5 w-5" />{{ t('tasks.lists') }}</button>
+        <Button variant="link" v-if="narrow" class="-ml-2" @click="router.push({ name: 'ws-tasks', params: { ws } })"><ChevronLeft class="h-5 w-5" />{{ t('tasks.lists') }}</Button>
         <div class="flex-1" />
         <template v-if="sel !== 'completed'">
-          <button v-if="canGroup" ref="groupAnchor" class="btn btn-sm shrink-0" data-testid="tasks-view-menu" :aria-expanded="groupOpen" @click="groupOpen = !groupOpen">
+          <Button variant="secondary" size="sm" v-if="canGroup" ref="groupAnchor" class="shrink-0" data-testid="tasks-view-menu" :aria-expanded="groupOpen" @click="groupOpen = !groupOpen">
             <Rows3 class="h-3.5 w-3.5" /><span class="hidden sm:inline">{{ t('tasks.groupBy') }}:</span> {{ groupLabel(grouping) }}<template v-if="sorting !== 'manual'"> · {{ t(`tasks.sortShort.${sorting}`) }}</template>
-          </button>
+          </Button>
           <TaskFilter v-if="!saved || saved.can_edit" :ws="ws" :fkey="filterKey" :show-lists="!list" :can-save="!saved && canSmart" @save="newSmart" />
         </template>
-        <button v-if="sel !== 'completed'" class="icon-btn" :title="showDone ? t('tasks.hideDone') : t('tasks.showDone')" @click="showDone = !showDone">
+        <Button variant="ghost" size="icon" v-if="sel !== 'completed'" class="text-text-2" :title="showDone ? t('tasks.hideDone') : t('tasks.showDone')" @click="showDone = !showDone">
           <component :is="showDone ? EyeOff : Eye" class="h-[18px] w-[18px]" />
-        </button>
-        <button v-if="list && editable" class="icon-btn" :title="t('tasks.editList')" @click="listSheet = { open: true, id: list.id }"><Pencil class="h-[17px] w-[17px]" /></button>
-        <button v-if="saved" class="icon-btn" :title="t('smartList.edit')" data-testid="smart-edit" @click="smartSheet = { open: true, id: saved.id }"><Pencil class="h-[17px] w-[17px]" /></button>
+        </Button>
+        <Button variant="ghost" size="icon" v-if="list && editable" class="text-text-2" :title="t('tasks.editList')" @click="listSheet = { open: true, id: list.id }"><Pencil class="h-[17px] w-[17px]" /></Button>
+        <Button variant="ghost" size="icon" v-if="saved" class="text-text-2" :title="t('smartList.edit')" data-testid="smart-edit" @click="smartSheet = { open: true, id: saved.id }"><Pencil class="h-[17px] w-[17px]" /></Button>
       </header>
       <div class="mb-5 flex items-baseline gap-3">
-        <h1 class="large-title min-w-0 flex-1 truncate" :style="{ color: heading.color }">{{ heading.title }}</h1>
-        <span class="text-[28px] font-semibold tabular-nums" :style="{ color: heading.color }">{{ total }}</span>
+        <h1 class="large-title min-w-0 flex-1 truncate">{{ heading.title }}</h1>
+        <span class="text-[28px] font-semibold tabular-nums text-text-3">{{ total }}</span>
       </div>
       <RouterLink v-if="listFolder" :to="listFolder.to" class="list-folder" data-testid="list-folder">
         <FolderOpen class="h-4 w-4 shrink-0" :style="{ color: listFolder.color }" />
@@ -560,11 +565,11 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         </div>
       </Popover>
 
-      <p v-if="workspace?.archived_at" class="mb-4 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
-      <div v-else-if="list?.archived_at" class="mb-4 flex items-center gap-3 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2" data-testid="list-archived">
+      <p v-if="workspace?.archived_at" class="mb-4 rounded-lg border border-border px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
+      <div v-else-if="list?.archived_at" class="mb-4 flex items-center gap-3 rounded-lg border border-border px-4 py-2.5 text-[13px] text-text-2" data-testid="list-archived">
         <Archive class="h-4 w-4 shrink-0" />
         <span class="min-w-0 flex-1">{{ t('lists.archivedBanner') }}</span>
-        <button v-if="editable" type="button" class="btn btn-sm shrink-0" data-testid="list-restore" @click="restoreList"><ArchiveRestore class="h-3.5 w-3.5" />{{ t('lists.restore') }}</button>
+        <Button variant="secondary" size="sm" v-if="editable" type="button" class="shrink-0" data-testid="list-restore" @click="restoreList"><ArchiveRestore class="h-3.5 w-3.5" />{{ t('lists.restore') }}</Button>
       </div>
 
       <div v-for="(s, i) in filteredOut ? [] : sections" :key="s.key" class="mb-6">
@@ -573,7 +578,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
           {{ s.title }}
           <span class="font-normal text-text-3">{{ s.tasks.filter((x) => !x.done).length || '' }}</span>
         </h3>
-        <div :ref="(el) => { if (el) sectionEls[i] = el as HTMLElement }" class="rows" :data-group="s.key">
+        <div :ref="(el) => { if (el) sectionEls[i] = el as HTMLElement }" v-flip class="rows" :data-group="s.key">
           <div v-for="x in s.tasks" :key="x.id" :data-id="x.id" class="row-wrap" :class="{ leaving: x.done && justDone.has(x.id) && !showDone }">
             <TaskRow
               :task="x"
@@ -600,7 +605,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
             <input
               ref="addInput"
               v-model="draft"
-              class="min-w-0 flex-1 bg-transparent text-[14.5px] outline-none"
+              class="min-w-0 flex-1 bg-transparent text-[14.5px] outline-hidden"
               :placeholder="t('tasks.quickPlaceholder')"
               maxlength="500"
               @keydown.enter="commitAdd(s)"
@@ -618,13 +623,13 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
         <ListFilter class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
         <p class="title-3">{{ t('tasks.noMatch') }}</p>
         <p class="subhead mt-1">{{ t('tasks.noMatchHint') }}</p>
-        <button class="btn mt-4" @click="clearFilter">{{ t('filter.clear') }}</button>
+        <Button variant="secondary" class="mt-4" @click="clearFilter">{{ t('filter.clear') }}</Button>
       </div>
       <div v-else-if="!sections.length" class="empty">
         <CheckCircle2 class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
         <p class="title-3">{{ lists.length ? t('tasks.allDone') : t('tasks.noLists') }}</p>
         <p class="subhead mt-1">{{ lists.length ? t('tasks.allDoneHint') : t('tasks.noListsHint') }}</p>
-        <button v-if="editable && !lists.length" class="btn-primary mt-4" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</button>
+        <Button v-if="editable && !lists.length" class="mt-4" @click="listSheet = { open: true, id: '' }"><ListPlus class="h-4 w-4" />{{ t('tasks.addList') }}</Button>
         <div v-else-if="editable && sel !== 'completed'" class="mx-auto mt-5 max-w-sm">
           <input
             v-model="draft"
@@ -669,7 +674,7 @@ const smartColors = { today: '#007AFF', scheduled: '#FF3B30', all: '#5856D6', co
 }
 .lists-pane {
   padding: 28px 18px 32px;
-  border-right: 0.5px solid var(--border);
+  border-right: 1px solid var(--border);
   background: var(--grouped);
 }
 html.dark .lists-pane {
@@ -690,17 +695,19 @@ html.holiday .lists-pane {
   border-radius: 12px;
   background: var(--surface);
   text-align: left;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
   transition: transform 0.15s var(--ease);
 }
-.smart:active {
-  transform: scale(0.97);
+/* Chosen: shadcn's selected fill (a card, a list row). */
+.smart:hover {
+  background: color-mix(in srgb, var(--fill) 50%, var(--surface));
 }
 .smart.on {
-  box-shadow: 0 0 0 2px var(--accent);
+  background: var(--fill);
 }
 .list-on {
-  background: var(--accent-bg);
+  background: var(--fill);
+  font-weight: 500;
 }
 /* Archived lists: folded away under My Lists, quieter when open. */
 .arch-toggle {
@@ -727,13 +734,13 @@ html.holiday .lists-pane {
   gap: 8px;
   padding: 0 4px 4px;
   font: 600 17px var(--font-display);
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .rows {
   min-height: 4px;
 }
 .row-wrap {
-  border-bottom: 0.5px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
   margin-left: 32px;
   padding-left: 0;
 }

@@ -29,6 +29,8 @@ type prefsResponse struct {
 	Locale        string                    `json:"locale"`
 	PageEditor    string                    `json:"page_editor"`   // visual | markdown
 	DevTheme      string                    `json:"dev_theme"`     // "" (as the instance) | none | a theme id
+	HolidayTheme  string                    `json:"holiday_theme"` // "" (as the instance) | off | auto | a holiday
+	SeasonTheme   string                    `json:"season_theme"`  // "" (as the instance) | off | auto | a season
 	RemoteImages  string                    `json:"remote_images"` // ask | always
 	SketchColors  []string                  `json:"sketch_colors"` // their own palette in Quick Draw
 	EditorThemes  map[string]string         `json:"editor_themes"` // sheets / diagrams / whiteboards: light | dark
@@ -43,6 +45,10 @@ type prefsResponse struct {
 	// HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
 	// unless turned off; the theme itself is the owner's).
 	HolidayEffects bool `json:"holiday_effects"`
+	// Glass: how much the sidebar, bars, windows and menus are liquid glass (0–100; 0 = solid).
+	Glass int `json:"glass"`
+	// Animations: the app's motion on, or off (still).
+	Animations bool `json:"animations"`
 }
 
 // editorKinds are the editors that may keep their own theme.
@@ -87,6 +93,8 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		Locale:         p.Locale,
 		PageEditor:     orDefault(p.PageEditor, "visual"),
 		DevTheme:       p.DevTheme,
+		HolidayTheme:   p.HolidayTheme,
+		SeasonTheme:    p.SeasonTheme,
 		RemoteImages:   orDefault(p.RemoteImages, "ask"),
 		SketchColors:   colors,
 		QuietFrom:      p.QuietFrom,
@@ -94,6 +102,8 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		QuietReminders: p.QuietReminders,
 		Quiet:          inbox.Quiet(p, time.Now()),
 		HolidayEffects: p.HolidayEffects,
+		Glass:          p.Glass,
+		Animations:     p.Animations,
 	}
 }
 
@@ -278,12 +288,32 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	if req.HolidayEffects != nil {
 		updates["holiday_effects"] = *req.HolidayEffects
 	}
+	if req.Glass != nil {
+		updates["glass"] = *req.Glass
+	}
+	if req.Animations != nil {
+		updates["animations"] = *req.Animations
+	}
 	if req.DevTheme != nil {
 		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "dev_theme must be empty, none, blue, gold, red, ink or green"})
 			return
 		}
 		updates["dev_theme"] = *req.DevTheme
+	}
+	if req.HolidayTheme != nil {
+		if *req.HolidayTheme != "" && validHolidayTheme(*req.HolidayTheme) != *req.HolidayTheme {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "holiday_theme must be empty, off, auto, christmas, halloween, nye, easter, santos or lunar"})
+			return
+		}
+		updates["holiday_theme"] = *req.HolidayTheme
+	}
+	if req.SeasonTheme != nil {
+		if *req.SeasonTheme != "" && validSeasonTheme(*req.SeasonTheme) != *req.SeasonTheme {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "season_theme must be empty, off, auto, spring, summer, autumn or winter"})
+			return
+		}
+		updates["season_theme"] = *req.SeasonTheme
 	}
 	if len(updates) > 0 {
 		if err := h.db.Model(&prefs).Updates(updates).Error; err != nil {

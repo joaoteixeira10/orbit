@@ -3,15 +3,16 @@ import { computed } from 'vue'
 import { useHolidayStore } from '@/stores/holiday'
 import { cobwebPath } from '@/lib/holidayThemes'
 
-// A card's corner art: Christmas' snow on the top edge (a path of its own
-// for each card), Halloween's cobweb in the top-right corner (both cards),
-// or the holiday's 40×40 picture (the first card only). Inside a card that
-// is position: relative; it never takes a click.
-const props = defineProps<{ card: 0 | 1 }>()
+// A card's corner art: snow along the top edge (Christmas, winter: every
+// card, the two drifts in turn), Halloween's cobweb in the top-right corner
+// (the first two cards), or the theme's 40×40 picture (the first card only).
+// `card` is the card's place on the page. Inside a card that is
+// position: relative; it never takes a click.
+const props = defineProps<{ card: number }>()
 const holiday = useHolidayStore()
 const corner = computed(() => {
-  const c = holiday.active?.art.cardCorner
-  if (!c || (c.kind === 'svg' && props.card !== 0)) return null
+  const c = holiday.look?.art.cardCorner
+  if (!c || (c.kind === 'svg' && props.card !== 0) || (c.kind === 'cobweb' && props.card > 1)) return null
   return c
 })
 const web = cobwebPath()
@@ -20,7 +21,7 @@ const web = cobwebPath()
 <template>
   <template v-if="corner">
     <svg v-if="corner.kind === 'snowcap'" class="h-cap" viewBox="0 0 400 18" preserveAspectRatio="none" aria-hidden="true" data-testid="holiday-corner">
-      <path :d="corner.paths[props.card]" fill="var(--h-cap)" stroke="var(--h-capLine)" />
+      <path :d="corner.paths[props.card % 2]" fill="var(--h-cap)" stroke="var(--h-capLine)" />
     </svg>
     <svg v-else-if="corner.kind === 'cobweb'" class="h-web" viewBox="0 0 64 64" aria-hidden="true" data-testid="holiday-corner">
       <path :d="web" fill="none" stroke="var(--h-web)" stroke-width="0.8" />

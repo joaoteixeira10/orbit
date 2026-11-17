@@ -12,6 +12,7 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
 import { currentLocale } from '@/i18n'
 import { workspacesApi, type Template, type ModuleKey, type ImportReport, type Workspace } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // "New workspace": pick a template (School, Work, Personal, Shared, Blank),
 // then make it yours — name, colour, icon and which modules it has. Or
@@ -144,31 +145,31 @@ async function create() {
             <span class="block text-[15px] font-semibold">{{ t(`templates.${tp.kind}.name`) }}</span>
             <span class="mt-0.5 block text-[13px] leading-snug text-text-2">{{ t(`templates.${tp.kind}.desc`) }}</span>
             <span class="mt-2 flex flex-wrap gap-1">
-              <span v-for="m in tp.modules.filter((x) => x !== 'home')" :key="m" class="pill !text-[11px]">{{ t(`modules.${m}`) }}</span>
+              <span v-for="m in tp.modules.filter((x) => x !== 'home')" :key="m" class="pill text-[11px]!">{{ t(`modules.${m}`) }}</span>
             </span>
           </span>
         </button>
       </div>
-      <button class="btn-plain mt-4" data-testid="import-ws" @click="step = 3"><Upload class="h-4 w-4" />{{ t('ws.import') }}</button>
+      <Button variant="link" class="mt-4" data-testid="import-ws" @click="step = 3"><Upload class="h-4 w-4" />{{ t('ws.import') }}</Button>
     </div>
 
     <!-- Step 2: make it yours -->
     <div v-else-if="tpl" class="space-y-5">
       <div class="-mt-2 flex items-center">
-        <button class="btn-plain -ml-2" @click="step = 1"><ChevronLeft class="h-4 w-4" />{{ t('ws.templates') }}</button>
+        <Button variant="link" class="-ml-2" @click="step = 1"><ChevronLeft class="h-4 w-4" />{{ t('ws.templates') }}</Button>
       </div>
       <div class="flex flex-col items-center gap-3">
         <WsIcon :icon="icon" :color="color" :size="64" :name="name" />
         <input
           v-model="name"
-          class="w-full rounded-xl bg-fill-2 px-4 py-2.5 text-center text-[20px] font-semibold outline-none focus:shadow-[0_0_0_3px_var(--ring)]"
+          class="rounded-lg w-full px-4 py-2.5 text-center text-[20px] font-semibold outline-hidden border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           :placeholder="t('ws.namePlaceholder')"
           maxlength="120"
           autofocus
           @keydown.enter="create"
         />
       </div>
-      <div class="rounded-xl bg-fill-2 p-4">
+      <div class="rounded-xl border border-border p-4">
         <IconColorPicker v-model:icon="icon" v-model:color="color" />
       </div>
 
@@ -186,7 +187,7 @@ async function create() {
         </div>
         <div v-if="soon.length" class="mt-3 flex flex-wrap items-center gap-1.5 px-1">
           <span class="text-[12px] text-text-3">{{ t('ws.comingSoon') }}</span>
-          <span v-for="m in soon" :key="m.key" class="pill !text-[11px] opacity-70">{{ t(`modules.${m.key}`) }}</span>
+          <span v-for="m in soon" :key="m.key" class="pill text-[11px]! opacity-70">{{ t(`modules.${m.key}`) }}</span>
         </div>
       </div>
 
@@ -202,7 +203,7 @@ async function create() {
     <!-- Step 3: import an export -->
     <div v-if="step === 3" class="space-y-4">
       <div v-if="!result" class="-mt-2 flex items-center">
-        <button class="btn-plain -ml-2" @click="step = 1"><ChevronLeft class="h-4 w-4" />{{ t('ws.templates') }}</button>
+        <Button variant="link" class="-ml-2" @click="step = 1"><ChevronLeft class="h-4 w-4" />{{ t('ws.templates') }}</Button>
       </div>
       <template v-if="!result">
         <p class="subhead">{{ t('ws.importHint') }}</p>
@@ -231,15 +232,15 @@ async function create() {
 
     <template v-if="step !== 1" #footer>
       <template v-if="step === 3 && !result">
-        <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-        <button class="btn-primary" :disabled="busy || !file" @click="runImport">{{ t('ws.importGo') }}</button>
+        <Button variant="secondary" @click="emit('close')">{{ t('common.cancel') }}</Button>
+        <Button :disabled="busy || !file" @click="runImport">{{ t('ws.importGo') }}</Button>
       </template>
-      <button v-else-if="step === 3" class="btn-primary" @click="openImported">{{ t('ws.open') }}</button>
+      <Button v-else-if="step === 3" @click="openImported">{{ t('ws.open') }}</Button>
       <template v-else>
-        <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-        <button class="btn-primary" :disabled="busy || !name.trim() || !modules.length" @click="create">
+        <Button variant="secondary" @click="emit('close')">{{ t('common.cancel') }}</Button>
+        <Button :disabled="busy || !name.trim() || !modules.length" @click="create">
           <Check class="h-4 w-4" />{{ t('ws.create') }}
-        </button>
+        </Button>
       </template>
     </template>
   </Overlay>

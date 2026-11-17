@@ -204,7 +204,7 @@ const theme = EditorView.theme({
   '.cm-placeholder': { color: 'var(--text-faint)' },
   '.cm-answer': { color: 'var(--accent-text)', opacity: '0.75', fontWeight: '500' },
   '.cm-panels': { backgroundColor: 'var(--surface)', color: 'var(--text)', borderRadius: '10px', zIndex: '5' },
-  '.cm-panels-top': { borderBottom: '0.5px solid var(--border)', position: 'sticky', top: '0' },
+  '.cm-panels-top': { borderBottom: '1px solid var(--border)', position: 'sticky', top: '0' },
   '.cm-panel.cm-search, .cm-panel.cm-gotoLine': { padding: '6px 8px', fontSize: '13px' },
   '.cm-panel input[type=text], .cm-textfield': {
     backgroundColor: 'var(--fill-2)', border: '0', borderRadius: '6px', padding: '3px 6px', color: 'var(--text)', fontSize: '13px',

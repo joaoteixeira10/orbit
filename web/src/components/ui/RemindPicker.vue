@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Clock, Sun, CalendarDays, Hourglass, X } from 'lucide-vue-next'
 import { fmtDate, fmtTime, toLocalInput, fromLocalInput } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // When to be reminded (a note) or to see something again (snooze): a few
 // quick choices — in an hour (snooze), later today, this evening, tomorrow
@@ -48,8 +50,8 @@ const customOk = computed(() => !!custom.value && fromLocalInput(custom.value).g
     </button>
     <div class="menu-sep" />
     <form class="flex items-center gap-1.5 px-3 py-1.5" @submit.prevent="customOk && emit('pick', fromLocalInput(custom).toISOString())">
-      <input v-model="custom" type="datetime-local" class="input min-w-0 flex-1 !py-1 text-[13px]" :aria-label="t('remind.pick')" />
-      <button class="btn btn-sm" :disabled="!customOk">{{ t('remind.set') }}</button>
+      <Input v-model="custom" type="datetime-local" class="min-w-0 flex-1 py-1! text-[13px]" :aria-label="t('remind.pick')" />
+      <Button variant="secondary" size="sm" :disabled="!customOk">{{ t('remind.set') }}</Button>
     </form>
     <template v-if="current && !snooze">
       <div class="menu-sep" />

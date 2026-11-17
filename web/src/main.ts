@@ -7,7 +7,17 @@ import { useAuthStore } from './stores/auth'
 import { useBrandingStore } from './stores/branding'
 import { i18n, currentLocale } from './i18n'
 import { installStepUp } from './lib/stepup'
+import { installTooltips } from './lib/tooltips'
 import './styles/main.css'
+
+// iPhone and iPad zoom in on any text field under 16px when it's tapped, and
+// stay zoomed. maximum-scale=1 stops that there (iOS still lets the person
+// pinch to zoom); elsewhere it would block pinching, so iOS only.
+const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+if (ios) {
+  const vp = document.querySelector('meta[name="viewport"]')
+  if (vp && !/maximum-scale/.test(vp.getAttribute('content') ?? '')) vp.setAttribute('content', `${vp.getAttribute('content')}, maximum-scale=1`)
+}
 
 async function bootstrap() {
   const app = createApp(App)
@@ -23,6 +33,7 @@ async function bootstrap() {
 
   app.use(router)
   app.mount('#app')
+  installTooltips()
 }
 
 bootstrap()

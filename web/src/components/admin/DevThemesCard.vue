@@ -114,7 +114,7 @@ const names = computed(() => DEV_THEME_NAMES[lang.value])
       </div>
 
       <div v-if="enabled" class="mt-[22px]">
-        <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">{{ L.pick }}</div>
+        <div class="mb-[13px] text-[12px] font-medium text-text-2">{{ L.pick }}</div>
         <div class="theme-grid">
           <button
             v-for="th in DEV_THEME_LIST"
@@ -138,7 +138,7 @@ const names = computed(() => DEV_THEME_NAMES[lang.value])
         </div>
 
         <div class="mt-6">
-          <div class="mb-[13px] text-[11px] font-semibold uppercase tracking-wider text-text-faint">{{ L.assets }}</div>
+          <div class="mb-[13px] text-[12px] font-medium text-text-2">{{ L.assets }}</div>
           <div class="src-row">
             <div class="src-ico"><ImageIcon class="h-4 w-4" /></div>
             <div class="min-w-0 flex-1"><b class="text-[14px] font-semibold">{{ L.mark }}</b><span class="mt-0.5 block text-[12px] text-text-3">{{ hasLogo ? L.hasLogo : L.noLogo }}</span></div>

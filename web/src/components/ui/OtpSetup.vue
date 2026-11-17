@@ -6,6 +6,7 @@ import { meApi } from '@/api'
 import { saveText } from '@/lib/api'
 import { useToastStore } from '@/stores/toast'
 import CodeInput from '@/components/ui/CodeInput.vue'
+import { Button } from '@/components/shadcn/button'
 
 // Self-contained TOTP enrollment: requests a secret on mount, renders the QR,
 // verifies a code, then shows one-time recovery codes. Emits `verified` when done.
@@ -71,9 +72,9 @@ function downloadCodes() {
         <span v-for="c in codes" :key="c" class="select-all">{{ c }}</span>
       </div>
       <div class="flex justify-end gap-2">
-        <button class="btn-ghost" @click="copyCodes">{{ t('settings.copy') }}</button>
-        <button class="btn-ghost" @click="downloadCodes">{{ t('common.download') }}</button>
-        <button class="btn-primary" @click="emit('verified')">{{ t('common.done') }}</button>
+        <Button variant="ghost" @click="copyCodes">{{ t('settings.copy') }}</Button>
+        <Button variant="ghost" @click="downloadCodes">{{ t('common.download') }}</Button>
+        <Button @click="emit('verified')">{{ t('common.done') }}</Button>
       </div>
     </template>
 
@@ -84,14 +85,14 @@ function downloadCodes() {
         <img v-if="qr" :src="qr" :alt="t('acct.otp.qrAlt')" class="h-40 w-40 rounded-lg bg-white p-2" />
         <div class="min-w-0">
           <div class="mb-1 text-[12px] text-text-3">{{ t('acct.otp.secretKey') }}</div>
-          <code class="block break-all rounded bg-surface-2 px-2 py-1 font-mono text-[12px]">{{ secret }}</code>
+          <code class="block break-all rounded-sm bg-surface-2 px-2 py-1 font-mono text-[12px]">{{ secret }}</code>
         </div>
       </div>
       <!-- The code prompt (see docs/AUTH-BLUEPRINT.md, "The two-factor code prompt"). -->
       <form class="flex flex-col gap-3" @submit.prevent="verify">
         <p class="text-center text-text-2">{{ t('login.enterCode') }}</p>
         <div class="flex justify-center"><CodeInput v-model="code" @complete="verify" /></div>
-        <button type="submit" :disabled="busy || code.length < 6" class="btn-primary w-full">{{ busy ? t('login.verifying') : t('acct.otp.verifyEnable') }}</button>
+        <Button type="submit" :disabled="busy || code.length < 6" class="w-full">{{ busy ? t('login.verifying') : t('acct.otp.verifyEnable') }}</Button>
       </form>
       <p v-if="err" class="rounded-lg bg-crit-bg px-3 py-2 text-[12px] text-crit-text">{{ err }}</p>
     </template>

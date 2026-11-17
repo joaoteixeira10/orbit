@@ -44,10 +44,10 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(15,23,42,.45)] p-4">
-    <div class="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-soft">
+  <div class="fixed inset-0 z-200 flex items-center justify-center bg-[rgba(15,23,42,.45)] p-4">
+    <div class="w-full max-w-md rounded-xl border border-border bg-(--sheet-bg) p-6 shadow-soft">
       <div class="mb-4 flex flex-col items-center gap-2 text-center">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-warn-bg">
+        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-warn-bg">
           <ShieldAlert class="h-6 w-6 text-warn-text" />
         </div>
         <h2 class="text-[15px] font-semibold">{{ t('acct.otp.setUpFull') }}</h2>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { computePosition, autoUpdate, flip, shift, offset, type Placement } from '@floating-ui/dom'
 
 // A popover anchored to an element (menus, pickers). It closes on a click
@@ -13,10 +13,15 @@ const el = ref<HTMLElement | null>(null)
 // Inside what's full screen, if anything is (only it is drawn then).
 const target = (document.fullscreenElement as HTMLElement | null) ?? 'body'
 let cleanup: (() => void) | null = null
+// The anchor may be a component (a shadcn <Button> ref): its element.
+const anchorEl = computed<HTMLElement | null>(() => {
+  const a = props.anchor as unknown as { $el?: HTMLElement } | HTMLElement | null
+  return a && '$el' in a && a.$el ? a.$el : (a as HTMLElement | null)
+})
 
 async function place() {
-  if (!props.anchor || !el.value) return
-  const { x, y } = await computePosition(props.anchor, el.value, {
+  if (!anchorEl.value || !el.value) return
+  const { x, y } = await computePosition(anchorEl.value, el.value, {
     placement: props.placement,
     strategy: 'fixed',
     middleware: [offset(6), flip({ padding: 8 }), shift({ padding: 8 })],
@@ -26,7 +31,7 @@ async function place() {
 
 function onDown(e: MouseEvent) {
   const t = e.target as Node
-  if (el.value?.contains(t) || props.anchor?.contains(t)) return
+  if (el.value?.contains(t) || anchorEl.value?.contains(t)) return
   // A popover opened from this one (later in the page): still "inside".
   const other = (t instanceof Element ? t : t.parentElement)?.closest('.popover')
   if (other && el.value && other !== el.value && el.value.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) return
@@ -41,11 +46,11 @@ function onKey(e: KeyboardEvent) {
 
 onMounted(async () => {
   await nextTick()
-  if (props.anchor && el.value) cleanup = autoUpdate(props.anchor, el.value, place)
+  if (anchorEl.value && el.value) cleanup = autoUpdate(anchorEl.value, el.value, place)
   document.addEventListener('mousedown', onDown, true)
   document.addEventListener('keydown', onKey, true)
 })
-watch(() => props.anchor, place)
+watch(anchorEl, place)
 onBeforeUnmount(() => {
   cleanup?.()
   document.removeEventListener('mousedown', onDown, true)
@@ -56,7 +61,7 @@ onBeforeUnmount(() => {
 <template>
   <Teleport :to="target">
     <Transition name="pop" appear>
-      <div ref="el" class="popover fixed left-0 top-0 z-[60]" :style="{ width: typeof width === 'number' ? width + 'px' : width }" role="menu">
+      <div ref="el" class="popover fixed left-0 top-0 z-60" :style="{ width: typeof width === 'number' ? width + 'px' : width }" role="menu">
         <slot />
       </div>
     </Transition>

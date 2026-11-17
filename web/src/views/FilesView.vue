@@ -16,6 +16,7 @@ import { emptySheet } from '@/lib/sheet'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // Files: a workspace's folders with everything in them — its files (from
 // the computer, and the attachments of its pages, tasks and notes), and its
@@ -109,20 +110,20 @@ async function upload(e: Event) {
         <h1 class="large-title">{{ t('modules.files') }}</h1>
         <p class="subhead mt-0.5">{{ workspace?.name }}</p>
       </div>
-      <RouterLink :to="{ name: 'ws-graph', params: { ws } }" class="btn btn-ghost"><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink>
+      <Button as-child variant="ghost"><RouterLink :to="{ name: 'ws-graph', params: { ws } }" ><Waypoints class="h-4 w-4" />{{ t('graph.title') }}</RouterLink></Button>
       <template v-if="editable && kinds.length">
         <template v-if="importable">
           <input ref="fileEl" type="file" class="hidden" multiple :accept="accept" data-testid="files-upload-input" @change="upload" />
-          <button class="btn btn-ghost" :disabled="busy" :title="t('drive.uploadHint')" @click="fileEl?.click()"><FileInput class="h-4 w-4" />{{ t('drive.upload') }}</button>
+          <Button variant="ghost" :disabled="busy" :title="t('drive.uploadHint')" @click="fileEl?.click()"><FileInput class="h-4 w-4" />{{ t('drive.upload') }}</Button>
         </template>
         <template v-if="kinds.includes('file')">
           <input ref="rawEl" type="file" class="hidden" multiple data-testid="files-add-input" @change="uploadRaw" />
-          <button class="btn" :title="t('drive.addFilesHint')" data-testid="files-add" @click="rawEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.addFiles') }}</button>
+          <Button variant="secondary" :title="t('drive.addFilesHint')" data-testid="files-add" @click="rawEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.addFiles') }}</Button>
         </template>
-        <button v-if="news.length" ref="newEl" class="btn-primary" data-testid="files-new" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('drive.new') }}<ChevronDown class="h-3.5 w-3.5" /></button>
+        <Button v-if="news.length" ref="newEl" data-testid="files-new" @click="newOpen = !newOpen"><Plus class="h-4 w-4" />{{ t('drive.new') }}<ChevronDown class="h-3.5 w-3.5" /></Button>
       </template>
     </header>
-    <p v-if="workspace && !kinds.length" class="mb-6 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('drive.noKinds') }}</p>
+    <p v-if="workspace && !kinds.length" class="mb-6 rounded-lg border border-border px-4 py-2.5 text-[13px] text-text-2">{{ t('drive.noKinds') }}</p>
 
     <FileBrowser ref="browser" :ws="ws" :kinds="kinds" :editable="editable" :root-name="t('modules.files')" />
 

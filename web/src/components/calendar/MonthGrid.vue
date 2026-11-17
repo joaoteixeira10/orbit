@@ -327,7 +327,7 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   flex: none;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .mg-names > div {
   padding: 0 8px 6px;
@@ -349,7 +349,7 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   min-height: 0;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .mg-week:last-child {
   border-bottom: 0;
@@ -359,7 +359,7 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
   min-width: 0;
   min-height: 0;
   overflow: visible;
-  box-shadow: inset 0.5px 0 0 var(--border);
+  box-shadow: inset 1px 0 0 var(--border);
   transition: background 0.15s var(--ease);
 }
 .mg-cell:first-child {
@@ -397,9 +397,10 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
 .mg-num.sel {
   background: var(--fill-strong);
 }
+/* Today: the primary colour (shadcn's), not Apple Calendar's red. */
 .mg-num.today {
-  background: var(--crit);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-fg);
   font-weight: 600;
 }
 .mg-lines {
@@ -529,7 +530,7 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
 }
 .compact .mg-week {
   border-bottom: 0;
-  border-top: 0.5px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
 }
 .mg-cday {
   display: flex;
@@ -554,7 +555,7 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
   color: var(--text-faint);
 }
 .mg-cday.today .num {
-  color: var(--crit);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .mg-cday.sel .num {
@@ -563,8 +564,8 @@ function barStyle(s: Extract<Slot, { kind: 'bar' }>) {
   font-weight: 600;
 }
 .mg-cday.today.sel .num {
-  background: var(--crit);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-fg);
 }
 .dots {
   display: flex;

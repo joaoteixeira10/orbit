@@ -179,19 +179,20 @@ watch(sel, async () => {
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div v-if="open" class="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]" style="background: var(--backdrop)" @mousedown.self="emit('close')">
-        <div class="sheet-panel cmd w-full max-w-[600px] overflow-hidden rounded-2xl shadow-lg2" role="dialog" aria-modal="true" :aria-label="t('cmd.title')">
-          <div class="flex items-center gap-3 px-4 py-3.5">
-            <Search class="h-5 w-5 text-text-3" />
-            <input ref="input" v-model="q" class="w-full bg-transparent text-[18px] outline-none placeholder:text-text-faint" :placeholder="t('cmd.placeholder')" @keydown="onKey" />
+      <div v-if="open" class="cmd-backdrop fixed inset-0 z-50 flex items-start justify-center bg-black/10 px-4 pt-[12vh] supports-backdrop-filter:backdrop-blur-xs dark:bg-black/40" @mousedown.self="emit('close')">
+        <!-- shadcn-vue's CommandDialog: a search row, then the list. -->
+        <div class="sheet-panel cmd w-full max-w-[600px] overflow-hidden rounded-xl shadow-lg2 ring-1 ring-foreground/10" role="dialog" aria-modal="true" :aria-label="t('cmd.title')">
+          <div class="flex h-12 items-center gap-2 px-3">
+            <Search class="size-4 shrink-0 text-text-3" />
+            <input ref="input" v-model="q" class="w-full bg-transparent text-sm outline-hidden placeholder:text-muted-foreground" :placeholder="t('cmd.placeholder')" @keydown="onKey" />
             <kbd class="rounded-md bg-fill px-1.5 py-0.5 text-[11px] text-text-3">esc</kbd>
           </div>
-          <div class="max-h-[50vh] overflow-y-auto border-t-[0.5px] border-border p-2">
+          <div class="max-h-[50vh] overflow-y-auto border-t border-border p-1">
             <div v-if="results.length" class="cap px-2.5 pb-1 pt-1.5">{{ t('cmd.results') }}</div>
             <button
               v-for="(i, n) in all"
               :key="i.key"
-              class="cmd-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left"
+              class="cmd-item flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left"
               :class="{ on: n === sel }"
               @mouseenter="sel = n"
               @click="choose(i)"
@@ -215,16 +216,15 @@ watch(sel, async () => {
 
 <style scoped>
 .cmd {
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(30px);
-  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  background: var(--sheet-bg);
 }
+/* The chosen item: the menu highlight (the accent). */
 .cmd-item.on {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-fg);
 }
 .cmd-item.on span,
 .cmd-item.on svg {
-  color: #fff !important;
+  color: var(--accent-fg) !important;
 }
 </style>

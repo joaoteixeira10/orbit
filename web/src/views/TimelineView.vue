@@ -15,6 +15,7 @@ import { useTaskFilter } from '@/lib/taskFilter'
 import { todayStr, weekStart, isOverdue, relDay } from '@/lib/dates'
 import { ZOOMS, ZOOM_PX, dayNum, rangeFor, spanOf, patchFor, type Span, type TlGroup, type TlRow, type Zoom } from '@/lib/timeline'
 import type { Member, Task } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // Timeline: the workspace's tasks as bars on a Gantt chart, grouped by list,
 // from their start to their due date. Zoom by weeks, months or quarters;
@@ -254,28 +255,28 @@ useFillHeight(frame, 320)
       <!-- Filter and completed (beside the title on phones too) -->
       <div class="order-1 mb-0.5 flex items-center gap-1.5 md:order-2">
         <TaskFilter :ws="ws" show-lists />
-        <button class="icon-btn shrink-0" :class="{ on: showDone }" :title="showDone ? t('tasks.hideDone') : t('tasks.showDone')" :aria-label="showDone ? t('tasks.hideDone') : t('tasks.showDone')" :aria-pressed="showDone" @click="showDone = !showDone">
+        <Button variant="ghost" size="icon" class="text-text-2 shrink-0" :class="{ on: showDone }" :title="showDone ? t('tasks.hideDone') : t('tasks.showDone')" :aria-label="showDone ? t('tasks.hideDone') : t('tasks.showDone')" :aria-pressed="showDone" @click="showDone = !showDone">
           <component :is="showDone ? EyeOff : Eye" class="h-[18px] w-[18px]" />
-        </button>
+        </Button>
       </div>
       <!-- Zoom and Today (their own row on phones) -->
       <div class="zoom-row order-2 flex w-full items-center gap-1.5 md:order-1 md:mb-0.5 md:w-auto">
         <div class="seg zoom" role="tablist" :aria-label="t('timeline.zoom')">
           <button v-for="z in ZOOMS" :key="z" role="tab" :aria-selected="zoom === z" :class="{ on: zoom === z }" @click="zoom = z">{{ t(`timeline.zooms.${z}`) }}</button>
         </div>
-        <button class="btn btn-sm shrink-0" @click="goToday">{{ t('dates.today') }}</button>
+        <Button variant="secondary" size="sm" class="shrink-0" @click="goToday">{{ t('dates.today') }}</Button>
       </div>
     </header>
 
     <div ref="frame" class="frame mx-4 mt-4 sm:mx-8 sm:mt-5">
       <!-- Loading -->
       <div v-if="!loaded" class="h-full p-4" aria-busy="true">
-        <div v-for="n in 6" :key="n" class="skeleton" :style="{ width: `${30 + ((n * 37) % 50)}%`, marginLeft: `${(n * 13) % 40}%` }" />
+        <div v-for="n in 6" :key="n" class="skeleton shimmer" :style="{ width: `${30 + ((n * 37) % 50)}%`, marginLeft: `${(n * 13) % 40}%` }" />
       </div>
 
       <!-- No lists -->
       <div v-else-if="!lists.length" class="empty">
-        <span class="tile mx-auto h-16 w-16 !rounded-2xl" style="--tile: var(--ws)"><CalendarRange class="h-8 w-8" :stroke-width="2" /></span>
+        <span class="tile mx-auto h-16 w-16 rounded-2xl!" style="--tile: var(--ws)"><CalendarRange class="h-8 w-8" :stroke-width="2" /></span>
         <h2 class="title-2 mt-5">{{ t('timeline.noLists') }}</h2>
         <p class="subhead mt-1.5 leading-relaxed">{{ t('timeline.noListsHint') }}</p>
       </div>
@@ -285,7 +286,7 @@ useFillHeight(frame, 320)
         <ListFilter class="mx-auto mb-3 h-10 w-10 text-text-faint" :stroke-width="1.5" />
         <p class="title-3">{{ t('tasks.noMatch') }}</p>
         <p class="subhead mt-1">{{ t('tasks.noMatchHint') }}</p>
-        <button class="btn btn-sm mt-4" @click="clear">{{ t('filter.clear') }}</button>
+        <Button variant="secondary" size="sm" class="mt-4" @click="clear">{{ t('filter.clear') }}</Button>
       </div>
 
       <TimelineChart
@@ -344,19 +345,16 @@ useFillHeight(frame, 320)
     padding-right: 6px;
   }
 }
-.seg.zoom button:not(.on):hover {
-  background: var(--surface-hover);
-}
 .frame {
   height: calc(100dvh - 200px);
   min-height: 320px;
   overflow: hidden;
   border-radius: var(--r-lg);
   background: var(--bg);
-  box-shadow: 0 0 0 0.5px var(--border), var(--shadow-sm);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-sm);
 }
 html.dark .frame {
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .empty {
   max-width: 24rem;
@@ -368,15 +366,5 @@ html.dark .frame {
   height: 22px;
   margin: 14px 0;
   border-radius: 7px;
-  background: var(--fill-2);
-  animation: pulse 1.4s var(--ease) infinite alternate;
-}
-@keyframes pulse {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0.45;
-  }
 }
 </style>

@@ -2,6 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Overlay from './Overlay.vue'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // An alert-style confirmation. typeToConfirm (optional): the user must type
 // this exact text before the confirm button enables (deleting a workspace).
@@ -30,13 +32,13 @@ const ready = computed(() => !props.typeToConfirm || typed.value.trim() === prop
     </div>
     <label v-if="typeToConfirm" class="mt-4 block text-[12.5px] text-text-2">
       {{ t('common.typeToConfirm') }} <b class="font-semibold text-text">{{ typeToConfirm }}</b>
-      <input v-model="typed" class="input mt-1.5" autocomplete="off" spellcheck="false" @keydown.enter="ready && emit('confirm')" />
+      <Input v-model="typed" class="mt-1.5" autocomplete="off" spellcheck="false" @keydown.enter="ready && emit('confirm')" />
     </label>
     <div class="mt-5 grid grid-cols-2 gap-2">
-      <button class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button :class="danger ? 'btn-danger' : 'btn-primary'" :disabled="!ready" @click="emit('confirm')">
+      <Button variant="outline" @click="emit('close')">{{ t('common.cancel') }}</Button>
+      <Button :variant="danger ? 'destructive' : 'default'" :disabled="!ready" @click="emit('confirm')">
         {{ confirmLabel || t('common.confirm') }}
-      </button>
+      </Button>
     </div>
   </Overlay>
 </template>

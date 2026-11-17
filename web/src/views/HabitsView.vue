@@ -10,6 +10,7 @@ import { addDays, dateStr, fmtDate, startOfWeek, sameDay, weekdayNames } from '@
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // Habits: yours alone, a row each — how often, the streak, this week's days
 // to tick, and (opened) the year and how it's going.
@@ -98,14 +99,14 @@ const sheet = ref<{ open: boolean; habit: Habit | null }>({ open: false, habit: 
           {{ workspace?.name }}<template v-if="dueNow.length"> · {{ doneNow >= dueNow.length ? t('habits.allDone') : t('habits.todayCount', { done: doneNow, due: dueNow.length }) }}</template>
         </p>
       </div>
-      <button v-if="editable" class="btn-primary" data-testid="new-habit" @click="sheet = { open: true, habit: null }"><Plus class="h-4 w-4" />{{ t('habits.new') }}</button>
+      <Button v-if="editable" data-testid="new-habit" @click="sheet = { open: true, habit: null }"><Plus class="h-4 w-4" />{{ t('habits.new') }}</Button>
     </header>
 
     <div v-if="loaded && !active.length && !archived.length" class="flex flex-col items-center py-16 text-center">
       <span class="tile h-14 w-14" style="--tile: #34c759"><Repeat class="h-7 w-7" /></span>
       <p class="mt-4 text-[15px] font-semibold">{{ t('habits.none') }}</p>
       <p class="mt-1 max-w-[360px] text-[13px] text-text-2">{{ t('habits.noneHint') }}</p>
-      <button v-if="editable" class="btn-primary mt-5" @click="sheet = { open: true, habit: null }"><Plus class="h-4 w-4" />{{ t('habits.new') }}</button>
+      <Button v-if="editable" class="mt-5" @click="sheet = { open: true, habit: null }"><Plus class="h-4 w-4" />{{ t('habits.new') }}</Button>
     </div>
 
     <div v-if="active.length" class="mb-2 hidden items-center gap-3 px-4 sm:flex">
@@ -121,7 +122,7 @@ const sheet = ref<{ open: boolean; habit: Habit | null }>({ open: false, habit: 
               <span class="block truncate text-[15px] font-semibold">{{ h.title }}</span>
               <span class="flex flex-wrap items-center gap-x-2 text-[12.5px] text-text-3">
                 <span>{{ describe(h) }}</span>
-                <span v-if="streak(h, today)" class="inline-flex items-center gap-0.5 font-medium text-[color:var(--c)]"><Flame class="h-3.5 w-3.5" />{{ streakText(h) }}</span>
+                <span v-if="streak(h, today)" :key="streakText(h)" class="streak inline-flex items-center gap-0.5 font-medium text-(--c)"><Flame class="h-3.5 w-3.5" />{{ streakText(h) }}</span>
               </span>
             </span>
             <ChevronDown class="ml-auto h-4 w-4 shrink-0 text-text-3 transition" :class="{ 'rotate-180': opened === h.id }" />
@@ -146,7 +147,7 @@ const sheet = ref<{ open: boolean; habit: Habit | null }>({ open: false, habit: 
           <div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-text-2">
             <span>{{ t('habits.best', { n: best(h, today) }) }}</span>
             <span>{{ t('habits.month', { p: Math.round(rate(h, today) * 100) }) }}</span>
-            <button v-if="editable" class="btn-plain ml-auto !text-[13px]" @click="sheet = { open: true, habit: h }"><Pencil class="h-3.5 w-3.5" />{{ t('common.edit') }}</button>
+            <Button variant="link" v-if="editable" class="ml-auto text-[13px]!" @click="sheet = { open: true, habit: h }"><Pencil class="h-3.5 w-3.5" />{{ t('common.edit') }}</Button>
           </div>
           <YearGrid :habit="h" :color="h.color || 'var(--accent)'" />
         </div>
@@ -219,6 +220,25 @@ const sheet = ref<{ open: boolean; habit: Habit | null }>({ open: false, habit: 
     gap: 6px;
     width: 100%;
     justify-content: space-between;
+  }
+}
+/* A streak that grows (or appears) pops, its flame flaring (styles/motion.css's switch). */
+.streak {
+  animation: streak-pop 0.5s cubic-bezier(0.3, 0.7, 0.4, 1.5) both;
+}
+.streak :deep(svg) {
+  animation: streak-flare 0.7s ease-out both;
+}
+@keyframes streak-pop {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+@keyframes streak-flare {
+  40% {
+    scale: 1.45;
+    rotate: -12deg;
   }
 }
 </style>

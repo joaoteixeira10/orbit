@@ -6,6 +6,7 @@ import Popover from '@/components/ui/Popover.vue'
 import { chartPng, chartRows, csvOf, saveBlob, type ChartSpec } from '@/lib/chartExport'
 import { fileName } from '@/lib/markdown'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // A chart card's download button: the chart as a picture or its numbers.
 const props = defineProps<{ spec: () => ChartSpec; name: string }>()
@@ -30,9 +31,9 @@ function csv() {
 </script>
 
 <template>
-  <button ref="anchor" type="button" class="icon-btn h-7 w-7 shrink-0" :title="t('charts.export')" :aria-label="t('charts.export')" data-testid="chart-export" @click="open = !open">
+  <Button variant="ghost" size="icon" ref="anchor" type="button" class="text-text-2 h-7 w-7 shrink-0" :title="t('charts.export')" :aria-label="t('charts.export')" data-testid="chart-export" @click="open = !open">
     <Download class="h-4 w-4" />
-  </button>
+  </Button>
   <Popover v-if="open" :anchor="anchor" placement="bottom-end" :width="200" @close="open = false">
     <div class="p-1.5">
       <button type="button" class="menu-item w-full" data-testid="chart-png" @click="png"><Image class="h-4 w-4 text-text-2" />{{ t('charts.png') }}</button>

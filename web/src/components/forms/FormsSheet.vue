@@ -10,6 +10,9 @@ import { shareApi, type FormDef, type FormField } from '@/lib/shareApi'
 import type { Database } from '@/lib/database'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { Textarea } from '@/components/shadcn/textarea'
 
 // A database's forms: each asks for some of its properties (and the row's
 // name), with your own words and help, some required; it takes answers
@@ -99,25 +102,25 @@ const canPublic = computed(() => auth.features.public_forms !== false)
     <!-- The forms -->
     <template v-if="!editing">
       <p class="mb-4 text-[13px] leading-relaxed text-text-2">{{ t('forms.lead') }}</p>
-      <p v-if="!forms.length" class="mb-3 rounded-xl bg-fill-2 px-4 py-3 text-[13px] text-text-3">{{ t('forms.none') }}</p>
+      <p v-if="!forms.length" class="mb-3 rounded-lg border border-border px-4 py-3 text-[13px] text-text-3">{{ t('forms.none') }}</p>
       <div v-for="f in forms" :key="f.id" class="form-row" data-testid="form-row">
         <ClipboardList class="h-4 w-4 shrink-0 text-text-3" />
         <button type="button" class="min-w-0 flex-1 truncate text-left font-medium" @click="editing = JSON.parse(JSON.stringify(f))">{{ f.title || t('forms.untitled') }}</button>
         <span class="shrink-0 text-[12px] text-text-3">{{ t('forms.answers', { n: f.answers }, f.answers) }}<template v-if="f.public"> · {{ t('forms.public') }}</template><template v-if="!f.open"> · {{ t('forms.closedShort') }}</template></span>
-        <RouterLink :to="{ name: 'ws-form', params: { ws, id: f.id } }" class="icon-btn h-8 w-8" :title="t('forms.openIt')" :aria-label="t('forms.openIt')"><ExternalLink class="h-4 w-4" /></RouterLink>
+        <Button as-child variant="ghost" size="icon"><RouterLink :to="{ name: 'ws-form', params: { ws, id: f.id } }" class="text-text-2 h-8 w-8" :title="t('forms.openIt')" :aria-label="t('forms.openIt')"><ExternalLink class="h-4 w-4" /></RouterLink></Button>
       </div>
     </template>
 
     <!-- One form -->
     <div v-else class="flex flex-col gap-4" data-testid="form-editor">
-      <button type="button" class="btn-plain -ml-2 self-start" @click="editing = null"><ChevronLeft class="h-4 w-4" />{{ t('forms.all') }}</button>
+      <Button variant="link" type="button" class="-ml-2 self-start" @click="editing = null"><ChevronLeft class="h-4 w-4" />{{ t('forms.all') }}</Button>
       <label class="block">
         <span class="label">{{ t('forms.formTitle') }}</span>
-        <input v-model="editing.title" class="input" maxlength="300" :disabled="!editable" data-testid="form-edit-title" />
+        <Input v-model="editing.title" maxlength="300" :disabled="!editable" data-testid="form-edit-title" />
       </label>
       <label class="block">
         <span class="label">{{ t('forms.intro') }}</span>
-        <textarea v-model="editing.intro" class="input" rows="2" maxlength="5000" :disabled="!editable" />
+        <Textarea v-model="editing.intro" rows="2" maxlength="5000" :disabled="!editable" />
       </label>
       <div>
         <span class="label">{{ t('forms.questions') }}</span>
@@ -127,8 +130,8 @@ const canPublic = computed(() => auth.features.public_forms !== false)
             <div class="min-w-0 flex-1">
               <div class="text-[13px] font-medium">{{ c.name }}</div>
               <template v-if="fieldOf(c.prop)">
-                <input class="field mt-1 !py-1 text-[12.5px]" :value="fieldOf(c.prop)!.label" :placeholder="t('forms.askAs', { name: c.name })" maxlength="200" :disabled="!editable" @input="setField(c.prop, { label: ($event.target as HTMLInputElement).value })" />
-                <input class="field mt-1 !py-1 text-[12.5px]" :value="fieldOf(c.prop)!.help" :placeholder="t('forms.help')" maxlength="500" :disabled="!editable" @input="setField(c.prop, { help: ($event.target as HTMLInputElement).value })" />
+                <input class="field mt-1 py-1! text-[12.5px]" :value="fieldOf(c.prop)!.label" :placeholder="t('forms.askAs', { name: c.name })" maxlength="200" :disabled="!editable" @input="setField(c.prop, { label: ($event.target as HTMLInputElement).value })" />
+                <input class="field mt-1 py-1! text-[12.5px]" :value="fieldOf(c.prop)!.help" :placeholder="t('forms.help')" maxlength="500" :disabled="!editable" @input="setField(c.prop, { help: ($event.target as HTMLInputElement).value })" />
               </template>
             </div>
             <label v-if="fieldOf(c.prop)" class="flex shrink-0 items-center gap-1.5 text-[12px] text-text-2">
@@ -139,13 +142,13 @@ const canPublic = computed(() => auth.features.public_forms !== false)
       </div>
       <label class="block">
         <span class="label">{{ t('forms.thanksLabel') }}</span>
-        <input v-model="editing.thanks" class="input" maxlength="500" :placeholder="t('forms.thanks')" :disabled="!editable" />
+        <Input v-model="editing.thanks" maxlength="500" :placeholder="t('forms.thanks')" :disabled="!editable" />
       </label>
       <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px]">
         <label class="flex items-center gap-2"><Toggle v-model="editing.open" :disabled="!editable" />{{ t('forms.taking') }}</label>
         <label class="flex items-center gap-2" :title="canPublic ? '' : t('forms.publicOff')"><Toggle v-model="editing.public" :disabled="!editable || (!canPublic && !editing.public)" data-testid="form-public" />{{ t('forms.makePublic') }}</label>
       </div>
-      <div v-if="editing.url" class="flex items-center gap-2 rounded-lg bg-fill-2 px-3 py-2">
+      <div v-if="editing.url" class="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
         <code class="min-w-0 flex-1 truncate font-mono text-[12px]" data-testid="form-url">{{ editing.url }}</code>
         <CopyButton :value="editing.url" />
       </div>
@@ -154,11 +157,11 @@ const canPublic = computed(() => auth.features.public_forms !== false)
 
     <template #footer>
       <template v-if="editing">
-        <button v-if="editable" type="button" class="btn btn-ghost mr-auto text-crit-text" @click="removing = true"><Trash2 class="h-4 w-4" />{{ t('forms.delete') }}</button>
-        <RouterLink :to="{ name: 'ws-form', params: { ws, id: editing.id } }" class="btn">{{ t('forms.openIt') }}</RouterLink>
-        <button v-if="editable" type="button" class="btn-primary" data-testid="form-save" @click="save()">{{ t('common.save') }}</button>
+        <Button variant="ghost" v-if="editable" type="button" class="mr-auto text-crit-text" @click="removing = true"><Trash2 class="h-4 w-4" />{{ t('forms.delete') }}</Button>
+        <Button as-child variant="secondary"><RouterLink :to="{ name: 'ws-form', params: { ws, id: editing.id } }" >{{ t('forms.openIt') }}</RouterLink></Button>
+        <Button v-if="editable" type="button" data-testid="form-save" @click="save()">{{ t('common.save') }}</Button>
       </template>
-      <button v-else-if="editable" type="button" class="btn-primary" data-testid="form-new" @click="make"><Plus class="h-4 w-4" />{{ t('forms.new') }}</button>
+      <Button v-else-if="editable" type="button" data-testid="form-new" @click="make"><Plus class="h-4 w-4" />{{ t('forms.new') }}</Button>
     </template>
     <Confirm :open="removing" :title="t('forms.deleteTitle')" :message="t('forms.deleteBody')" :confirm-label="t('forms.delete')" danger @confirm="remove" @close="removing = false" />
   </Overlay>
@@ -172,7 +175,7 @@ const canPublic = computed(() => auth.features.public_forms !== false)
   padding: 10px 12px;
   margin-bottom: 6px;
   border-radius: 12px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .q-row {
   display: flex;

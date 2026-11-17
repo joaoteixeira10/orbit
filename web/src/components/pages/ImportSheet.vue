@@ -6,6 +6,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import type { ImportResult } from '@/lib/importRun'
 import { usePagesStore } from '@/stores/pages'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // Importing pages: Markdown files, a Notion export, Apple Notes. One picker
 // takes them all (zips too); the sheet says how to get each out of its app,
@@ -55,21 +56,21 @@ async function picked(e: Event) {
     <div class="space-y-4" data-testid="import-sheet">
       <p class="text-[14px] leading-relaxed text-text-2">{{ t('importer.intro') }}</p>
       <div class="group">
-        <div class="group-row !items-start">
+        <div class="group-row items-start!">
           <span class="tile mt-0.5 h-7 w-7" style="--tile: #8e8e93"><FileText class="h-4 w-4" /></span>
           <div class="min-w-0 flex-1 py-0.5">
             <div class="text-[14px] font-medium">{{ t('importer.md') }}</div>
             <div class="text-[12.5px] leading-snug text-text-3">{{ t('importer.mdHow') }}</div>
           </div>
         </div>
-        <div class="group-row !items-start">
+        <div class="group-row items-start!">
           <span class="tile mt-0.5 h-7 w-7" style="--tile: #1d1d1f"><NotebookPen class="h-4 w-4" /></span>
           <div class="min-w-0 flex-1 py-0.5">
             <div class="text-[14px] font-medium">{{ t('importer.notion') }}</div>
             <div class="text-[12.5px] leading-snug text-text-3">{{ t('importer.notionHow') }}</div>
           </div>
         </div>
-        <div class="group-row !items-start">
+        <div class="group-row items-start!">
           <span class="tile mt-0.5 h-7 w-7" style="--tile: #ffcc00"><StickyNote class="h-4 w-4" /></span>
           <div class="min-w-0 flex-1 py-0.5">
             <div class="text-[14px] font-medium">{{ t('importer.apple') }}</div>
@@ -78,11 +79,11 @@ async function picked(e: Event) {
         </div>
       </div>
 
-      <div v-if="busy" class="flex items-center gap-2 rounded-xl bg-fill-2 px-4 py-3 text-[13.5px]" aria-live="polite">
+      <div v-if="busy" class="flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-[13.5px]" aria-live="polite">
         <LoaderCircle class="h-4 w-4 animate-spin" />
         {{ total ? t('importer.progress', { done, total }) : t('importer.reading') }}
       </div>
-      <div v-else-if="result" class="rounded-xl bg-fill-2 px-4 py-3 text-[13.5px]" aria-live="polite" data-testid="import-result">
+      <div v-else-if="result" class="rounded-lg border border-border px-4 py-3 text-[13.5px]" aria-live="polite" data-testid="import-result">
         {{ t('importer.result', { pages: t('importer.pagesN', { n: result.pages }, result.pages), files: t('importer.filesN', { n: result.files }, result.files) }) }}
         <p v-if="result.failed.length" class="mt-1 text-crit-text">{{ t('importer.failed', { list: result.failed.slice(0, 5).join(', ') }, result.failed.length) }}</p>
       </div>
@@ -97,8 +98,8 @@ async function picked(e: Event) {
       />
     </div>
     <template #footer>
-      <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ result ? t('common.close') : t('common.cancel') }}</button>
-      <button type="button" class="btn-primary" :disabled="busy" @click="input?.click()"><Upload class="h-4 w-4" />{{ t('importer.choose') }}</button>
+      <Button variant="secondary" type="button" :disabled="busy" @click="emit('close')">{{ result ? t('common.close') : t('common.cancel') }}</Button>
+      <Button type="button" :disabled="busy" @click="input?.click()"><Upload class="h-4 w-4" />{{ t('importer.choose') }}</Button>
     </template>
   </Overlay>
 </template>

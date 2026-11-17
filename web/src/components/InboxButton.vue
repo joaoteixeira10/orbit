@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { shake, pop } from '@/lib/motion'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Bell, AlarmClock, UserCheck, Users, Sparkles, Sun, CheckCheck, BellOff, Clock } from 'lucide-vue-next'
@@ -14,6 +15,7 @@ import { renderNotification } from '@/lib/inbox'
 import { ago } from '@/components/notes/noteModel'
 import { locale } from '@/lib/dates'
 import type { InboxItem } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // The bell: how many notifications are unread, and a panel with the latest
 // (new ones first). A click opens what it's about and marks it read.
@@ -34,7 +36,8 @@ const now = ref(Date.now())
 function toggle() {
   open.value = !open.value
   now.value = Date.now()
-  if (open.value && !inbox.loaded) void inbox.load().catch(() => {})
+  // Opened: the latest (not only what the live connection brought).
+  if (open.value) void inbox.load().catch(() => {})
 }
 const fresh = computed(() => inbox.items.filter((n) => !n.read))
 const earlier = computed(() => inbox.items.filter((n) => n.read))
@@ -46,6 +49,19 @@ function go(n: InboxItem) {
   if (n.link) void router.push(n.link)
 }
 const badge = computed(() => (inbox.unread > 99 ? '99+' : String(inbox.unread)))
+// Something new comes in: the bell shakes and the count pops (not for what
+// was already waiting when the app opened).
+const bellEl = ref<HTMLElement | null>(null)
+const badgeEl = ref<HTMLElement | null>(null)
+const since = Date.now()
+watch(
+  () => inbox.unread,
+  (n, was) => {
+    if (n <= was || Date.now() - since < 4000) return
+    shake(bellEl.value)
+    void nextTick(() => pop(badgeEl.value, 1.4))
+  },
+)
 
 // Snooze: "remind me again" in an hour, tomorrow…
 const toast = useToastStore()
@@ -65,22 +81,22 @@ async function snooze(at: string) {
 </script>
 
 <template>
-  <button
+  <Button variant="ghost" size="icon"
     ref="anchor"
-    class="icon-btn relative h-7 w-7 shrink-0"
+    class="text-text-2 relative h-7 w-7 shrink-0"
     :title="t('inbox.open')"
     :aria-label="inbox.unread ? `${t('inbox.open')} — ${t('inbox.unread', { n: inbox.unread })}` : t('inbox.open')"
     :aria-expanded="open"
     @click="toggle"
   >
-    <Bell class="h-[17px] w-[17px]" />
-    <span v-if="inbox.unread" class="badge">{{ badge }}</span>
-  </button>
+    <span ref="bellEl" class="bell grid place-items-center"><Bell class="h-[17px] w-[17px]" /></span>
+    <span v-if="inbox.unread" ref="badgeEl" class="badge">{{ badge }}</span>
+  </Button>
 
   <Popover v-if="open" :anchor="anchor" :placement="placement" :width="380" @close="open = false">
     <div class="flex items-center gap-2 border-b border-line-soft px-4 py-3">
       <h2 class="flex-1 text-[15px] font-semibold">{{ t('inbox.title') }}</h2>
-      <button v-if="inbox.unread" class="btn-plain !text-[13px]" @click="inbox.markAll()"><CheckCheck class="h-4 w-4" />{{ t('inbox.markAll') }}</button>
+      <Button variant="link" v-if="inbox.unread" class="text-[13px]!" @click="inbox.markAll()"><CheckCheck class="h-4 w-4" />{{ t('inbox.markAll') }}</Button>
     </div>
     <div class="max-h-[min(70vh,560px)] overflow-y-auto overscroll-contain py-1">
       <div v-if="!inbox.items.length" class="px-6 py-10 text-center">
@@ -102,14 +118,14 @@ async function snooze(at: string) {
               </span>
             </span>
             <span v-if="!n.read" class="dot" />
-            <button class="snooze icon-btn h-7 w-7" :title="t('snooze.action')" :aria-label="t('snooze.action')" @click.stop="snoozing = { id: n.id, el: $event.currentTarget as HTMLElement }">
+            <Button variant="ghost" size="icon" class="text-text-2 snooze h-7 w-7" :title="t('snooze.action')" :aria-label="t('snooze.action')" @click.stop="snoozing = { id: n.id, el: $event.currentTarget as HTMLElement }">
               <Clock class="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </template>
       </template>
       <div v-if="inbox.more" class="px-4 py-2 text-center">
-        <button class="btn-plain !text-[13px]" @click="inbox.loadMore()">{{ t('inbox.more') }}</button>
+        <Button variant="link" class="text-[13px]!" @click="inbox.loadMore()">{{ t('inbox.more') }}</Button>
       </div>
     </div>
   </Popover>
@@ -119,6 +135,10 @@ async function snooze(at: string) {
 </template>
 
 <style scoped>
+/* The bell swings from its top. */
+.bell {
+  transform-origin: 50% 10%;
+}
 .badge {
   position: absolute;
   top: -3px;

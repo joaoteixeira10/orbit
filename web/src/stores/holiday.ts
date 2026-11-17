@@ -1,21 +1,38 @@
 import { defineStore } from 'pinia'
 import { useBrandingStore } from '@/stores/branding'
-import { cssVars, resolveHoliday, type Holiday, type Mode } from '@/lib/holidayThemes'
+import { cssVars, resolveHoliday, type Holiday, type Look, type Mode } from '@/lib/holidayThemes'
+import { resolveSeason, type Season } from '@/lib/seasonThemes'
 
 // The custom properties apply() set last, removed before the next.
 let applied: string[] = []
 
-// Holiday themes: which one shows — the owner's setting: off, auto (the one
-// whose season today is in) or one of them now — and its colours and art as
-// --h-* on <html>, in light or dark. The sidebar and Home read them
-// (styles/holiday.css); nothing else changes. `now` ticks every minute (the
-// shell), so a season starts and ends, and New Year's hours count down.
+// Holiday and season themes: which one shows — the owner's settings (or this
+// person's own, when the owner lets each choose): off, auto (the one whose
+// days today is in) or one of them now — and its colours
+// as --h-* on <html>, in light or dark (styles/holiday.css: the sidebar, the
+// main column and every window). A holiday in its days wins over the season;
+// only a holiday has its mark, countdown and capture line; both hang
+// things on Home and dress a card's corner. `now`
+// ticks every minute (the shell), so a theme starts and ends, and New Year's
+// hours count down.
 export const useHolidayStore = defineStore('holiday', {
   state: () => ({ now: new Date() }),
   getters: {
     active(): Holiday | null {
       const b = useBrandingStore()
-      return b.holidayTheme === 'off' ? null : resolveHoliday(b.holidayTheme, this.now)
+      const set = b.effectiveHolidayTheme
+      return set === 'off' ? null : resolveHoliday(set, this.now)
+    },
+    // The season, while no holiday shows.
+    season(): Season | null {
+      if (this.active) return null
+      const b = useBrandingStore()
+      const set = b.effectiveSeasonTheme
+      return set === 'off' ? null : resolveSeason(set, this.now)
+    },
+    // What colours the app now: the holiday, else the season.
+    look(): Look | null {
+      return this.active ?? this.season
     },
     mode(): Mode {
       return useBrandingStore().dark ? 'dark' : 'light'
@@ -29,7 +46,7 @@ export const useHolidayStore = defineStore('holiday', {
       const root = document.documentElement
       for (const k of applied) root.style.removeProperty(k)
       applied = []
-      const h = this.active
+      const h = this.look
       root.classList.toggle('holiday', !!h)
       if (!h) {
         delete root.dataset.holiday

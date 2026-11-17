@@ -52,7 +52,7 @@ const dueToday = computed(() => !overdue.value && !props.task.done && props.task
 <template>
   <div class="task-row group/task" :class="{ done: task.done, compact, 'has-chips': !!members && !compact }" @click="emit('open')">
     <button
-      class="check mt-[1px]"
+      class="check mt-px"
       :class="{ on: task.done }"
       :style="{ '--check': color }"
       role="checkbox"

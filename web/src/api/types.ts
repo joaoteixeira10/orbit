@@ -97,6 +97,9 @@ export interface Branding {
   developer_theme?: 'blue' | 'gold' | 'red' | 'ink' | 'green'
   developer_themes_personal?: boolean // each person may pick their own
   holiday_theme?: string // off | auto | christmas | halloween | nye | easter | santos | lunar
+  season_theme?: string // off | auto | spring | summer | autumn | winter (a holiday in its days wins)
+  holiday_themes_personal?: boolean // each person may pick their own holiday theme
+  season_themes_personal?: boolean // each person may pick their own season theme
   asset_source_logo?: 'theme' | 'keep'
   asset_source_wordmark?: 'theme' | 'keep'
   asset_source_favicon?: 'theme' | 'keep'

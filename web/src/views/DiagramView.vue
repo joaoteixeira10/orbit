@@ -19,6 +19,7 @@ import { onLiveEvent } from '@/lib/live'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // One diagram, as big as the window: its name, a menu (its link; download
 // as .drawio — or Mermaid's .mmd —, an .svg or .png; delete), the editor
@@ -228,10 +229,10 @@ const here = usePresence('diagram', id, editable)
 <template>
   <div class="diagram-view" :class="{ embedded }">
     <header class="mb-3 flex items-center gap-2">
-      <RouterLink v-if="!embedded" :to="{ name: 'ws-diagrams', params: { ws } }" class="btn-plain -ml-2 shrink-0"><ChevronLeft class="h-4 w-4" />{{ t('modules.diagrams') }}</RouterLink>
+      <Button as-child variant="link"><RouterLink v-if="!embedded" :to="{ name: 'ws-diagrams', params: { ws } }" class="-ml-2 shrink-0"><ChevronLeft class="h-4 w-4" />{{ t('modules.diagrams') }}</RouterLink></Button>
       <input
         v-model="title"
-        class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[20px] font-bold outline-none hover:bg-fill-2 focus:bg-fill-2"
+        class="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-[20px] font-semibold outline-hidden hover:border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         :placeholder="t('diagrams.untitled')"
         :readonly="!editable"
         maxlength="300"
@@ -245,8 +246,8 @@ const here = usePresence('diagram', id, editable)
         {{ status }}
       </span>
       <PresenceAvatars :people="here.others.value" class="shrink-0" />
-      <button ref="menuEl" type="button" class="icon-btn shrink-0" :aria-label="t('diagrams.more')" data-testid="diagram-menu" @click="menu = !menu"><MoreHorizontal class="h-[18px] w-[18px]" /></button>
-      <button v-if="embedded" type="button" class="btn-primary shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</button>
+      <Button variant="ghost" size="icon" ref="menuEl" type="button" class="text-text-2 shrink-0" :aria-label="t('diagrams.more')" data-testid="diagram-menu" @click="menu = !menu"><MoreHorizontal class="h-[18px] w-[18px]" /></Button>
+      <Button v-if="embedded" type="button" class="shrink-0" data-testid="embed-done" @click="done">{{ t('common.done') }}</Button>
     </header>
     <p v-if="missing" class="py-24 text-center text-[14px] text-text-3">{{ t('diagrams.notFound') }}</p>
     <div v-else ref="fill" class="diagram-frame">
@@ -302,7 +303,7 @@ const here = usePresence('diagram', id, editable)
   justify-content: center;
   overflow: auto;
   padding: 24px;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
 }

@@ -217,12 +217,12 @@ defineExpose({ focus })
             <span class="min-w-0 flex-1 truncate">{{ t('notes.lang.auto') }} <span class="text-text-3">· {{ langLabel(guessed) }}</span></span>
             <Check v-if="!draft.lang" class="h-4 w-4 text-accent-text" />
           </button>
-          <div class="my-1 border-t-[0.5px] border-border" />
+          <div class="my-1 border-t border-border" />
           <button v-for="l in ['text', 'markdown']" :key="l" type="button" role="menuitemradio" :aria-checked="draft.lang === l" class="lang-opt" @click="setLang(l)">
             <span class="min-w-0 flex-1 truncate">{{ langLabel(l) }}</span>
             <Check v-if="draft.lang === l" class="h-4 w-4 text-accent-text" />
           </button>
-          <div class="my-1 border-t-[0.5px] border-border" />
+          <div class="my-1 border-t border-border" />
           <button v-for="l in CODE_LANGS" :key="l.id" type="button" role="menuitemradio" :aria-checked="draft.lang === l.id" class="lang-opt" @click="setLang(l.id)">
             <span class="min-w-0 flex-1 truncate">{{ l.label }}</span>
             <Check v-if="draft.lang === l.id" class="h-4 w-4 text-accent-text" />
@@ -421,7 +421,7 @@ textarea::placeholder,
   gap: 6px;
   margin: 8px 0 2px;
   padding: 6px 4px 4px;
-  border-top: 0.5px solid var(--note-line);
+  border-top: 1px solid var(--note-line);
   font-size: 12.5px;
   font-weight: 500;
   color: var(--text-2);

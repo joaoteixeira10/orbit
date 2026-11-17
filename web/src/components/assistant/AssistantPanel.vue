@@ -12,6 +12,7 @@ import { downloadUpload, fileSize } from '@/lib/uploads'
 import { fmtTook, fmtWhen, relTime } from '@/lib/format'
 import { tidy } from '@/lib/assistantText'
 import type { AssistantFile, AssistantStep } from '@/api/assistant'
+import { Button } from '@/components/shadcn/button'
 
 // The assistant's chat window, floating at the bottom right — or large in the
 // middle of the screen (expand); the whole screen on a phone. Closed, a round
@@ -202,18 +203,18 @@ onUnmounted(() => clearInterval(tick))
   >
     <div v-if="dropping" class="ai-drop"><Paperclip class="h-6 w-6" />{{ t('assistant.attachDrop') }}</div>
     <header class="ai-head">
-      <button v-if="view === 'history'" class="icon-btn h-8 w-8" :title="t('assistant.back')" :aria-label="t('assistant.back')" @click="view = 'chat'"><ArrowLeft class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" v-if="view === 'history'" class="text-text-2 h-8 w-8" :title="t('assistant.back')" :aria-label="t('assistant.back')" @click="view = 'chat'"><ArrowLeft class="h-4 w-4" /></Button>
       <Sparkles v-else class="h-[18px] w-[18px] text-accent" />
       <div class="min-w-0 flex-1">
         <div class="truncate text-[14px] font-semibold">{{ view === 'history' ? t('assistant.history') : t('assistant.title') }}</div>
         <div v-if="store.status?.model" class="truncate text-[11px] text-text-3" data-testid="assistant-model-name">{{ store.status.model }}<template v-if="store.status.own"> · {{ t('assistant.yours') }}</template></div>
       </div>
-      <button v-if="view === 'chat'" class="icon-btn h-8 w-8" :title="t('assistant.history')" :aria-label="t('assistant.history')" data-testid="assistant-history" @click="showHistory"><History class="h-4 w-4" /></button>
-      <button class="icon-btn h-8 w-8" :title="t('assistant.newChat')" :aria-label="t('assistant.newChat')" data-testid="assistant-new" @click="fresh"><Plus class="h-4 w-4" /></button>
-      <button class="icon-btn ai-grow h-8 w-8" :title="store.big ? t('assistant.shrink') : t('assistant.grow')" :aria-label="store.big ? t('assistant.shrink') : t('assistant.grow')" data-testid="assistant-grow" @click="store.setBig(!store.big)">
+      <Button variant="ghost" size="icon" v-if="view === 'chat'" class="text-text-2 h-8 w-8" :title="t('assistant.history')" :aria-label="t('assistant.history')" data-testid="assistant-history" @click="showHistory"><History class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" class="text-text-2 h-8 w-8" :title="t('assistant.newChat')" :aria-label="t('assistant.newChat')" data-testid="assistant-new" @click="fresh"><Plus class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" class="text-text-2 ai-grow h-8 w-8" :title="store.big ? t('assistant.shrink') : t('assistant.grow')" :aria-label="store.big ? t('assistant.shrink') : t('assistant.grow')" data-testid="assistant-grow" @click="store.setBig(!store.big)">
         <Minimize2 v-if="store.big" class="h-4 w-4" /><Maximize2 v-else class="h-4 w-4" />
-      </button>
-      <button class="icon-btn h-8 w-8" :title="t('assistant.close')" :aria-label="t('assistant.close')" @click="store.open = false"><X class="h-4 w-4" /></button>
+      </Button>
+      <Button variant="ghost" size="icon" class="text-text-2 h-8 w-8" :title="t('assistant.close')" :aria-label="t('assistant.close')" @click="store.open = false"><X class="h-4 w-4" /></Button>
     </header>
 
     <!-- Past conversations -->
@@ -224,7 +225,7 @@ onUnmounted(() => clearInterval(tick))
           <span class="block truncate text-[13.5px] font-medium">{{ c.title }}</span>
           <span class="block text-[11.5px] text-text-3">{{ relTime(c.updated_at) }}</span>
         </button>
-        <button class="icon-btn h-7 w-7 opacity-0 group-hover/c:opacity-100 focus:opacity-100" :title="t('assistant.deleteChat')" :aria-label="t('assistant.deleteChat')" @click="store.removeChat(c.id)"><Trash2 class="h-3.5 w-3.5" /></button>
+        <Button variant="ghost" size="icon" class="text-text-2 h-7 w-7 opacity-0 group-hover/c:opacity-100 focus:opacity-100 pointer-coarse:opacity-100" :title="t('assistant.deleteChat')" :aria-label="t('assistant.deleteChat')" @click="store.removeChat(c.id)"><Trash2 class="h-3.5 w-3.5" /></Button>
       </div>
       <div v-if="store.chats.length" class="p-3 text-center">
         <button class="text-[12.5px] text-crit-text hover:underline" data-testid="assistant-delete-all" @click="confirmAll = true">{{ t('assistant.deleteAll') }}</button>
@@ -342,10 +343,11 @@ onUnmounted(() => clearInterval(tick))
   height: min(600px, calc(100dvh - 40px));
   flex-direction: column;
   overflow: hidden;
-  border-radius: 18px;
-  background: var(--surface);
+  /* shadcn-vue's dialog surface: rounded, a fine ring. */
+  border-radius: 12px;
+  background: var(--sheet-bg);
   box-shadow:
-    0 0 0 0.5px var(--border),
+    0 0 0 1px var(--sheet-ring),
     0 16px 48px rgba(0, 0, 0, 0.18),
     0 4px 12px rgba(0, 0, 0, 0.08);
   transform-origin: bottom right;
@@ -454,7 +456,7 @@ onUnmounted(() => clearInterval(tick))
   align-items: center;
   gap: 8px;
   padding: 10px 10px 10px 16px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .ai-body {
   flex: 1;
@@ -466,10 +468,12 @@ onUnmounted(() => clearInterval(tick))
   margin: 24px 8px;
   text-align: center;
 }
+/* A suggestion: shadcn's outline button. */
 .ai-suggest {
-  padding: 9px 12px;
-  border-radius: 12px;
-  background: var(--fill-2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
   font-size: 13px;
   text-align: left;
   transition: background var(--speed);
@@ -487,7 +491,7 @@ onUnmounted(() => clearInterval(tick))
   max-width: 80%;
   width: fit-content;
   padding: 8px 12px;
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 10px 10px 4px 10px;
   background: var(--accent);
   color: var(--accent-fg);
   font-size: 14px;
@@ -511,8 +515,8 @@ onUnmounted(() => clearInterval(tick))
   width: fit-content;
   max-width: 100%;
   padding: 8px 12px;
-  border-radius: 18px 18px 18px 4px;
-  background: var(--fill-2);
+  border-radius: 10px 10px 10px 4px;
+  background: var(--fill);
   word-break: break-word;
 }
 .ai-steps {
@@ -582,9 +586,9 @@ onUnmounted(() => clearInterval(tick))
   gap: 8px;
   margin-top: 6px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--crit-bg);
-  box-shadow: inset 0 0 0 0.5px var(--crit-border);
+  border: 1px solid var(--crit-border);
   font-size: 13px;
   line-height: 1.4;
   color: var(--crit-text);
@@ -594,29 +598,30 @@ onUnmounted(() => clearInterval(tick))
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 .ai-chat:hover,
 .ai-chat.on {
-  background: var(--fill-2);
+  background: var(--fill);
 }
 .ai-foot {
-  padding: 8px 10px 10px;
-  border-top: 0.5px solid var(--border);
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
 }
 .ai-box {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 6px 6px 6px 6px;
-  border-radius: 18px;
-  background: var(--fill-2);
-  box-shadow: inset 0 0 0 0.5px var(--border);
-  transition: box-shadow var(--speed);
+  padding: 6px;
+  /* The composer: shadcn's input, the ring the box's, not the text's. */
+  border-radius: 12px;
+  border: 1px solid var(--border-2);
+  background: transparent;
+  transition: box-shadow var(--speed), border-color var(--speed);
 }
-/* The ring is the box's, not the text's. */
 .ai-box:focus-within {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 .ai-box textarea:focus,
 .ai-box textarea:focus-visible {
@@ -643,7 +648,7 @@ onUnmounted(() => clearInterval(tick))
   width: 28px;
   height: 28px;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 8px;
   color: var(--text-2);
 }
 .ai-clip:hover {
@@ -671,10 +676,10 @@ onUnmounted(() => clearInterval(tick))
   max-width: 100%;
   align-items: center;
   gap: 5px;
-  padding: 4px 6px 4px 8px;
-  border-radius: 10px;
-  background: var(--fill-2);
-  box-shadow: inset 0 0 0 0.5px var(--border);
+  padding: 3px 6px 3px 8px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
   font-size: 12px;
   color: var(--text);
 }
@@ -720,33 +725,39 @@ button.ai-file:hover {
   width: 28px;
   height: 28px;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--accent);
   color: var(--accent-fg);
 }
 .ai-send:disabled {
   opacity: 0.35;
 }
+/* Ask / Agent: shadcn's tabs, small. */
 .ai-mode {
   display: flex;
   gap: 2px;
-  padding: 2px;
+  padding: 3px;
   border-radius: 8px;
-  background: var(--fill-2);
+  background: var(--fill);
 }
 .ai-mode button {
   padding: 1px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  border: 1px solid transparent;
+  font-size: 11.5px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--text-2);
   transition:
     background var(--speed),
     color var(--speed);
 }
 .ai-mode button.on {
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+html.dark .ai-mode button.on {
+  border-color: var(--border-strong);
+  background: var(--fill-strong);
 }
 </style>

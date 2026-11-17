@@ -11,6 +11,7 @@ import { orderedItems } from './noteModel'
 import type { Note, NoteColor } from '@/api/planner'
 import { evaluate } from '@/lib/mathnotes'
 import { guessNoteLang, isCodeLang, noteTokens, tokensHtml } from '@/lib/noteSyntax'
+import { Button } from '@/components/shadcn/button'
 
 // One sticky note on the wall: its tint, title, text (clamped with a fade)
 // or checklist (tick right here; open items first, then the checked ones).
@@ -97,16 +98,16 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     @click="emit('open')"
     @keydown.enter.self="emit('open')"
   >
-    <button
+    <Button variant="ghost" size="icon-sm"
       v-if="editable"
-      class="pin tb"
+      class="pin tb rounded-full text-text-2"
       :class="{ on: note.pinned }"
       :aria-label="note.pinned ? t('notes.unpin') : t('notes.pin')"
       :title="note.pinned ? t('notes.unpin') : t('notes.pin')"
       @click.stop="emit('pin')"
     >
       <Pin class="h-4 w-4" :fill="note.pinned ? 'currentColor' : 'none'" />
-    </button>
+    </Button>
 
     <img v-if="cover" :src="cover" alt="" class="n-cover" />
     <img v-if="note.drawing?.preview" :src="previewSrc(note.drawing.preview)" alt="" class="n-drawing" data-testid="card-drawing" draggable="false" />
@@ -142,16 +143,16 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
     <p v-if="note.remind_at" class="n-files"><BellRing class="h-3 w-3" />{{ fmtDate(new Date(note.remind_at), { weekday: 'short', day: 'numeric', month: 'short' }) }}, {{ fmtTime(new Date(note.remind_at)) }}</p>
 
     <footer v-if="editable" class="bar" @click.stop>
-      <button ref="colorBtn" class="tb" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">
+      <Button variant="ghost" size="icon-sm" ref="colorBtn" class="tb rounded-full text-text-2" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">
         <Palette class="h-4 w-4" />
-      </button>
-      <button class="tb" :aria-label="note.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="note.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="emit('convert')">
+      </Button>
+      <Button variant="ghost" size="icon-sm" class="tb rounded-full text-text-2" :aria-label="note.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="note.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="emit('convert')">
         <Type v-if="note.checklist" class="h-4 w-4" />
         <SquareCheck v-else class="h-4 w-4" />
-      </button>
-      <button ref="moreBtn" class="tb" :class="{ on: menu === 'more' }" :aria-label="t('notes.options')" :title="t('notes.options')" @click="menu = menu === 'more' ? '' : 'more'">
+      </Button>
+      <Button variant="ghost" size="icon-sm" ref="moreBtn" class="tb rounded-full text-text-2" :class="{ on: menu === 'more' }" :aria-label="t('notes.options')" :title="t('notes.options')" @click="menu = menu === 'more' ? '' : 'more'">
         <MoreHorizontal class="h-4 w-4" />
-      </button>
+      </Button>
     </footer>
 
     <Popover v-if="menu === 'color'" :anchor="colorBtn" placement="bottom-start" @close="menu = ''">
@@ -194,7 +195,7 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   max-height: 180px;
   margin: -14px -16px 4px;
   object-fit: cover;
-  border-radius: 14px 14px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 .n-files {
   display: inline-flex;
@@ -210,22 +211,22 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--note-bg);
-  box-shadow: 0 0 0 0.5px var(--border), var(--shadow-sm);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-sm);
   cursor: default;
   user-select: none;
   transition: box-shadow 0.2s var(--ease), transform 0.2s var(--spring);
 }
 .note-card:not([data-note='']) {
-  box-shadow: 0 0 0 0.5px var(--note-line), var(--shadow-sm);
+  box-shadow: 0 0 0 1px var(--note-line), var(--shadow-sm);
 }
 .note-card:hover {
-  box-shadow: 0 0 0 0.5px var(--border-2), var(--shadow);
+  box-shadow: 0 0 0 1px var(--border-2), var(--shadow);
 }
 .note-card:focus-visible {
   box-shadow: 0 0 0 3px var(--ring);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 .n-title {
   font: 600 15px/1.35 var(--font-display);
@@ -299,20 +300,6 @@ function act(e: 'page' | 'tasks' | 'copy' | 'move' | 'remove') {
 }
 
 /* Toolbar: fades in on hover (and stays while a popover is open). */
-.tb {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  color: var(--text-2);
-  transition: background 0.15s var(--ease), color 0.15s, opacity 0.18s var(--ease);
-}
-.tb:hover,
-.tb.on {
-  background: var(--fill);
-  color: var(--text);
-}
 .pin {
   position: absolute;
   top: 8px;

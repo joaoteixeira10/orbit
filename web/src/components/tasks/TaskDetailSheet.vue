@@ -2,14 +2,22 @@
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, ChevronRight, Clock, Hourglass, Repeat, Flag, Tag, ListTree, Plus, Check, ChevronDown, X, UserRound, Columns3, List, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical, Maximize2, Minimize2 } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarDays, Clock, Hourglass, Repeat, Flag, Hash, Plus, Check, ChevronDown, X, UserRound, ListTodo, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical, Maximize2, Minimize2, Trash2 } from 'lucide-vue-next'
 import { estimateText } from '@/lib/weekPlan'
 import { durationOf, useFocusStore } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'
 import Overlay from '@/components/ui/Overlay.vue'
 import { useSortable } from '@/lib/sortable'
-import Popover from '@/components/ui/Popover.vue'
-import Toggle from '@/components/ui/Toggle.vue'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { Checkbox } from '@/components/shadcn/checkbox'
+import { Badge } from '@/components/shadcn/badge'
+import { Separator } from '@/components/shadcn/separator'
+import { Switch } from '@/components/shadcn/switch'
+import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shadcn/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/shadcn/dropdown-menu'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
@@ -22,6 +30,7 @@ import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { toggleTask } from '@/lib/markdown'
 import CodeArea from '@/components/editor/CodeArea.vue'
 import { todayStr, dateStr, addDays, parseDate, fmtDate, isOverdue, REPEAT_RULES, repeatLabel, repeatPreset, type RepeatPreset } from '@/lib/dates'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Everything about one task: its title and notes, how its date stands (with
 // Today / Tomorrow / Next week), then Schedule (dates, time, repeat),
@@ -357,8 +366,6 @@ const dueState = computed(() => {
   return { tone: 'soon', text: t('tasks.dueIn', { n: days }, days) }
 })
 const datePop = ref<'start' | 'due' | ''>('')
-const startPill = ref<HTMLElement | null>(null)
-const duePill = ref<HTMLElement | null>(null)
 function setDay(which: 'start' | 'due', v: string) {
   if (which === 'due') void save(v ? { due: v } : { due: '', repeat: '' })
   else void save({ start: v })
@@ -369,32 +376,26 @@ function setDay(which: 'start' | 'due', v: string) {
 function colDot(c: Column, i: number): string {
   return c.color || (c.done ? 'var(--ok)' : i === 0 ? 'var(--text-3)' : 'var(--warn)')
 }
-const statusPop = ref(false)
-const statusBtn = ref<HTMLElement | null>(null)
 const column = computed(() => {
   const cols = list.value?.columns ?? []
   const i = cols.findIndex((c) => c.id === task.value?.column_id)
   return i < 0 ? null : { c: cols[i], i }
 })
 function setStatus(id: string) {
-  statusPop.value = false
   if (id !== task.value?.column_id) void save({ column_id: id })
 }
 
 // Estimate: any length, in hours and minutes (a week at most).
 const estPop = ref(false)
-const estBtn = ref<HTMLElement | null>(null)
 const estH = ref<number | ''>('')
 const estM = ref<number | ''>('')
-const estHEl = ref<HTMLInputElement | null>(null)
-async function openEstimate() {
+// Opened: the current estimate in its boxes (the popover focuses the hours).
+watch(estPop, (o) => {
+  if (!o) return
   const e = task.value?.estimate ?? 0
   estH.value = e ? Math.floor(e / 60) : ''
   estM.value = e ? e % 60 : ''
-  estPop.value = true
-  await nextTick()
-  estHEl.value?.select()
-}
+})
 function setEstimate(clear = false) {
   const min = clear ? 0 : Math.round(Number(estH.value || 0) * 60 + Number(estM.value || 0))
   if (min < 0 || min > 10080) return toast.error(t('tasks.estRange'))
@@ -402,20 +403,9 @@ function setEstimate(clear = false) {
   if (min !== (task.value?.estimate ?? 0)) void save({ estimate: min })
 }
 
-// People and tags.
-const assignPop = ref(false)
-const assignBtn = ref<HTMLElement | null>(null)
-const tagging = ref(false)
-const tagEl = ref<HTMLInputElement | null>(null)
-async function openTag() {
-  tagging.value = true
-  await nextTick()
-  tagEl.value?.focus()
-}
-function tagBlur() {
-  addTag()
-  tagging.value = false
-}
+// Repeat and goal in shadcn's Select (which takes no empty value).
+const repeatSel = computed(() => repeat.value || 'never')
+const goalSel = computed(() => task.value?.goal_id || 'none')
 
 // Start focus: a session on it at once (the length picked last), shown on
 // the focus timer.
@@ -440,298 +430,340 @@ async function startFocus() {
 </script>
 
 <template>
+  <!-- shadcn's design (an icon in its colour on each row, shadcn's
+       controls in bordered boxes), with everything the sheet does. -->
   <Overlay :open="open && !!task" :size="sideComments ? 'xxl' : 'lg'" bare @close="emit('close')">
     <div v-if="task" class="tsheet" :class="{ split: sideComments }" data-testid="task-sheet">
-      <!-- The task: its header and fields scroll together -->
       <div class="t-scroll">
-      <header class="t-head">
-        <div class="flex items-center gap-2">
-          <span v-if="list" class="crumb"><span class="crumb-dot" :style="{ background: list.color || 'var(--ws)' }" />{{ list.name }}</span>
-          <button type="button" class="icon-btn head-x ml-auto h-7 w-7" :aria-label="t('common.close')" :title="t('common.close')" @click="emit('close')"><X class="h-4 w-4" /></button>
-        </div>
-        <div class="mt-1.5 flex items-start gap-3">
-          <button
-            class="check mt-1 !h-6 !w-6"
-            :class="{ on: task.done }"
-            :style="{ '--check': list?.color || 'var(--ws)' }"
-            :disabled="!editable"
-            :aria-label="task.done ? t('tasks.reopen') : t('tasks.complete')"
-            @click="save({ completed: !task.done })"
-          >
-            <Check class="h-3.5 w-3.5" :stroke-width="3.4" />
-          </button>
-          <div class="min-w-0 flex-1">
-            <textarea
-              id="task-title"
-              v-model="title"
-              rows="1"
-              class="title-area w-full resize-none bg-transparent text-[22px] font-bold leading-snug outline-none"
-              :class="{ 'text-text-3 line-through': task.done }"
-              :readonly="!editable"
-              maxlength="500"
-              @blur="saveTitle"
-              @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
+        <header class="t-head">
+          <div class="flex items-start gap-3">
+            <Checkbox
+              :model-value="task.done"
+              class="mt-1.5 size-5 rounded-full"
+              :disabled="!editable"
+              :aria-label="task.done ? t('tasks.reopen') : t('tasks.complete')"
+              @update:model-value="(v) => save({ completed: v === true })"
             />
+            <div class="min-w-0 flex-1">
+              <textarea
+                id="task-title"
+                v-model="title"
+                rows="1"
+                class="title-area w-full resize-none bg-transparent text-[20px] font-semibold leading-snug outline-hidden"
+                :class="{ 'text-text-3 line-through': task.done }"
+                :readonly="!editable"
+                maxlength="500"
+                @blur="saveTitle"
+                @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
+              />
+              <p class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-text-2">
+                <span v-if="list" class="size-2 shrink-0 rounded-full" :style="{ background: list.color || 'var(--ws)' }" />
+                <span class="truncate">{{ list?.name }}<template v-if="workspace"> · {{ workspace.name }}</template></span>
+              </p>
+            </div>
+            <Button variant="ghost" size="icon-sm" class="head-x -mr-1" :aria-label="t('common.close')" :title="t('common.close')" @click="emit('close')"><X /></Button>
+          </div>
+        </header>
+
+        <div class="grid gap-4 px-5 pb-5">
+          <!-- Notes: Markdown, read rendered; a click writes in them. -->
+          <div>
             <div v-if="notes.trim() && !editingNotes" ref="notesBox" class="notes-box" :class="{ editable, all: notesAll, fade: notesMore && !notesAtEnd }" data-testid="task-notes-view" @click="notesClick" @scroll="measureNotes">
               <MarkdownView class="notes-md" :content="notes" :editable="editable" math breaks @toggle="tickInNotes" @edit="editNotes" />
             </div>
-            <!-- The editor's size and look from here (it takes no class of its own). -->
             <div v-else-if="editable || notes.trim()" ref="notesBox" class="math-wrap notes-area" :class="{ all: notesAll, fade: notesMore && !notesAtEnd }" data-testid="task-notes-box" @scroll="measureNotes" @keydown.esc="notesEsc" @mousedown="notesBoxDown" @focusin="editingNotes = editable">
-              <CodeArea
-                id="task-notes"
-                ref="notesEl"
-                v-model="notes"
-                class="w-full"
-                sums
-                :placeholder="t('tasks.addNotes')"
-                :readonly="!editable"
-                :label="t('tasks.notesMd')"
-                testid="task-notes"
-                @blur="saveNotes"
-              />
+              <CodeArea id="task-notes" ref="notesEl" v-model="notes" class="w-full" sums :placeholder="t('tasks.addNotes')" :readonly="!editable" :label="t('tasks.notesMd')" testid="task-notes" @blur="saveNotes" />
             </div>
-            <button v-if="notesMore || notesAll" type="button" class="notes-more" data-testid="task-notes-more" @mousedown.prevent @click="notesAll = !notesAll">
-              <component :is="notesAll ? Minimize2 : Maximize2" class="h-3.5 w-3.5" />{{ notesAll ? t('tasks.notesLess') : t('tasks.notesAll') }}
-            </button>
+            <Button v-if="notesMore || notesAll" variant="link" size="sm" class="mt-1 h-auto gap-1.5 px-1 text-text-2" data-testid="task-notes-more" @mousedown.prevent @click="notesAll = !notesAll">
+              <Minimize2 v-if="notesAll" /><Maximize2 v-else />{{ notesAll ? t('tasks.notesLess') : t('tasks.notesAll') }}
+            </Button>
           </div>
-        </div>
-        <p v-if="gitReadOnly" class="mt-2 rounded-xl bg-fill-2 px-3 py-2 text-[12.5px] text-warn-text" data-testid="git-read-only">{{ t('git.bot.readOnlyTask', { host: gitHost }) }}</p>
-        <div v-if="dueState" class="due-bar" :class="dueState.tone" data-testid="task-due-bar">
-          <Calendar class="h-4 w-4 shrink-0" />
-          <span class="due-text">{{ dueState.text }}</span>
-          <span v-if="editable" class="flex flex-none gap-1.5">
-            <button v-for="q in quick" :key="q.v" type="button" class="due-chip" :class="{ on: task.due === q.v }" @click="save({ due: q.v })">{{ q.label }}</button>
-          </span>
-        </div>
-      </header>
 
-      <div class="t-body">
-        <!-- Schedule -->
-        <h3 class="sec">{{ t('tasks.schedule') }}</h3>
-        <div class="group">
-          <div class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #ff3b30"><Calendar class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.dates') }}</span>
-            <div class="flex flex-wrap items-center justify-end gap-1.5">
-              <button ref="startPill" type="button" class="day-pill" :class="{ ghost: !task.start }" :disabled="!editable" :title="t('tasks.startHint')" data-testid="task-start" @click="datePop = 'start'">{{ task.start ? dayText(task.start) : t('tasks.startsOn') }}</button>
-              <ArrowRight class="h-3.5 w-3.5 text-text-3" aria-hidden="true" />
-              <button ref="duePill" type="button" class="day-pill" :class="{ ghost: !task.due, late }" :disabled="!editable" data-testid="task-due" @click="datePop = 'due'">{{ task.due ? dayText(task.due) : t('tasks.addDate') }}</button>
-            </div>
-          </div>
-          <div v-if="task.due" class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #007aff"><Clock class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.time') }}</span>
-            <template v-if="task.due_time">
-              <input type="time" class="day-pill" :value="task.due_time" :disabled="!editable" :aria-label="t('tasks.time')" @change="save({ due_time: ($event.target as HTMLInputElement).value })" />
-              <button v-if="editable" type="button" class="icon-btn h-6 w-6" :aria-label="t('tasks.noTime')" :title="t('tasks.noTime')" @click="setTime(false)"><X class="h-3.5 w-3.5" /></button>
-            </template>
-            <button v-else-if="editable" type="button" class="text-[14px] text-accent-text hover:underline" @click="setTime(true)">{{ t('tasks.addTime') }}</button>
-          </div>
-          <div class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #8e8e93"><Repeat class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.repeat') }}</span>
-            <label class="plain-select">
-              <select :value="repeat" :disabled="!editable" :aria-label="t('tasks.repeat')" @change="setRepeat(($event.target as HTMLSelectElement).value)">
-                <option value="">{{ t('repeat.never') }}</option>
-                <option value="daily">{{ t('repeat.daily') }}</option>
-                <option value="weekdays">{{ t('repeat.weekdays') }}</option>
-                <option value="weekly">{{ t('repeat.weekly') }}</option>
-                <option value="biweekly">{{ t('repeat.biweekly') }}</option>
-                <option value="monthly">{{ t('repeat.monthly') }}</option>
-                <option value="yearly">{{ t('repeat.yearly') }}</option>
-                <option v-if="repeat === 'custom'" value="custom">{{ repeatLabel(task?.repeat ?? '') }}</option>
-              </select>
-              <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
-            </label>
-          </div>
-        </div>
+          <p v-if="gitReadOnly" class="rounded-lg border border-border px-3 py-2 text-[12.5px] text-warn-text" data-testid="git-read-only">{{ t('git.bot.readOnlyTask', { host: gitHost }) }}</p>
 
-        <!-- Planning -->
-        <h3 class="sec">{{ t('tasks.planning') }}</h3>
-        <div class="group">
-          <div v-if="list" class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #30b0c7"><Columns3 class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.status') }}</span>
-            <button ref="statusBtn" type="button" class="pick" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.status')" aria-haspopup="menu" data-testid="task-status" @click="statusPop = !statusPop">
-              <span v-if="column" class="dot" :style="{ background: colDot(column.c, column.i) }" />{{ column?.c.name ?? '–' }}
-              <ChevronDown v-if="editable && !task.parent_id" class="h-3.5 w-3.5 text-text-3" aria-hidden="true" />
-            </button>
-          </div>
-          <div class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #ff9500"><Flag class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.priority') }}</span>
-            <div class="seg">
-              <button v-for="p in [0, 1, 2, 3]" :key="p" :class="{ on: task.priority === p }" :disabled="!editable" :aria-label="t(`tasks.prio.${p}`)" :title="t(`tasks.prio.${p}`)" @click="save({ priority: p })">
-                {{ p === 0 ? '–' : '!'.repeat(p) }}
-              </button>
-            </div>
-          </div>
-          <div class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #30b0c7"><Hourglass class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.estimate') }}</span>
-            <button ref="estBtn" type="button" class="pick" :class="{ empty: !task.estimate }" :disabled="!editable" :aria-label="t('tasks.estimate')" aria-haspopup="dialog" data-testid="task-estimate" @click="estPop ? (estPop = false) : openEstimate()">
-              {{ task.estimate ? estimateText(task.estimate) : t('tasks.noEstimate') }}
-              <ChevronDown v-if="editable" class="h-3.5 w-3.5 text-text-3" aria-hidden="true" />
-            </button>
-          </div>
-          <div v-if="schoolWs && !task.parent_id" class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #ff3b30"><GraduationCap class="h-4 w-4" /></span>
-            <span class="min-w-0 flex-1">
-              <span class="block text-[14px]">{{ t('school.exam') }}</span>
-              <span class="block text-[12px] text-text-3">{{ t('school.examHint') }}</span>
+          <!-- How its date stands -->
+          <div v-if="dueState" class="due-bar" :class="dueState.tone" data-testid="task-due-bar">
+            <Calendar class="size-4 shrink-0" />
+            <span class="due-text">{{ dueState.text }}</span>
+            <span v-if="editable" class="flex flex-none gap-1.5">
+              <Button v-for="q in quick" :key="q.v" size="xs" :variant="task.due === q.v ? 'default' : 'outline'" @click="save({ due: q.v })">{{ q.label }}</Button>
             </span>
-            <Toggle :model-value="task.kind === 'exam'" :disabled="!editable" :aria-label="t('school.exam')" @update:model-value="(v) => save({ kind: v ? 'exam' : 'task' })" />
           </div>
-          <div class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #5856d6"><List class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.list') }}</span>
-            <label class="plain-select">
-              <select :value="task.list_id" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.list')" @change="save({ list_id: ($event.target as HTMLSelectElement).value })">
-                <option v-if="list?.archived_at" :value="list.id">{{ list.name }} · {{ t('lists.archivedTag') }}</option>
-                <option v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</option>
-              </select>
-              <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
-            </label>
-          </div>
-          <div v-if="goalsWs && !task.parent_id && (goalList.length || task.goal_id)" class="group-row" data-testid="task-goal">
-            <span class="tile h-7 w-7" style="--tile: #ff2d55"><Target class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('goals.field') }}</span>
-            <label class="plain-select">
-              <select :value="task.goal_id || ''" :disabled="!editable" :aria-label="t('goals.field')" @change="save({ goal_id: ($event.target as HTMLSelectElement).value })">
-                <option value="">{{ t('goals.noGoal') }}</option>
-                <option v-for="g in goalList" :key="g.id" :value="g.id">{{ g.icon ? `${g.icon} ` : '' }}{{ g.title }}</option>
-              </select>
-              <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
-            </label>
-          </div>
-          <div v-if="!task.parent_id && (waits.length || (editable && waitChoices.length))" class="group-row !items-start" data-testid="task-waits">
-            <span class="tile mt-0.5 h-7 w-7" style="--tile: #8e8e93"><Link2 class="h-4 w-4" /></span>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <span class="flex-1 text-[14px]">{{ t('tasks.waitsOn') }}</span>
-                <label v-if="editable && waitChoices.length" class="plain-select">
-                  <select value="" :aria-label="t('tasks.waitsAdd')" data-testid="waits-add" @change="addWait(($event.target as HTMLSelectElement).value)">
-                    <option value="" disabled>{{ t('tasks.waitsAddShort') }}</option>
-                    <option v-for="x in waitChoices" :key="x.id" :value="x.id">{{ x.done ? '✓ ' : '' }}{{ x.title }}</option>
-                  </select>
-                  <ChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
-                </label>
+
+          <!-- When -->
+          <div class="box">
+            <div class="row">
+              <CalendarDays class="ico text-crit" />
+              <span class="flex-1">{{ t('tasks.dates') }}</span>
+              <Popover :open="datePop === 'start'" @update:open="(o) => (datePop = o ? 'start' : '')">
+                <PopoverTrigger as-child>
+                  <Button variant="outline" size="sm" :class="{ 'text-text-3': !task.start }" :disabled="!editable" :title="t('tasks.startHint')" data-testid="task-start">{{ task.start ? dayText(task.start) : t('tasks.startsOn') }}</Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" class="w-60" data-testid="task-date-pop">
+                  <p class="text-[12px] font-medium text-text-3">{{ t('tasks.start') }}</p>
+                  <Input type="date" :model-value="task.start ?? ''" :max="task.due ?? undefined" :aria-label="t('tasks.start')" @change="setDay('start', ($event.target as HTMLInputElement).value)" />
+                  <p class="text-[12px] leading-snug text-text-3">{{ t('tasks.startHint') }}</p>
+                  <Button v-if="task.start" variant="ghost" size="sm" class="w-full text-destructive" @click="setDay('start', '')">{{ t('tasks.removeDate') }}</Button>
+                </PopoverContent>
+              </Popover>
+              <ArrowRight class="size-3.5 text-text-3" aria-hidden="true" />
+              <Popover :open="datePop === 'due'" @update:open="(o) => (datePop = o ? 'due' : '')">
+                <PopoverTrigger as-child>
+                  <Button variant="outline" size="sm" :class="{ 'text-text-3': !task.due, 'border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive': late }" :disabled="!editable" data-testid="task-due">{{ task.due ? dayText(task.due) : t('tasks.addDate') }}</Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" class="w-60" data-testid="task-date-pop">
+                  <p class="text-[12px] font-medium text-text-3">{{ t('tasks.date') }}</p>
+                  <Input type="date" :model-value="task.due ?? ''" :aria-label="t('tasks.date')" @change="setDay('due', ($event.target as HTMLInputElement).value)" />
+                  <Button v-if="task.due" variant="ghost" size="sm" class="w-full text-destructive" @click="setDay('due', '')">{{ t('tasks.removeDate') }}</Button>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <template v-if="task.due">
+              <Separator />
+              <div class="row">
+                <Clock class="ico text-accent" />
+                <span class="flex-1">{{ t('tasks.time') }}</span>
+                <template v-if="task.due_time">
+                  <Input type="time" class="h-7 w-32" :model-value="task.due_time" :disabled="!editable" :aria-label="t('tasks.time')" @change="save({ due_time: ($event.target as HTMLInputElement).value })" />
+                  <Button v-if="editable" variant="ghost" size="icon-sm" :aria-label="t('tasks.noTime')" :title="t('tasks.noTime')" @click="setTime(false)"><X /></Button>
+                </template>
+                <Button v-else-if="editable" variant="link" size="sm" class="px-0" @click="setTime(true)">{{ t('tasks.addTime') }}</Button>
               </div>
-              <div v-if="waits.length" class="mt-1.5 flex flex-wrap gap-1.5">
-                <span v-for="w in waits" :key="w.id" class="pill" :class="{ 'line-through opacity-60': w.done }">
-                  {{ w.title }}
-                  <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" :aria-label="t('tasks.waitsRemove', { title: w.title })" @click="removeWait(w.id)"><X class="h-3 w-3" /></button>
+            </template>
+            <Separator />
+            <div class="row">
+              <Repeat class="ico text-text-3" />
+              <span class="flex-1">{{ t('tasks.repeat') }}</span>
+              <Select :model-value="repeatSel" :disabled="!editable" @update:model-value="(v) => setRepeat(v === 'never' ? '' : String(v))">
+                <SelectTrigger size="sm" class="w-40" :aria-label="t('tasks.repeat')"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="never">{{ t('repeat.never') }}</SelectItem>
+                  <SelectItem v-for="r in ['daily', 'weekdays', 'weekly', 'biweekly', 'monthly', 'yearly']" :key="r" :value="r">{{ t(`repeat.${r}`) }}</SelectItem>
+                  <SelectItem v-if="repeat === 'custom'" value="custom">{{ repeatLabel(task.repeat ?? '') }}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <!-- Details -->
+          <div class="box">
+            <div class="row">
+              <ListTodo class="ico text-accent" />
+              <span class="flex-1">{{ t('tasks.list') }}</span>
+              <Select :model-value="task.list_id" :disabled="!editable || !!task.parent_id" @update:model-value="(v) => save({ list_id: String(v) })">
+                <SelectTrigger size="sm" class="w-40" :aria-label="t('tasks.list')"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-if="list?.archived_at" :value="list.id">{{ list.name }} · {{ t('lists.archivedTag') }}</SelectItem>
+                  <SelectItem v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <template v-if="list">
+              <Separator />
+              <div class="row">
+                <span class="ico grid place-items-center"><span class="size-2.5 rounded-full" :style="{ background: column ? colDot(column.c, column.i) : 'var(--text-3)' }" /></span>
+                <span class="flex-1">{{ t('tasks.status') }}</span>
+                <DropdownMenu :modal="false">
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="outline" size="sm" class="w-40 justify-between font-normal" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.status')" data-testid="task-status">{{ column?.c.name ?? '–' }}<ChevronDown class="text-text-3" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-52" data-testid="task-status-menu">
+                    <DropdownMenuRadioGroup :model-value="task.column_id" @update:model-value="(v) => setStatus(String(v))">
+                      <DropdownMenuRadioItem v-for="(c, i) in list.columns" :key="c.id" :value="c.id">
+                        <span class="size-2 rounded-full" :style="{ background: colDot(c, i) }" />{{ c.name }}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </template>
+            <Separator />
+            <div class="row">
+              <Flag class="ico text-warn" />
+              <span class="flex-1">{{ t('tasks.priority') }}</span>
+              <Tabs :model-value="String(task.priority)" @update:model-value="(v) => editable && save({ priority: Number(v) })">
+                <TabsList>
+                  <TabsTrigger v-for="p in [0, 1, 2, 3]" :key="p" :value="String(p)" :disabled="!editable" :aria-label="t(`tasks.prio.${p}`)" :title="t(`tasks.prio.${p}`)">{{ p === 0 ? '–' : '!'.repeat(p) }}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <Separator />
+            <div class="row">
+              <Hourglass class="ico text-accent" />
+              <span class="flex-1">{{ t('tasks.estimate') }}</span>
+              <Popover v-model:open="estPop">
+                <PopoverTrigger as-child>
+                  <Button variant="outline" size="sm" :class="{ 'text-text-3': !task.estimate }" :disabled="!editable" :aria-label="t('tasks.estimate')" data-testid="task-estimate">{{ task.estimate ? estimateText(task.estimate) : t('tasks.noEstimate') }}</Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" class="w-64" data-testid="task-estimate-pop">
+                  <form class="grid gap-2.5" @submit.prevent="setEstimate()">
+                    <p class="text-[12px] font-medium text-text-3">{{ t('tasks.estimateHint') }}</p>
+                    <div class="flex items-center gap-2">
+                      <Input v-model.number="estH" type="number" min="0" max="168" step="1" inputmode="numeric" class="w-16 text-center" placeholder="0" :aria-label="t('tasks.estHours')" />
+                      <span class="text-[13px] text-text-2">h</span>
+                      <Input v-model.number="estM" type="number" min="0" max="59" step="5" inputmode="numeric" class="w-16 text-center" placeholder="0" :aria-label="t('tasks.estMinutes')" />
+                      <span class="text-[13px] text-text-2">min</span>
+                    </div>
+                    <div class="flex gap-2">
+                      <Button v-if="task.estimate" type="button" variant="ghost" size="sm" class="flex-1 text-destructive" @click="setEstimate(true)">{{ t('tasks.estClear') }}</Button>
+                      <Button type="submit" size="sm" class="flex-1">{{ t('tasks.estSet') }}</Button>
+                    </div>
+                  </form>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <template v-if="schoolWs && !task.parent_id">
+              <Separator />
+              <div class="row">
+                <GraduationCap class="ico text-crit" />
+                <span class="min-w-0 flex-1">
+                  <span class="block">{{ t('school.exam') }}</span>
+                  <span class="block text-[12px] text-text-3">{{ t('school.examHint') }}</span>
                 </span>
+                <Switch :model-value="task.kind === 'exam'" :disabled="!editable" :aria-label="t('school.exam')" @update:model-value="(v) => save({ kind: v ? 'exam' : 'task' })" />
               </div>
-              <p v-if="waits.length" class="mt-1 text-[12px] text-text-3">{{ t('tasks.waitsHint') }}</p>
+            </template>
+            <template v-if="goalsWs && !task.parent_id && (goalList.length || task.goal_id)">
+              <Separator />
+              <div class="row" data-testid="task-goal">
+                <Target class="ico text-[#ff2d55]" />
+                <span class="flex-1">{{ t('goals.field') }}</span>
+                <Select :model-value="goalSel" :disabled="!editable" @update:model-value="(v) => save({ goal_id: v === 'none' ? '' : String(v) })">
+                  <SelectTrigger size="sm" class="w-40" :aria-label="t('goals.field')"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{{ t('goals.noGoal') }}</SelectItem>
+                    <SelectItem v-for="g in goalList" :key="g.id" :value="g.id">{{ g.icon ? `${g.icon} ` : '' }}{{ g.title }}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </template>
+            <template v-if="!task.parent_id && (waits.length || (editable && waitChoices.length))">
+              <Separator />
+              <div class="row items-start!" data-testid="task-waits">
+                <Link2 class="ico mt-1.5 text-text-3" />
+                <div class="min-w-0 flex-1">
+                  <div class="flex min-h-8 items-center gap-2">
+                    <span class="flex-1">{{ t('tasks.waitsOn') }}</span>
+                    <DropdownMenu v-if="editable && waitChoices.length" :modal="false">
+                      <DropdownMenuTrigger as-child><Button variant="outline" size="sm" data-testid="waits-add">{{ t('tasks.waitsAddShort') }}<ChevronDown class="text-text-3" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" class="max-h-72 w-64">
+                        <DropdownMenuLabel>{{ t('tasks.waitsAdd') }}</DropdownMenuLabel>
+                        <DropdownMenuItem v-for="x in waitChoices" :key="x.id" @select="addWait(x.id)"><Check v-if="x.done" class="text-ok" />{{ x.title }}</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div v-if="waits.length" class="mt-1.5 flex flex-wrap gap-1.5">
+                    <Badge v-for="w in waits" :key="w.id" variant="secondary" class="gap-1" :class="{ 'line-through opacity-60': w.done }">
+                      {{ w.title }}
+                      <button v-if="editable" type="button" class="opacity-60 hover:opacity-100" :aria-label="t('tasks.waitsRemove', { title: w.title })" @click="removeWait(w.id)"><X class="size-3" /></button>
+                    </Badge>
+                  </div>
+                  <p v-if="waits.length" class="mt-1 text-[12px] text-text-3">{{ t('tasks.waitsHint') }}</p>
+                </div>
+              </div>
+            </template>
+            <Separator />
+            <div class="row" data-testid="assignees">
+              <UserRound class="ico text-ok" />
+              <span class="flex-1">{{ t('tasks.assignee') }}</span>
+              <div class="flex flex-wrap items-center justify-end gap-1.5">
+                <Badge v-for="m in assigned" :key="m.user_id" variant="secondary" class="person h-6 gap-1.5 pl-0.5">
+                  <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="20" />{{ (m.display_name || m.username).split(' ')[0] }}
+                  <button v-if="editable" type="button" class="opacity-60 hover:opacity-100" :aria-label="t('tasks.removeAssignee', { name: m.display_name || m.username })" @click="setAssignees(task.assignee_ids.filter((x) => x !== m.user_id))"><X class="size-3" /></button>
+                </Badge>
+                <span v-if="!assigned.length && !editable" class="text-[13px] text-text-3">{{ t('tasks.nobody') }}</span>
+                <DropdownMenu v-if="editable && unassigned.length" :modal="false">
+                  <DropdownMenuTrigger as-child><Button variant="outline" size="icon-xs" class="rounded-full" :aria-label="t('tasks.addAssignee')" :title="t('tasks.addAssignee')" data-testid="assign-add"><Plus /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="max-h-72 w-60">
+                    <DropdownMenuItem v-for="m in unassigned" :key="m.user_id" @select="setAssignees([...task.assignee_ids, m.user_id])">
+                      <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="20" />{{ m.display_name || m.username }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button v-if="members.length <= 1 && workspace?.role === 'owner'" variant="link" size="sm" class="px-0" @click="invitePeople">{{ t('tasks.invitePeople') }}</Button>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <!-- People & tags -->
-        <h3 class="sec">{{ t('tasks.peopleTags') }}</h3>
-        <div class="group">
-          <div class="group-row" data-testid="assignees">
-            <span class="tile h-7 w-7" style="--tile: #34c759"><UserRound class="h-4 w-4" /></span>
-            <span class="flex-1 text-[14px]">{{ t('tasks.assignee') }}</span>
-            <div class="flex flex-wrap items-center justify-end gap-1.5">
-              <span v-for="m in assigned" :key="m.user_id" class="person">
-                <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="20" />{{ (m.display_name || m.username).split(' ')[0] }}
-                <button v-if="editable" type="button" class="person-x" :aria-label="t('tasks.removeAssignee', { name: m.display_name || m.username })" @click="setAssignees(task.assignee_ids.filter((x) => x !== m.user_id))"><X class="h-3 w-3" /></button>
-              </span>
-              <span v-if="!assigned.length && !editable" class="text-[13px] text-text-3">{{ t('tasks.nobody') }}</span>
-              <button v-if="editable && unassigned.length" ref="assignBtn" type="button" class="add-person" :aria-label="t('tasks.addAssignee')" :title="t('tasks.addAssignee')" data-testid="assign-add" @click="assignPop = !assignPop"><Plus class="h-3.5 w-3.5" /></button>
-              <!-- Alone in the workspace: others are invited from its Members. -->
-              <button v-if="members.length <= 1 && workspace?.role === 'owner'" type="button" class="text-[13px] text-accent-text hover:underline" @click="invitePeople">{{ t('tasks.invitePeople') }}</button>
-            </div>
-          </div>
-          <div class="group-row">
-            <span class="tile h-7 w-7" style="--tile: #8e8e93"><Tag class="h-4 w-4" /></span>
-            <span class="text-[14px]">{{ t('tasks.tags') }}</span>
-            <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
-              <span v-for="tag in task.tags" :key="tag" class="pill !bg-accent-bg !text-accent-text">
+            <Separator />
+            <div class="row flex-wrap">
+              <Hash class="ico text-text-3" />
+              <span class="mr-auto">{{ t('tasks.tags') }}</span>
+              <Badge v-for="tag in task.tags" :key="tag" variant="secondary" class="gap-1">
                 #{{ tag }}
-                <button v-if="editable" class="-mr-1 opacity-60 hover:opacity-100" :aria-label="t('tasks.removeTag', { tag })" @click="removeTag(tag)"><X class="h-3 w-3" /></button>
-              </span>
-              <input v-if="editable && tagging" ref="tagEl" v-model="tagDraft" class="w-[110px] bg-transparent py-0.5 text-right text-[14px] outline-none" :placeholder="t('tasks.addTag')" :aria-label="t('tasks.addTag')" @keydown.enter="addTag" @keydown.esc.stop="tagging = false" @blur="tagBlur" />
-              <button v-else-if="editable" type="button" class="text-[14px] text-text-3 hover:text-text-2" data-testid="tag-add" @click="openTag">{{ t('tasks.addTagShort') }}</button>
+                <button v-if="editable" type="button" class="opacity-60 hover:opacity-100" :aria-label="t('tasks.removeTag', { tag })" @click="removeTag(tag)"><X class="size-3" /></button>
+              </Badge>
+              <Input v-if="editable" v-model="tagDraft" :placeholder="t('tasks.addTag')" :aria-label="t('tasks.addTag')" class="h-7 w-28" data-testid="tag-add" @keydown.enter.prevent="addTag" @blur="addTag" />
+            </div>
+          </div>
+
+          <!-- Its issue -->
+          <div v-if="gitOn && !task.parent_id && (task.git_number || list?.git || editable)">
+            <p class="mb-2 flex items-center gap-1.5 text-[14px] font-medium text-text-2"><GitBranch class="size-3.5" />{{ t('git.task.title') }}</p>
+            <div class="box">
+              <div v-if="task.git_number" class="row">
+                <div class="min-w-0 flex-1 text-[13.5px]">
+                  <span class="text-text-2">{{ task.git_repo }}</span>
+                  <GitBadge :task="task" class="ml-1.5" />
+                  <span class="ml-1.5 text-[12.5px] text-text-3">{{ t(`git.task.state.${task.git_state || 'open'}`) }}</span>
+                </div>
+                <Button v-if="editable" variant="link" size="sm" class="shrink-0 text-destructive" @click="unlinkGit">{{ t('git.task.unlink') }}</Button>
+              </div>
+              <template v-if="task.git_number && list?.git">
+                <Separator />
+                <label class="row">
+                  <Milestone class="ico text-text-3" />
+                  <span class="flex-1">{{ t('git.task.milestone') }}</span>
+                  <NativeSelect size="sm" :model-value="task.git_milestone_id || 0" class="w-auto max-w-[60%]" :disabled="!editable" data-testid="milestone" @change="setMilestone(Number(($event.target as HTMLSelectElement).value))">
+                    <option :value="0">{{ t('git.task.noMilestone') }}</option>
+                    <option v-if="task.git_milestone_id && !milestones.some((m) => m.ref === task!.git_milestone_id)" :value="task.git_milestone_id">{{ task.git_milestone }}</option>
+                    <option v-for="m in milestones" :key="m.ref" :value="m.ref">{{ m.title }}</option>
+                  </NativeSelect>
+                </label>
+              </template>
+              <form v-else-if="editable && !list?.git" class="row" @submit.prevent="linkGit">
+                <Input v-model="gitDraft" type="url" class="h-8 flex-1" :placeholder="t('git.task.placeholder')" :aria-label="t('git.task.placeholder')" />
+                <Button type="submit" variant="outline" size="sm" class="shrink-0" :disabled="!gitDraft.trim() || linking">{{ t('git.task.link') }}</Button>
+              </form>
+              <div v-if="task.git_dirty" class="row text-[12.5px] text-warn-text"><TriangleAlert class="size-3.5 shrink-0" />{{ t('git.task.pending') }}</div>
+            </div>
+            <p class="mt-1.5 px-1 text-[12px] leading-snug text-text-3">
+              {{ list?.git ? t('git.task.inList', { repo: `${list.git.owner}/${list.git.repo}` }) : t('git.task.hint') }}
+            </p>
+          </div>
+
+          <!-- Sub-tasks -->
+          <div v-if="!task.parent_id">
+            <p class="mb-2 text-[14px] font-medium text-text-2">{{ t('tasks.subtasks') }}</p>
+            <div class="box">
+              <div v-if="subtasks.length" ref="subsEl" class="subs">
+                <div v-for="s in subtasks" :key="s.id" :data-id="s.id" class="group/sub" data-testid="task-sub">
+                  <div class="row">
+                    <GripVertical v-if="editable && subtasks.length > 1" data-testid="task-sub-grip" class="sub-grip size-4 shrink-0 cursor-grab text-text-3" :aria-label="t('tasks.dragSub')" />
+                    <Checkbox :model-value="s.done" class="rounded-full" :disabled="!editable" :aria-label="s.title" @update:model-value="(v) => toggleSub(s.id, v === true)" />
+                    <input
+                      v-if="editable"
+                      :value="s.title"
+                      class="min-w-0 flex-1 bg-transparent outline-hidden"
+                      :class="{ 'text-text-3 line-through': s.done }"
+                      :aria-label="t('tasks.renameSub')"
+                      maxlength="500"
+                      data-testid="task-sub-title"
+                      @keydown.enter="($event.target as HTMLInputElement).blur()"
+                      @keydown.esc="(($event.target as HTMLInputElement).value = s.title), ($event.target as HTMLInputElement).blur()"
+                      @blur="renameSub(s.id, s.title, $event.target as HTMLInputElement)"
+                    />
+                    <span v-else class="flex-1" :class="{ 'text-text-3 line-through': s.done }">{{ s.title }}</span>
+                    <Button v-if="editable" variant="ghost" size="icon-xs" class="opacity-0 group-hover/sub:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100" :aria-label="t('common.delete')" @click="removeSub(s.id)"><X /></Button>
+                  </div>
+                </div>
+              </div>
+              <div v-if="editable" class="row">
+                <Plus class="ico text-text-3" />
+                <input v-model="subDraft" class="flex-1 bg-transparent outline-hidden" :placeholder="t('tasks.addSubtask')" @keydown.enter="addSub" />
+              </div>
+              <p v-if="!subtasks.length && !editable" class="row text-text-3">–</p>
             </div>
           </div>
         </div>
-
-        <!-- Its issue -->
-        <template v-if="gitOn && !task.parent_id && (task.git_number || list?.git || editable)">
-          <h3 class="sec flex items-center gap-1.5"><GitBranch class="h-3.5 w-3.5" />{{ t('git.task.title') }}</h3>
-          <div class="group">
-            <div v-if="task.git_number" class="group-row">
-              <div class="min-w-0 flex-1 text-[13.5px]">
-                <span class="text-text-2">{{ task.git_repo }}</span>
-                <GitBadge :task="task" class="ml-1.5" />
-                <span class="ml-1.5 text-[12.5px] text-text-3">{{ t(`git.task.state.${task.git_state || 'open'}`) }}</span>
-              </div>
-              <button v-if="editable" class="btn-plain shrink-0 !text-danger" @click="unlinkGit">{{ t('git.task.unlink') }}</button>
-            </div>
-            <label v-if="task.git_number && list?.git" class="group-row">
-              <Milestone class="h-4 w-4 shrink-0 text-text-3" />
-              <span class="flex-1 text-[14px]">{{ t('git.task.milestone') }}</span>
-              <select
-                :value="task.git_milestone_id || 0"
-                class="input !w-auto max-w-[60%] !py-1 text-[13.5px]"
-                :disabled="!editable"
-                data-testid="milestone"
-                @change="setMilestone(Number(($event.target as HTMLSelectElement).value))"
-              >
-                <option :value="0">{{ t('git.task.noMilestone') }}</option>
-                <option v-if="task.git_milestone_id && !milestones.some((m) => m.ref === task!.git_milestone_id)" :value="task.git_milestone_id">{{ task.git_milestone }}</option>
-                <option v-for="m in milestones" :key="m.ref" :value="m.ref">{{ m.title }}</option>
-              </select>
-            </label>
-            <form v-else-if="editable && !list?.git" class="group-row" @submit.prevent="linkGit">
-              <input v-model="gitDraft" type="url" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('git.task.placeholder')" :aria-label="t('git.task.placeholder')" />
-              <button type="submit" class="btn-plain shrink-0" :disabled="!gitDraft.trim() || linking">{{ t('git.task.link') }}</button>
-            </form>
-            <div v-if="task.git_dirty" class="group-row !min-h-0 !py-2 text-[12.5px] text-warn-text"><TriangleAlert class="h-3.5 w-3.5 shrink-0" />{{ t('git.task.pending') }}</div>
-          </div>
-          <p class="footnote mt-1 px-1 leading-snug">
-            {{ list?.git ? t('git.task.inList', { repo: `${list.git.owner}/${list.git.repo}` }) : t('git.task.hint') }}
-          </p>
-        </template>
-
-        <!-- Sub-tasks -->
-        <template v-if="!task.parent_id">
-          <h3 class="sec flex items-center gap-1.5"><ListTree class="h-3.5 w-3.5" />{{ t('tasks.subtasks') }}</h3>
-          <div class="group">
-            <div v-if="subtasks.length" ref="subsEl" class="subs">
-              <div v-for="s in subtasks" :key="s.id" :data-id="s.id" class="group-row !min-h-[40px]" data-testid="task-sub">
-                <GripVertical v-if="editable && subtasks.length > 1" data-testid="task-sub-grip" class="sub-grip h-4 w-4 shrink-0 cursor-grab text-text-3" :aria-label="t('tasks.dragSub')" />
-                <button class="check !h-[18px] !w-[18px]" :class="{ on: s.done }" :style="{ '--check': list?.color || 'var(--ws)' }" :disabled="!editable" @click="toggleSub(s.id, !s.done)">
-                  <Check class="h-2.5 w-2.5" :stroke-width="3.4" />
-                </button>
-                <input
-                  v-if="editable"
-                  :value="s.title"
-                  class="min-w-0 flex-1 bg-transparent text-[14px] outline-none"
-                  :class="{ 'text-text-3 line-through': s.done }"
-                  :aria-label="t('tasks.renameSub')"
-                  maxlength="500"
-                  data-testid="task-sub-title"
-                  @keydown.enter="($event.target as HTMLInputElement).blur()"
-                  @keydown.esc="(($event.target as HTMLInputElement).value = s.title), ($event.target as HTMLInputElement).blur()"
-                  @blur="renameSub(s.id, s.title, $event.target as HTMLInputElement)"
-                />
-                <span v-else class="flex-1 text-[14px]" :class="{ 'text-text-3 line-through': s.done }">{{ s.title }}</span>
-                <button v-if="editable" class="icon-btn h-6 w-6" @click="removeSub(s.id)"><X class="h-3.5 w-3.5" /></button>
-              </div>
-            </div>
-            <div v-if="editable" class="group-row !min-h-[40px]">
-              <Plus class="h-4 w-4 text-text-3" />
-              <input v-model="subDraft" class="flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('tasks.addSubtask')" @keydown.enter="addSub" />
-            </div>
-            <p v-if="!subtasks.length && !editable" class="group-row text-[13px] text-text-3">–</p>
-          </div>
-        </template>
-      </div>
-
       </div>
 
       <!-- Activity: any member, viewers too; beside the details when wide -->
@@ -749,83 +781,16 @@ async function startFocus() {
       </aside>
 
       <footer v-if="editable || canFocus" class="t-foot">
-        <button v-if="editable" type="button" class="btn-plain !text-danger" @click="remove">{{ t('common.delete') }}</button>
-        <span v-if="focusWs && task.focus_minutes" class="ml-auto flex items-center gap-1.5 text-[12.5px] text-text-3" data-testid="task-focus"><Timer class="h-3.5 w-3.5" />{{ t('focus.spent', { t: durationOf(task.focus_minutes) }) }}</span>
-        <button v-if="canFocus" type="button" class="btn-primary" :class="{ 'ml-auto': !task.focus_minutes }" data-testid="task-start-focus" @click="startFocus"><Timer class="h-4 w-4" />{{ t('focus.startFocus') }}</button>
-        <button v-else type="button" class="btn-primary ml-auto" @click="emit('close')">{{ t('common.done') }}</button>
+        <Button v-if="editable" variant="link" class="px-1 text-destructive" @click="remove"><Trash2 />{{ t('common.delete') }}</Button>
+        <span v-if="focusWs && task.focus_minutes" class="ml-auto flex items-center gap-1.5 text-[12.5px] text-text-3" data-testid="task-focus"><Timer class="size-3.5" />{{ t('focus.spent', { t: durationOf(task.focus_minutes) }) }}</span>
+        <Button v-if="canFocus" :class="{ 'ml-auto': !task.focus_minutes }" data-testid="task-start-focus" @click="startFocus"><Timer />{{ t('focus.startFocus') }}</Button>
+        <Button v-else class="ml-auto" @click="emit('close')">{{ t('common.done') }}</Button>
       </footer>
-
-      <Popover v-if="datePop" :anchor="datePop === 'start' ? startPill : duePill" placement="bottom-end" :width="240" @close="datePop = ''">
-        <div class="space-y-2 p-3" data-testid="task-date-pop">
-          <p class="text-[12px] font-medium text-text-3">{{ datePop === 'start' ? t('tasks.start') : t('tasks.date') }}</p>
-          <input
-            type="date"
-            class="input w-full"
-            :value="(datePop === 'start' ? task.start : task.due) ?? ''"
-            :max="datePop === 'start' ? (task.due ?? undefined) : undefined"
-            :aria-label="datePop === 'start' ? t('tasks.start') : t('tasks.date')"
-            @change="setDay(datePop as 'start' | 'due', ($event.target as HTMLInputElement).value)"
-          />
-          <p v-if="datePop === 'start'" class="text-[12px] leading-snug text-text-3">{{ t('tasks.startHint') }}</p>
-          <button v-if="datePop === 'start' ? task.start : task.due" type="button" class="btn-plain w-full justify-center !text-danger" @click="setDay(datePop as 'start' | 'due', '')">{{ t('tasks.removeDate') }}</button>
-        </div>
-      </Popover>
-      <Popover v-if="statusPop && list" :anchor="statusBtn" placement="bottom-end" :width="220" @close="statusPop = false">
-        <div class="p-1" role="menu" data-testid="task-status-menu">
-          <button
-            v-for="(c, i) in list.columns"
-            :key="c.id"
-            type="button"
-            role="menuitemradio"
-            :aria-checked="task.column_id === c.id"
-            class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13.5px] hover:bg-fill-2"
-            @click="setStatus(c.id)"
-          >
-            <span class="dot" :style="{ background: colDot(c, i) }" />
-            <span class="min-w-0 flex-1 truncate">{{ c.name }}</span>
-            <Check v-if="task.column_id === c.id" class="h-4 w-4 text-accent-text" />
-          </button>
-        </div>
-      </Popover>
-      <Popover v-if="estPop" :anchor="estBtn" placement="bottom-end" :width="250" @close="estPop = false">
-        <form class="space-y-2.5 p-3" data-testid="task-estimate-pop" @submit.prevent="setEstimate()">
-          <p class="text-[12px] font-medium text-text-3">{{ t('tasks.estimateHint') }}</p>
-          <div class="flex items-center gap-2">
-            <input ref="estHEl" v-model.number="estH" type="number" min="0" max="168" step="1" inputmode="numeric" class="input !w-16 !py-1.5 text-center" :aria-label="t('tasks.estHours')" placeholder="0" />
-            <span class="text-[13px] text-text-2">h</span>
-            <input v-model.number="estM" type="number" min="0" max="59" step="5" inputmode="numeric" class="input !w-16 !py-1.5 text-center" :aria-label="t('tasks.estMinutes')" placeholder="0" />
-            <span class="text-[13px] text-text-2">min</span>
-          </div>
-          <div class="flex gap-2">
-            <button v-if="task.estimate" type="button" class="btn-plain flex-1 justify-center !text-danger" @click="setEstimate(true)">{{ t('tasks.estClear') }}</button>
-            <button type="submit" class="btn-primary btn-sm flex-1 justify-center">{{ t('tasks.estSet') }}</button>
-          </div>
-        </form>
-      </Popover>
-      <Popover v-if="assignPop" :anchor="assignBtn" placement="bottom-end" :width="240" @close="assignPop = false">
-        <div class="max-h-[280px] overflow-y-auto p-1" role="menu">
-          <button
-            v-for="m in unassigned"
-            :key="m.user_id"
-            type="button"
-            role="menuitem"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13.5px] hover:bg-fill-2"
-            @click="setAssignees([...task.assignee_ids, m.user_id]); assignPop = unassigned.length > 1"
-          >
-            <Avatar :name="m.display_name || m.username" :src="m.avatar_url" :size="22" />
-            <span class="min-w-0 flex-1 truncate">{{ m.display_name || m.username }}</span>
-          </button>
-        </div>
-      </Popover>
     </div>
   </Overlay>
 </template>
 
 <style scoped>
-/* The sub-tasks sit in their own box (to be dragged), lined like the group's rows. */
-.subs > * + * {
-  border-top: 0.5px solid var(--border);
-}
 /* One column: everything scrolls, Delete / Start focus stay at the bottom.
    Wide (a task with its activity): the details on the left — header, the
    fields scrolling, the buttons — and the activity on the right. */
@@ -835,24 +800,10 @@ async function startFocus() {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
+  background: var(--sheet-bg);
 }
 .t-head {
-  padding: 18px 22px 8px;
-  background: var(--surface);
-}
-/* Dark: one dark grey for the whole sheet (the grouped black was too dark),
-   the cards a step lighter on it. */
-html.dark .tsheet,
-html.dark .t-scroll,
-html.dark .t-head,
-html.dark .t-body,
-html.dark .t-foot,
-html.dark .t-side {
-  background: #1c1c1e;
-}
-.t-body {
-  padding: 2px 18px 22px;
-  background: var(--grouped);
+  padding: 20px 20px 12px;
 }
 .t-foot {
   position: sticky;
@@ -861,27 +812,26 @@ html.dark .t-side {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 18px;
-  border-top: 0.5px solid var(--border);
-  background: var(--surface);
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: inherit;
 }
 .t-side {
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 @media (min-width: 900px) {
   .tsheet.split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 46%);
+    grid-template-columns: minmax(0, 1fr) 380px;
     grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas: 'main side' 'foot side';
-    height: min(86vh, 860px);
+    height: min(88vh, 880px);
     overflow: hidden;
   }
   .split .t-scroll {
     grid-area: main;
     min-height: 0;
     overflow-y: auto;
-    background: var(--grouped);
   }
   .split .t-foot {
     grid-area: foot;
@@ -891,68 +841,63 @@ html.dark .t-side {
     grid-area: side;
     min-height: 0;
     border-top: 0;
-    border-left: 0.5px solid var(--border);
+    border-left: 1px solid var(--border);
   }
   .split .head-x {
     display: none;
   }
 }
-.crumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-size: 12.5px;
-  color: var(--text-2);
-}
-.crumb-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-}
-.sec {
-  margin: 18px 4px 6px;
-  font-size: 13px;
-  color: var(--text-2);
-}
-.t-body > .sec:first-child {
-  margin-top: 10px;
-}
 .title-area {
   field-sizing: content;
 }
-/* Notes: quiet text under the title; while written in, a box of its own.
-   Always the same height (about six lines), empty or long, scrolling
-   inside, so the fields below never move. */
+/* Grouped boxes: bordered, a row per field, an icon in its colour. */
+.box {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+.ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+/* The sub-tasks (to be dragged), lined like the rows. */
+.subs > * {
+  border-bottom: 1px solid var(--border);
+}
+/* Notes: in a box of their own (as shadcn's textarea), always the same height
+   (about six lines), empty or long, scrolling inside, so the fields below
+   never move; "Show all" lets them grow. */
 .notes-area,
 .notes-box {
   --notes-h: 136px;
-}
-.notes-area {
   height: var(--notes-h);
   overflow-y: auto;
-  cursor: text;
-  margin-top: 2px;
-  padding: 2px 0;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
   font-size: 14px;
   line-height: 1.55;
-  color: var(--text-2);
+}
+.notes-area {
+  cursor: text;
+  color: var(--text);
 }
 .notes-area:focus-within {
-  padding: 6px 10px;
-  background: var(--fill-2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--text);
 }
 .notes-area :deep(.cm-content) {
   min-height: 1.6em;
-}
-.notes-box {
-  height: var(--notes-h);
-  overflow-y: auto;
-  margin-top: 2px;
 }
 .notes-box.editable {
   cursor: text;
@@ -962,31 +907,15 @@ html.dark .t-side {
   height: auto;
   min-height: var(--notes-h);
 }
-/* More below: the last lines fade out until scrolled to. */
+/* More below: the last lines fade out until scrolled to (not the border). */
 .notes-area.fade,
 .notes-box.fade {
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
-}
-.notes-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 4px;
-  padding: 2px 6px;
-  margin-left: -6px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--accent-text);
-}
-.notes-more:hover {
-  background: var(--fill-2);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), rgb(0 0 0 / 0.15) calc(100% - 1px), #000 calc(100% - 1px));
 }
 .notes-box .notes-md {
   font-size: 14px;
   line-height: 1.55;
   padding-bottom: 0;
-  color: var(--text-2);
 }
 /* How its date stands. */
 .due-bar {
@@ -994,143 +923,25 @@ html.dark .t-side {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 14px;
-  padding: 8px 8px 8px 12px;
-  border-radius: 10px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   font-size: 13.5px;
-  font-weight: 600;
-  background: var(--fill-2);
+  font-weight: 500;
   color: var(--text-2);
 }
 .due-bar.late {
+  border-color: var(--crit-border);
   background: var(--crit-bg);
   color: var(--crit-text);
 }
 .due-bar.today {
+  border-color: var(--warn-border);
   background: var(--warn-bg);
   color: var(--warn-text);
 }
 /* The words first; on a narrow sheet the buttons go under them. */
 .due-text {
   flex: 1 0 auto;
-}
-.due-chip {
-  flex: none;
-  padding: 4px 10px;
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: 0 0 0 0.5px var(--border);
-}
-.due-chip:hover {
-  background: var(--surface-2);
-}
-.due-chip.on {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.day-pill {
-  padding: 3px 9px;
-  border-radius: 7px;
-  background: var(--fill);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-}
-.day-pill:hover:not(:disabled) {
-  background: var(--fill-strong);
-}
-.day-pill.ghost {
-  color: var(--text-3);
-}
-.day-pill.late {
-  background: var(--crit-bg);
-  color: var(--crit-text);
-  font-weight: 600;
-}
-.plain-select {
-  position: relative;
-  display: inline-flex;
-  max-width: 60%;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-3);
-}
-.plain-select select {
-  min-width: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  padding: 2px 0;
-  background: transparent;
-  color: var(--text-3);
-  font-size: 14px;
-  text-align: right;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  outline: none;
-}
-.plain-select select:focus-visible {
-  border-radius: 6px;
-  box-shadow: 0 0 0 3px var(--ring);
-}
-.pick {
-  display: inline-flex;
-  max-width: 60%;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px 3px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  box-shadow: 0 0 0 0.5px var(--border-2);
-}
-.pick:hover:not(:disabled) {
-  background: var(--fill-2);
-}
-.pick:disabled {
-  padding-right: 10px;
-}
-.pick.empty {
-  color: var(--text-3);
-}
-.dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-.person {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 9px 2px 2px;
-  border-radius: 999px;
-  background: var(--fill);
-  font-size: 13px;
-  font-weight: 500;
-}
-.person-x {
-  margin-right: -3px;
-  opacity: 0.5;
-}
-.person-x:hover {
-  opacity: 1;
-}
-.add-person {
-  display: inline-flex;
-  width: 26px;
-  height: 26px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 1px dashed var(--border-strong);
-  color: var(--text-3);
-}
-.add-person:hover {
-  color: var(--text);
-  border-color: var(--text-3);
 }
 </style>

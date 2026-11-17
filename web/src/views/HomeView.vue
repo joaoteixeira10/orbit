@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vCountUp, celebrate } from '@/lib/motion'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -26,6 +27,7 @@ import HolidayChip from '@/components/holiday/HolidayChip.vue'
 import HolidayCorner from '@/components/holiday/HolidayCorner.vue'
 import HolidayHang from '@/components/holiday/HolidayHang.vue'
 import { useHolidayStore } from '@/stores/holiday'
+import { Button } from '@/components/shadcn/button'
 
 // Home. At / it is Today across every workspace: what's late and due, the
 // week's events, recently edited pages and pinned notes. At /w/:ws it is
@@ -45,8 +47,10 @@ const workspace = computed(() => wss.byId(wsId.value))
 // line on mine. Its colours and what falls are the shell's, on every page.
 const holiday = useHolidayStore()
 const themed = computed(() => !!holiday.active)
+// A holiday or a season: what hangs and the cards' corners.
+const dressed = computed(() => !!holiday.look)
 // Something hangs along the top (the greeting moves down to make room).
-const hung = computed(() => themed.value && !!(holiday.active?.decor || holiday.active?.extraDecor))
+const hung = computed(() => dressed.value && !!(holiday.look?.decor || holiday.look?.extraDecor))
 const data = ref<Home | null>(null)
 const loading = ref(true)
 
@@ -100,6 +104,9 @@ async function toggle(x: Task) {
   if (!w || w.role === 'viewer') return
   justDone.value.add(x.id)
   x.done = !x.done
+  // The last one for today done: a little celebration.
+  const day = data.value ? [...data.value.overdue, ...data.value.today] : []
+  if (x.done && day.includes(x) && day.every((y) => y.done)) celebrate()
   try {
     const r = await tasksApi.update(x.id, { completed: x.done })
     if (r.repeated) toast.success(t('tasks.repeated', { date: relDay(r.task.due!) }))
@@ -130,17 +137,17 @@ const upcomingByDay = computed(() => {
   return [...groups]
 })
 
-// An event's bar: its calendar's colour — in a holiday theme, the theme's
+// An event's bar: its calendar's colour — in a holiday or season theme, the theme's
 // colours in turn (one per calendar colour, as they come), and the festive
 // stripes for public holidays.
 const barColors = computed(() => {
   const m = new Map<string, string>()
-  const bars = holiday.active?.art.bars ?? []
+  const bars = holiday.look?.art.bars ?? []
   for (const e of data.value?.events ?? []) if (e.kind !== 'holiday' && !m.has(e.color)) m.set(e.color, bars[m.size % bars.length])
   return m
 })
 function barOf(e: Occurrence): string {
-  if (!themed.value) return e.color
+  if (!holiday.look) return e.color
   return e.kind === 'holiday' ? 'var(--h-festive)' : barColors.value.get(e.color) || e.color
 }
 
@@ -199,7 +206,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 
 <template>
   <div class="home" :class="{ hung }">
-    <HolidayHang v-if="themed" />
+    <HolidayHang v-if="dressed" />
     <!-- Header -->
     <header v-if="workspace" class="mb-8 flex flex-wrap items-center gap-4">
       <WsIcon :icon="workspace.icon" :color="workspace.color" :size="56" :name="workspace.name" />
@@ -209,14 +216,14 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </div>
       <div class="flex items-center gap-2">
         <button v-if="members.length > 1" class="flex -space-x-2" :title="t('ws.members')" @click="settings('members')">
-          <Avatar v-for="m in members.slice(0, 4)" :key="m.user_id" :name="m.display_name || m.username" :src="m.avatar_url" :size="30" class="ring-2 ring-[var(--bg)]" />
+          <Avatar v-for="m in members.slice(0, 4)" :key="m.user_id" :name="m.display_name || m.username" :src="m.avatar_url" :size="30" class="ring-2 ring-(--bg)" />
         </button>
-        <button v-if="workspace.role === 'owner'" class="btn btn-sm" @click="settings('members')"><UserPlus class="h-4 w-4" />{{ t('ws.invite') }}</button>
-        <button class="icon-btn" :title="t('ws.settings')" @click="settings()"><Settings class="h-[18px] w-[18px]" /></button>
+        <Button variant="secondary" size="sm" v-if="workspace.role === 'owner'" @click="settings('members')"><UserPlus class="h-4 w-4" />{{ t('ws.invite') }}</Button>
+        <Button variant="ghost" size="icon" class="text-text-2" :title="t('ws.settings')" @click="settings()"><Settings class="h-[18px] w-[18px]" /></Button>
       </div>
     </header>
     <header v-else class="mb-6">
-      <p class="eyebrow text-[13px] font-semibold uppercase tracking-wide text-text-3">{{ dateLine }}</p>
+      <p class="eyebrow text-[14px] font-medium text-text-2">{{ dateLine }}</p>
       <div class="mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-2">
         <h1 class="large-title">{{ greeting }}</h1>
         <HolidayChip v-if="themed" />
@@ -229,11 +236,12 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       @create="jot"
     />
 
-    <p v-if="workspace?.archived_at" class="mb-6 rounded-xl bg-fill-2 px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
+    <p v-if="workspace?.archived_at" class="mb-6 rounded-lg border border-border px-4 py-2.5 text-[13px] text-text-2">{{ t('ws.archivedBanner') }}</p>
 
     <!-- Module shortcuts (workspace overview) -->
     <div v-if="workspace && modules.length" class="mods mb-8">
-      <RouterLink v-for="m in modules" :key="m" :to="{ name: moduleRoute[m] ?? 'ws', params: { ws: workspace.id } }" class="mod card">
+      <RouterLink v-for="(m, i) in modules" :key="m" :to="{ name: moduleRoute[m] ?? 'ws', params: { ws: workspace.id } }" class="mod card relative">
+        <HolidayCorner v-if="dressed" :card="2 + i" />
         <span class="tile h-9 w-9 rounded-[10px]" :style="{ '--tile': workspace.color }"><component :is="moduleIcon(m)" class="h-5 w-5" :stroke-width="2.2" /></span>
         <span class="mt-3 block text-[15px] font-semibold">{{ t(`modules.${m}`) }}</span>
         <span class="block text-[12px] leading-snug text-text-3">{{ t(`modules.${m}Desc`) }}</span>
@@ -245,7 +253,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       <Sparkles class="mx-auto h-10 w-10 text-accent" :stroke-width="1.6" />
       <h2 class="title-2 mt-4">{{ t('home.welcome') }}</h2>
       <p class="subhead mx-auto mt-2 max-w-md">{{ t('home.welcomeHint') }}</p>
-      <button v-if="auth.canCreateWorkspaces" class="btn-primary btn-lg mt-6" @click="newWorkspace"><Plus class="h-5 w-5" />{{ t('ws.new') }}</button>
+      <Button size="lg" v-if="auth.canCreateWorkspaces" class="mt-6" @click="newWorkspace"><Plus class="h-5 w-5" />{{ t('ws.new') }}</Button>
       <p v-else class="footnote mt-6">{{ t('home.askInvite') }}</p>
     </div>
 
@@ -253,8 +261,8 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
     <div class="widgets">
       <!-- Today -->
       <section class="widget card relative p-5">
-        <HolidayCorner v-if="themed" :card="0" />
-        <h2 class="widget-title w-today" style="color: var(--accent-text)">{{ t('home.today') }}<span class="count">{{ data.overdue.length + data.today.length || '' }}</span></h2>
+        <HolidayCorner v-if="dressed" :card="0" />
+        <h2 class="widget-title w-today">{{ t('home.today') }}<span v-count-up="data.overdue.length + data.today.length || ''" class="count" /></h2>
         <template v-if="data.overdue.length">
           <h3 class="sub text-crit-text">{{ t('tasks.overdue') }}</h3>
           <TaskRow
@@ -265,7 +273,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
             :workspace-name="wsName(x)"
             compact
             :editable="wss.byId(x.workspace_id)?.role !== 'viewer'"
-            class="border-b-[0.5px] border-[var(--line-soft)]"
+            class="border-b border-(--line-soft)"
             @toggle="toggle(x)"
             @open="open(x)"
           />
@@ -278,7 +286,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
           :workspace-name="wsName(x)"
           compact
           :editable="wss.byId(x.workspace_id)?.role !== 'viewer'"
-          class="border-b-[0.5px] border-[var(--line-soft)]"
+          class="border-b border-(--line-soft)"
           @toggle="toggle(x)"
           @open="open(x)"
         />
@@ -286,8 +294,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
 
       <!-- This week -->
-      <section v-if="upcomingByDay.length" class="widget card p-5">
-        <h2 class="widget-title" style="color: #ff9500">{{ t('home.thisWeek') }}</h2>
+      <section v-if="upcomingByDay.length" class="widget card relative p-5">
+        <HolidayCorner v-if="dressed" :card="2" />
+        <h2 class="widget-title">{{ t('home.thisWeek') }}</h2>
         <div v-for="[day, list] in upcomingByDay" :key="day" class="mb-2">
           <h3 class="sub">{{ relDay(day) }}</h3>
           <TaskRow
@@ -305,8 +314,8 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
       <!-- Up next: events -->
       <section class="widget card relative p-5">
-        <HolidayCorner v-if="themed" :card="1" />
-        <h2 class="widget-title w-next" style="color: #ff3b30">{{ t('home.upNext') }}</h2>
+        <HolidayCorner v-if="dressed" :card="1" />
+        <h2 class="widget-title w-next">{{ t('home.upNext') }}</h2>
         <div v-for="g in eventsByDay" :key="dateStr(g.day)" class="mb-3">
           <h3 class="sub">{{ relDay(dateStr(g.day)) }}</h3>
           <RouterLink
@@ -325,7 +334,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
                 <span v-if="!wsId">{{ wss.byId(e.workspace_id)?.name }}</span>
               </span>
             </span>
-            <span v-if="isNow(e)" class="pill !bg-crit-bg !text-crit-text">{{ t('home.now') }}</span>
+            <span v-if="isNow(e)" class="pill bg-crit-bg! text-crit-text!">{{ t('home.now') }}</span>
           </RouterLink>
         </div>
         <p v-if="!eventsByDay.length" class="empty-line">{{ t('home.noEvents') }}</p>
@@ -333,8 +342,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 
       <!-- Pinned notes -->
       <!-- Exams to count down to -->
-      <section v-if="data.exams?.length" class="widget card p-5" data-testid="exams">
-        <h2 class="widget-title" style="color: #ff3b30">{{ t('school.exams') }}</h2>
+      <section v-if="data.exams?.length" class="widget card relative p-5" data-testid="exams">
+        <HolidayCorner v-if="dressed" :card="3" />
+        <h2 class="widget-title">{{ t('school.exams') }}</h2>
         <button v-for="x in data.exams" :key="x.id" type="button" class="exam-row" @click="open(x)">
           <span class="min-w-0 flex-1 text-left">
             <span class="block truncate text-[14.5px]">{{ x.title }}</span>
@@ -344,8 +354,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
         </button>
       </section>
 
-      <section v-if="data.notes?.length" class="widget card p-5">
-        <h2 class="widget-title" style="color: #d9a400">{{ t('home.pinnedNotes') }}</h2>
+      <section v-if="data.notes?.length" class="widget card relative p-5">
+        <HolidayCorner v-if="dressed" :card="4" />
+        <h2 class="widget-title">{{ t('home.pinnedNotes') }}</h2>
         <div class="mini-notes">
           <RouterLink
             v-for="n in data.notes"
@@ -368,8 +379,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
 
       <!-- Quick Notes: the latest, not pinned (pinned ones are above) -->
-      <section v-if="!wsId && data.mine?.length" class="widget card p-5">
-        <h2 class="widget-title" style="color: #c99a00">
+      <section v-if="!wsId && data.mine?.length" class="widget card relative p-5">
+        <HolidayCorner v-if="dressed" :card="5" />
+        <h2 class="widget-title">
           {{ t('notes.mine.title') }}
           <RouterLink :to="{ name: 'my-notes' }" class="ml-auto text-[13px] font-medium text-accent-text">{{ t('notes.mine.showAll') }}</RouterLink>
         </h2>
@@ -388,11 +400,12 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       </section>
 
       <!-- Recent pages -->
-      <section v-if="data.pages.length" class="widget card p-5">
-        <h2 class="widget-title" style="color: #5856d6">{{ t('home.recentPages') }}</h2>
+      <section v-if="data.pages.length" class="widget card relative p-5">
+        <HolidayCorner v-if="dressed" :card="6" />
+        <h2 class="widget-title">{{ t('home.recentPages') }}</h2>
         <div class="grid grid-cols-1 gap-1">
           <RouterLink v-for="p in data.pages" :key="p.id" :to="{ name: 'ws-page', params: { ws: p.workspace_id, page: p.id } }" class="page-link">
-            <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-fill-2 text-[16px]">
+            <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border text-[16px]">
               <template v-if="p.icon">{{ p.icon }}</template><FileText v-else class="h-4 w-4 text-text-3" />
             </span>
             <span class="min-w-0 flex-1">
@@ -411,8 +424,12 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
       <p v-if="nothing" class="footnote mt-2">{{ t('home.allClear') }}</p>
     </template>
 
-    <div v-else-if="loading" class="grid gap-6 lg:grid-cols-2">
-      <div v-for="i in 2" :key="i" class="card h-48 animate-pulse" />
+    <!-- Loading: cards in outline, a light sweeping across them. -->
+    <div v-else-if="loading" class="grid gap-6 lg:grid-cols-2" aria-busy="true">
+      <div v-for="i in 4" :key="i" class="card p-5">
+        <div class="shimmer h-5 w-32 rounded-md" />
+        <div v-for="n in 3" :key="n" class="shimmer mt-4 h-3.5 rounded-md" :style="{ width: `${92 - n * 14}%` }" />
+      </div>
     </div>
 
     <TaskDetailSheet v-if="openTask" :open="true" :ws="openTask.ws" :task-id="openTask.id" @close="closeTask" />
@@ -433,6 +450,23 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
 .widgets {
   column-gap: 24px;
 }
+/* Opening Home: the greeting, the capture line and the cards rise in, one
+   after another (styles/motion.css; still when animations are off). */
+.home > header,
+.jot-box,
+.mods > .mod,
+.widgets > .widget {
+  animation: rise-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.jot-box {
+  animation-delay: 50ms;
+}
+.widgets > .widget:nth-child(1) { animation-delay: 100ms; }
+.widgets > .widget:nth-child(2) { animation-delay: 160ms; }
+.widgets > .widget:nth-child(3) { animation-delay: 220ms; }
+.widgets > .widget:nth-child(4) { animation-delay: 280ms; }
+.widgets > .widget:nth-child(5) { animation-delay: 340ms; }
+.widgets > .widget:nth-child(n + 6) { animation-delay: 400ms; }
 @media (min-width: 1024px) {
   .widgets {
     columns: 2;
@@ -452,8 +486,9 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
   align-items: baseline;
   gap: 8px;
   margin-bottom: 8px;
-  font: 700 20px var(--font-display);
-  letter-spacing: -0.015em;
+  /* shadcn's CardTitle. */
+  font: 600 17px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
 }
 .widget-title .count {
   font-weight: 600;
@@ -519,12 +554,12 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--note-bg);
-  box-shadow: 0 0 0 0.5px var(--note-line);
+  box-shadow: 0 0 0 1px var(--note-line);
   transition: transform 0.18s var(--spring), box-shadow 0.18s;
 }
 .mini-note:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 0 0.5px var(--note-line), var(--shadow);
+  box-shadow: 0 0 0 1px var(--note-line), var(--shadow);
 }
 .mini-body {
   display: -webkit-box;
@@ -566,13 +601,20 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
   gap: 12px;
   grid-template-columns: repeat(auto-fill, minmax(min(200px, calc(50% - 6px)), 1fr));
 }
+/* A module card lifts as the pointer comes to it, its icon a little bigger. */
 .mod {
   padding: 14px;
-  transition: transform 0.18s var(--spring), box-shadow 0.18s;
+  transition: transform 0.25s var(--spring), box-shadow 0.25s var(--ease);
 }
 .mod:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
+  transform: translateY(-5px);
+  box-shadow: 0 0 0 1px var(--border), 0 14px 30px -10px rgb(0 0 0 / 0.28);
+}
+.mod .tile {
+  transition: scale 0.25s var(--spring);
+}
+.mod:hover .tile {
+  scale: 1.12;
 }
 .hero {
   padding: 48px 24px;
@@ -584,7 +626,7 @@ const nothing = computed(() => !!data.value && !data.value.overdue.length && !da
   align-items: center;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .exam-row:last-child {
   border-bottom: 0;

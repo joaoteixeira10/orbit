@@ -9,6 +9,7 @@ import { draftOf, inputOf, isEmptyDraft, toChecklist, toText, type Draft } from 
 import { ensureNoteColorStyles } from './noteColors'
 import { useNotesStore } from '@/stores/notes'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // A quick note from anywhere (⌥N, or ⌘K → Quick note): a sheet to write in
 // the moment, saved to the user's Quick Notes when it closes — no workspace
@@ -57,16 +58,16 @@ function toggleChecklist() {
     </div>
     <template #footer>
       <div class="note-sheet flex min-w-0 flex-1 items-center gap-1" data-note="yellow">
-        <button class="tb" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
+        <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
           <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
           <SquareCheck v-else class="h-[18px] w-[18px]" />
-        </button>
-        <button class="tb" :class="{ on: noteWide }" :aria-label="noteWide ? t('notes.smaller') : t('notes.bigger')" :title="noteWide ? t('notes.smaller') : t('notes.bigger')" :aria-pressed="noteWide" data-testid="note-size" @click="noteWide = !noteWide">
+        </Button>
+        <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :class="{ on: noteWide }" :aria-label="noteWide ? t('notes.smaller') : t('notes.bigger')" :title="noteWide ? t('notes.smaller') : t('notes.bigger')" :aria-pressed="noteWide" data-testid="note-size" @click="noteWide = !noteWide">
           <Minimize2 v-if="noteWide" class="h-[18px] w-[18px]" />
           <Maximize2 v-else class="h-[18px] w-[18px]" />
-        </button>
+        </Button>
         <span class="ml-2 min-w-0 flex-1 truncate text-[12px] text-text-2">{{ t('notes.mine.title') }} · {{ t('notes.mine.onlyYou') }}</span>
-        <button class="btn btn-sm done" @click="close">{{ t('common.done') }}</button>
+        <Button variant="secondary" size="sm" class="done" @click="close">{{ t('common.done') }}</Button>
       </div>
     </template>
   </Overlay>
@@ -75,18 +76,6 @@ function toggleChecklist() {
 <style scoped>
 .note-sheet.wide :deep(.note-fields .cm-content) {
   min-height: 50vh;
-}
-.tb {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  color: var(--text-2);
-}
-.tb:hover {
-  background: var(--fill);
-  color: var(--text);
 }
 .done {
   background: var(--note-line);

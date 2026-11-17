@@ -9,6 +9,7 @@ import { KIND_COLOR, NODE_KINDS, loadGraph, neighbourhood, only, routeOf, type G
 import { onLiveEvent } from '@/lib/live'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // A workspace's graph: everything in it and how it connects. Kinds can be
 // hidden (their dots and links), a name found (the rest dims); ?focus=
@@ -96,7 +97,7 @@ useFillHeight(fill, 420)
       </div>
       <label class="relative w-60 max-w-full">
         <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3" />
-        <input v-model="search" class="field !pl-8" :placeholder="t('graph.find')" data-testid="graph-search" />
+        <input v-model="search" class="field pl-8!" :placeholder="t('graph.find')" data-testid="graph-search" />
       </label>
     </header>
     <div class="mb-3 flex flex-wrap items-center gap-1.5">
@@ -118,7 +119,7 @@ useFillHeight(fill, 420)
         <div class="seg" role="group">
           <button v-for="d in [1, 2, 3]" :key="d" type="button" :class="{ on: depth === d }" @click="setDepth(d)">{{ d }}</button>
         </div>
-        <button type="button" class="btn btn-sm" data-testid="graph-all" @click="showAll"><X class="h-3.5 w-3.5" />{{ t('graph.all') }}</button>
+        <Button variant="secondary" size="sm" type="button" data-testid="graph-all" @click="showAll"><X class="h-3.5 w-3.5" />{{ t('graph.all') }}</Button>
       </template>
     </div>
     <div ref="fill" class="graph-frame">
@@ -134,9 +135,9 @@ useFillHeight(fill, 420)
 }
 .graph-frame {
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .chip {
   display: inline-flex;

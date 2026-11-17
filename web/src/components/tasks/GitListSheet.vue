@@ -7,6 +7,9 @@ import Overlay from '@/components/ui/Overlay.vue'
 import { gitApi, type GitAccount, type GitBoards, type GitLink, type GitRepo, type TaskList } from '@/api/planner'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A new task list that holds a repository's issues: pick the account, the
 // repository, and how its issues are laid out — open / closed, labels as
@@ -149,15 +152,15 @@ const modes = computed(() => [
     <div v-else-if="!accounts.length" class="flex flex-col items-center gap-3 py-6 text-center">
       <span class="tile h-12 w-12" style="--tile: #f05032"><GitBranch class="h-6 w-6" /></span>
       <p class="max-w-[320px] text-[14px] text-text-2">{{ t('git.list.needAccount') }}</p>
-      <RouterLink :to="{ name: 'settings', hash: '#git' }" class="btn-primary" @click="emit('close')">{{ t('git.list.openSettings') }}</RouterLink>
+      <Button as-child><RouterLink :to="{ name: 'settings', hash: '#git' }" @click="emit('close')">{{ t('git.list.openSettings') }}</RouterLink></Button>
     </div>
 
     <div v-else class="space-y-5">
       <label v-if="accounts.length > 1" class="block">
         <span class="cap mb-1.5 block px-1">{{ t('git.list.account') }}</span>
-        <select v-model="accountId" class="input" :disabled="!!repo">
+        <NativeSelect v-model="accountId" class="w-full" :disabled="!!repo">
           <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.login }} · {{ a.base_url.replace(/^https?:\/\//, '') }}</option>
-        </select>
+        </NativeSelect>
       </label>
 
       <!-- Repository -->
@@ -170,13 +173,13 @@ const modes = computed(() => [
               <div class="truncate text-[14px] font-medium">{{ repo.full_name }}</div>
               <div v-if="repo.description" class="truncate text-[12px] text-text-3">{{ repo.description }}</div>
             </div>
-            <button type="button" class="btn-plain" @click="change">{{ t('git.list.change') }}</button>
+            <Button variant="link" type="button" @click="change">{{ t('git.list.change') }}</Button>
           </div>
         </div>
         <template v-else>
           <div class="search-box">
             <Search class="h-4 w-4 text-text-3" />
-            <input v-model="query" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none" :placeholder="t('git.list.searchRepo')" :aria-label="t('git.list.searchRepo')" autofocus />
+            <input v-model="query" class="min-w-0 flex-1 bg-transparent text-[14px] outline-hidden" :placeholder="t('git.list.searchRepo')" :aria-label="t('git.list.searchRepo')" autofocus />
             <LoaderCircle v-if="searching" class="h-4 w-4 animate-spin text-text-3" />
           </div>
           <div v-if="repos.length" class="group mt-2 max-h-[264px] overflow-y-auto">
@@ -199,7 +202,7 @@ const modes = computed(() => [
             v-for="m in modes"
             :key="m.key"
             type="button"
-            class="group-row w-full !items-start text-left"
+            class="group-row w-full items-start! text-left"
             :aria-pressed="mode === m.key"
             @click="mode = m.key"
           >
@@ -237,24 +240,24 @@ const modes = computed(() => [
           <p v-else-if="!boards.projects.length" class="text-[12.5px] text-text-3">{{ t('git.list.noProjects') }}</p>
           <label v-else class="flex items-center gap-3">
             <span class="text-[13px] text-text-2">{{ t('git.list.pickProject') }}</span>
-            <select v-model.number="projectId" class="input !w-auto !py-1 text-[13px]">
+            <NativeSelect size="sm" v-model.number="projectId" class="w-auto">
               <option v-for="p in boards.projects" :key="p.id" :value="p.id">{{ p.title }}</option>
-            </select>
+            </NativeSelect>
           </label>
         </div>
       </section>
 
       <label v-if="repo" class="block">
         <span class="cap mb-1.5 block px-1">{{ t('git.list.name') }}</span>
-        <input v-model="name" class="input" maxlength="100" @keydown.enter.prevent="create" />
+        <Input v-model="name" maxlength="100" @keydown.enter.prevent="create" />
       </label>
     </div>
 
     <template #footer>
-      <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button v-if="accounts?.length" type="button" class="btn-primary" :disabled="!canCreate" @click="create">
+      <Button variant="secondary" type="button" @click="emit('close')">{{ t('common.cancel') }}</Button>
+      <Button v-if="accounts?.length" type="button" :disabled="!canCreate" @click="create">
         <LoaderCircle v-if="busy" class="h-4 w-4 animate-spin" />{{ t('git.list.create') }}
-      </button>
+      </Button>
     </template>
   </Overlay>
 </template>

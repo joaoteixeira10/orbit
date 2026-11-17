@@ -62,9 +62,9 @@ const send = (values: Record<string, unknown>) => (token.value ? guestApi.answer
   max-width: 640px;
   margin: 0 auto;
   padding: 28px clamp(18px, 4vw, 36px);
-  border-radius: 18px;
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border), 0 4px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(0, 0, 0, 0.05);
 }
 .fv-foot {
   padding: 20px;

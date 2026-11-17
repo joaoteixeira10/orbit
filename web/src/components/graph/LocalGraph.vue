@@ -6,6 +6,7 @@ import { Maximize2, Waypoints } from 'lucide-vue-next'
 import GraphCanvas from './GraphCanvas.vue'
 import { loadGraph, neighbourhood, routeOf, type Graph, type GraphNode } from '@/lib/graph'
 import { onLiveEvent } from '@/lib/live'
+import { Button } from '@/components/shadcn/button'
 
 // The small graph beside a thing: what it links to and what links to it,
 // 1–3 links deep (remembered), and the way to the workspace's whole graph.
@@ -55,7 +56,7 @@ function open(n: GraphNode) {
       <div class="seg" role="group" :aria-label="t('graph.depth')">
         <button v-for="d in [1, 2, 3]" :key="d" type="button" :class="{ on: depth === d }" :aria-pressed="depth === d" @click="depth = d">{{ d }}</button>
       </div>
-      <RouterLink :to="{ name: 'ws-graph', params: { ws }, query: { focus: id, depth: String(depth) } }" class="icon-btn ml-auto h-6 w-6" :title="t('graph.openAll')" :aria-label="t('graph.openAll')" data-testid="local-graph-open"><Maximize2 class="h-3.5 w-3.5" /></RouterLink>
+      <Button as-child variant="ghost" size="icon"><RouterLink :to="{ name: 'ws-graph', params: { ws }, query: { focus: id, depth: String(depth) } }" class="text-text-2 ml-auto h-6 w-6" :title="t('graph.openAll')" :aria-label="t('graph.openAll')" data-testid="local-graph-open"><Maximize2 class="h-3.5 w-3.5" /></RouterLink></Button>
     </div>
     <p v-if="lonely" class="px-1 pb-1 text-[12px] text-text-3">{{ t('graph.lonely') }}</p>
     <div v-else class="lg-canvas"><GraphCanvas :graph="near" :focus="id" compact @open="open" /></div>
@@ -67,7 +68,7 @@ function open(n: GraphNode) {
       <div class="seg" role="group" :aria-label="t('graph.depth')">
         <button v-for="d in [1, 2, 3]" :key="d" type="button" :class="{ on: depth === d }" :aria-pressed="depth === d" @click="depth = d">{{ d }}</button>
       </div>
-      <RouterLink :to="{ name: 'ws-graph', params: { ws }, query: { focus: id, depth: String(depth) } }" class="btn-plain !py-0.5 text-[12.5px]" data-testid="local-graph-open">{{ t('graph.openAll') }}</RouterLink>
+      <Button as-child variant="link"><RouterLink :to="{ name: 'ws-graph', params: { ws }, query: { focus: id, depth: String(depth) } }" class="py-0.5! text-[12.5px]" data-testid="local-graph-open">{{ t('graph.openAll') }}</RouterLink></Button>
     </div>
     <p v-if="lonely" class="px-3 pb-3 text-[12.5px] text-text-3">{{ t('graph.lonely') }}</p>
     <div v-else class="lg-canvas"><GraphCanvas :graph="near" :focus="id" compact @open="open" /></div>
@@ -80,7 +81,7 @@ function open(n: GraphNode) {
   overflow: hidden;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .lg-head {
   display: flex;
@@ -110,6 +111,6 @@ function open(n: GraphNode) {
 }
 .lg-canvas {
   height: 240px;
-  border-top: 0.5px solid var(--line-soft, var(--border));
+  border-top: 1px solid var(--line-soft, var(--border));
 }
 </style>

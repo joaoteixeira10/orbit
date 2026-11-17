@@ -123,7 +123,7 @@ async function signOut() {
             <button type="button" class="primary" :disabled="busy" data-testid="join" @click="join">{{ busy ? t('invites.joining') : t('invites.join') }}</button>
             <p class="lead center text-[13px]">
               {{ t('invites.signedInAs', { name: me }) }} ·
-              <button type="button" class="link !inline" @click="signOut">{{ t('invites.notYou') }}</button>
+              <button type="button" class="link inline!" @click="signOut">{{ t('invites.notYou') }}</button>
             </p>
           </template>
           <template v-else>

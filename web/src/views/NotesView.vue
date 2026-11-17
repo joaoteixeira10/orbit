@@ -448,7 +448,7 @@ watch(
 }
 .cell.sortable-drag :deep(.note-card),
 .cell.sortable-fallback :deep(.note-card) {
-  box-shadow: 0 0 0 0.5px var(--border), 0 18px 40px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 1px var(--border), 0 18px 40px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Colour filter. */
@@ -462,14 +462,14 @@ watch(
   height: 20px;
   border-radius: 999px;
   background: var(--note-bg);
-  box-shadow: inset 0 0 0 0.5px var(--border-2);
+  box-shadow: inset 0 0 0 1px var(--border-2);
   transition: transform 0.15s var(--spring), box-shadow 0.15s;
 }
 .dot:hover {
   transform: scale(1.1);
 }
 .dot.on {
-  box-shadow: inset 0 0 0 0.5px var(--border-2), 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
+  box-shadow: inset 0 0 0 1px var(--border-2), 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
 }
 .dot-clear {
   display: grid;
@@ -491,15 +491,15 @@ watch(
   width: 72px;
   height: 72px;
   margin: 0 auto 16px;
-  border-radius: 20px;
+  border-radius: 12px;
   color: #b07d00;
   background: linear-gradient(160deg, #fff7c7, #ffe98a);
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 6px 18px rgba(255, 204, 0, 0.25);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 6px 18px rgba(255, 204, 0, 0.25);
 }
 html.dark .empty-icon {
   color: #ffd60a;
   background: linear-gradient(160deg, #4f4622, #3d3518);
-  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* Undo snackbar (an Apple-style HUD pill). */
@@ -520,7 +520,7 @@ html.dark .empty-icon {
   background: rgba(36, 36, 38, 0.9);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 .snack-undo {
   padding: 4px 10px;

@@ -9,6 +9,7 @@ import { ago } from '@/components/notes/noteModel'
 import { locale } from '@/lib/dates'
 import { usePagesStore } from '@/stores/pages'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // My recent changes to a workspace's pages — made, moved, renamed, copied,
 // put in the trash (two weeks of them) — each undone with a click. One that
@@ -89,7 +90,7 @@ async function undo(c: Change, force = false) {
           {{ ago(c.at, loc) }}<template v-if="c.undone"> · {{ t('changes.wasUndone') }}</template><template v-else-if="c.gone"> · {{ t('changes.gone') }}</template><template v-else-if="c.changed"> · {{ t('changes.changedSince') }}</template>
         </div>
       </div>
-      <button v-if="!c.undone && !c.gone" type="button" class="btn btn-sm shrink-0" data-testid="change-undo" @click="undo(c)"><Undo2 class="h-3.5 w-3.5" />{{ t('changes.undo') }}</button>
+      <Button variant="secondary" size="sm" v-if="!c.undone && !c.gone" type="button" class="shrink-0" data-testid="change-undo" @click="undo(c)"><Undo2 class="h-3.5 w-3.5" />{{ t('changes.undo') }}</Button>
     </div>
     <Confirm
       :open="!!asking"
@@ -108,7 +109,7 @@ async function undo(c: Change, force = false) {
   align-items: center;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .ch-row.done {
   opacity: 0.55;

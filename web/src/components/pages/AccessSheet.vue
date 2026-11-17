@@ -9,6 +9,7 @@ import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // Who can see a page — and what's under it: everyone in the workspace, or
 // only some of its people (you always). It's never wider than a page above
@@ -94,10 +95,10 @@ async function save() {
         <span class="text-[11.5px] text-text-3">{{ t(`roles.${p.role}`) }}</span>
       </label>
     </div>
-    <p v-if="above" class="mt-3 rounded-lg bg-fill-2 px-3 py-2 text-[12px] text-text-2">{{ t('access.above', { name: above.title || t('pages.untitled') }) }}</p>
+    <p v-if="above" class="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] text-text-2">{{ t('access.above', { name: above.title || t('pages.untitled') }) }}</p>
     <template #footer>
-      <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
-      <button type="button" class="btn-primary" :disabled="busy" data-testid="access-save" @click="save">{{ t('common.save') }}</button>
+      <Button variant="secondary" type="button" @click="emit('close')">{{ t('common.cancel') }}</Button>
+      <Button type="button" :disabled="busy" data-testid="access-save" @click="save">{{ t('common.save') }}</Button>
     </template>
   </Overlay>
 </template>

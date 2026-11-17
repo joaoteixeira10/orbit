@@ -6,10 +6,13 @@ import { settingsApi } from '@/api'
 import { useBrandingStore } from '@/stores/branding'
 import { useHolidayStore } from '@/stores/holiday'
 import { useToastStore } from '@/stores/toast'
-import { HOLIDAYS, type HolidaySetting } from '@/lib/holidayThemes'
+import { HOLIDAYS, resolveHoliday, type HolidaySetting } from '@/lib/holidayThemes'
+import Toggle from '@/components/ui/Toggle.vue'
 
 // Owner → Branding: holiday themes for everyone — off, each in its season,
-// or one now (to see it, or to have it). Saved at once.
+// or one now (to see it, or to have it) — and whether each person may pick
+// their own holiday and season themes instead (Settings → Appearance).
+// Saved at once.
 const { t } = useI18n()
 const branding = useBrandingStore()
 const holiday = useHolidayStore()
@@ -17,6 +20,16 @@ const toast = useToastStore()
 const saving = ref(false)
 
 const choice = computed(() => branding.holidayTheme)
+// What the owner's setting shows today (not the owner's own choice).
+const showing = computed(() => resolveHoliday(branding.holidayTheme, holiday.now))
+async function setPersonal(v: boolean) {
+  try {
+    branding.apply(await settingsApi.update({ holiday_themes_personal: v }))
+    toast.success(t('holiday.admin.saved'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
 async function pick(v: HolidaySetting) {
   if (saving.value || v === choice.value) return
   saving.value = true
@@ -47,7 +60,7 @@ async function pick(v: HolidaySetting) {
           <CalendarClock class="h-7 w-7 text-text-3" :stroke-width="1.6" />
           <span>
             <b>{{ t('holiday.admin.auto') }}</b>
-            <small>{{ choice === 'auto' ? (holiday.active ? t('holiday.admin.nowShowing', { name: t(`holiday.name.${holiday.active.id}`) }) : t('holiday.admin.noneNow')) : t('holiday.admin.autoHint') }}</small>
+            <small>{{ choice === 'auto' ? (showing ? t('holiday.admin.nowShowing', { name: t(`holiday.name.${showing.id}`) }) : t('holiday.admin.noneNow')) : t('holiday.admin.autoHint') }}</small>
           </span>
         </button>
         <button
@@ -64,6 +77,13 @@ async function pick(v: HolidaySetting) {
           <span class="grid h-7 w-7 shrink-0 place-items-center" aria-hidden="true" v-html="h.art.logo" />
           <span><b>{{ t(`holiday.name.${h.id}`) }}</b><small>{{ t(`holiday.admin.season.${h.id}`) }}</small></span>
         </button>
+      </div>
+      <div class="mt-1 flex items-center gap-3 border-t border-border pt-4">
+        <div class="min-w-0 flex-1">
+          <b class="text-[14px] font-semibold">{{ t('holiday.admin.personal') }}</b>
+          <span class="mt-0.5 block text-[12px] leading-snug text-text-3">{{ t('holiday.admin.personalHint') }}</span>
+        </div>
+        <Toggle :model-value="branding.holidaysPersonal" data-testid="holiday-personal" @update:model-value="setPersonal" />
       </div>
     </div>
   </div>

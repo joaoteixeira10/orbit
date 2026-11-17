@@ -11,6 +11,7 @@ import { toggleTask } from '@/lib/markdown'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // The journal: a month with each day's mood on the left; the chosen day on
 // the right — how it went, what happened (Markdown, saved as you write) —
@@ -136,8 +137,8 @@ const yearsAgo = (d: string) => Number(date.value.slice(0, 4)) - Number(d.slice(
       <aside class="card self-start p-3">
         <div class="mb-2 flex items-center">
           <span class="flex-1 pl-1 text-[14px] font-semibold">{{ monthTitle(month) }}</span>
-          <button class="icon-btn" :aria-label="t('journal.prev')" @click="month = addMonths(month, -1)"><ChevronLeft class="h-4 w-4" /></button>
-          <button class="icon-btn" :aria-label="t('journal.next')" @click="month = addMonths(month, 1)"><ChevronRight class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('journal.prev')" @click="month = addMonths(month, -1)"><ChevronLeft class="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('journal.next')" @click="month = addMonths(month, 1)"><ChevronRight class="h-4 w-4" /></Button>
         </div>
         <div class="days">
           <span v-for="(n, i) in names" :key="'h' + i" class="wd">{{ n }}</span>
@@ -185,7 +186,7 @@ const yearsAgo = (d: string) => Number(date.value.slice(0, 4)) - Number(d.slice(
           <template v-else>
             <MarkdownView v-if="content.trim()" :content="content" :editable="editable" @toggle="tick" @edit="editing = true" />
             <p v-else class="text-[14px] text-text-3">{{ t('journal.empty') }}</p>
-            <button v-if="editable" class="btn-plain mt-3 !text-[13px]" @click="editing = true"><Pencil class="h-3.5 w-3.5" />{{ t('journal.edit') }}</button>
+            <Button variant="link" v-if="editable" class="mt-3 text-[13px]!" @click="editing = true"><Pencil class="h-3.5 w-3.5" />{{ t('journal.edit') }}</Button>
           </template>
         </div>
         <p v-if="writing && !content" class="mt-2 px-1 text-[12.5px] text-text-3">{{ t('journal.write') }}</p>
@@ -231,7 +232,7 @@ const yearsAgo = (d: string) => Number(date.value.slice(0, 4)) - Number(d.slice(
   gap: 1px;
   height: 42px;
   padding-top: 4px;
-  border-radius: 9px;
+  border-radius: 8px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }

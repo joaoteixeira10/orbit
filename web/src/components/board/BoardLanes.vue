@@ -5,6 +5,7 @@ import { ChevronDown, CircleCheck, Plus } from 'lucide-vue-next'
 import BoardCard from './BoardCard.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import { useSortables, type SortMove } from '@/lib/sortable'
+import { vFlip } from '@/lib/motion'
 import { useTasksStore } from '@/stores/tasks'
 import { useToastStore } from '@/stores/toast'
 import type { Column, Member, Task } from '@/api/planner'
@@ -135,7 +136,7 @@ const over = (c: Column) => !!c.limit && (props.totals[c.id] ?? 0) > c.limit
       </button>
       <div v-show="!folded.has(l.key)" class="lane-row">
         <div v-for="c in columns" :key="c.id" class="cell">
-          <div :ref="(el) => setCell(`${c.id}|${l.key}`, el)" class="cell-cards" :data-group="`${c.id}|${l.key}`">
+          <div :ref="(el) => setCell(`${c.id}|${l.key}`, el)" v-flip class="cell-cards" :data-group="`${c.id}|${l.key}`">
             <BoardCard
               v-for="x in cards(c.id, l.key)"
               :key="x.id"
@@ -150,7 +151,7 @@ const over = (c: Column) => !!c.limit && (props.totals[c.id] ?? 0) > c.limit
           </div>
           <template v-if="!readonly">
             <form v-if="adding === `${c.id}|${l.key}`" class="mt-1.5" @submit.prevent="add(c, l)">
-              <input ref="addEl" v-model="draft" class="field !py-1.5 text-[13.5px]" maxlength="500" :placeholder="t('board.cardPlaceholder')" :aria-label="t('board.addCard')" @keydown.esc="adding = ''" @blur="add(c, l)" />
+              <input ref="addEl" v-model="draft" class="field py-1.5! text-[13.5px]" maxlength="500" :placeholder="t('board.cardPlaceholder')" :aria-label="t('board.addCard')" @keydown.esc="adding = ''" @blur="add(c, l)" />
             </form>
             <button v-else type="button" class="cell-add" :aria-label="t('board.addCard')" @click="startAdd(`${c.id}|${l.key}`)"><Plus class="h-3.5 w-3.5" /></button>
           </template>
@@ -222,7 +223,7 @@ const over = (c: Column) => !!c.limit && (props.totals[c.id] ?? 0) > c.limit
 }
 .lane {
   padding-bottom: 6px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .cell {
   min-height: 64px;

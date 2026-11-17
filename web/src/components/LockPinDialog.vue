@@ -5,6 +5,8 @@ import { LockKeyhole } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import { changePin, lockApi, lockPossible, setUp, unlock, WrongPin, type LockKeyInfo } from '@/lib/lock'
 import { answerPin, pinPrompt, type PinMode } from '@/lib/lockPrompt'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // The lock PIN: set the first time (twice, with what forgetting it means),
 // entered to open locked notes and pages, or changed (the old one, then the
@@ -79,7 +81,7 @@ async function submit() {
   <Overlay :open="!!mode" :title="title" size="sm" top @close="answerPin(false)">
     <div v-if="!lockPossible()" class="space-y-4" data-testid="lock-insecure">
       <p class="rounded-xl bg-warn-bg px-3 py-2 text-[13px] text-warn-text">{{ t('lock.insecure') }}</p>
-      <div class="flex justify-end"><button type="button" class="btn" @click="answerPin(false)">{{ t('common.close') }}</button></div>
+      <div class="flex justify-end"><Button variant="secondary" type="button" @click="answerPin(false)">{{ t('common.close') }}</Button></div>
     </div>
     <form v-else class="space-y-4" data-testid="lock-pin" @submit.prevent="submit">
       <div class="flex items-start gap-3">
@@ -96,13 +98,13 @@ async function submit() {
       </label>
       <label v-if="mode !== 'unlock'" class="block">
         <span class="mb-1 block text-[12px] font-medium text-text-2">{{ t('lock.again') }}</span>
-        <input v-model="pin2" type="password" autocomplete="off" class="input w-full" data-testid="lock-pin-again" />
+        <Input v-model="pin2" type="password" autocomplete="off" class="w-full" data-testid="lock-pin-again" />
       </label>
       <p v-if="mode !== 'unlock'" class="rounded-xl bg-warn-bg px-3 py-2 text-[12.5px] text-warn-text">{{ t('lock.warning') }}</p>
       <p v-if="error" class="text-[12.5px] text-crit-text" role="alert">{{ error }}</p>
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn" @click="answerPin(false)">{{ t('common.cancel') }}</button>
-        <button type="submit" class="btn-primary" :disabled="!ready" data-testid="lock-pin-ok">{{ mode === 'unlock' ? t('lock.open') : t('common.save') }}</button>
+        <Button variant="secondary" type="button" @click="answerPin(false)">{{ t('common.cancel') }}</Button>
+        <Button type="submit" :disabled="!ready" data-testid="lock-pin-ok">{{ mode === 'unlock' ? t('lock.open') : t('common.save') }}</Button>
       </div>
     </form>
   </Overlay>

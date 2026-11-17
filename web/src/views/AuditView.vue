@@ -8,6 +8,7 @@ import { useToastStore } from '@/stores/toast'
 import { fmtDate } from '@/lib/format'
 import { downloadAuthed } from '@/lib/api'
 import { onLiveEvent } from '@/lib/live'
+import { Button } from '@/components/shadcn/button'
 
 // The audit log: who did what to which account, role, workspace or setting,
 // from where, and whether it worked. The first page refreshes when users or
@@ -134,9 +135,9 @@ function otherDetail(a: AuditEntry) {
       <span v-if="verify" class="verify" :class="verify.ok ? 'ok' : 'bad'">
         {{ verify.ok ? t('audit.intact', { n: verify.checked }) : t('audit.broken', { id: verify.broken_at }) }}
       </span>
-      <button type="button" class="btn btn-sm" :class="{ 'btn-on': onlyImp }" :aria-pressed="onlyImp" data-testid="audit-imp" @click="onlyImp = !onlyImp">{{ t('audit.impersonations') }}</button>
-      <button type="button" class="btn btn-sm" :disabled="verifying" @click="verifyChain">{{ t('audit.verify') }}</button>
-      <button type="button" class="btn btn-sm" :disabled="downloading" :title="t('audit.csvHint')" @click="downloadCsv">{{ t('audit.csv') }}</button>
+      <Button :variant="onlyImp ? 'default' : 'secondary'" size="sm" type="button" :aria-pressed="onlyImp" data-testid="audit-imp" @click="onlyImp = !onlyImp">{{ t('audit.impersonations') }}</Button>
+      <Button variant="secondary" size="sm" type="button" :disabled="verifying" @click="verifyChain">{{ t('audit.verify') }}</Button>
+      <Button variant="secondary" size="sm" type="button" :disabled="downloading" :title="t('audit.csvHint')" @click="downloadCsv">{{ t('audit.csv') }}</Button>
       <label class="search">
         <Search class="h-4 w-4 shrink-0" aria-hidden="true" />
         <input v-model="q" type="search" :placeholder="t('audit.search')" :aria-label="t('audit.searchLabel')" autocomplete="off" />
@@ -186,7 +187,7 @@ function otherDetail(a: AuditEntry) {
       </table>
       <div v-else class="empty-state">{{ !loaded ? t('audit.loading') : q || onlyImp ? t('audit.noMatch') : t('audit.none') }}</div>
     </div>
-    <div v-if="more" class="panel-body"><button type="button" class="btn btn-sm" @click="load(true)">{{ t('audit.older') }}</button></div>
+    <div v-if="more" class="panel-body"><Button variant="secondary" size="sm" type="button" @click="load(true)">{{ t('audit.older') }}</Button></div>
   </section>
   </div>
 </template>
@@ -210,11 +211,6 @@ function otherDetail(a: AuditEntry) {
   font-weight: 500;
   white-space: nowrap;
 }
-.btn.btn-on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-fg);
-}
 .audit-page { padding: 32px clamp(16px, 4vw, 48px) 64px; }
 .panel-head { justify-content: flex-start; }
 .panel-head .search { height: 32px; min-width: 260px; }
@@ -224,7 +220,7 @@ function otherDetail(a: AuditEntry) {
 .scope { font-family: var(--font-sans); font-weight: 600; color: var(--text); margin-bottom: 2px; }
 .table-wrap { overflow-x: auto; }
 table.list { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-table.list th { text-align: left; font-weight: 500; color: var(--text-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 9px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.list th { text-align: left; font-weight: 500; color: var(--text-2); font-size: 13px; padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 table.list td { padding: 9px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
 table.list tr:last-child td { border-bottom: 0; }
 table.list tr.failed td:first-child { box-shadow: inset 3px 0 var(--crit); }

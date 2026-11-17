@@ -10,6 +10,7 @@ import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { relDay } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
 
 // A workspace's trash: pages wait here 30 days before they are deleted for
 // good. Only the pages trashed directly are listed (their sub-pages come
@@ -80,8 +81,8 @@ async function destroy() {
           <span class="block text-[12px] text-text-3">{{ t('pages.inTrash', { when: relDay(p.trashed_at!.slice(0, 10)).toLowerCase() }) }}</span>
         </span>
         <template v-if="editable">
-          <button class="btn btn-sm" @click="restore(p)"><RotateCcw class="h-3.5 w-3.5" />{{ t('pages.restore') }}</button>
-          <button class="icon-btn !text-danger" :title="t('pages.deleteForever')" @click="confirmFor = p"><Trash2 class="h-4 w-4" /></button>
+          <Button variant="secondary" size="sm" @click="restore(p)"><RotateCcw class="h-3.5 w-3.5" />{{ t('pages.restore') }}</Button>
+          <Button variant="ghost" size="icon" class="text-text-2 text-danger!" :title="t('pages.deleteForever')" @click="confirmFor = p"><Trash2 class="h-4 w-4" /></Button>
         </template>
       </div>
     </div>

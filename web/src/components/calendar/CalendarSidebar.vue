@@ -6,6 +6,8 @@ import Popover from '@/components/ui/Popover.vue'
 import { COLORS } from '@/lib/icons'
 import { addMonths, dateStr, monthGrid, monthTitle, startOfDay, weekdayNames } from '@/lib/dates'
 import type { CalView } from './model'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // The calendar's left pane, as in Outlook: a small month to move around
 // (click a day to go there, in the view you're in; the days on screen are
@@ -66,8 +68,8 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
       <div class="mini-head">
         <b>{{ monthTitle(month) }}</b>
         <span class="ml-auto flex">
-          <button class="icon-btn h-7 w-7" :aria-label="t('cal.prev')" @click="month = addMonths(month, -1)"><ChevronLeft class="h-4 w-4" /></button>
-          <button class="icon-btn h-7 w-7" :aria-label="t('cal.next')" @click="month = addMonths(month, 1)"><ChevronRight class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" class="text-text-2 h-7 w-7" :aria-label="t('cal.prev')" @click="month = addMonths(month, -1)"><ChevronLeft class="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" class="text-text-2 h-7 w-7" :aria-label="t('cal.next')" @click="month = addMonths(month, 1)"><ChevronRight class="h-4 w-4" /></Button>
         </span>
       </div>
       <div class="mini-grid" role="grid">
@@ -88,7 +90,7 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
     <div class="mt-5">
       <div class="flex items-center px-2">
         <h3 class="cap flex-1">{{ heading }}</h3>
-        <button v-if="canAdd" class="icon-btn h-6 w-6" :title="t('cal.addCalendar')" :aria-label="t('cal.addCalendar')" @click="emit('add')"><Plus class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" v-if="canAdd" class="text-text-2 h-6 w-6" :title="t('cal.addCalendar')" :aria-label="t('cal.addCalendar')" @click="emit('add')"><Plus class="h-4 w-4" /></Button>
       </div>
       <ul class="mt-1">
         <li v-for="s in sources" :key="s.id" class="cal-src">
@@ -96,9 +98,9 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
             <span class="box" :class="{ on: !hidden.has(s.id) }" :style="{ '--c': s.color || 'var(--accent)' }"><Check v-if="!hidden.has(s.id)" class="h-3 w-3" :stroke-width="3.4" /></span>
             <span class="truncate">{{ s.name }}</span>
           </button>
-          <button v-if="s.key" class="paint icon-btn h-6 w-6" :class="{ open: painting?.id === s.id }" :title="t('cal.colorOf', { name: s.name })" :aria-label="t('cal.colorOf', { name: s.name })" :data-testid="`cal-color-${s.id}`" @click="paint(s, $event)">
+          <Button variant="ghost" size="icon" v-if="s.key" class="text-text-2 paint h-6 w-6" :class="{ open: painting?.id === s.id }" :title="t('cal.colorOf', { name: s.name })" :aria-label="t('cal.colorOf', { name: s.name })" :data-testid="`cal-color-${s.id}`" @click="paint(s, $event)">
             <Palette class="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </li>
       </ul>
       <Popover v-if="painting" :anchor="paintAt" placement="right-start" :width="212" @close="painting = null">
@@ -109,23 +111,25 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
               :key="c"
               type="button"
               class="swatch"
-              :style="{ background: c, boxShadow: painting.color.toLowerCase() === c.toLowerCase() ? `0 0 0 2px var(--surface), 0 0 0 4px ${c}` : 'none' }"
+              :style="{ '--sw': c }"
+              role="radio"
+              :aria-checked="painting.color.toLowerCase() === c.toLowerCase()"
               :aria-label="c"
               :data-testid="`cal-swatch-${c}`"
               @click="choose(c)"
             />
           </div>
-          <button v-if="painting.base && painting.color.toLowerCase() !== painting.base.toLowerCase()" type="button" class="menu-item mt-2 !px-1.5 text-[13px]" @click="choose('')">
-            <span class="swatch !h-4 !w-4" :style="{ background: painting.base }" />{{ t('cal.colorDefault') }}
+          <button v-if="painting.base && painting.color.toLowerCase() !== painting.base.toLowerCase()" type="button" class="menu-item mt-2 px-1.5! text-[13px]" @click="choose('')">
+            <span class="swatch size-4!" :style="{ '--sw': painting.base }" />{{ t('cal.colorDefault') }}
           </button>
         </div>
       </Popover>
       <label v-if="holidays && (holidays.editable || holidays.country)" class="mt-3 block px-2" data-testid="holidays">
         <span class="cap">{{ t('cal.holidays') }}</span>
-        <select class="input mt-1 !py-1 text-[13px]" :value="holidays.country" :disabled="!holidays.editable" @change="emit('holidays', ($event.target as HTMLSelectElement).value)">
+        <NativeSelect size="sm" class="mt-1 w-full" :model-value="holidays.country" :disabled="!holidays.editable" @change="emit('holidays', ($event.target as HTMLSelectElement).value)">
           <option value="">{{ t('cal.noHolidays') }}</option>
           <option v-for="c in holidays.countries" :key="c.code" :value="c.code">{{ c.name }}</option>
-        </select>
+        </NativeSelect>
       </label>
     </div>
   </aside>
@@ -158,7 +162,7 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
   height: 30px;
   margin: 0 auto;
   width: 30px;
-  border-radius: 999px;
+  border-radius: 8px;
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -173,15 +177,19 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
   border-radius: 0;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
-.day.sel {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
-}
+/* shadcn's Calendar: today in the muted fill, the chosen day the primary. */
 .day.today {
+  background: var(--fill);
+  font-weight: 600;
+  width: 30px;
+  border-radius: 8px;
+}
+.day.sel {
   background: var(--accent);
   color: var(--accent-fg);
-  font-weight: 700;
+  font-weight: 600;
   width: 30px;
-  border-radius: 999px;
+  border-radius: 8px;
 }
 .src {
   display: flex;
@@ -218,13 +226,6 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
   .paint {
     opacity: 0.7;
   }
-}
-.swatch {
-  display: inline-block;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
 }
 .box {
   display: grid;

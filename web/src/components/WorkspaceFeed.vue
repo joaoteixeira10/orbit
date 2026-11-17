@@ -3,9 +3,11 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Avatar from './ui/Avatar.vue'
+import HolidayCorner from '@/components/holiday/HolidayCorner.vue'
 import { activityApi, type ActivityLine } from '@/api/planner'
 import { onLiveEvent } from '@/lib/live'
 import { locale } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
 
 // A workspace's activity, newest first: a person's run of the same thing
 // within two hours reads as one line ("Ana completed 3 tasks"), with what
@@ -73,8 +75,9 @@ function open(l: ActivityLine) {
 </script>
 
 <template>
-  <section class="widget card p-5" data-testid="ws-feed">
-    <h2 class="widget-title" style="color: #34c759">{{ t('feed.title') }}</h2>
+  <section class="widget card relative p-5" data-testid="ws-feed">
+    <HolidayCorner :card="7" />
+    <h2 class="widget-title">{{ t('feed.title') }}</h2>
     <ol class="space-y-3">
       <li v-for="g in groups" :key="g.key" class="flex gap-2.5">
         <Avatar :name="g.actor || '?'" :src="g.avatar" :size="24" class="mt-0.5" />
@@ -91,16 +94,17 @@ function open(l: ActivityLine) {
       </li>
     </ol>
     <p v-if="!groups.length" class="empty-line">{{ t('feed.none') }}</p>
-    <button v-else-if="more" class="btn-plain mt-3" @click="loadMore">{{ t('feed.more') }}</button>
+    <Button variant="link" v-else-if="more" class="mt-3" @click="loadMore">{{ t('feed.more') }}</Button>
   </section>
 </template>
 
 <style scoped>
 /* As the overview's other cards. */
+/* shadcn's CardTitle. */
 .widget-title {
   margin-bottom: 8px;
-  font: 700 20px var(--font-display);
-  letter-spacing: -0.015em;
+  font: 600 17px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
 }
 .empty-line {
   padding: 10px 0;

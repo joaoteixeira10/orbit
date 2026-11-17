@@ -8,6 +8,8 @@ import { Book, MAX_COLS, MAX_ROWS, addr, newTab, reshape, series, show, toTSV, f
 import { colName, dayOf, formatRef, shiftFormula } from '@/lib/formula'
 import { locale, todayStr } from '@/lib/dates'
 import { usePrefsStore } from '@/stores/prefs'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A spreadsheet, editable: tabs of cells in a grid that scrolls both ways
 // (only what's in view is drawn), a formula bar, a toolbar. It edits like
@@ -689,20 +691,20 @@ defineExpose({ tabId })
   <div class="sheet-ed" :class="prefs.editorClass('sheets')" data-testid="sheet-editor">
     <!-- Toolbar -->
     <div v-if="editable" class="sh-tools">
-      <button type="button" class="icon-btn h-7 w-7" :disabled="!canUndo" :title="t('sheets.undo')" :aria-label="t('sheets.undo')" @click="undo"><Undo2 class="h-4 w-4" /></button>
-      <button type="button" class="icon-btn h-7 w-7" :disabled="!canRedo" :title="t('sheets.redo')" :aria-label="t('sheets.redo')" @click="redo"><Redo2 class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :disabled="!canUndo" :title="t('sheets.undo')" :aria-label="t('sheets.undo')" @click="undo"><Undo2 class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :disabled="!canRedo" :title="t('sheets.redo')" :aria-label="t('sheets.redo')" @click="redo"><Redo2 class="h-4 w-4" /></Button>
       <span class="sh-sep" />
-      <button type="button" class="icon-btn h-7 w-7" :class="{ on: active?.b }" :title="t('sheets.bold')" :aria-label="t('sheets.bold')" @click="toggle('b')"><Bold class="h-4 w-4" /></button>
-      <button type="button" class="icon-btn h-7 w-7" :class="{ on: active?.i }" :title="t('sheets.italic')" :aria-label="t('sheets.italic')" @click="toggle('i')"><Italic class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :class="{ on: active?.b }" :title="t('sheets.bold')" :aria-label="t('sheets.bold')" @click="toggle('b')"><Bold class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :class="{ on: active?.i }" :title="t('sheets.italic')" :aria-label="t('sheets.italic')" @click="toggle('i')"><Italic class="h-4 w-4" /></Button>
       <span class="sh-sep" />
-      <button type="button" class="icon-btn h-7 w-7" :class="{ on: active?.al === 'l' }" :aria-label="t('sheets.alignLeft')" @click="align('l')"><AlignLeft class="h-4 w-4" /></button>
-      <button type="button" class="icon-btn h-7 w-7" :class="{ on: active?.al === 'c' }" :aria-label="t('sheets.alignCenter')" @click="align('c')"><AlignCenter class="h-4 w-4" /></button>
-      <button type="button" class="icon-btn h-7 w-7" :class="{ on: active?.al === 'r' }" :aria-label="t('sheets.alignRight')" @click="align('r')"><AlignRight class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :class="{ on: active?.al === 'l' }" :aria-label="t('sheets.alignLeft')" @click="align('l')"><AlignLeft class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :class="{ on: active?.al === 'c' }" :aria-label="t('sheets.alignCenter')" @click="align('c')"><AlignCenter class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :class="{ on: active?.al === 'r' }" :aria-label="t('sheets.alignRight')" @click="align('r')"><AlignRight class="h-4 w-4" /></Button>
       <span class="sh-sep" />
-      <select class="input !w-auto !py-0.5 text-[12.5px]" :value="active?.nf ?? ''" :aria-label="t('sheets.format')" data-testid="sheet-format" @change="format(($event.target as HTMLSelectElement).value as NumFmt | '')">
+      <NativeSelect size="sm" class="w-auto" :model-value="active?.nf ?? ''" :aria-label="t('sheets.format')" data-testid="sheet-format" @change="format(($event.target as HTMLSelectElement).value as NumFmt | '')">
         <option v-for="f in FORMATS" :key="f.key" :value="f.key">{{ t(`sheets.fmt.${f.label}`) }}</option>
-      </select>
-      <button type="button" class="icon-btn h-7 w-7" :class="{ on: freeze > 0 }" :title="t('sheets.freeze')" :aria-label="t('sheets.freeze')" @click="toggleFreeze"><Rows3 class="h-4 w-4" /></button>
+      </NativeSelect>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :class="{ on: freeze > 0 }" :title="t('sheets.freeze')" :aria-label="t('sheets.freeze')" @click="toggleFreeze"><Rows3 class="h-4 w-4" /></Button>
     </div>
 
     <!-- Formula bar -->
@@ -861,7 +863,7 @@ defineExpose({ tabId })
           {{ tb.name }}
         </button>
       </template>
-      <button v-if="editable" type="button" class="icon-btn h-7 w-7" :title="t('sheets.addTab')" :aria-label="t('sheets.addTab')" data-testid="sheet-add-tab" @click="addTab"><Plus class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" v-if="editable" type="button" class="text-text-2 h-7 w-7" :title="t('sheets.addTab')" :aria-label="t('sheets.addTab')" data-testid="sheet-add-tab" @click="addTab"><Plus class="h-4 w-4" /></Button>
     </div>
 
     <Popover v-if="headMenu" :anchor="headMenu.anchor" :width="220" @close="headMenu = null">
@@ -895,7 +897,7 @@ defineExpose({ tabId })
   height: 100%;
   border-radius: var(--r-lg);
   background: var(--bg);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
   overflow: hidden;
 }
 .sh-tools {
@@ -904,7 +906,7 @@ defineExpose({ tabId })
   align-items: center;
   gap: 2px;
   padding: 6px 8px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .sh-tools .on {
   background: var(--accent-bg);
@@ -921,7 +923,7 @@ defineExpose({ tabId })
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
 .sh-addr {
@@ -968,8 +970,8 @@ defineExpose({ tabId })
   width: var(--rowheadw);
   height: var(--headh);
   z-index: 4;
-  border-right: 0.5px solid var(--border);
-  border-bottom: 0.5px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .sh-top {
   left: var(--rowheadw);
@@ -988,8 +990,8 @@ defineExpose({ tabId })
   height: var(--headh);
   display: grid;
   place-items: center;
-  border-right: 0.5px solid var(--border);
-  border-bottom: 0.5px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: var(--grouped);
   font-size: 11.5px;
   color: var(--text-3);
@@ -1036,8 +1038,8 @@ defineExpose({ tabId })
   height: var(--rowh);
   display: grid;
   place-items: center;
-  border-bottom: 0.5px solid var(--border);
-  border-right: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   font-size: 11.5px;
   color: var(--text-3);
 }
@@ -1056,8 +1058,8 @@ defineExpose({ tabId })
   height: var(--rowh);
   padding: 0 6px;
   line-height: var(--rowh);
-  border-right: 0.5px solid var(--line-soft);
-  border-bottom: 0.5px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1133,7 +1135,7 @@ defineExpose({ tabId })
   align-items: center;
   gap: 2px;
   padding: 4px 8px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
   overflow-x: auto;
   background: var(--grouped);
 }
@@ -1148,7 +1150,7 @@ defineExpose({ tabId })
   background: var(--surface);
   color: var(--text);
   font-weight: 600;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .sh-tab-input {
   width: 120px;

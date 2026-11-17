@@ -1,13 +1,100 @@
+/* Tailwind first: it sets the cascade-layer order (theme, base,
+   components, utilities) before any of our own layers appear. */
+@import "tailwindcss";
 /* The developer themes (shared with the other projects; see the file). */
 @import "./dev-themes.css";
-/* Code highlighting colours. */
-@import "./syntax.css";
-/* Holiday themes: the sidebar and Home in a holiday's colours. */
-@import "./holiday.css";
+/* Code highlighting colours and the holiday themes (the sidebar and Home in
+   a holiday's colours), below the components and utilities as before. */
+@import "./syntax.css" layer(base);
+@import "./holiday.css" layer(base);
+/* shadcn-vue: its enter/leave animations, and its names for our tokens. */
+@import "tw-animate-css";
+@import "./shadcn.css";
+/* Liquid glass (each person's): unlayered, so it wins over the grounds. */
+@import "./glass.css";
+@import "./motion.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Dark mode follows the .dark class on <html>. */
+@custom-variant dark (&:is(.dark *));
+
+/* The Tailwind names for our tokens. "inline" so a utility reads the token
+   where it is used: a part kept light or dark (.theme-light/.theme-dark), a
+   workspace's --ws and the person's accent all reach it. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-grouped: var(--grouped);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-hover: var(--surface-hover);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-fill-strong: var(--fill-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-text-faint: var(--text-faint);
+  --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-text: var(--accent-text);
+  --color-accent-fg: var(--accent-fg); /* text on the accent (dark on Ink's bone) */
+  --color-ws: var(--ws);
+  --color-side: var(--side);
+  --color-line-soft: var(--line-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-text: var(--ok-text);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-text: var(--warn-text);
+  --color-crit: var(--crit);
+  --color-crit-bg: var(--crit-bg);
+  --color-crit-text: var(--crit-text);
+  --color-crit-border: var(--crit-border);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shadow-soft: var(--shadow);
+  --shadow-lg2: var(--shadow-lg);
+
+  /* Controls 9px, cards 12px, sheets 16px. */
+  --radius-lg: 9px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+}
+
+/* What Tailwind 3 did by default and Tailwind 4 doesn't: a light grey
+   border colour, grey placeholders and a pointer on buttons. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 /* ============================================================
    Orbit's design system, after Apple's: the system font (SF Pro on Apple
@@ -41,6 +128,10 @@
   --side-solid: #f2f2f7;
   --grouped: #f2f2f7; /* iOS grouped background */
   --surface: #ffffff;
+  /* The ground of every modal window (sheets, dialogs, the AI chat, the
+     command palette, viewers): one token, so they all look the same. */
+  --sheet-bg: #ffffff;
+  --sheet-ring: rgb(0 0 0 / 0.1);
   --surface-2: #f5f5f7;
   --surface-3: #e9e9ee;
   --surface-hover: rgba(0, 0, 0, 0.045);
@@ -86,7 +177,7 @@
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 12px 40px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 0 0 1px rgba(0, 0, 0, 0.12), 0 12px 40px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
   --backdrop: rgba(0, 0, 0, 0.22);
   color-scheme: light;
 }
@@ -112,6 +203,10 @@ html.dark,
   --side-solid: #242426;
   --grouped: #000000;
   --surface: #2c2c2e;
+  /* A step above the page (so a window never melts into it, backdrop or
+     not) and below the cards and fields on it. */
+  --sheet-bg: #262628;
+  --sheet-ring: rgb(255 255 255 / 0.12);
   --surface-2: #232325;
   --surface-3: #3a3a3c;
   --surface-hover: rgba(255, 255, 255, 0.06);
@@ -157,7 +252,7 @@ html.dark,
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 16px 48px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 16px 48px rgba(0, 0, 0, 0.55);
   --backdrop: rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
@@ -191,13 +286,16 @@ body {
   font: 14px/1.45 var(--font-sans);
   letter-spacing: -0.006em;
   -webkit-tap-highlight-color: transparent;
+  /* A quick second tap doesn't zoom the page (pinching still does). */
+  touch-action: manipulation;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv11", "ss01";
 }
 /* A developer theme: a soft wash of its colour from the top right of the
-   main column (AppShell's .main; a holiday theme paints its own). */
-html.dev-theme .main:not(.holiday-main) {
+   main column (AppShell's <main class="main">, not the rows' .main buttons;
+   a holiday theme paints its own, the liquid glass its wash). */
+html.dev-theme:not(.glass) main.main:not(.holiday-main) {
   background: radial-gradient(1200px 600px at 78% -8%, var(--accent-soft), transparent 60%), var(--bg);
 }
 code,
@@ -213,17 +311,16 @@ code,
   border-radius: 6px;
 }
 /* Fields drawn into something else (the ⌘K bar, a quick-add row, a search
-   pill) opt out with outline-none; the container shows the focus instead. */
-input.outline-none:focus-visible,
-textarea.outline-none:focus-visible,
+   pill) opt out with outline-hidden; the container shows the focus instead. */
+input.outline-hidden:focus-visible,
+textarea.outline-hidden:focus-visible,
 .search input:focus-visible {
   box-shadow: none;
 }
-/* Small uppercase section label (sidebar groups, table heads). */
+/* A small section label: shadcn's group label. */
 .cap {
-  font: 600 11px/1.3 var(--font-sans);
-  letter-spacing: 0.02em;
-  color: var(--text-3);
+  font: 500 12px/1.3 var(--font-sans);
+  color: var(--text-2);
 }
 /* Thin, overlay-style scrollbars. */
 * {
@@ -247,17 +344,18 @@ textarea.outline-none:focus-visible,
 @layer components {
   /* ---- Type ---- */
   .large-title {
-    font: 700 30px/1.15 var(--font-display);
-    letter-spacing: -0.022em;
+    /* shadcn's page heading: semibold, tight. */
+    font: 600 30px/1.2 var(--font-sans);
+    letter-spacing: -0.025em;
     color: var(--text);
   }
   .title-2 {
-    font: 700 22px/1.2 var(--font-display);
-    letter-spacing: -0.018em;
+    font: 600 22px/1.25 var(--font-sans);
+    letter-spacing: -0.02em;
   }
   .title-3 {
-    font: 600 17px/1.3 var(--font-display);
-    letter-spacing: -0.012em;
+    font: 600 16px/1.35 var(--font-sans);
+    letter-spacing: -0.01em;
   }
   .subhead {
     font-size: 13px;
@@ -270,208 +368,98 @@ textarea.outline-none:focus-visible,
 
   /* ---- Surfaces ---- */
   /* A grouped, rounded section (iOS inset grouped list / macOS box). */
+  /* shadcn-vue's Card: a fine ring, rounded. */
   .card {
-    border-radius: var(--r-lg);
+    border-radius: 12px;
     background: var(--surface);
-    box-shadow: 0 0 0 0.5px var(--border), var(--shadow-sm);
-  }
-  html.dark .card {
-    box-shadow: 0 0 0 0.5px var(--border);
+    box-shadow: 0 0 0 1px var(--border);
   }
   /* Note: this takes Tailwind's bare `group` class name; use named groups
      (`group/row` + `group-hover/row:`) for hover effects instead. */
+  /* A grouped box: bordered, a row per field. Its small icon
+     tiles show as the icon alone, in the tile's colour. */
   .group {
-    border-radius: var(--r-lg);
+    border-radius: 12px;
     background: var(--surface);
-    box-shadow: 0 0 0 0.5px var(--border);
+    border: 1px solid var(--border);
     overflow: hidden;
   }
   .group > * + * {
-    border-top: 0.5px solid var(--border);
+    border-top: 1px solid var(--border);
   }
   .group-row {
-    @apply flex items-center gap-3;
+    @apply flex items-center gap-2.5;
     min-height: 44px;
-    padding: 8px 14px;
+    padding: 6px 12px;
+    font-size: 14px;
   }
+  .group .tile.h-7,
+  .group .tile.h-8 {
+    width: 18px !important;
+    height: 18px !important;
+    background: none;
+    box-shadow: none;
+    color: var(--tile, var(--accent));
+  }
+  .group .tile.h-7 svg,
+  .group .tile.h-8 svg {
+    width: 18px;
+    height: 18px;
+  }
+  /* The sidebar's ground: solid, as shadcn's sidebar (no glass). */
   .material {
-    background: var(--side);
-    backdrop-filter: saturate(180%) blur(24px);
-    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    background: var(--side-solid);
   }
+  /* A popover: shadcn-vue's PopoverContent (on Orbit's colours). */
   .popover {
-    border-radius: 12px;
-    background: var(--surface);
-    box-shadow: var(--shadow-lg);
-    padding: 5px;
+    @apply rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10;
   }
-  html.dark .popover {
-    background: #2c2c2e;
-  }
+  /* A menu's item and separator: shadcn-vue's DropdownMenuItem (the
+     highlight in the accent) and DropdownMenuSeparator. */
   .menu-item {
-    @apply flex w-full items-center gap-2.5 text-left;
-    padding: 6px 10px;
-    border-radius: 7px;
-    font-size: 13.5px;
-    color: var(--text);
-    cursor: default;
+    @apply relative flex w-full cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4;
   }
   .menu-item:hover,
+  .menu-item:focus-visible,
   .menu-item.on {
-    background: var(--accent);
-    color: var(--accent-fg, #fff);
+    @apply bg-accent text-accent-foreground;
   }
   .menu-item:hover svg,
+  .menu-item:focus-visible svg,
   .menu-item.on svg {
-    color: var(--accent-fg, #fff) !important;
+    color: var(--accent-fg) !important;
   }
   .menu-item.danger {
-    color: var(--danger);
+    @apply text-destructive;
   }
-  .menu-item.danger:hover {
-    background: var(--danger);
-    color: #fff;
+  .menu-item.danger:hover,
+  .menu-item.danger:focus-visible {
+    @apply bg-destructive/10 text-destructive;
+  }
+  .menu-item.danger:hover svg {
+    color: var(--danger) !important;
   }
   .menu-sep {
-    height: 0.5px;
-    margin: 5px 8px;
-    background: var(--border);
+    @apply -mx-1 my-1 h-px bg-border;
   }
 
   /* ---- Controls ---- */
+  /* A text field: shadcn-vue's Input, for the few native ones left. */
   .input {
-    @apply w-full outline-none;
-    font-size: 14px;
-    color: var(--text);
-    padding: 7px 11px;
-    border-radius: var(--r-md);
-    border: 0.5px solid var(--border-2);
-    background: var(--surface);
-    box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.04);
-    transition: box-shadow var(--speed) var(--ease), border-color var(--speed) var(--ease);
-  }
-  html.dark .input {
-    background: var(--fill-2);
-    border-color: var(--border);
-  }
-  .input::placeholder {
-    color: var(--text-faint);
-  }
-  .input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--ring);
-  }
-  .input:disabled {
-    opacity: 0.55;
+    @apply h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base text-text transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30;
   }
   textarea.input {
-    line-height: 1.45;
-    resize: vertical;
+    @apply h-auto min-h-16 py-2;
   }
-  select.input {
-    appearance: none;
-    padding-right: 30px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3' fill='none' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-  }
-  /* A borderless field on a filled background (search, inline edits). */
+  /* A search or inline field: shadcn-vue's Input too. */
   .field {
-    @apply w-full outline-none;
-    font-size: 14px;
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: var(--r-md);
-    border: 0;
-    background: var(--fill-2);
+    @apply h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm text-text outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30;
   }
-  .field:focus {
-    box-shadow: 0 0 0 3px var(--ring);
-  }
+  /* A field's label: shadcn-vue's Label. */
   .label {
-    @apply mb-1.5 block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-2);
+    @apply mb-2 block text-sm leading-none font-medium text-text;
   }
 
-  .btn {
-    @apply inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap;
-    font-size: 13.5px;
-    font-weight: 500;
-    line-height: 20px;
-    padding: 6px 14px;
-    border-radius: var(--r-md);
-    border: 0;
-    background: var(--fill);
-    color: var(--text);
-    cursor: pointer;
-    transition: background var(--speed) var(--ease), transform 0.1s var(--ease), filter var(--speed);
-  }
-  .btn:hover:not(:disabled) {
-    background: var(--fill-strong);
-  }
-  .btn:active:not(:disabled) {
-    transform: scale(0.97);
-  }
-  .btn:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-  .btn-primary {
-    @apply btn;
-    background: var(--accent);
-    color: var(--accent-fg);
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent);
-    filter: brightness(1.08);
-  }
-  .btn-tinted {
-    @apply btn;
-    background: var(--accent-bg);
-    color: var(--accent-text);
-  }
-  .btn-tinted:hover:not(:disabled) {
-    background: var(--accent-soft);
-  }
-  .btn-ghost {
-    @apply btn;
-    background: transparent;
-  }
-  .btn-ghost:hover:not(:disabled) {
-    background: var(--surface-hover);
-  }
-  .btn-plain {
-    @apply btn;
-    background: transparent;
-    color: var(--accent-text);
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-  .btn-plain:hover:not(:disabled) {
-    background: transparent;
-    opacity: 0.75;
-  }
-  .btn-danger {
-    @apply btn;
-    background: var(--danger);
-    color: #fff;
-  }
-  .btn-danger:hover:not(:disabled) {
-    background: var(--danger);
-    filter: brightness(1.08);
-  }
-  .btn-sm {
-    font-size: 12.5px;
-    padding: 3px 10px;
-    border-radius: 7px;
-  }
-  .btn-lg {
-    font-size: 15px;
-    padding: 9px 18px;
-    border-radius: 11px;
-  }
   /* A square icon button (toolbar). */
   .icon-btn {
     @apply inline-grid shrink-0 place-items-center;
@@ -499,38 +487,25 @@ textarea.outline-none:focus-visible,
 
   /* Segmented control. */
   .seg {
-    @apply inline-flex shrink-0;
-    padding: 2px;
-    border-radius: 9px;
-    background: var(--fill);
+    @apply inline-flex min-h-8 w-fit shrink-0 items-center justify-center rounded-lg bg-muted p-0.75 text-muted-foreground;
   }
   .seg button {
-    @apply cursor-pointer whitespace-nowrap;
-    padding: 4px 13px;
-    font-size: 13px;
-    font-weight: 500;
-    border-radius: 7px;
-    color: var(--text);
-    border: 0;
-    background: transparent;
-    transition: background var(--speed) var(--ease), box-shadow var(--speed);
+    @apply relative inline-flex min-h-[26px] flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0;
   }
   .seg button.on {
-    background: var(--surface);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  }
-  html.dark .seg button.on {
-    background: #636366;
+    @apply bg-background text-foreground shadow-sm dark:border-(--border-strong) dark:bg-(--fill-strong) dark:text-foreground;
   }
 
   /* Round checkbox (Reminders). Colour from --check. */
+  /* Round checkbox: shadcn-vue's Checkbox (round), in
+     its list's or note's colour (--check). */
   .check {
-    @apply grid shrink-0 cursor-pointer place-items-center;
+    @apply grid shrink-0 cursor-pointer place-items-center shadow-xs dark:bg-input/30;
     --check: var(--ws);
     width: 20px;
     height: 20px;
     border-radius: 999px;
-    border: 1.5px solid var(--text-faint);
+    border: 1px solid var(--border-2);
     background: transparent;
     color: #fff;
     transition: all 0.18s var(--ease);
@@ -553,14 +528,10 @@ textarea.outline-none:focus-visible,
   }
 
   /* Pills and badges. */
-  .pill {
-    @apply inline-flex items-center gap-1 whitespace-nowrap;
-    font-size: 11.5px;
-    font-weight: 500;
-    padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--fill);
-    color: var(--text-2);
+  /* A pill: shadcn-vue's Badge (secondary). */
+  .pill,
+  .act-kind {
+    @apply inline-flex min-h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent bg-secondary px-2 py-0.5 text-xs font-medium whitespace-nowrap text-text-2;
   }
 
   /* Toggle chips (filters): a pill that turns accent when on. */
@@ -571,7 +542,8 @@ textarea.outline-none:focus-visible,
     border-radius: 999px;
     font-size: 13px;
     font-weight: 500;
-    background: var(--fill-2);
+    border: 1px solid var(--border-2);
+    background: transparent;
     color: var(--text);
     transition: background 0.12s var(--ease), color 0.12s var(--ease);
   }
@@ -579,26 +551,28 @@ textarea.outline-none:focus-visible,
     background: var(--fill);
   }
   .chip.on {
+    border-color: var(--accent);
     background: var(--accent);
     color: var(--accent-fg, #fff);
   }
 
   /* Sidebar rows. */
+  /* A sidebar row: shadcn's SidebarMenuButton. */
   .side-item {
     @apply flex w-full items-center gap-2 text-left;
-    height: 30px;
+    height: 32px;
     padding: 0 8px;
-    border-radius: 7px;
-    font-size: 13.5px;
+    border-radius: 8px;
+    font-size: 14px;
     color: var(--text);
     cursor: default;
     transition: background 0.12s var(--ease);
   }
-  .side-item:hover {
-    background: var(--surface-hover);
+  .side-item:hover,
+  .side-item.on {
+    background: var(--fill);
   }
   .side-item.on {
-    background: var(--fill-strong);
     font-weight: 500;
   }
   .side-item svg {
@@ -611,111 +585,80 @@ textarea.outline-none:focus-visible,
   }
 
   /* Workspace / list icon tile (iOS Settings style). */
+  /* An icon tile — a workspace's or list's own icon, a module card's, a
+     template's, an empty state's: shadcn's bordered icon box, the icon in the
+     tile's colour. */
   .tile {
     @apply grid shrink-0 place-items-center;
-    color: #fff;
-    border-radius: 7px;
-    background: var(--tile, var(--accent));
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
-    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--tile, var(--accent));
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  span.tile[class*=" h-"],
+  span.tile[class^="tile h-"] {
+    border-radius: 10px;
   }
 
   /* ---- Legacy names (admin and audit views) ---- */
+  /* A tab bar (admin, settings sheets): shadcn-vue's TabsList / TabsTrigger. */
   .subtabs {
-    display: flex;
-    gap: 2px;
-    margin-bottom: 18px;
-    padding: 2px;
-    border-radius: 9px;
-    background: var(--fill);
-    width: max-content;
-    max-width: 100%;
-    overflow-x: auto;
+    @apply mb-[18px] inline-flex max-w-full min-h-8 w-max items-center overflow-x-auto rounded-lg bg-muted p-0.75 text-muted-foreground;
   }
   .subtab {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 4px 13px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    background: none;
-    border: 0;
-    border-radius: 7px;
-    white-space: nowrap;
-    cursor: pointer;
+    @apply relative inline-flex min-h-[26px] cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:text-muted-foreground dark:hover:text-foreground [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4;
   }
   .subtab.on {
-    background: var(--surface);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  }
-  html.dark .subtab.on {
-    background: #636366;
+    @apply bg-background text-foreground shadow-sm dark:border-(--border-strong) dark:bg-(--fill-strong) dark:text-foreground;
   }
   .subtab .count {
-    font-size: 11.5px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: var(--fill);
-    color: var(--text-2);
+    @apply rounded-4xl bg-secondary px-1.5 text-xs text-text-2;
   }
+  /* Tables: shadcn-vue's Table (head, cell, row). */
   .th {
-    @apply whitespace-nowrap text-left;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-3);
+    @apply h-10 px-3 text-left align-middle text-sm font-medium whitespace-nowrap text-text-2;
   }
   .td {
-    padding: 9px 14px;
-    font-size: 13.5px;
+    @apply px-3 py-2.5 align-middle text-sm;
   }
   tbody tr {
-    border-color: var(--line-soft);
+    border-color: var(--border);
+    transition: background 0.12s;
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--fill) 50%, transparent);
   }
   .panel {
-    border-radius: var(--r-lg);
+    border-radius: 12px;
     background: var(--surface);
-    box-shadow: 0 0 0 0.5px var(--border);
+    border: 1px solid var(--border);
     overflow: hidden;
   }
   .panel-head {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 14px;
-    border-bottom: 0.5px solid var(--border);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
   }
   .panel-body {
-    padding: 12px 14px;
+    padding: 16px;
   }
-  .lb-btn {
-    @apply btn btn-sm;
-  }
+  /* A search box: shadcn-vue's Input, its icon inside. */
   .search {
-    @apply inline-flex items-center gap-2;
-    padding: 0 10px;
-    border-radius: var(--r-md);
-    background: var(--fill-2);
-    color: var(--text-3);
+    @apply inline-flex h-8 items-center gap-2 rounded-lg border border-input px-2.5 text-text-3 dark:bg-input/30;
   }
   .search:focus-within {
-    box-shadow: 0 0 0 3px var(--ring);
+    @apply border-ring ring-3 ring-ring/50;
   }
   .search input {
-    @apply bg-transparent outline-none;
-    color: var(--text);
-    font-size: 13.5px;
-    width: 100%;
+    @apply w-full bg-transparent text-sm text-text outline-hidden placeholder:text-muted-foreground;
   }
   .empty-state {
     padding: 36px 16px;
     text-align: center;
     color: var(--text-3);
-  }
-  .act-kind {
-    @apply pill;
   }
   .act-kind.failed {
     background: var(--crit-bg);
@@ -873,14 +816,14 @@ textarea.outline-none:focus-visible,
   min-width: 0;
   padding: 2px 6px;
   border-radius: 8px;
-  box-shadow: 0 0 0 0.5px var(--line-soft, var(--border));
+  box-shadow: 0 0 0 1px var(--line-soft, var(--border));
 }
 .md-view [data-columns] > [data-column] > :first-child { margin-top: 0; }
 .details-block {
   margin: 0.6em 0;
   padding: 4px 10px;
   border-radius: 10px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .details-summary {
   font-weight: 600;
@@ -896,7 +839,7 @@ textarea.outline-none:focus-visible,
   margin: 0.6em 0;
   padding: 4px 10px;
   border-radius: 10px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .md-view details > summary {
   font-weight: 600;
@@ -917,7 +860,7 @@ textarea.outline-none:focus-visible,
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border), 0 8px 28px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 0 0 1px var(--border), 0 8px 28px rgba(0, 0, 0, 0.14);
   font-size: 13px;
   line-height: 1.45;
   color: var(--text);
@@ -931,4 +874,133 @@ textarea.outline-none:focus-visible,
   margin-top: 6px;
   font-size: 11.5px;
   color: var(--text-3);
+}
+
+/* Native checkboxes and radios look like shadcn-vue's Checkbox and
+   RadioGroupItem (the few screens that use the browser's own). */
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-grid;
+    flex: none;
+    place-content: center;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    background: transparent;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    vertical-align: middle;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  input[type="radio"] {
+    border-radius: 999px;
+  }
+  input[type="checkbox"]:checked,
+  input[type="radio"]:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  input[type="checkbox"]:checked::after {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: var(--accent-fg);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  input[type="radio"]:checked::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent-fg);
+  }
+  input[type="checkbox"]:focus-visible,
+  input[type="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+  input[type="checkbox"]:disabled,
+  input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+/* A colour swatch: a dot (solid, a fine ring, a white tick on the
+   chosen one — drawn here when the button has none of its own). */
+@layer components {
+  .swatch {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: var(--sw, var(--accent));
+    color: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1);
+    cursor: pointer;
+    transition: transform 0.15s var(--ease);
+  }
+  html.dark .swatch {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.15);
+  }
+  .swatch:hover {
+    transform: scale(1.1);
+  }
+  .swatch[aria-checked="true"]:empty::after {
+    content: "";
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+}
+
+/* A tooltip: shadcn-vue's TooltipContent (lib/tooltips.ts shows it). */
+.orbit-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 400;
+  max-width: 280px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+  animation: orbit-tip-in 0.12s ease-out;
+}
+@keyframes orbit-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.97);
+  }
+}
+
+/* Developer themes card (styled in the shared dev-themes.css): the master
+   switch as a plain bordered card with a bordered icon box, the theme cards
+   with shadcn's corners. */
+@layer components {
+  .dev-master {
+    border-radius: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+  }
+  .dev-master .dm-ico {
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .theme-card {
+    border-radius: 12px;
+    border-width: 1px;
+  }
 }

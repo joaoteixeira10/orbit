@@ -156,7 +156,7 @@ function openHit(h: GuideSection) {
   width: 250px;
   padding: 28px 14px;
   overflow-y: auto;
-  border-right: 0.5px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 .docs-side .search {
   display: flex;
@@ -215,7 +215,7 @@ function openHit(h: GuideSection) {
   .docs-side {
     width: auto;
     border-right: 0;
-    border-bottom: 0.5px solid var(--border);
+    border-bottom: 1px solid var(--border);
     padding: 20px 12px 12px;
   }
 }

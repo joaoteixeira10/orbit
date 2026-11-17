@@ -19,6 +19,7 @@ import { useToastStore } from '@/stores/toast'
 import { locale, fmtDate, fmtTime } from '@/lib/dates'
 import { ago, draftOf, inputOf, isEmptyDraft, sameContent, toChecklist, toText, type Draft } from './noteModel'
 import type { Note } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // One note, opened from the wall: the same editing as the capture box in a
 // sheet tinted with the note's colour. Changes save while typing (debounced)
@@ -299,7 +300,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
           <input v-if="draft.title" class="sealed-title" :value="draft.title" readonly :aria-label="t('lock.locked')" />
           <LockKeyhole class="h-7 w-7 text-text-3" />
           <p class="text-[13px] text-text-2">{{ sealedMine ? t('lock.lockedHint') : t('lock.lockedOther') }}</p>
-          <button v-if="sealedMine" class="btn btn-sm" data-testid="note-unlock" @click="openSealed">{{ t('lock.openIt') }}</button>
+          <Button variant="secondary" size="sm" v-if="sealedMine" data-testid="note-unlock" @click="openSealed">{{ t('lock.openIt') }}</Button>
         </div>
         <NoteFields v-else ref="fields" v-model="draft" big :readonly="!canEdit" @submit="close" />
         <Attachments
@@ -320,47 +321,47 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
           <BellRing class="h-3.5 w-3.5" />{{ t('remind.at', { when: remindLabel }) }}
           <button v-if="editable" class="ml-0.5 opacity-70 hover:opacity-100" :aria-label="t('remind.remove')" :title="t('remind.remove')" @click="remind('')"><X class="h-3.5 w-3.5" /></button>
         </p>
-        <button
+        <Button variant="ghost" size="icon"
           v-if="editable"
-          class="tb pin absolute -right-2 -top-1"
+          class="tb pin absolute -right-2 -top-1 rounded-full text-text-2"
           :class="{ on: draft.pinned }"
           :aria-label="draft.pinned ? t('notes.unpin') : t('notes.pin')"
           :title="draft.pinned ? t('notes.unpin') : t('notes.pin')"
           @click="draft.pinned = !draft.pinned"
         >
           <Pin class="h-[18px] w-[18px]" :fill="draft.pinned ? 'currentColor' : 'none'" />
-        </button>
+        </Button>
       </div>
     </div>
     <template v-if="note" #footer>
       <div class="note-sheet flex min-w-0 flex-1 items-center gap-1" :data-note="draft.color">
         <template v-if="canEdit">
-          <button ref="colorBtn" class="tb" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">
+          <Button variant="ghost" size="icon" ref="colorBtn" class="tb rounded-full text-text-2" :class="{ on: menu === 'color' }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="menu = menu === 'color' ? '' : 'color'">
             <Palette class="h-[18px] w-[18px]" />
-          </button>
-          <button class="tb" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
+          </Button>
+          <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
             <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
             <SquareCheck v-else class="h-[18px] w-[18px]" />
-          </button>
-          <button class="tb" :class="{ on: !!note.drawing }" :aria-label="t('draw.onNote')" :title="t('draw.onNote')" data-testid="note-draw" @click="openDrawing">
+          </Button>
+          <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :class="{ on: !!note.drawing }" :aria-label="t('draw.onNote')" :title="t('draw.onNote')" data-testid="note-draw" @click="openDrawing">
             <Brush class="h-[18px] w-[18px]" />
-          </button>
-          <button ref="remindBtn" class="tb" :class="{ on: menu === 'remind' || !!note.remind_at }" :aria-label="t('remind.title')" :title="t('remind.title')" data-testid="note-remind" @click="menu = menu === 'remind' ? '' : 'remind'">
+          </Button>
+          <Button variant="ghost" size="icon" ref="remindBtn" class="tb rounded-full text-text-2" :class="{ on: menu === 'remind' || !!note.remind_at }" :aria-label="t('remind.title')" :title="t('remind.title')" data-testid="note-remind" @click="menu = menu === 'remind' ? '' : 'remind'">
             <BellPlus class="h-[18px] w-[18px]" />
-          </button>
-          <button class="tb" :aria-label="t('files.attach')" :title="t('files.attach')" @click="files?.pick()">
+          </Button>
+          <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :aria-label="t('files.attach')" :title="t('files.attach')" @click="files?.pick()">
             <Paperclip class="h-[18px] w-[18px]" />
-          </button>
-          <button ref="moreBtn" class="tb" :class="{ on: menu === 'more' }" :aria-label="t('notes.options')" :title="t('notes.options')" @click="menu = menu === 'more' ? '' : 'more'">
+          </Button>
+          <Button variant="ghost" size="icon" ref="moreBtn" class="tb rounded-full text-text-2" :class="{ on: menu === 'more' }" :aria-label="t('notes.options')" :title="t('notes.options')" @click="menu = menu === 'more' ? '' : 'more'">
             <MoreHorizontal class="h-[18px] w-[18px]" />
-          </button>
+          </Button>
         </template>
-        <button class="tb" :class="{ on: noteWide }" :aria-label="noteWide ? t('notes.smaller') : t('notes.bigger')" :title="noteWide ? t('notes.smaller') : t('notes.bigger')" :aria-pressed="noteWide" data-testid="note-size" @click="noteWide = !noteWide">
+        <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :class="{ on: noteWide }" :aria-label="noteWide ? t('notes.smaller') : t('notes.bigger')" :title="noteWide ? t('notes.smaller') : t('notes.bigger')" :aria-pressed="noteWide" data-testid="note-size" @click="noteWide = !noteWide">
           <Minimize2 v-if="noteWide" class="h-[18px] w-[18px]" />
           <Maximize2 v-else class="h-[18px] w-[18px]" />
-        </button>
+        </Button>
         <span class="ml-2 min-w-0 flex-1 truncate text-[12px] text-text-2">{{ edited }}</span>
-        <button class="btn btn-sm close-btn" @click="close">{{ t('common.close') }}</button>
+        <Button variant="secondary" size="sm" class="close-btn" @click="close">{{ t('common.close') }}</Button>
       </div>
       <Popover v-if="menu === 'color'" :anchor="colorBtn" placement="top-start" @close="menu = ''">
         <NoteColorPicker v-model="draft.color" />
@@ -412,7 +413,7 @@ const edited = computed(() => (note.value ? t('notes.edited', { when: ago(note.v
   padding: 8px;
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.08);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
 }
 .drawing-pic img {
   display: block;
@@ -448,16 +449,7 @@ footer .note-sheet,
 .tb.pin.on:hover {
   background: var(--fill);
 }
-.tb {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  color: var(--text-2);
-  transition: background 0.15s var(--ease), color 0.15s;
-}
-.tb:hover,
+/* The toolbar: shadcn's ghost icon buttons, round. */
 .tb.on {
   background: var(--fill);
   color: var(--text);

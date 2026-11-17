@@ -43,7 +43,7 @@ function onEnter() {
 <template>
   <Popover :anchor="anchor" :width="240" @close="emit('close')">
     <div class="p-1.5" data-testid="option-picker">
-      <input v-model="q" class="field mb-1.5 !py-1.5 text-[13.5px]" :placeholder="canAdd ? t('db.findOrAdd') : t('db.find')" autofocus @keydown.enter.prevent="onEnter" />
+      <input v-model="q" class="field mb-1.5 py-1.5! text-[13.5px]" :placeholder="canAdd ? t('db.findOrAdd') : t('db.find')" autofocus @keydown.enter.prevent="onEnter" />
       <div class="max-h-64 overflow-y-auto">
         <button v-for="o in shown" :key="o.id" type="button" class="menu-item w-full" @click="toggle(o.id)">
           <Check class="h-4 w-4" :class="value.includes(o.id) ? 'text-accent' : 'opacity-0'" />

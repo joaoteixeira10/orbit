@@ -6,6 +6,8 @@ import Popover from '@/components/ui/Popover.vue'
 import FormulaAssist from '@/components/ui/FormulaAssist.vue'
 import { ChevronRight } from 'lucide-vue-next'
 import { OPTION_COLORS, PROP_TYPES, formulaProblem, newId, type DBProp, type PropType } from '@/lib/database'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A property's menu (its column's header): its name and type, a select's
 // options (renamed, recoloured, taken away), hide it here, delete it.
@@ -109,19 +111,19 @@ function done() {
 <template>
   <Popover :anchor="anchor" :width="draft.type === 'formula' ? 320 : 264" @close="done">
     <div class="space-y-2 p-2.5" data-testid="prop-menu">
-      <input v-model="draft.name" class="field !py-1.5 text-[13.5px]" :placeholder="t('db.propName')" :aria-label="t('db.propName')" maxlength="100" autofocus @keydown.enter.prevent="done" />
+      <input v-model="draft.name" class="field py-1.5! text-[13.5px]" :placeholder="t('db.propName')" :aria-label="t('db.propName')" maxlength="100" autofocus @keydown.enter.prevent="done" />
       <label class="flex items-center gap-2 text-[13px] text-text-2">
         {{ t('db.type') }}
-        <select class="input ml-auto !w-auto !py-1 text-[13px]" :value="draft.type" data-testid="prop-type" @change="setType(($event.target as HTMLSelectElement).value as PropType)">
+        <NativeSelect size="sm" class="ml-auto w-auto" :model-value="draft.type" data-testid="prop-type" @change="setType(($event.target as HTMLSelectElement).value as PropType)">
           <option v-for="k in PROP_TYPES" :key="k" :value="k">{{ t(`db.types.${k}`) }}</option>
-        </select>
+        </NativeSelect>
       </label>
       <template v-if="draft.type === 'formula'">
         <div class="cap px-0.5 pt-1">{{ t('db.formula') }}</div>
         <textarea
           ref="formulaEl"
           v-model="draft.formula"
-          class="field min-h-[64px] font-mono !text-[12.5px]"
+          class="field min-h-[64px] font-mono text-[12.5px]!"
           rows="3"
           spellcheck="false"
           placeholder="=[@Price]*[@Qty]"
@@ -138,7 +140,7 @@ function done() {
         <div v-if="others?.length">
           <div class="cap px-0.5 pb-1">{{ t('db.properties') }}</div>
           <div class="flex flex-wrap gap-1">
-            <button v-for="o in others" :key="o.id" type="button" class="chip !text-[11.5px]" :data-testid="`formula-prop-${o.name}`" @click="pick = { anchor: $event.currentTarget as HTMLElement, prop: o }">
+            <button v-for="o in others" :key="o.id" type="button" class="chip text-[11.5px]!" :data-testid="`formula-prop-${o.name}`" @click="pick = { anchor: $event.currentTarget as HTMLElement, prop: o }">
               {{ o.name }}<ChevronRight class="h-3 w-3 opacity-50" />
             </button>
           </div>
@@ -146,7 +148,7 @@ function done() {
         <div>
           <div class="cap px-0.5 pb-1">{{ t('db.functions') }}</div>
           <div class="flex flex-wrap gap-1">
-            <button v-for="f in FUNCTIONS" :key="f" type="button" class="chip font-mono !text-[11px]" @click="insertFn(f)">{{ f.slice(0, f.indexOf('(')) }}</button>
+            <button v-for="f in FUNCTIONS" :key="f" type="button" class="chip font-mono text-[11px]!" @click="insertFn(f)">{{ f.slice(0, f.indexOf('(')) }}</button>
           </div>
         </div>
         <Popover v-if="pick" :anchor="pick.anchor" :width="230" placement="bottom-start" @close="pick = null">
@@ -162,18 +164,18 @@ function done() {
         <div class="cap px-0.5 pt-1">{{ t('db.options') }}</div>
         <div v-for="(o, i) in draft.options" :key="o.id" class="flex items-center gap-1.5">
           <button type="button" class="h-4 w-4 shrink-0 rounded-full" :style="{ background: o.color || '#8e8e93' }" :aria-label="t('db.colour')" @click="cycle(i)" />
-          <input v-model="o.name" class="field !py-1 text-[13px]" maxlength="100" :aria-label="t('db.optionName')" />
-          <button type="button" class="icon-btn h-6 w-6 shrink-0" :aria-label="t('db.removeOption', { name: o.name })" @click="draft.options!.splice(i, 1)"><X class="h-3.5 w-3.5" /></button>
+          <input v-model="o.name" class="field py-1! text-[13px]" maxlength="100" :aria-label="t('db.optionName')" />
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-6 w-6 shrink-0" :aria-label="t('db.removeOption', { name: o.name })" @click="draft.options!.splice(i, 1)"><X class="h-3.5 w-3.5" /></Button>
         </div>
         <div class="flex items-center gap-1.5">
           <Plus class="h-4 w-4 shrink-0 text-text-3" />
-          <input v-model="optionName" class="field !py-1 text-[13px]" :placeholder="t('db.addOption')" maxlength="100" data-testid="prop-option" @keydown.enter.prevent="addOption" />
+          <input v-model="optionName" class="field py-1! text-[13px]" :placeholder="t('db.addOption')" maxlength="100" data-testid="prop-option" @keydown.enter.prevent="addOption" />
         </div>
       </template>
       <div class="border-t border-line-soft pt-1.5">
         <button v-if="!isNew" type="button" class="menu-item w-full" @click="emit('hide'), emit('close')"><EyeOff class="h-4 w-4 text-text-2" />{{ t('db.hide') }}</button>
         <button v-if="!isNew" type="button" class="menu-item danger w-full" @click="emit('remove'), emit('close')"><Trash2 class="h-4 w-4" />{{ t('db.deleteProp') }}</button>
-        <button type="button" class="btn-primary btn-sm mt-1 w-full" data-testid="prop-done" @click="done">{{ t('db.done') }}</button>
+        <Button size="sm" type="button" class="mt-1 w-full" data-testid="prop-done" @click="done">{{ t('db.done') }}</Button>
       </div>
     </div>
   </Popover>

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { settingsApi } from '@/api'
 import type { Branding } from '@/api/types'
 import type { HolidaySetting } from '@/lib/holidayThemes'
+import type { SeasonSetting } from '@/lib/seasonThemes'
 import { DEV_THEMES, isDevThemeId, resolveCrest, resolveCrestIcons, resolveThemeAccent, type DevTheme, type DevThemeId } from '@/lib/devThemes'
 
 // upsertLink returns the (created-if-missing) <link rel=...> in <head>.
@@ -67,6 +68,15 @@ export const useBrandingStore = defineStore('branding', {
     devThemesPersonal: false,
     // Holiday themes (the owner's): off, auto (each in its season) or one now.
     holidayTheme: 'off' as HolidaySetting,
+    // Season themes (the owner's): off, auto (the season today is in) or one now.
+    seasonTheme: 'off' as SeasonSetting,
+    // The owner lets each person pick their own holiday / season theme.
+    holidaysPersonal: false,
+    seasonsPersonal: false,
+    // This person's own ("" = as the instance; off, auto or one; set by the
+    // prefs store, cached for the first paint, cleared at sign-out).
+    userHolidayTheme: localStorage.getItem('orbit_holiday_theme') || '',
+    userSeasonTheme: localStorage.getItem('orbit_season_theme') || '',
     // This person's choice ("" = as the instance, "none", or a theme id; set
     // by the prefs store, cached for the first paint, cleared at sign-out).
     userDevTheme: localStorage.getItem('orbit_dev_theme') || '',
@@ -87,6 +97,14 @@ export const useBrandingStore = defineStore('branding', {
         if (isDevThemeId(this.userDevTheme)) return DEV_THEMES[this.userDevTheme]
       }
       return this.instanceTheme
+    },
+    // The holiday and season settings in force: this person's own when the
+    // owner allows it, else the owner's.
+    effectiveHolidayTheme(): HolidaySetting {
+      return this.holidaysPersonal && this.userHolidayTheme ? (this.userHolidayTheme as HolidaySetting) : this.holidayTheme
+    },
+    effectiveSeasonTheme(): SeasonSetting {
+      return this.seasonsPersonal && this.userSeasonTheme ? (this.userSeasonTheme as SeasonSetting) : this.seasonTheme
     },
     // What the sidebar/login mark should render.
     logoMode(): 'theme' | 'upload' | 'default' {
@@ -142,6 +160,9 @@ export const useBrandingStore = defineStore('branding', {
       this.assetSourceFavicon = b.asset_source_favicon || 'theme'
       this.devThemesPersonal = !!b.developer_themes_personal
       this.holidayTheme = (b.holiday_theme || 'off') as HolidaySetting
+      this.seasonTheme = (b.season_theme || 'off') as SeasonSetting
+      this.holidaysPersonal = !!b.holiday_themes_personal
+      this.seasonsPersonal = !!b.season_themes_personal
       if (b.drawio_url) this.drawioUrl = b.drawio_url
 
       document.title = this.appName

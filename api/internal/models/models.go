@@ -190,6 +190,11 @@ type UserPrefs struct {
 	// DevTheme is this user's own developer theme, when the owner lets each
 	// person choose: "" = as the instance, "none", or a theme id.
 	DevTheme string `gorm:"size:10" json:"dev_theme"`
+	// HolidayTheme / SeasonTheme: this user's own holiday and season themes,
+	// when the owner lets each person choose: "" = as the instance, "off",
+	// "auto" or one of them.
+	HolidayTheme string `gorm:"size:12" json:"holiday_theme"`
+	SeasonTheme  string `gorm:"size:12" json:"season_theme"`
 	// RemoteImages is whether pages show images from other sites at once
 	// ("always") or only after a click ("ask", the default): such an image
 	// tells its site who reads the page, and when.
@@ -217,6 +222,12 @@ type UserPrefs struct {
 	// HolidayEffects: a holiday theme's falling snow, bats, confetti… (on
 	// until turned off; the theme's colours and art are the owner's).
 	HolidayEffects bool `gorm:"not null;default:true" json:"holiday_effects"`
+	// Glass: how much the sidebar, bars, windows and menus are liquid glass,
+	// 0 (solid, the default) to 100.
+	Glass int `gorm:"not null;default:0" json:"glass"`
+	// Animations: the app's motion (switching theme, opening pages, finishing
+	// a task…); off keeps it still. The system's reduced motion wins either way.
+	Animations bool `gorm:"not null;default:true" json:"animations"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.

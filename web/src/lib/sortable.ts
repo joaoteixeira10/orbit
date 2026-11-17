@@ -4,6 +4,7 @@
 // where, so the caller updates its data and Vue re-renders the new order.
 import { onBeforeUnmount, watch, type Ref } from 'vue'
 import Sortable, { type Options } from 'sortablejs'
+import { dropped, settle } from '@/lib/motion'
 
 export interface SortMove {
   id: string // data-id of the dragged element
@@ -41,6 +42,10 @@ function sortableOptions(onMove: (m: SortMove) => void, options: Options): Optio
         from.insertBefore(item, from.children[oldIndex] ?? null)
       }
       if (from === to && oldIndex === e.newIndex) return
+      // It lands with a little bounce, once the app has drawn the new order.
+      dropped()
+      const id = item.dataset.id ?? ''
+      setTimeout(() => settle(to.querySelector(`:scope > [data-id="${CSS.escape(id)}"]`) ?? item), 40)
       onMove({
         id: item.dataset.id ?? '',
         fromGroup: from.dataset.group ?? '',

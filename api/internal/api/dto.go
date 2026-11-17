@@ -91,6 +91,9 @@ type updatePrefsRequest struct {
 	Locale        *string                    `json:"locale" binding:"omitempty,max=8"`
 	PageEditor    *string                    `json:"page_editor" binding:"omitempty,oneof=visual markdown"`
 	DevTheme      *string                    `json:"dev_theme" binding:"omitempty,max=10"`
+	// HolidayTheme / SeasonTheme: "" (as the instance), off, auto or one of them.
+	HolidayTheme *string `json:"holiday_theme" binding:"omitempty,max=12"`
+	SeasonTheme  *string `json:"season_theme" binding:"omitempty,max=12"`
 	RemoteImages  *string                    `json:"remote_images" binding:"omitempty,oneof=ask always"`
 	SketchColors  *[]string                  `json:"sketch_colors" binding:"omitempty,max=40"`
 	// Sheets, diagrams, whiteboards: "light" or "dark" whatever Orbit's
@@ -107,4 +110,8 @@ type updatePrefsRequest struct {
 	QuietReminders *bool   `json:"quiet_reminders"`
 	// A holiday theme's falling snow, bats, confetti… on or off.
 	HolidayEffects *bool `json:"holiday_effects"`
+	// Glass: how much the sidebar, bars, windows and menus are liquid glass (0 = solid).
+	Glass *int `json:"glass" binding:"omitempty,min=0,max=100"`
+	// Animations: the app's motion on (default) or off.
+	Animations *bool `json:"animations"`
 }

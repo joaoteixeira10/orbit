@@ -11,6 +11,8 @@ import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 import { COLORS } from '@/lib/icons'
 import { locale } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // A workspace's other calendars: the one it syncs with both ways (CalDAV,
 // on top), and its subscribed ones (ICS feeds from Google, iCloud,
@@ -156,18 +158,18 @@ function ago(iso: string): string {
         <div v-for="s in subs" :key="s.id">
           <!-- Editing: name and colour -->
           <div v-if="editId === s.id" class="space-y-3 px-3.5 py-3">
-            <input v-model="editName" class="input" maxlength="120" :aria-label="t('cal.subName')" @keydown.enter="saveEdit(s)" @keydown.esc.stop="editId = ''" />
+            <Input v-model="editName" maxlength="120" :aria-label="t('cal.subName')" @keydown.enter="saveEdit(s)" @keydown.esc.stop="editId = ''" />
             <div class="flex flex-wrap items-center gap-1.5" role="radiogroup" :aria-label="t('cal.color')">
               <button v-for="c in COLORS" :key="c" type="button" class="swatch" role="radio" :aria-checked="editColor.toLowerCase() === c.toLowerCase()" :aria-label="c" :style="{ '--sw': c }" @click="editColor = c">
                 <Check v-if="editColor.toLowerCase() === c.toLowerCase()" class="h-3 w-3" :stroke-width="3.4" />
               </button>
             </div>
             <div class="flex justify-end gap-2">
-              <button class="btn btn-sm" @click="editId = ''">{{ t('common.cancel') }}</button>
-              <button class="btn-primary btn-sm" @click="saveEdit(s)">{{ t('common.save') }}</button>
+              <Button variant="secondary" size="sm" @click="editId = ''">{{ t('common.cancel') }}</Button>
+              <Button size="sm" @click="saveEdit(s)">{{ t('common.save') }}</Button>
             </div>
           </div>
-          <div v-else class="group-row !items-start">
+          <div v-else class="group-row items-start!">
             <span class="mt-1.5 h-3 w-3 shrink-0 rounded-full" :style="{ background: s.color }" />
             <div class="min-w-0 flex-1">
               <div class="truncate text-[14.5px] font-medium">{{ s.name }}</div>
@@ -177,15 +179,15 @@ function ago(iso: string): string {
                 <span>{{ s.fetched_at ? t('cal.fetched', { when: ago(s.fetched_at) }) : t('cal.neverFetched') }}</span>
               </div>
               <p v-if="s.last_error" class="mt-1 flex items-start gap-1 text-[12.5px] text-crit-text">
-                <AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="break-words">{{ s.last_error }}</span>
+                <AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="wrap-break-word">{{ s.last_error }}</span>
               </p>
             </div>
             <div class="-mr-1.5 flex shrink-0 items-center">
-              <button class="icon-btn" :title="t('cal.refresh')" :aria-label="t('cal.refresh')" :disabled="busy[s.id]" @click="refresh(s)">
+              <Button variant="ghost" size="icon" class="text-text-2" :title="t('cal.refresh')" :aria-label="t('cal.refresh')" :disabled="busy[s.id]" @click="refresh(s)">
                 <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': busy[s.id] }" />
-              </button>
-              <button class="icon-btn" :title="t('common.edit')" :aria-label="t('common.edit')" @click="startEdit(s)"><Pencil class="h-4 w-4" /></button>
-              <button class="icon-btn !text-danger" :title="t('cal.unsubscribe')" :aria-label="t('cal.unsubscribe')" @click="removing = s"><Trash2 class="h-4 w-4" /></button>
+              </Button>
+              <Button variant="ghost" size="icon" class="text-text-2" :title="t('common.edit')" :aria-label="t('common.edit')" @click="startEdit(s)"><Pencil class="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" class="text-text-2 text-danger!" :title="t('cal.unsubscribe')" :aria-label="t('cal.unsubscribe')" @click="removing = s"><Trash2 class="h-4 w-4" /></Button>
             </div>
           </div>
         </div>
@@ -198,24 +200,23 @@ function ago(iso: string): string {
           <label class="label" for="sub-url">{{ t('cal.subUrl') }}</label>
           <div class="relative">
             <Link2 class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3" />
-            <input
-              id="sub-url"
-              v-model="url"
-              class="input !pl-8"
-              type="url"
-              inputmode="url"
-              autocomplete="off"
-              spellcheck="false"
-              :placeholder="t('cal.subUrlPlaceholder')"
-              :disabled="subscribing"
-              required
-            />
+            <Input
+ id="sub-url"
+ v-model="url"
+ class="pl-8!"
+ type="url"
+ inputmode="url"
+ autocomplete="off"
+ spellcheck="false"
+ :placeholder="t('cal.subUrlPlaceholder')"
+ :disabled="subscribing"
+ required />
           </div>
           <p v-if="addError" class="mt-1.5 text-[12.5px] text-crit-text">{{ addError }}</p>
         </div>
         <div>
           <label class="label" for="sub-name">{{ t('cal.subName') }}</label>
-          <input id="sub-name" v-model="name" class="input" maxlength="120" :placeholder="t('cal.subNamePlaceholder')" :disabled="subscribing" />
+          <Input id="sub-name" v-model="name" maxlength="120" :placeholder="t('cal.subNamePlaceholder')" :disabled="subscribing" />
         </div>
         <div class="flex flex-wrap items-center gap-1.5" role="radiogroup" :aria-label="t('cal.color')">
           <button v-for="c in COLORS" :key="c" type="button" class="swatch" role="radio" :aria-checked="color === c" :aria-label="c" :style="{ '--sw': c }" @click="color = c">
@@ -223,19 +224,19 @@ function ago(iso: string): string {
           </button>
         </div>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn" :disabled="subscribing" @click="adding = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary" :disabled="!urlOk || subscribing">
+          <Button variant="secondary" type="button" :disabled="subscribing" @click="adding = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" :disabled="!urlOk || subscribing">
             <RefreshCw v-if="subscribing" class="h-4 w-4 animate-spin" />{{ subscribing ? t('cal.subscribing') : t('cal.subscribe') }}
-          </button>
+          </Button>
         </div>
       </form>
-      <button v-else class="btn-tinted w-full" @click="startAdd"><Plus class="h-4 w-4" />{{ t('cal.addCalendar') }}</button>
+      <Button variant="outline" v-else class="w-full" @click="startAdd"><Plus class="h-4 w-4" />{{ t('cal.addCalendar') }}</Button>
 
       <p class="footnote px-1 leading-relaxed">{{ t('cal.subsHint') }}</p>
     </div>
     </div>
     <template #footer>
-      <button class="btn-primary" @click="emit('close')">{{ t('common.done') }}</button>
+      <Button @click="emit('close')">{{ t('common.done') }}</Button>
     </template>
   </Overlay>
 
@@ -251,21 +252,7 @@ function ago(iso: string): string {
 </template>
 
 <style scoped>
-.swatch {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--sw);
-  color: #fff;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s var(--spring);
-}
 .swatch:hover {
   transform: scale(1.12);
-}
-.swatch[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--sw);
 }
 </style>

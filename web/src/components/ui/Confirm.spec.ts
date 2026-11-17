@@ -27,7 +27,7 @@ describe('Confirm', () => {
 
     const del = bodyButtons().find((b) => b.textContent?.trim() === 'Delete')
     expect(del).toBeTruthy()
-    expect(del!.className).toContain('btn-danger')
+    expect(del!.dataset.variant).toBe('destructive')
 
     del!.click()
     expect(w.emitted('confirm')).toBeTruthy()
@@ -38,7 +38,7 @@ describe('Confirm', () => {
     const w = mount(Confirm, { global, props: { open: true, title: 'T', message: 'M' } })
 
     const confirm = bodyButtons().find((b) => b.textContent?.trim() === 'Confirm')
-    expect(confirm!.className).toContain('btn-primary')
+    expect(confirm!.dataset.variant).toBe('default')
 
     const cancel = bodyButtons().find((b) => b.textContent?.trim() === 'Cancel')
     cancel!.click()

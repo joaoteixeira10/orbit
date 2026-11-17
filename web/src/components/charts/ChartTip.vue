@@ -45,11 +45,10 @@ watch(
   min-width: 132px;
   max-width: 260px;
   padding: 8px 11px 9px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  backdrop-filter: blur(20px) saturate(1.6);
-  box-shadow: var(--shadow-lg);
+  /* shadcn's chart tooltip: a solid card, a fine ring. */
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   pointer-events: none;
   font-size: 12px;
   line-height: 1.35;
@@ -92,7 +91,7 @@ watch(
 .hint {
   margin-top: 5px;
   padding-top: 5px;
-  border-top: 0.5px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
   color: var(--text-3);
   font-size: 11px;
 }

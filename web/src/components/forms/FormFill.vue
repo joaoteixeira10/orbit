@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { CheckCircle2 } from 'lucide-vue-next'
 import type { FillForm } from '@/lib/shareApi'
 import { ApiError } from '@/lib/api'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { Textarea } from '@/components/shadcn/textarea'
 
 // A form, filled in: one question per field (a text, a number, a date,
 // yes / no, one or several choices, a person), the required ones marked.
@@ -69,17 +72,17 @@ async function submit() {
     <div v-if="done" class="ff-done" data-testid="form-done">
       <CheckCircle2 class="h-10 w-10 text-[#34c759]" />
       <p class="text-[17px] font-semibold">{{ form.thanks || t('forms.thanks') }}</p>
-      <button type="button" class="btn-plain" @click="reset">{{ t('forms.another') }}</button>
+      <Button variant="link" type="button" @click="reset">{{ t('forms.another') }}</Button>
     </div>
     <p v-else-if="!form.open" class="ff-closed" data-testid="form-closed">{{ t('forms.closed') }}</p>
     <form v-else class="mt-6 flex flex-col gap-5" novalidate @submit.prevent="submit">
       <div v-for="f in form.fields" :key="f.prop" class="ff-q" :class="{ bad: bad === f.prop }">
         <label :for="`q-${f.prop}`" class="ff-label">{{ f.label }}<span v-if="f.required" class="text-[#ff3b30]"> *</span></label>
         <p v-if="f.help" class="ff-help">{{ f.help }}</p>
-        <input v-if="f.type === 'title' || f.type === 'url'" :id="`q-${f.prop}`" v-model="values[f.prop] as string" class="input" :type="f.type === 'url' ? 'url' : 'text'" :maxlength="f.type === 'title' ? 300 : 2000" :data-testid="`form-${f.prop}`" />
-        <textarea v-else-if="f.type === 'text'" :id="`q-${f.prop}`" v-model="values[f.prop] as string" class="input" rows="3" maxlength="2000" :data-testid="`form-${f.prop}`" />
-        <input v-else-if="f.type === 'number'" :id="`q-${f.prop}`" v-model.number="values[f.prop] as number" class="input !w-40" type="number" step="any" :data-testid="`form-${f.prop}`" />
-        <input v-else-if="f.type === 'date'" :id="`q-${f.prop}`" v-model="values[f.prop] as string" class="input !w-48" type="date" :data-testid="`form-${f.prop}`" />
+        <Input v-if="f.type === 'title' || f.type === 'url'" :id="`q-${f.prop}`" v-model="values[f.prop] as string" :type="f.type === 'url' ? 'url' : 'text'" :maxlength="f.type === 'title' ? 300 : 2000" :data-testid="`form-${f.prop}`" />
+        <Textarea v-else-if="f.type === 'text'" :id="`q-${f.prop}`" v-model="values[f.prop] as string" rows="3" maxlength="2000" :data-testid="`form-${f.prop}`" />
+        <Input v-else-if="f.type === 'number'" :id="`q-${f.prop}`" v-model.number="values[f.prop] as number" class="w-40!" type="number" step="any" :data-testid="`form-${f.prop}`" />
+        <Input v-else-if="f.type === 'date'" :id="`q-${f.prop}`" v-model="values[f.prop] as string" class="w-48!" type="date" :data-testid="`form-${f.prop}`" />
         <label v-else-if="f.type === 'checkbox'" class="flex items-center gap-2 text-[14px]"><input :id="`q-${f.prop}`" v-model="values[f.prop] as boolean" type="checkbox" :data-testid="`form-${f.prop}`" />{{ t('forms.yes') }}</label>
         <div v-else-if="f.type === 'select' || f.type === 'person'" class="ff-choices" role="radiogroup">
           <label v-for="o in f.options" :key="o.id" class="ff-choice" :class="{ on: values[f.prop] === o.id }">
@@ -96,7 +99,7 @@ async function submit() {
       </div>
       <input v-model="hp" class="ff-hp" tabindex="-1" autocomplete="off" aria-hidden="true" name="website" />
       <p v-if="error" class="rounded-lg bg-crit-bg px-3 py-2 text-[13px] text-crit-text" role="alert" data-testid="form-error">{{ error }}</p>
-      <div><button type="submit" class="btn-primary btn-lg" :disabled="busy" data-testid="form-send">{{ t('forms.send') }}</button></div>
+      <div><Button size="lg" type="submit" :disabled="busy" data-testid="form-send">{{ t('forms.send') }}</Button></div>
     </form>
   </div>
 </template>

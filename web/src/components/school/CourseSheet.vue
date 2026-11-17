@@ -8,6 +8,9 @@ import { coursesApi, type Course, type SlotInput } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
 import { COLORS } from '@/lib/icons'
 import { deviceTZ, weekdayNames, weekStart } from '@/lib/dates'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A course: its name and short name, teacher, room, colour, the tag of its
 // tasks, its term, its weight in the overall average, and its weekly classes
@@ -116,16 +119,16 @@ async function remove() {
         <div class="group">
           <div class="group-row">
             <span class="h-3 w-3 shrink-0 rounded-full" :style="{ background: color }" />
-            <input ref="nameEl" v-model="name" class="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-none placeholder:text-text-faint focus-visible:!shadow-none" :placeholder="t('school.namePh')" maxlength="120" :aria-label="t('school.name')" />
-            <input v-model="code" class="w-20 bg-transparent text-right text-[14px] uppercase outline-none placeholder:text-text-faint focus-visible:!shadow-none" :placeholder="t('school.codePh')" maxlength="16" :aria-label="t('school.code')" />
+            <input ref="nameEl" v-model="name" class="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-hidden placeholder:text-text-faint focus-visible:shadow-none!" :placeholder="t('school.namePh')" maxlength="120" :aria-label="t('school.name')" />
+            <input v-model="code" class="w-20 bg-transparent text-right text-[14px] uppercase outline-hidden placeholder:text-text-faint focus-visible:shadow-none!" :placeholder="t('school.codePh')" maxlength="16" :aria-label="t('school.code')" />
           </div>
           <label class="group-row">
             <span class="w-24 shrink-0 text-[14px]">{{ t('school.teacher') }}</span>
-            <input v-model="teacher" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none focus-visible:!shadow-none" maxlength="120" />
+            <input v-model="teacher" class="min-w-0 flex-1 bg-transparent text-[14px] outline-hidden focus-visible:shadow-none!" maxlength="120" />
           </label>
           <label class="group-row">
             <span class="w-24 shrink-0 text-[14px]">{{ t('school.room') }}</span>
-            <input v-model="room" class="min-w-0 flex-1 bg-transparent text-[14px] outline-none focus-visible:!shadow-none" maxlength="60" />
+            <input v-model="room" class="min-w-0 flex-1 bg-transparent text-[14px] outline-hidden focus-visible:shadow-none!" maxlength="60" />
           </label>
           <div class="group-row flex-wrap">
             <span class="flex-1 text-[14px]">{{ t('school.color') }}</span>
@@ -151,16 +154,16 @@ async function remove() {
         <div>
           <h3 class="subhead mb-1.5 px-1">{{ t('school.classes') }}</h3>
           <div class="group">
-            <div v-for="(s, i) in slots" :key="s.id ?? `new-${i}`" class="group-row flex-wrap !gap-y-1.5" data-testid="class-row">
-              <select v-model.number="s.weekday" class="input !w-auto !py-1 text-[13.5px]" :aria-label="t('cal.starts')">
+            <div v-for="(s, i) in slots" :key="s.id ?? `new-${i}`" class="group-row flex-wrap gap-y-1.5!" data-testid="class-row">
+              <NativeSelect size="sm" v-model.number="s.weekday" class="w-auto" :aria-label="t('cal.starts')">
                 <option v-for="d in days" :key="d.value" :value="d.value">{{ d.label }}</option>
-              </select>
-              <input v-model="s.start" type="time" class="input !w-auto !py-1 text-[13.5px]" required :aria-label="t('cal.starts')" />
+              </NativeSelect>
+              <Input v-model="s.start" type="time" class="w-auto! py-1! text-[13.5px]" required :aria-label="t('cal.starts')" />
               <span class="text-text-3">–</span>
-              <input v-model="s.end" type="time" class="input !w-auto !py-1 text-[13.5px]" :class="{ '!text-crit-text line-through': badSlot(s) }" required :aria-label="t('cal.ends')" />
-              <input v-model="s.room" class="input !w-24 !py-1 text-[13.5px]" :placeholder="room || t('school.room')" maxlength="60" :aria-label="t('school.room')" />
-              <input v-model="s.kind" class="input min-w-0 flex-1 !py-1 text-[13.5px]" :placeholder="t('school.kindPh')" maxlength="40" :aria-label="t('school.kind')" />
-              <button v-if="editable" type="button" class="icon-btn h-7 w-7" :title="t('school.removeClass')" :aria-label="t('school.removeClass')" @click="slots.splice(i, 1)"><X class="h-4 w-4" /></button>
+              <Input v-model="s.end" type="time" class="w-auto! py-1! text-[13.5px]" :class="{ 'text-crit-text! line-through': badSlot(s) }" required :aria-label="t('cal.ends')" />
+              <Input v-model="s.room" class="w-24! py-1! text-[13.5px]" :placeholder="room || t('school.room')" maxlength="60" :aria-label="t('school.room')" />
+              <Input v-model="s.kind" class="min-w-0 flex-1 py-1! text-[13.5px]" :placeholder="t('school.kindPh')" maxlength="40" :aria-label="t('school.kind')" />
+              <Button variant="ghost" size="icon" v-if="editable" type="button" class="text-text-2 h-7 w-7" :title="t('school.removeClass')" :aria-label="t('school.removeClass')" @click="slots.splice(i, 1)"><X class="h-4 w-4" /></Button>
             </div>
             <div v-if="!slots.length && !editable" class="group-row text-[13.5px] text-text-3">{{ t('school.noClasses') }}</div>
             <button v-if="editable" type="button" class="group-row w-full text-left text-[14px] text-accent-text" @click="addSlot"><Plus class="h-4 w-4" />{{ t('school.addClass') }}</button>
@@ -168,19 +171,19 @@ async function remove() {
         </div>
 
         <div class="group">
-          <div class="group-row flex-wrap !gap-y-1.5">
+          <div class="group-row flex-wrap gap-y-1.5!">
             <span class="flex-1 text-[14px]">{{ t('school.term') }}</span>
-            <label class="inline-flex items-center gap-1.5 text-[13px] text-text-2">{{ t('school.termStart') }} <input v-model="termStart" type="date" class="input !w-auto !py-1 text-[13.5px]" /></label>
-            <label class="inline-flex items-center gap-1.5 text-[13px] text-text-2">{{ t('school.termEnd') }} <input v-model="termEnd" type="date" class="input !w-auto !py-1 text-[13.5px]" :class="{ '!text-crit-text line-through': termBad }" :min="termStart || undefined" /></label>
+            <label class="inline-flex items-center gap-1.5 text-[13px] text-text-2">{{ t('school.termStart') }} <Input v-model="termStart" type="date" class="w-auto! py-1! text-[13.5px]" /></label>
+            <label class="inline-flex items-center gap-1.5 text-[13px] text-text-2">{{ t('school.termEnd') }} <Input v-model="termEnd" type="date" class="w-auto! py-1! text-[13.5px]" :class="{ 'text-crit-text! line-through': termBad }" :min="termStart || undefined" /></label>
           </div>
           <label class="group-row">
             <span class="flex-1 text-[14px]">{{ t('school.tag') }}</span>
             <span class="text-text-3">#</span>
-            <input v-model="tag" class="w-36 bg-transparent text-[14px] outline-none placeholder:text-text-faint focus-visible:!shadow-none" :placeholder="(code || name).toLowerCase().replace(/[^\p{L}\p{N}_-]+/gu, '-')" maxlength="40" />
+            <input v-model="tag" class="w-36 bg-transparent text-[14px] outline-hidden placeholder:text-text-faint focus-visible:shadow-none!" :placeholder="(code || name).toLowerCase().replace(/[^\p{L}\p{N}_-]+/gu, '-')" maxlength="40" />
           </label>
           <label class="group-row">
             <span class="flex-1 text-[14px]">{{ t('school.weight') }}</span>
-            <input v-model.number="weight" type="number" min="0" max="100" step="0.5" class="input !w-20 !py-1 text-right text-[13.5px]" />
+            <Input v-model.number="weight" type="number" min="0" max="100" step="0.5" class="w-20! py-1! text-right text-[13.5px]" />
           </label>
         </div>
         <p class="footnote -mt-2 px-1">{{ t('school.termHint') }} {{ t('school.weightHint') }}</p>
@@ -188,7 +191,7 @@ async function remove() {
         <textarea
           v-model="notes"
           rows="3"
-          class="w-full resize-y rounded-xl bg-fill-2 px-3 py-2.5 text-[14px] outline-none placeholder:text-text-faint focus:shadow-[0_0_0_3px_var(--ring)]"
+          class="rounded-lg w-full resize-y px-3 py-2.5 text-[14px] outline-hidden placeholder:text-text-faint border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           :placeholder="t('school.notes')"
           maxlength="20000"
         />
@@ -197,9 +200,9 @@ async function remove() {
     </form>
 
     <template #footer>
-      <button v-if="course && editable" class="btn-ghost mr-auto !text-danger" @click="askDelete = true"><Trash2 class="h-4 w-4" />{{ t('school.delete') }}</button>
-      <button class="btn" @click="emit('close')">{{ editable ? t('common.cancel') : t('common.done') }}</button>
-      <button v-if="editable" class="btn-primary" :disabled="!canSave" data-testid="course-save" @click="save">{{ course ? t('common.save') : t('school.create') }}</button>
+      <Button variant="ghost" v-if="course && editable" class="mr-auto text-danger!" @click="askDelete = true"><Trash2 class="h-4 w-4" />{{ t('school.delete') }}</Button>
+      <Button variant="secondary" @click="emit('close')">{{ editable ? t('common.cancel') : t('common.done') }}</Button>
+      <Button v-if="editable" :disabled="!canSave" data-testid="course-save" @click="save">{{ course ? t('common.save') : t('school.create') }}</Button>
     </template>
   </Overlay>
   <Confirm
@@ -214,21 +217,7 @@ async function remove() {
 </template>
 
 <style scoped>
-.swatch {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--sw);
-  color: #fff;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s var(--spring);
-}
 .swatch:hover {
   transform: scale(1.12);
-}
-.swatch[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--sw);
 }
 </style>

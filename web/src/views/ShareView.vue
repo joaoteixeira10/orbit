@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { notesApi } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
 import { shareNote } from '@/lib/share'
+import { Button } from '@/components/shadcn/button'
 
 // /share: what another app shared (title, text, url) is saved as a Quick
 // Note, which then opens. Android's share sheet comes here through the web
@@ -38,7 +39,7 @@ onMounted(async () => {
     <template v-if="failed">
       <h1 class="title-3">{{ t('notes.mine.shareFailed') }}</h1>
       <p class="mt-1.5 text-[13px] text-text-2">{{ failed }}</p>
-      <RouterLink class="btn mt-5" :to="{ name: 'my-notes' }">{{ t('notes.mine.title') }}</RouterLink>
+      <Button as-child variant="secondary"><RouterLink class="mt-5" :to="{ name: 'my-notes' }">{{ t('notes.mine.title') }}</RouterLink></Button>
     </template>
     <p v-else class="text-[14px] text-text-2">{{ t('notes.mine.sharing') }}</p>
   </div>

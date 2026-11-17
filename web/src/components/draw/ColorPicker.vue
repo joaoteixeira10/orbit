@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { Pipette, Plus, X } from 'lucide-vue-next'
 import { hexOf, hexToHsv, hsvToHex, type HSV } from '@/lib/colors'
 import { usePrefsStore } from '@/stores/prefs'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
 
 // Choosing a colour, every way: a square of shades with a hue strip, its
 // code, how see-through, the eyedropper, the standard colours, the last
@@ -120,9 +122,9 @@ const forget = (c: string) => void prefs.setSketchColors(mine.value.filter((x) =
     />
     <div class="flex items-center gap-2">
       <span class="cp-now" :style="{ background: color, opacity }" />
-      <input v-model="code" class="input min-w-0 flex-1 !py-1 font-mono text-[13px]" maxlength="7" :aria-label="t('sketch.code')" data-testid="color-code" @keydown.enter.prevent="typed" @blur="typed" />
+      <Input v-model="code" class="min-w-0 flex-1 py-1! font-mono text-[13px]" maxlength="7" :aria-label="t('sketch.code')" data-testid="color-code" @keydown.enter.prevent="typed" @blur="typed" />
       <span class="w-10 text-right text-[12px] tabular-nums text-text-3">{{ Math.round(opacity * 100) }}%</span>
-      <button type="button" class="icon-btn h-8 w-8" :title="t('sketch.eyedropper')" :aria-label="t('sketch.eyedropper')" data-testid="color-dropper" @click="dropper"><Pipette class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8" :title="t('sketch.eyedropper')" :aria-label="t('sketch.eyedropper')" data-testid="color-dropper" @click="dropper"><Pipette class="h-4 w-4" /></Button>
     </div>
 
     <div class="cp-row">
@@ -170,7 +172,7 @@ const forget = (c: string) => void prefs.setSketchColors(mine.value.filter((x) =
   margin: -9px 0 0 -9px;
   border: 2.5px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
 .cp-hue,
@@ -198,7 +200,7 @@ const forget = (c: string) => void prefs.setSketchColors(mine.value.filter((x) =
   border: 2.5px solid #fff;
   border-radius: 50%;
   background: transparent;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .cp-hue::-moz-range-thumb,
 .cp-alpha::-moz-range-thumb {
@@ -207,14 +209,14 @@ const forget = (c: string) => void prefs.setSketchColors(mine.value.filter((x) =
   border: 2.5px solid #fff;
   border-radius: 50%;
   background: transparent;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 .cp-now {
   width: 28px;
   height: 28px;
   flex: none;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 .cp-cap {
   margin-bottom: -4px;
@@ -231,7 +233,7 @@ const forget = (c: string) => void prefs.setSketchColors(mine.value.filter((x) =
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 .cp-swatch.on {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent);
@@ -252,7 +254,7 @@ const forget = (c: string) => void prefs.setSketchColors(mine.value.filter((x) =
   border-radius: 50%;
   background: var(--surface);
   color: var(--text-2);
-  box-shadow: 0 0 0 0.5px var(--border), 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .cp-mine:hover .cp-forget,
 .cp-forget:focus-visible {

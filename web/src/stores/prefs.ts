@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { currentLocale } from '@/i18n'
 import { api } from '@/lib/api'
 import { mediaPrefs } from '@/lib/media'
+import { applyMotion, themeSweep } from '@/lib/motion'
 
 export type Theme = 'light' | 'dark' | 'system'
 export type TimeFormat = '24h' | '12h'
@@ -30,12 +31,29 @@ interface ServerPrefs {
   locale?: string
   page_editor?: PageEditorMode
   dev_theme?: string // "" = as the instance | none | a developer theme id
+  holiday_theme?: string // "" = as the instance | off | auto | a holiday
+  season_theme?: string // "" = as the instance | off | auto | a season
   remote_images?: 'ask' | 'always'
   sketch_colors?: string[] // their own palette in Quick Draw
   editor_themes?: EditorThemes
   calendar_colors?: Record<string, string>
   focus_lengths?: number[] // own focus timer lengths, minutes
   holiday_effects?: boolean // a holiday theme's falling snow, bats, confetti…
+  glass?: number // liquid glass: 0 (solid) to 100
+  animations?: boolean // the app's motion (off = still)
+}
+
+// Liquid glass on <html>: the class, and how liquid as --glass (0–1).
+function applyGlass(level: number) {
+  const root = document.documentElement
+  root.classList.toggle('glass', level > 0)
+  if (level > 0) root.style.setProperty('--glass', String(level / 100))
+  else root.style.removeProperty('--glass')
+}
+let glassTimer = 0
+function readGlass(): number {
+  const n = Number(localStorage.getItem('orbit_glass') ?? 0)
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : 0
 }
 
 function browserTZ(): string {
@@ -76,6 +94,20 @@ function pushDevTheme(choice: string) {
   })
 }
 
+// Push this person's holiday and season themes into the branding store (the
+// holiday store follows; cached for the first paint; cleared at sign-out).
+function pushHolidays(holiday: string, season: string) {
+  for (const [k, v] of [['orbit_holiday_theme', holiday], ['orbit_season_theme', season]] as const) {
+    if (v) localStorage.setItem(k, v)
+    else localStorage.removeItem(k)
+  }
+  void import('@/stores/branding').then((m) => {
+    const b = m.useBrandingStore()
+    b.userHolidayTheme = holiday
+    b.userSeasonTheme = season
+  })
+}
+
 // Per-user UI preferences. Backed by the server (UserPrefs) so they follow the
 // user across devices; localStorage is a cache for instant first paint.
 export const usePrefsStore = defineStore('prefs', {
@@ -93,11 +125,19 @@ export const usePrefsStore = defineStore('prefs', {
     focusLengths: [] as number[],
     // A holiday theme's falling snow, bats, confetti… (the theme is the owner's).
     holidayEffects: true,
+    // Liquid glass: how much the sidebar, bars, windows and menus are glass
+    // (0 = solid, the default; to 100).
+    glass: readGlass(),
+    // The app's motion: switching theme, opening pages, finishing a task…
+    animations: localStorage.getItem('orbit_animations') !== '0',
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
     timeFormat: ((localStorage.getItem('orbit_time_format') as TimeFormat) || localeDefaults().timeFormat) as TimeFormat,
     pageEditor: (localStorage.getItem('orbit_page_editor') === 'markdown' ? 'markdown' : 'visual') as PageEditorMode,
     // Own developer theme ("" = as the instance), when the owner allows it.
     devTheme: localStorage.getItem('orbit_dev_theme') || '',
+    // Own holiday and season themes ("" = as the instance), when allowed.
+    holidayTheme: localStorage.getItem('orbit_holiday_theme') || '',
+    seasonTheme: localStorage.getItem('orbit_season_theme') || '',
     // Images from other sites in pages: after a click (ask) or at once.
     remoteImages: (localStorage.getItem('orbit_remote_images') === 'always' ? 'always' : 'ask') as 'ask' | 'always',
   }),
@@ -109,6 +149,8 @@ export const usePrefsStore = defineStore('prefs', {
     },
     applyTheme() {
       document.documentElement.classList.toggle('dark', this.isDark())
+      applyGlass(this.glass)
+      applyMotion(this.animations)
       // Re-resolve accent + favicon (the manifest background follows light/dark).
       // Lazy import avoids a store cycle and tolerates branding not yet loaded.
       void import('@/stores/branding').then((m) => {
@@ -135,12 +177,19 @@ export const usePrefsStore = defineStore('prefs', {
       pushAccent(this.accentColor)
       this.devTheme = p.dev_theme || ''
       pushDevTheme(this.devTheme)
+      this.holidayTheme = p.holiday_theme || ''
+      this.seasonTheme = p.season_theme || ''
+      pushHolidays(this.holidayTheme, this.seasonTheme)
       this.remoteImages = p.remote_images === 'always' ? 'always' : 'ask'
       this.sketchColors = p.sketch_colors ?? []
       this.editorThemes = p.editor_themes ?? {}
       this.calendarColors = p.calendar_colors ?? {}
       this.focusLengths = p.focus_lengths ?? []
       this.holidayEffects = p.holiday_effects !== false
+      this.glass = Math.min(100, Math.max(0, Math.round(p.glass ?? 0)))
+      localStorage.setItem('orbit_glass', String(this.glass))
+      this.animations = p.animations !== false
+      localStorage.setItem('orbit_animations', this.animations ? '1' : '0')
       localStorage.setItem('orbit_editor_themes', JSON.stringify(this.editorThemes))
       mediaPrefs.remoteImages = this.remoteImages
       localStorage.setItem('orbit_remote_images', this.remoteImages)
@@ -154,9 +203,17 @@ export const usePrefsStore = defineStore('prefs', {
     },
 
     async setTheme(t: Theme) {
+      const wasDark = this.isDark()
       this.theme = t
       localStorage.setItem('orbit_theme', t)
-      this.applyTheme()
+      if (wasDark === this.isDark()) this.applyTheme()
+      // Light ↔ dark sweeps in; the accent and favicon settle before the
+      // new look is captured.
+      else
+        themeSweep(async () => {
+          this.applyTheme()
+          await import('@/stores/branding')
+        })
       await this.persist({ theme: t })
     },
     async setTimezone(tz: string) {
@@ -190,6 +247,17 @@ export const usePrefsStore = defineStore('prefs', {
       this.devTheme = choice
       pushDevTheme(choice)
       await this.persist({ dev_theme: choice })
+    },
+    // Pick this person's holiday or season theme ("" = as the instance).
+    async setHolidayTheme(choice: string) {
+      this.holidayTheme = choice
+      pushHolidays(choice, this.seasonTheme)
+      await this.persist({ holiday_theme: choice })
+    },
+    async setSeasonTheme(choice: string) {
+      this.seasonTheme = choice
+      pushHolidays(this.holidayTheme, choice)
+      await this.persist({ season_theme: choice })
     },
     // An editor's look: as Orbit's, or always light / dark.
     editorTheme(kind: EditorKind): EditorTheme {
@@ -225,6 +293,21 @@ export const usePrefsStore = defineStore('prefs', {
     async setHolidayEffects(on: boolean) {
       this.holidayEffects = on
       await this.persist({ holiday_effects: on })
+    },
+    // Liquid glass, 0–100: shown as it moves, saved once it rests.
+    setGlass(level: number) {
+      this.glass = Math.min(100, Math.max(0, Math.round(level)))
+      localStorage.setItem('orbit_glass', String(this.glass))
+      applyGlass(this.glass)
+      window.clearTimeout(glassTimer)
+      glassTimer = window.setTimeout(() => void this.persist({ glass: this.glass }), 400)
+    },
+    // The app's animations on or off (the system's reduced motion still wins).
+    async setAnimations(on: boolean) {
+      this.animations = on
+      localStorage.setItem('orbit_animations', on ? '1' : '0')
+      applyMotion(on)
+      await this.persist({ animations: on })
     },
     async setFocusLengths(lengths: number[]) {
       this.focusLengths = lengths

@@ -114,3 +114,143 @@ func TestHolidayEffects(t *testing.T) {
 		t.Error("me: effects still off")
 	}
 }
+
+// TestSeasonTheme: off by default; the owner picks auto or one season, in
+// the public branding for everyone; anything else is refused.
+func TestSeasonTheme(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	var b brandingResponse
+	_ = json.Unmarshal(do(r, "GET", "/api/v1/branding", "").Body.Bytes(), &b)
+	if b.SeasonTheme != "off" {
+		t.Fatalf("default: %q", b.SeasonTheme)
+	}
+	owner := loginTok(t, r, "admin", "adminpass")
+	for _, v := range []string{"auto", "spring", "summer", "autumn", "winter", "off"} {
+		if w := authdo(r, "PUT", "/api/v1/settings", `{"season_theme":"`+v+`"}`, owner); w.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", v, w.Code, w.Body.String())
+		}
+		_ = json.Unmarshal(do(r, "GET", "/api/v1/branding", "").Body.Bytes(), &b)
+		if b.SeasonTheme != v {
+			t.Errorf("after %s: %q", v, b.SeasonTheme)
+		}
+	}
+	if w := authdo(r, "PUT", "/api/v1/settings", `{"season_theme":"monsoon"}`, owner); w.Code != http.StatusBadRequest {
+		t.Errorf("an unknown season was accepted: %d", w.Code)
+	}
+}
+
+// TestGlass: solid (0) by default; each person sets 0–100, and it follows
+// them (the signed-in user carries it); out of range is refused.
+func TestGlass(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p prefsResponse
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.Glass != 0 {
+		t.Fatalf("default: %d", p.Glass)
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"glass":65}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("set: %d %s", w.Code, w.Body.String())
+	}
+	var me struct {
+		User struct {
+			Prefs struct {
+				Glass int `json:"glass"`
+			} `json:"prefs"`
+		} `json:"user"`
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/auth/me", "", owner).Body.Bytes(), &me)
+	if me.User.Prefs.Glass != 65 {
+		t.Errorf("me: %d", me.User.Prefs.Glass)
+	}
+	for _, bad := range []string{`{"glass":101}`, `{"glass":-1}`} {
+		if w := authdo(r, "PUT", "/api/v1/me/prefs", bad, owner); w.Code != http.StatusBadRequest {
+			t.Errorf("%s accepted: %d", bad, w.Code)
+		}
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"glass":0}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("back to solid: %d", w.Code)
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.Glass != 0 {
+		t.Errorf("solid again: %d", p.Glass)
+	}
+}
+
+// The app's animations: on by default, off and on again, per person.
+func TestAnimations(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p prefsResponse
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if !p.Animations {
+		t.Fatal("animations should be on by default")
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"animations":false}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("off: %d %s", w.Code, w.Body.String())
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.Animations {
+		t.Error("still on after turning off")
+	}
+	// Another setting leaves it as it is.
+	authdo(r, "PUT", "/api/v1/me/prefs", `{"glass":40}`, owner)
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.Animations {
+		t.Error("turned back on by another setting")
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"animations":true}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("on: %d", w.Code)
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if !p.Animations {
+		t.Error("not on again")
+	}
+}
+
+// TestPersonalHolidayThemes: the owner lets each person choose; a person
+// picks their own holiday and season themes ("" = as the instance), and
+// nothing outside the closed sets is kept.
+func TestPersonalHolidayThemes(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var b struct {
+		Holidays bool `json:"holiday_themes_personal"`
+		Seasons  bool `json:"season_themes_personal"`
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/branding", "", owner).Body.Bytes(), &b)
+	if b.Holidays || b.Seasons {
+		t.Fatal("each person's choice should be off by default")
+	}
+	// Each on its own.
+	if w := authdo(r, "PUT", "/api/v1/settings", `{"season_themes_personal":true}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("allow seasons: %d %s", w.Code, w.Body.String())
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/branding", "", owner).Body.Bytes(), &b)
+	if b.Holidays || !b.Seasons {
+		t.Fatalf("seasons only: %+v", b)
+	}
+	authdo(r, "PUT", "/api/v1/settings", `{"holiday_themes_personal":true}`, owner)
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/branding", "", owner).Body.Bytes(), &b)
+	if !b.Holidays || !b.Seasons {
+		t.Fatalf("both: %+v", b)
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"holiday_theme":"halloween","season_theme":"off"}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("pick: %d %s", w.Code, w.Body.String())
+	}
+	var p prefsResponse
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.HolidayTheme != "halloween" || p.SeasonTheme != "off" {
+		t.Errorf("kept: %q %q", p.HolidayTheme, p.SeasonTheme)
+	}
+	for _, body := range []string{`{"holiday_theme":"diwali"}`, `{"season_theme":"monsoon"}`} {
+		if w := authdo(r, "PUT", "/api/v1/me/prefs", body, owner); w.Code != http.StatusBadRequest {
+			t.Errorf("%s: %d", body, w.Code)
+		}
+	}
+	authdo(r, "PUT", "/api/v1/me/prefs", `{"holiday_theme":"","season_theme":""}`, owner)
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.HolidayTheme != "" || p.SeasonTheme != "" {
+		t.Errorf("back to the instance's: %q %q", p.HolidayTheme, p.SeasonTheme)
+	}
+}

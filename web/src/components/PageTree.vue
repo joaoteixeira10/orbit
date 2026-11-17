@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { ChevronRight, Plus, MoreHorizontal, FileText, Lock, LockKeyhole } from 'lucide-vue-next'
 import { usePagesStore, type PageNode } from '@/stores/pages'
 import { useSortable, type SortMove } from '@/lib/sortable'
+import { openUp, foldAway } from '@/lib/motion'
 import PageMenu from './PageMenu.vue'
 
 // One level of a workspace's page tree in the sidebar. Rows are dragged to
@@ -43,35 +44,36 @@ function go(n: PageNode) {
   <div ref="list" :data-group="parent ?? 'root'">
     <div v-for="n in nodes" :key="n.id" :data-id="n.id">
       <div
-        class="tree-row side-item group/row !h-[28px]"
+        class="tree-row side-item group/row h-[28px]!"
         :class="{ on: activeId === n.id }"
         :style="{ paddingLeft: 6 + depth * 14 + 'px' }"
         @click="go(n)"
       >
         <button
-          class="grid h-4 w-4 shrink-0 place-items-center rounded text-text-3 hover:bg-fill"
+          class="grid h-4 w-4 shrink-0 place-items-center rounded-sm text-text-3 hover:bg-fill"
           :class="{ invisible: !n.children.length }"
           :aria-label="t('pages.expand')"
           @click.stop="pages.toggle(n.id)"
         >
-          <ChevronRight class="h-3 w-3 !text-text-3 transition-transform" :class="{ 'rotate-90': pages.open.has(n.id) }" :stroke-width="2.5" />
+          <ChevronRight class="h-3 w-3 text-text-3! transition-transform" :class="{ 'rotate-90': pages.open.has(n.id) }" :stroke-width="2.5" />
         </button>
         <span v-if="n.icon" class="w-4 shrink-0 text-center text-[13px] leading-none">{{ n.icon }}</span>
-        <FileText v-else class="h-3.5 w-3.5 shrink-0 !text-text-3" />
+        <FileText v-else class="h-3.5 w-3.5 shrink-0 text-text-3!" />
         <span class="min-w-0 flex-1 truncate">{{ n.title || t('pages.untitled') }}</span>
-        <Lock v-if="n.restricted" class="h-3 w-3 shrink-0 !text-text-3" :aria-label="t('access.restricted')" data-testid="tree-lock" />
-        <LockKeyhole v-if="n.sealed" class="h-3 w-3 shrink-0 !text-text-3" :aria-label="t('lock.locked')" data-testid="tree-sealed" />
-        <!-- Shown on hover — and while this row's menu is open, which is
+        <Lock v-if="n.restricted" class="h-3 w-3 shrink-0 text-text-3!" :aria-label="t('access.restricted')" data-testid="tree-lock" />
+        <LockKeyhole v-if="n.sealed" class="h-3 w-3 shrink-0 text-text-3!" :aria-label="t('lock.locked')" data-testid="tree-sealed" />
+        <!-- Shown on hover (always on a touch screen) — and while this row's menu is open, which is
              anchored to its ⋯ (hidden, the menu would lose its place). -->
-        <span v-if="canEdit" class="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex" :class="{ '!flex': menuFor === n.id }">
-          <button class="grid h-5 w-5 place-items-center rounded hover:bg-fill" :title="t('pages.addSub')" @click.stop="emit('add', n.id)">
-            <Plus class="h-3.5 w-3.5 !text-text-2" />
+        <span v-if="canEdit" class="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex pointer-coarse:flex" :class="{ 'flex!': menuFor === n.id }">
+          <button class="grid h-5 w-5 place-items-center rounded-sm hover:bg-fill" :title="t('pages.addSub')" @click.stop="emit('add', n.id)">
+            <Plus class="h-3.5 w-3.5 text-text-2!" />
           </button>
-          <button class="grid h-5 w-5 place-items-center rounded hover:bg-fill" :title="t('common.more')" @click.stop="openMenu(n.id, $event)">
-            <MoreHorizontal class="h-3.5 w-3.5 !text-text-2" />
+          <button class="grid h-5 w-5 place-items-center rounded-sm hover:bg-fill" :title="t('common.more')" @click.stop="openMenu(n.id, $event)">
+            <MoreHorizontal class="h-3.5 w-3.5 text-text-2!" />
           </button>
         </span>
       </div>
+      <Transition :css="false" @enter="openUp" @leave="foldAway">
       <PageTree
         v-if="n.children.length && pages.open.has(n.id)"
         :ws="ws"
@@ -82,6 +84,7 @@ function go(n: PageNode) {
         @add="(p) => emit('add', p)"
         @move="(id, p, a) => emit('move', id, p, a)"
       />
+      </Transition>
     </div>
     <PageMenu v-if="menuFor" :page-id="menuFor" :ws="ws" :anchor="menuAnchor" @close="menuFor = ''" />
   </div>

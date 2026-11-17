@@ -6,6 +6,7 @@ import CodeArea from '@/components/editor/CodeArea.vue'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { MERMAID_TEMPLATES, addNode, connect, kindOf, renderMermaid, type MermaidKind } from '@/lib/mermaid'
+import { Button } from '@/components/shadcn/button'
 
 // A Mermaid diagram, edited: the text and its drawing side by side (one
 // above the other on a phone), redrawn a moment after each change. A new one
@@ -139,14 +140,14 @@ const hint = computed(() => (connecting.value ? (picked.value ? t('mermaid.conne
 <template>
   <div class="mermaid-editor" :class="{ 'is-readonly': readonly }" @keydown="onKey">
     <div v-if="!readonly" class="me-tools">
-      <button ref="tplEl" type="button" class="btn btn-sm" data-testid="mermaid-templates" @click="tplOpen = !tplOpen"><LayoutTemplate class="h-3.5 w-3.5" />{{ t('mermaid.templates') }}</button>
+      <Button variant="secondary" size="sm" ref="tplEl" type="button" data-testid="mermaid-templates" @click="tplOpen = !tplOpen"><LayoutTemplate class="h-3.5 w-3.5" />{{ t('mermaid.templates') }}</Button>
       <template v-if="flow">
         <span class="me-sep" />
-        <button type="button" class="btn btn-sm" data-testid="mermaid-add-node" @click="startNode"><Plus class="h-3.5 w-3.5" />{{ t('mermaid.addNode') }}</button>
-        <button type="button" class="btn btn-sm" :class="{ on: connecting }" :aria-pressed="connecting" data-testid="mermaid-connect" @click="startConnect"><Cable class="h-3.5 w-3.5" />{{ t('mermaid.connect') }}</button>
+        <Button variant="secondary" size="sm" type="button" data-testid="mermaid-add-node" @click="startNode"><Plus class="h-3.5 w-3.5" />{{ t('mermaid.addNode') }}</Button>
+        <Button variant="secondary" size="sm" type="button" :class="{ on: connecting }" :aria-pressed="connecting" data-testid="mermaid-connect" @click="startConnect"><Cable class="h-3.5 w-3.5" />{{ t('mermaid.connect') }}</Button>
         <form v-if="naming" class="flex items-center gap-1" @submit.prevent="addOne">
-          <input ref="labelEl" v-model="label" class="field !h-7 w-44 !py-0 text-[13px]" :placeholder="t('mermaid.nodeLabel')" maxlength="120" data-testid="mermaid-node-label" @keydown.esc.stop.prevent="naming = false" />
-          <button type="submit" class="btn btn-sm btn-primary">{{ t('mermaid.add') }}</button>
+          <input ref="labelEl" v-model="label" class="field h-7! w-44 py-0! text-[13px]" :placeholder="t('mermaid.nodeLabel')" maxlength="120" data-testid="mermaid-node-label" @keydown.esc.stop.prevent="naming = false" />
+          <Button size="sm" type="submit" >{{ t('mermaid.add') }}</Button>
         </form>
         <span v-if="hint" class="text-[12px] text-text-3">{{ hint }}</span>
       </template>
@@ -184,12 +185,12 @@ const hint = computed(() => (connecting.value ? (picked.value ? t('mermaid.conne
   align-items: center;
   gap: 6px;
 }
-.me-tools .btn.on {
+.me-tools [data-slot='button'].on {
   background: var(--accent);
   color: var(--accent-fg);
 }
 .me-sep {
-  width: 0.5px;
+  width: 1px;
   height: 18px;
   background: var(--border);
 }
@@ -216,7 +217,7 @@ const hint = computed(() => (connecting.value ? (picked.value ? t('mermaid.conne
   gap: 6px;
   overflow: auto;
   padding: 10px 12px;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
 }
@@ -240,7 +241,7 @@ const hint = computed(() => (connecting.value ? (picked.value ? t('mermaid.conne
   justify-content: center;
   overflow: auto;
   padding: 16px;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
   color: #000;

@@ -3965,12 +3965,12 @@ test('holiday themes: the owner picks one; every page dresses up, the overviews 
   await expect(page.getByText('Holiday theme saved')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-holiday', 'christmas')
 
-  // Home: the logo, the countdown, the capture box's line, snow on both cards.
+  // Home: the logo, the countdown, the capture box's line, snow on every card.
   await page.goto('/')
   await expect(page.getByTestId('holiday-logo')).toBeVisible()
   await expect(page.getByTestId('holiday-chip')).toHaveText(/\d+ days? to Christmas|Merry Christmas/)
   await expect(page.getByText('Jot something down… making a list, checking it twice')).toBeVisible()
-  await expect(page.getByTestId('holiday-corner')).toHaveCount(2)
+  await expect(page.getByTestId('holiday-corner')).toHaveCount(await page.locator('.widgets > .widget').count())
   // What hangs and what falls: hidden from screen readers, never a click.
   const hang = page.getByTestId('holiday-hang')
   await expect(hang).toHaveAttribute('aria-hidden', 'true')
@@ -4201,7 +4201,7 @@ test('the assistant in Agent mode: it lines changes up in one card; the ticked o
     const lists = async () => ((await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()) as { name: string }[]).map((l) => l.name)
     expect(await lists()).not.toContain('Launch')
 
-    await changes.nth(2).getByRole('button').click()
+    await changes.nth(2).getByRole('checkbox').click()
     await plan.getByTestId('assistant-approve').click()
     await expect(plan).toContainText('2 changes made')
     await expect(plan.getByTestId('assistant-approve')).toHaveCount(0)

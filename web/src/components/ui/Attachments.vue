@@ -5,6 +5,7 @@ import { Paperclip, X, FileText, LoaderCircle } from 'lucide-vue-next'
 import { fileSize, uploadBlobUrl, uploadFile, uploadsApi, type Upload, type UploadTarget } from '@/lib/uploads'
 import { openFile } from '@/lib/fileView'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // The files on a task or a note: images as thumbnails, other files as rows;
 // add (button, or drop files on it), open / download, remove. Given the
@@ -98,12 +99,12 @@ defineExpose({ pick: () => input.value?.click() })
       <FileText class="h-4 w-4 shrink-0 text-text-3" />
       <button type="button" class="min-w-0 flex-1 truncate text-left text-[13.5px] hover:underline" @click="open(f)">{{ f.name }}</button>
       <span class="shrink-0 text-[12px] text-text-3">{{ fileSize(f.size) }}</span>
-      <button v-if="editable" type="button" class="icon-btn h-6 w-6" :title="t('files.remove')" :aria-label="t('files.remove')" @click="remove(f)"><X class="h-3.5 w-3.5" /></button>
+      <Button variant="ghost" size="icon" v-if="editable" type="button" class="text-text-2 h-6 w-6" :title="t('files.remove')" :aria-label="t('files.remove')" @click="remove(f)"><X class="h-3.5 w-3.5" /></Button>
     </div>
     <div v-if="editable && !compact" class="add-row">
-      <button type="button" class="btn-plain !px-1" @click="input?.click()">
+      <Button variant="link" type="button" class="px-1!" @click="input?.click()">
         <LoaderCircle v-if="busy" class="h-4 w-4 animate-spin" /><Paperclip v-else class="h-4 w-4" />{{ t('files.add') }}
-      </button>
+      </Button>
       <span class="text-[12px] text-text-3">{{ t('files.drop') }}</span>
     </div>
     <input ref="input" type="file" multiple class="hidden" @change="add(($event.target as HTMLInputElement).files); ($event.target as HTMLInputElement).value = ''" />
@@ -134,7 +135,7 @@ defineExpose({ pick: () => input.value?.click() })
   border-radius: 10px;
   overflow: hidden;
   background: var(--fill-2);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .compact .thumb-img {
   width: 100%;
@@ -164,7 +165,7 @@ defineExpose({ pick: () => input.value?.click() })
   border-radius: 999px;
   background: var(--surface);
   color: var(--text-2);
-  box-shadow: var(--shadow-sm), 0 0 0 0.5px var(--border-2);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-2);
 }
 .file-row {
   display: flex;

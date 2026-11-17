@@ -42,7 +42,7 @@ const rows = computed(() => {
   margin: 0.5em 0;
   padding: 6px;
   border-radius: 10px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .sp-row {
   display: flex;

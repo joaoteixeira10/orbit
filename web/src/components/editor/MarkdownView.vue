@@ -302,12 +302,12 @@ function onDblClick(e: MouseEvent) {
 .md-view :deep(h1) {
   font-size: 1.75em;
   padding-bottom: 0.3em;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .md-view :deep(h2) {
   font-size: 1.4em;
   padding-bottom: 0.25em;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .md-view :deep(h3) {
   font-size: 1.15em;
@@ -406,7 +406,7 @@ function onDblClick(e: MouseEvent) {
   border-radius: 7px;
   color: var(--text-2);
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border-2), var(--shadow-sm);
+  box-shadow: 0 0 0 1px var(--border-2), var(--shadow-sm);
   opacity: 0;
   cursor: pointer;
   transition: opacity var(--speed) var(--ease), color var(--speed);
@@ -451,7 +451,7 @@ function onDblClick(e: MouseEvent) {
   height: 0;
   margin: 2em 0;
   border: 0;
-  border-top: 0.5px solid var(--border-2);
+  border-top: 1px solid var(--border-2);
 }
 .md-view :deep(table) {
   display: block;
@@ -463,7 +463,7 @@ function onDblClick(e: MouseEvent) {
 .md-view :deep(th),
 .md-view :deep(td) {
   padding: 7px 13px;
-  border: 0.5px solid var(--border-2);
+  border: 1px solid var(--border-2);
 }
 .md-view :deep(th) {
   font-weight: 600;
@@ -535,7 +535,7 @@ function onDblClick(e: MouseEvent) {
 .md-view :deep(kbd) {
   padding: 0.1em 0.45em;
   border-radius: 5px;
-  border: 0.5px solid var(--border-2);
+  border: 1px solid var(--border-2);
   box-shadow: inset 0 -1px 0 var(--border-2);
   font: 0.85em var(--font-mono);
 }
@@ -574,7 +574,7 @@ function onDblClick(e: MouseEvent) {
 .md-view :deep(.footnotes) {
   margin-top: 2em;
   padding-top: 0.8em;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
   font-size: 13.5px;
   color: var(--text-2);
 }

@@ -36,7 +36,9 @@ onUnmounted(() => (document.body.style.overflow = ''))
   z-index: 50; /* as dialogs: one opened from here comes later, on top */
   display: flex;
   padding: clamp(0px, 2.5vw, 28px);
-  background: var(--backdrop);
+  /* The backdrop: shadcn's dialog overlay (a light wash, the page blurred). */
+  background: rgb(0 0 0 / 0.1);
+  backdrop-filter: blur(4px);
 }
 .embed-panel {
   display: flex;
@@ -44,8 +46,8 @@ onUnmounted(() => (document.body.style.overflow = ''))
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
-  background: var(--bg);
+  border-radius: 12px;
+  background: var(--sheet-bg);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
 }
 .embed-panel > :deep(*) {
@@ -56,5 +58,8 @@ onUnmounted(() => (document.body.style.overflow = ''))
   .embed-panel {
     border-radius: 0;
   }
+}
+html.dark .embed-backdrop {
+  background: rgb(0 0 0 / 0.4);
 }
 </style>

@@ -12,6 +12,7 @@ import { locale } from '@/lib/dates'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // A page's history, over the page: every saved version (one person's saves
 // close together are one), newest first, with who saved it; one picked
@@ -162,7 +163,7 @@ watch(
                 <Columns3 class="mr-1 inline h-3.5 w-3.5" />{{ t('history.compare', { n: picked.length + others.length }) }}
               </button>
             </div>
-            <button type="button" class="icon-btn h-8 w-8 rounded-full bg-fill" :aria-label="t('common.close')" data-testid="history-close" @click="emit('close')"><X class="h-4 w-4" /></button>
+            <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8 rounded-full bg-fill" :aria-label="t('common.close')" data-testid="history-close" @click="emit('close')"><X class="h-4 w-4" /></Button>
           </header>
 
           <div class="hist-body">
@@ -205,7 +206,7 @@ watch(
                 </div>
               </template>
               <div class="p-3">
-                <button ref="pageEl" type="button" class="btn btn-sm w-full" :disabled="full" data-testid="history-add-page" @click="pagePicking = true"><Plus class="h-3.5 w-3.5" />{{ t('history.addPage') }}</button>
+                <Button variant="secondary" size="sm" ref="pageEl" type="button" class="w-full" :disabled="full" data-testid="history-add-page" @click="pagePicking = true"><Plus class="h-3.5 w-3.5" />{{ t('history.addPage') }}</Button>
                 <div v-if="others.length" class="mt-2 flex flex-wrap gap-1">
                   <span v-for="o in others" :key="o.id" class="chip"><FileText class="h-3 w-3" />{{ o.title }}<button type="button" :aria-label="t('editor.remove')" @click="others = others.filter((x) => x.id !== o.id)"><X class="h-3 w-3" /></button></span>
                 </div>
@@ -224,7 +225,7 @@ watch(
                     >
                   </div>
                   <label v-if="before" class="flex items-center gap-1.5 text-[12.5px] text-text-2"><input v-model="changes" type="checkbox" data-testid="history-changes" />{{ t('history.changes') }}</label>
-                  <button v-if="editable && idx > 0" type="button" class="btn-primary btn-sm" data-testid="history-restore" @click="confirming = true"><RotateCcw class="h-3.5 w-3.5" />{{ t('history.restore') }}</button>
+                  <Button size="sm" v-if="editable && idx > 0" type="button" data-testid="history-restore" @click="confirming = true"><RotateCcw class="h-3.5 w-3.5" />{{ t('history.restore') }}</Button>
                 </div>
                 <h1 v-if="current.title" class="mb-2 text-[24px] font-bold">{{ current.title }}</h1>
                 <DiffView :after="shown.after" :before="shown.before" />
@@ -248,7 +249,7 @@ watch(
           <div class="p-2">
             <label class="relative mb-1 block">
               <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3" />
-              <input v-model="pageQ" class="field !pl-8 text-[13px]" :placeholder="t('history.findPage')" />
+              <input v-model="pageQ" class="field pl-8! text-[13px]" :placeholder="t('history.findPage')" />
             </label>
             <div class="max-h-64 overflow-y-auto">
               <button v-for="p in pageChoices" :key="p.id" type="button" class="menu-item w-full" data-testid="history-page" @click="addPage(p)">
@@ -279,7 +280,9 @@ watch(
   z-index: 50; /* as dialogs: one opened from here comes later, on top */
   display: flex;
   padding: clamp(0px, 2.5vw, 28px);
-  background: var(--backdrop);
+  /* The backdrop: shadcn's dialog overlay (a light wash, the page blurred). */
+  background: rgb(0 0 0 / 0.1);
+  backdrop-filter: blur(4px);
 }
 .hist-panel {
   display: flex;
@@ -287,8 +290,8 @@ watch(
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
-  background: var(--bg);
+  border-radius: 12px;
+  background: var(--sheet-bg);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
 }
 .hist-head {
@@ -296,7 +299,7 @@ watch(
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .hist-body {
   display: flex;
@@ -307,7 +310,7 @@ watch(
   width: 270px;
   flex-shrink: 0;
   overflow-y: auto;
-  border-right: 0.5px solid var(--border);
+  border-right: 1px solid var(--border);
   background: var(--grouped, var(--fill-2));
 }
 .v-row {
@@ -323,7 +326,7 @@ watch(
   background: var(--fill-2);
 }
 .v-row.on {
-  background: var(--accent-bg, var(--fill));
+  background: var(--fill);
 }
 .badge {
   padding: 0 6px;
@@ -357,7 +360,7 @@ watch(
   gap: 10px;
   margin: -16px -28px 12px;
   padding: 10px 28px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(8px);
 }
@@ -382,7 +385,7 @@ watch(
   z-index: 1;
   margin: 0 -14px 8px;
   padding: 10px 14px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 94%, transparent);
   backdrop-filter: blur(8px);
 }
@@ -397,7 +400,10 @@ watch(
     width: auto;
     max-height: 36vh;
     border-right: 0;
-    border-bottom: 0.5px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
+}
+html.dark .hist-backdrop {
+  background: rgb(0 0 0 / 0.4);
 }
 </style>

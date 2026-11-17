@@ -2,6 +2,7 @@
 import { watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
+import { Button } from '@/components/shadcn/button'
 
 // Overlay is Orbit's sheet: a centred panel on wide screens, a bottom sheet
 // on phones ('centered'), or an inspector sliding in from the right ('side').
@@ -18,7 +19,8 @@ const { t } = useI18n()
 
 function onKey(e: KeyboardEvent) {
   // An Escape something inside used (an editor's extra cursors, a menu) isn't to close.
-  if (e.key === 'Escape' && !e.defaultPrevented) {
+  // Nor while a shadcn popover, select or menu (reka-ui) is open: that one takes it.
+  if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('[data-dismissable-layer]')) {
     e.stopPropagation()
     emit('close')
   }
@@ -47,7 +49,8 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div v-if="open" class="fixed inset-0 flex items-end justify-center sm:items-center" :class="top ? 'z-[55]' : 'z-50'" style="background: var(--backdrop)" @mousedown.self="emit('close')">
+      <!-- The backdrop: shadcn's dialog overlay (a light wash, the page blurred). -->
+      <div v-if="open" class="sheet-backdrop fixed inset-0 flex items-end justify-center bg-black/10 supports-backdrop-filter:backdrop-blur-xs dark:bg-black/40 sm:items-center" :class="top ? 'z-55' : 'z-50'" @mousedown.self="emit('close')">
         <!-- Sheet -->
         <div
           v-if="mode === 'centered'"
@@ -60,11 +63,11 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
           <header v-if="title || $slots.actions" class="flex shrink-0 items-center gap-3 px-5 pb-2 pt-4">
             <h2 class="title-3 min-w-0 flex-1 truncate">{{ title }}</h2>
             <slot name="actions" />
-            <button class="icon-btn -mr-1.5 h-7 w-7 rounded-full bg-fill" :aria-label="t('common.close')" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
+            <Button variant="ghost" size="icon-sm" class="-mr-1.5 text-text-2" :aria-label="t('common.close')" @click="emit('close')"><X /></Button>
           </header>
           <div v-if="bare" class="flex min-h-0 flex-1 flex-col"><slot /></div>
           <div v-else class="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-2"><slot /></div>
-          <footer v-if="$slots.footer" class="flex shrink-0 items-center justify-end gap-2 border-t-[0.5px] border-border px-5 py-3">
+          <footer v-if="$slots.footer" class="flex shrink-0 items-center justify-end gap-2 border-t border-border px-5 py-3">
             <slot name="footer" />
           </footer>
         </div>
@@ -75,11 +78,11 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
           role="dialog"
           aria-modal="true"
           :aria-label="title"
-          class="sheet-panel absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col bg-surface shadow-lg2"
+          class="sheet-panel absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col bg-(--sheet-bg) shadow-lg2"
         >
-          <header v-if="title" class="flex items-center justify-between border-b-[0.5px] border-border px-5 py-3.5">
+          <header v-if="title" class="flex items-center justify-between border-b border-border px-5 py-3.5">
             <h2 class="title-3">{{ title }}</h2>
-            <button class="icon-btn h-7 w-7 rounded-full bg-fill" :aria-label="t('common.close')" @click="emit('close')"><X class="h-4 w-4" :stroke-width="2.4" /></button>
+            <Button variant="ghost" size="icon-sm" class="text-text-2" :aria-label="t('common.close')" @click="emit('close')"><X /></Button>
           </header>
           <div class="flex-1 overflow-y-auto p-5"><slot /></div>
         </div>
@@ -89,19 +92,17 @@ const widths = { sm: 'sm:max-w-[400px]', md: 'sm:max-w-[520px]', lg: 'sm:max-w-[
 </template>
 
 <style scoped>
+/* shadcn-vue's dialog: rounded, a fine ring. */
 .sheet {
-  background: var(--surface);
-  border-radius: 16px 16px 0 0;
-  box-shadow: var(--shadow-lg);
+  background: var(--sheet-bg);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 0 0 1px var(--sheet-ring), var(--shadow-lg);
   padding-bottom: env(safe-area-inset-bottom);
 }
 @media (min-width: 640px) {
   .sheet {
-    border-radius: 16px;
+    border-radius: 12px;
     padding-bottom: 0;
   }
-}
-html.dark .sheet {
-  background: #2c2c2e;
 }
 </style>

@@ -93,7 +93,7 @@ const open = () => router.push({ name: 'ws-sheet', params: { ws: props.ws, id: p
 .sheet-embed {
   margin: 0.6em 0 1em;
   border-radius: 12px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
   overflow: hidden;
   background: var(--bg);
   font-size: 13px;
@@ -103,7 +103,7 @@ const open = () => router.push({ name: 'ws-sheet', params: { ws: props.ws, id: p
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .se-open {
   display: inline-flex;
@@ -125,7 +125,7 @@ td {
   min-width: 70px;
   max-width: 260px;
   padding: 3px 8px;
-  border: 0.5px solid var(--line-soft);
+  border: 1px solid var(--line-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -157,7 +157,7 @@ th {
   display: flex;
   gap: 2px;
   padding: 4px 8px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
   background: var(--grouped);
 }
 .se-tabs button {

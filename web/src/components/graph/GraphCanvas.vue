@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Maximize, Minus, Plus } from 'lucide-vue-next'
 import { KIND_COLOR, degrees, layout, type Graph, type GraphNode } from '@/lib/graph'
+import { Button } from '@/components/shadcn/button'
 
 // A graph drawn: each thing a dot (its kind's colour, bigger with more
 // links), each link a line (embeds thicker, sub-pages and folders dashed,
@@ -160,9 +161,9 @@ function click(n: GraphNode) {
       </g>
     </svg>
     <div v-if="!compact" class="g-zoom">
-      <button type="button" class="icon-btn h-8 w-8" :aria-label="t('graph.zoomIn')" @click="zoomAt(1.3)"><Plus class="h-4 w-4" /></button>
-      <button type="button" class="icon-btn h-8 w-8" :aria-label="t('graph.zoomOut')" @click="zoomAt(1 / 1.3)"><Minus class="h-4 w-4" /></button>
-      <button type="button" class="icon-btn h-8 w-8" :aria-label="t('graph.fit')" @click="fit"><Maximize class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8" :aria-label="t('graph.zoomIn')" @click="zoomAt(1.3)"><Plus class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8" :aria-label="t('graph.zoomOut')" @click="zoomAt(1 / 1.3)"><Minus class="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8" :aria-label="t('graph.fit')" @click="fit"><Maximize class="h-4 w-4" /></Button>
     </div>
   </div>
 </template>
@@ -230,6 +231,6 @@ svg {
   padding: 3px;
   border-radius: 11px;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 0 0 0.5px var(--border), 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 1px var(--border), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 </style>

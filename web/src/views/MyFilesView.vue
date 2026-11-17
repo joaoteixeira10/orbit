@@ -7,6 +7,7 @@ import FileBrowser from '@/components/files/FileBrowser.vue'
 import { drawingsApi } from '@/components/draw/drawing'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
 
 // My files: one's own drive, outside any workspace — Quick Draw sketches,
 // files from the computer, and Quick Notes' attachments, in folders of
@@ -44,8 +45,8 @@ async function newSketch() {
       </div>
       <template v-if="editable">
         <input ref="rawEl" type="file" class="hidden" multiple data-testid="files-add-input" @change="uploadRaw" />
-        <button class="btn" :title="t('drive.addFilesHint')" data-testid="files-add" @click="rawEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.addFiles') }}</button>
-        <button class="btn-primary" data-testid="my-files-sketch" @click="newSketch"><Brush class="h-4 w-4" />{{ t('draw.newSketch') }}</button>
+        <Button variant="secondary" :title="t('drive.addFilesHint')" data-testid="files-add" @click="rawEl?.click()"><Upload class="h-4 w-4" />{{ t('drive.addFiles') }}</Button>
+        <Button data-testid="my-files-sketch" @click="newSketch"><Brush class="h-4 w-4" />{{ t('draw.newSketch') }}</Button>
       </template>
     </header>
     <FileBrowser ref="browser" ws="me" :kinds="['board', 'file']" :editable="editable" :root-name="t('myFiles.title')">

@@ -60,6 +60,11 @@ async function open() {
     const source = new EventSource(`${STREAM}?ticket=${encodeURIComponent(ticket)}`)
     es = source
     source.onmessage = (e) => dispatch(e.data)
+    // Connected again after a break: what came meanwhile wasn't heard.
+    source.onopen = () => {
+      if (connectedBefore) resync()
+      connectedBefore = true
+    }
     source.onerror = () => {
       source.close()
       if (es === source) es = null
@@ -68,6 +73,30 @@ async function open() {
   } catch {
     scheduleReconnect()
   }
+}
+
+// resync tells the listeners ('resync') that events may have been missed
+// (the stream was down, or the app was in the background, where a phone
+// suspends it): they fetch what's current.
+let connectedBefore = false
+function resync() {
+  handlers.get('resync')?.forEach((h) => h({ type: 'resync' }))
+}
+// Back on screen (a phone app reopened, a tab shown again): reconnect now if
+// the stream dropped, and catch up either way.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !running) return
+    if (!es || es.readyState === EventSource.CLOSED) {
+      es = null
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
+      }
+      void open()
+    }
+    resync()
+  })
 }
 
 function scheduleReconnect() {
@@ -88,6 +117,7 @@ export function startLiveUpdates() {
 // stopLiveUpdates closes the stream and cancels any pending reconnect.
 export function stopLiveUpdates() {
   running = false
+  connectedBefore = false
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null

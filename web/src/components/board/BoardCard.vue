@@ -71,10 +71,10 @@ const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props
 @media (hover: hover) {
   .board-card:hover {
     transform: translateY(-1px);
-    box-shadow: 0 0 0 0.5px var(--border), 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
   }
   html.dark .board-card:hover {
-    box-shadow: 0 0 0 0.5px var(--border-2), 0 6px 18px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 1px var(--border-2), 0 6px 18px rgba(0, 0, 0, 0.4);
   }
 }
 .board-card:active {
@@ -168,7 +168,7 @@ const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props
   visibility: hidden;
 }
 .board-card.sortable-chosen:not(.sortable-ghost) {
-  box-shadow: 0 0 0 0.5px var(--border), var(--shadow);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow);
 }
 .board-card.sortable-drag,
 .board-card.sortable-fallback {
@@ -177,7 +177,7 @@ const hasMeta = computed(() => !!props.task.git_number || !!due.value || !!props
      with the individual rotate / scale properties, which compose with it. */
   rotate: 2.5deg;
   scale: 1.02;
-  box-shadow: 0 0 0 0.5px var(--border), 0 18px 40px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 1px var(--border), 0 18px 40px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.1);
   cursor: grabbing;
   transition: none;
 }

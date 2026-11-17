@@ -110,6 +110,9 @@ const segLabel = (r: BarRow, s: Series) => `${r.label}, ${s.label}: ${r.values[s
   min-width: 0;
 }
 .bar {
+  /* Grows from the left when the chart opens (styles/motion.css). */
+  transform-origin: left;
+  animation: fill-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   display: flex;
   gap: 2px;
   height: 16px;
@@ -126,7 +129,7 @@ const segLabel = (r: BarRow, s: Series) => `${r.label}, ${s.label}: ${r.values[s
   border: 0;
   outline: none;
   transition:
-    flex-grow 0.55s var(--spring),
+    grow 0.55s var(--spring),
     opacity 0.2s var(--ease),
     filter 0.2s var(--ease);
 }

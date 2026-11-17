@@ -61,8 +61,8 @@ const PRIO = ['', '!', '!!', '!!!']
     <Popover v-if="open === 'date'" :anchor="anchor" placement="bottom-end" :width="220" @close="open = ''">
       <div class="p-1.5">
         <button v-for="q in quick" :key="q.v" class="menu-item" @click="setDue(q.v)">{{ q.label }}</button>
-        <label class="menu-item"><input type="date" class="w-full bg-transparent text-[13.5px] outline-none" :value="task.due ?? ''" @change="setDue(($event.target as HTMLInputElement).value)" /></label>
-        <button v-if="task.due" class="menu-item !text-danger" @click="setDue('')">{{ t('dates.noDate') }}</button>
+        <label class="menu-item"><input type="date" class="w-full bg-transparent text-[13.5px] outline-hidden" :value="task.due ?? ''" @change="setDue(($event.target as HTMLInputElement).value)" /></label>
+        <button v-if="task.due" class="menu-item text-danger!" @click="setDue('')">{{ t('dates.noDate') }}</button>
       </div>
     </Popover>
     <Popover v-if="open === 'prio'" :anchor="anchor" placement="bottom-end" :width="180" @close="open = ''">
@@ -115,7 +115,7 @@ const PRIO = ['', '!', '!!', '!!!']
   border-radius: 7px;
   font-size: 12px;
   color: var(--text-2);
-  box-shadow: inset 0 0 0 0.5px var(--border);
+  box-shadow: inset 0 0 0 1px var(--border);
   white-space: nowrap;
   transition: background var(--speed), opacity var(--speed);
 }

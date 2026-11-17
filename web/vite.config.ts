@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { defineConfig, type Plugin } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 
 // The API reference (/api/docs, served by the Go API) runs Scalar's standalone
 // script from this origin — the CSP allows only script-src 'self'. Serve it in
@@ -73,7 +74,7 @@ function excalidrawFonts(): Plugin {
 // In prod the Go binary serves the built SPA directly, so no proxy is needed.
 // The UI shows the server's version (/about); the SPA doesn't bake its own.
 export default defineConfig({
-  plugins: [vue(), scalar(), excalidrawFonts()],
+  plugins: [vue(), tailwindcss(), scalar(), excalidrawFonts()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

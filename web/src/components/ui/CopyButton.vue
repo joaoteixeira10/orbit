@@ -36,7 +36,7 @@ async function copy() {
 <template>
   <button
     type="button"
-    class="inline-flex items-center gap-1 rounded text-text-3 transition hover:text-text"
+    class="inline-flex items-center gap-1 rounded-sm text-text-3 transition hover:text-text"
     :title="tip"
     :aria-label="tip"
     @click.stop="copy"

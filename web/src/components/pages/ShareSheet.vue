@@ -7,6 +7,8 @@ import Toggle from '@/components/ui/Toggle.vue'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { shareApi, type ShareLink } from '@/lib/shareApi'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A page's guest links: each opens the page (and, if chosen, the pages
 // inside it) to anyone who has it, without an account — to read, or also to
@@ -67,13 +69,13 @@ const until = (iso?: string) => (iso ? new Intl.DateTimeFormat(undefined, { date
   <Overlay :open="open" :title="t('share.title')" size="lg" @close="emit('close')">
     <p class="mb-4 text-[13px] leading-relaxed text-text-2">{{ t('share.lead') }}</p>
     <p v-if="loading" class="py-4 text-center text-[13px] text-text-3">{{ t('common.loading') }}</p>
-    <p v-else-if="!links.length" class="mb-3 rounded-xl bg-fill-2 px-4 py-3 text-[13px] text-text-3">{{ t('share.none') }}</p>
+    <p v-else-if="!links.length" class="mb-3 rounded-lg border border-border px-4 py-3 text-[13px] text-text-3">{{ t('share.none') }}</p>
     <div v-for="l in links" :key="l.id" class="share-row" data-testid="share-link">
       <div class="flex items-center gap-2">
         <Link2 class="h-4 w-4 shrink-0 text-text-3" />
-        <input class="field min-w-0 flex-1 font-mono !text-[12px]" :value="l.url" readonly data-testid="share-url" @focus="($event.target as HTMLInputElement).select()" />
+        <input class="field min-w-0 flex-1 font-mono text-[12px]!" :value="l.url" readonly data-testid="share-url" @focus="($event.target as HTMLInputElement).select()" />
         <CopyButton :value="l.url" />
-        <button v-if="editable" type="button" class="icon-btn h-8 w-8 text-text-3" :aria-label="t('share.remove')" data-testid="share-remove" @click="remove(l)"><Trash2 class="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" v-if="editable" type="button" class="text-text-2 h-8 w-8 text-text-3" :aria-label="t('share.remove')" data-testid="share-remove" @click="remove(l)"><Trash2 class="h-4 w-4" /></Button>
       </div>
       <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px]">
         <div class="seg" role="group">
@@ -83,24 +85,24 @@ const until = (iso?: string) => (iso ? new Intl.DateTimeFormat(undefined, { date
         <label class="flex items-center gap-2"><Toggle :model-value="l.subpages" :disabled="!editable" @update:model-value="(v: boolean) => change(l, { subpages: v })" />{{ t('share.subpages') }}</label>
         <label class="flex items-center gap-2 text-text-2">
           {{ t('share.until') }}
-          <select class="input !w-auto !py-1 text-[12.5px]" :disabled="!editable" @change="change(l, { expires_in_days: Number(($event.target as HTMLSelectElement).value) })">
+          <NativeSelect size="sm" class="w-auto" :disabled="!editable" @change="change(l, { expires_in_days: Number(($event.target as HTMLSelectElement).value) })">
             <option value="0" :selected="!l.expires_at">{{ t('share.forever') }}</option>
             <option value="1">{{ t('share.days', { n: 1 }, 1) }}</option>
             <option value="7">{{ t('share.days', { n: 7 }, 7) }}</option>
             <option value="30">{{ t('share.days', { n: 30 }, 30) }}</option>
             <option v-if="l.expires_at" value="-1" selected disabled>{{ until(l.expires_at) }}</option>
-          </select>
+          </NativeSelect>
         </label>
       </div>
       <div class="mt-2 flex items-center gap-2 text-[12px]" :title="t('share.agentsHint')">
         <Bot class="h-4 w-4 shrink-0 text-text-3" />
         <span class="shrink-0 text-text-3">{{ t('share.agents') }}</span>
-        <input class="field min-w-0 flex-1 font-mono !py-1 !text-[11.5px]" :value="markdownOf(l.url, l.subpages)" readonly data-testid="share-markdown" @focus="($event.target as HTMLInputElement).select()" />
+        <input class="field min-w-0 flex-1 font-mono py-1! text-[11.5px]!" :value="markdownOf(l.url, l.subpages)" readonly data-testid="share-markdown" @focus="($event.target as HTMLInputElement).select()" />
         <CopyButton :value="markdownOf(l.url, l.subpages)" />
       </div>
     </div>
     <template #footer>
-      <button v-if="editable" type="button" class="btn-primary" data-testid="share-new" @click="make"><Plus class="h-4 w-4" />{{ t('share.new') }}</button>
+      <Button v-if="editable" type="button" data-testid="share-new" @click="make"><Plus class="h-4 w-4" />{{ t('share.new') }}</Button>
     </template>
   </Overlay>
 </template>
@@ -110,6 +112,6 @@ const until = (iso?: string) => (iso ? new Intl.DateTimeFormat(undefined, { date
   margin-bottom: 10px;
   padding: 12px;
   border-radius: 12px;
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 </style>

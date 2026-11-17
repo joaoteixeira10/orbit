@@ -24,6 +24,8 @@ import { onLiveEvent } from '@/lib/live'
 import { COLORS } from '@/lib/icons'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
+import { Button } from '@/components/shadcn/button'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // A workspace's files in folders, as in a file manager: the folders here
 // and the files here (of the kinds asked for: a module shows its own; Files
@@ -606,16 +608,16 @@ defineExpose({ here, reload: load, addFiles })
           <button v-if="editable" type="button" :class="{ on: mode === 'trash' }" :aria-pressed="mode === 'trash'" :title="t('drive.trashHint')" data-testid="files-trash" @click="setMode('trash')"><Trash2 class="h-4 w-4" /><span class="ml-1.5 hidden sm:inline">{{ t('drive.trash') }}</span></button>
         </div>
         <div class="flex items-center gap-1">
-          <button v-if="editable" ref="newEl" type="button" class="btn btn-sm" data-testid="new-folder" @click="startFolder"><FolderPlus class="h-3.5 w-3.5" />{{ t('drive.newFolder') }}</button>
-          <select v-model="sort" class="input !w-auto !py-1 text-[12.5px]" :aria-label="t('drive.sortBy')">
+          <Button variant="secondary" size="sm" v-if="editable" ref="newEl" type="button" data-testid="new-folder" @click="startFolder"><FolderPlus class="h-3.5 w-3.5" />{{ t('drive.newFolder') }}</Button>
+          <NativeSelect size="sm" v-model="sort" class="w-auto" :aria-label="t('drive.sortBy')">
             <option value="modified">{{ t('drive.byModified') }}</option>
             <option value="name">{{ t('drive.byName') }}</option>
-          </select>
+          </NativeSelect>
           <div class="seg" role="group" :aria-label="t('drive.view')">
             <button type="button" :class="{ on: view === 'grid' }" :aria-pressed="view === 'grid'" :title="t('drive.grid')" data-testid="view-grid" @click="view = 'grid'"><LayoutGrid class="h-4 w-4" /></button>
             <button type="button" :class="{ on: view === 'list' }" :aria-pressed="view === 'list'" :title="t('drive.list')" data-testid="view-list" @click="view = 'list'"><List class="h-4 w-4" /></button>
           </div>
-          <button type="button" class="icon-btn h-8 w-8" :class="{ 'text-accent': infoOpen }" :aria-pressed="infoOpen" :title="t('drive.details')" :aria-label="t('drive.details')" data-testid="files-info" @click="(infoOpen = !infoOpen), (infoOf = null)"><Info class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8" :class="{ 'text-accent': infoOpen }" :aria-pressed="infoOpen" :title="t('drive.details')" :aria-label="t('drive.details')" data-testid="files-info" @click="(infoOpen = !infoOpen), (infoOf = null)"><Info class="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -629,8 +631,8 @@ defineExpose({ here, reload: load, addFiles })
             <span class="shrink-0 text-[12px] text-text-3" data-testid="project-progress">{{ t('project.open', { n: project.list.open_count }) }} · {{ t('project.done', { n: project.done }) }}</span>
           </div>
         </div>
-        <RouterLink :to="{ name: 'ws-tasks', params: { ws, list: project.list.id } }" class="btn btn-sm" data-testid="project-list"><ListChecks class="h-3.5 w-3.5" />{{ t('project.list') }}</RouterLink>
-        <RouterLink v-if="hasModule('board')" :to="{ name: 'ws-board', params: { ws, list: project.list.id } }" class="btn btn-sm"><SquareKanban class="h-3.5 w-3.5" />{{ t('project.board') }}</RouterLink>
+        <Button as-child variant="secondary" size="sm"><RouterLink :to="{ name: 'ws-tasks', params: { ws, list: project.list.id } }" data-testid="project-list"><ListChecks class="h-3.5 w-3.5" />{{ t('project.list') }}</RouterLink></Button>
+        <Button as-child variant="secondary" size="sm"><RouterLink v-if="hasModule('board')" :to="{ name: 'ws-board', params: { ws, list: project.list.id } }" ><SquareKanban class="h-3.5 w-3.5" />{{ t('project.board') }}</RouterLink></Button>
       </div>
 
       <p v-if="loaded && !shownFolders.length && !items.length" class="py-14 text-center text-[13.5px] text-text-3" data-testid="files-empty">
@@ -649,8 +651,8 @@ defineExpose({ here, reload: load, addFiles })
             <div class="truncate text-[12px] text-text-3">{{ [onText(f), where(f.folder_id), sizeText(f.size, loc)].filter(Boolean).join(' · ') }}</div>
           </div>
           <span class="hide-sm shrink-0 text-[12px] text-text-3">{{ t('drive.goes', { when: goesWhen(f) }) }}</span>
-          <button type="button" class="btn btn-sm" data-testid="trash-restore" @click="restoreFile(f)"><RotateCcw class="h-3.5 w-3.5" />{{ t('drive.restore') }}</button>
-          <button type="button" class="icon-btn h-8 w-8 !text-danger" :title="t('drive.deleteNow')" :aria-label="t('drive.deleteNow')" data-testid="trash-purge" @click="purging = f"><Trash2 class="h-4 w-4" /></button>
+          <Button variant="secondary" size="sm" type="button" data-testid="trash-restore" @click="restoreFile(f)"><RotateCcw class="h-3.5 w-3.5" />{{ t('drive.restore') }}</Button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8 text-danger!" :title="t('drive.deleteNow')" :aria-label="t('drive.deleteNow')" data-testid="trash-purge" @click="purging = f"><Trash2 class="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -684,7 +686,7 @@ defineExpose({ here, reload: load, addFiles })
                 </div>
                 <div class="line-clamp-2 text-[11.5px] leading-snug text-text-3" data-testid="folder-summary">{{ summaryOf(f) }}</div>
               </div>
-              <button type="button" class="icon-btn h-7 w-7 shrink-0" :aria-label="t('drive.more')" data-testid="folder-more" @click.stop="openMenu({ folder: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button>
+              <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7 shrink-0" :aria-label="t('drive.more')" data-testid="folder-more" @click.stop="openMenu({ folder: f }, $event)"><MoreHorizontal class="h-4 w-4" /></Button>
             </div>
           </div>
         </section>
@@ -718,7 +720,7 @@ defineExpose({ here, reload: load, addFiles })
                   <div v-if="onText(f)" class="truncate text-[12px] text-text-3" data-testid="file-on">{{ onText(f) }}</div>
                   <div v-else class="text-[12px] text-text-3">{{ f.kind === 'file' ? `${sizeText(f.size, loc)} · ${ago(f.updated_at, loc)}` : t('drive.edited', { when: ago(f.updated_at, loc) }) }}</div>
                 </div>
-                <button type="button" class="icon-btn h-7 w-7 shrink-0" :aria-label="t('drive.more')" data-testid="file-more" @click.stop="openMenu({ file: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button>
+                <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7 shrink-0" :aria-label="t('drive.more')" data-testid="file-more" @click.stop="openMenu({ file: f }, $event)"><MoreHorizontal class="h-4 w-4" /></Button>
               </div>
             </div>
           </div>
@@ -756,7 +758,7 @@ defineExpose({ here, reload: load, addFiles })
             <td class="hide-sm text-text-3">{{ t('drive.kind.folder') }}</td>
             <td class="hide-sm" />
             <td class="hide-sm text-right text-text-3">{{ summaryOf(f) }}</td>
-            <td><button type="button" class="icon-btn h-7 w-7" :aria-label="t('drive.more')" @click.stop="openMenu({ folder: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button></td>
+            <td><Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :aria-label="t('drive.more')" @click.stop="openMenu({ folder: f }, $event)"><MoreHorizontal class="h-4 w-4" /></Button></td>
           </tr>
           <tr
             v-for="f in items"
@@ -773,7 +775,7 @@ defineExpose({ here, reload: load, addFiles })
             <td class="hide-sm text-text-3">{{ kindName(f.kind) }}</td>
             <td class="hide-sm text-text-3">{{ ago(f.updated_at, loc) }}</td>
             <td class="hide-sm text-right tabular-nums text-text-3">{{ sizeText(f.size, loc) }}</td>
-            <td><button type="button" class="icon-btn h-7 w-7" :aria-label="t('drive.more')" data-testid="file-more" @click.stop="openMenu({ file: f }, $event)"><MoreHorizontal class="h-4 w-4" /></button></td>
+            <td><Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :aria-label="t('drive.more')" data-testid="file-more" @click.stop="openMenu({ file: f }, $event)"><MoreHorizontal class="h-4 w-4" /></Button></td>
           </tr>
         </tbody>
       </table>
@@ -790,14 +792,14 @@ defineExpose({ here, reload: load, addFiles })
                 <img v-else-if="thumbs[infoFile.id]" :src="thumbs[infoFile.id]" alt="" class="photo" />
                 <span v-else class="tile h-14 w-14" :style="{ '--tile': KIND_COLOR[infoFile.kind] }"><component :is="typeIcon(infoFile)" class="h-7 w-7" /></span>
               </div>
-              <div class="mt-3 break-words text-[15px] font-semibold">{{ nameOf(infoFile) }}</div>
+              <div class="mt-3 wrap-break-word text-[15px] font-semibold">{{ nameOf(infoFile) }}</div>
             </template>
             <template v-else>
               <FolderIcon class="h-12 w-12" :style="infoFolder ? { color: folderColor(infoFolder), fill: `color-mix(in srgb, ${folderColor(infoFolder)} 30%, transparent)` } : { color: '#5ac8fa' }" :stroke-width="1.4" />
-              <div class="mt-2 break-words text-[15px] font-semibold">{{ infoFolder ? infoFolder.name : rootName }}</div>
+              <div class="mt-2 wrap-break-word text-[15px] font-semibold">{{ infoFolder ? infoFolder.name : rootName }}</div>
             </template>
           </div>
-          <button v-if="wide" type="button" class="icon-btn h-7 w-7" :aria-label="t('common.close')" @click="infoOpen = false"><X class="h-4 w-4" /></button>
+          <Button variant="ghost" size="icon" v-if="wide" type="button" class="text-text-2 h-7 w-7" :aria-label="t('common.close')" @click="infoOpen = false"><X class="h-4 w-4" /></Button>
         </div>
         <dl class="info-rows">
           <template v-if="infoFile">
@@ -823,8 +825,8 @@ defineExpose({ here, reload: load, addFiles })
           </template>
         </dl>
         <div v-if="infoFile" class="mt-4 flex flex-wrap gap-2">
-          <button type="button" class="btn-primary btn-sm" @click="open(infoFile)"><ExternalLink class="h-3.5 w-3.5" />{{ t('drive.open') }}</button>
-          <button type="button" class="btn btn-sm" @click="downloadOf(infoFile)"><Download class="h-3.5 w-3.5" />{{ t('drive.download') }}</button>
+          <Button size="sm" type="button" @click="open(infoFile)"><ExternalLink class="h-3.5 w-3.5" />{{ t('drive.open') }}</Button>
+          <Button variant="secondary" size="sm" type="button" @click="downloadOf(infoFile)"><Download class="h-3.5 w-3.5" />{{ t('drive.download') }}</Button>
         </div>
         <LocalGraph v-if="!personal && (infoFile || infoFolder)" :key="infoFile?.id ?? infoFolder?.id" :ws="ws" :id="(infoFile?.id ?? infoFolder?.id)!" />
       </div>
@@ -833,7 +835,7 @@ defineExpose({ here, reload: load, addFiles })
     <!-- Menus -->
     <Popover v-if="menu" :anchor="menu.el" :width="230" placement="bottom-end" @close="menu = null">
       <form v-if="menu.mode === 'rename'" class="p-2.5" @submit.prevent="doRename">
-        <input ref="renameEl" v-model="renameText" class="field !py-1.5 text-[13.5px]" maxlength="300" :aria-label="t('drive.rename')" data-testid="rename-input" />
+        <input ref="renameEl" v-model="renameText" class="field py-1.5! text-[13.5px]" maxlength="300" :aria-label="t('drive.rename')" data-testid="rename-input" />
       </form>
       <div v-else-if="'file' in menu.target" class="p-1.5" data-testid="file-menu">
         <button type="button" class="menu-item w-full" @click="open(menu.target.file)"><ExternalLink class="h-4 w-4 text-text-2" />{{ t('drive.open') }}</button>
@@ -903,8 +905,8 @@ defineExpose({ here, reload: load, addFiles })
 
     <Popover v-if="newOpen" :anchor="newEl" :width="260" placement="bottom-end" @close="newOpen = false">
       <form class="flex gap-2 p-2.5" @submit.prevent="makeFolder">
-        <input ref="newInput" v-model="newName" class="field min-w-0 flex-1 !py-1.5 text-[13.5px]" maxlength="200" :placeholder="t('drive.folderName')" :aria-label="t('drive.folderName')" data-testid="folder-name" />
-        <button type="submit" class="btn-primary btn-sm" :disabled="!newName.trim()">{{ t('drive.create') }}</button>
+        <input ref="newInput" v-model="newName" class="field min-w-0 flex-1 py-1.5! text-[13.5px]" maxlength="200" :placeholder="t('drive.folderName')" :aria-label="t('drive.folderName')" data-testid="folder-name" />
+        <Button size="sm" type="submit" :disabled="!newName.trim()">{{ t('drive.create') }}</Button>
       </form>
     </Popover>
 
@@ -927,8 +929,8 @@ defineExpose({ here, reload: load, addFiles })
         </button>
       </div>
       <div class="mt-4 flex justify-end gap-2">
-        <button type="button" class="btn" @click="moving = null">{{ t('common.cancel') }}</button>
-        <button type="button" class="btn-primary" data-testid="move-here" @click="doMove">{{ t('drive.moveHere') }}</button>
+        <Button variant="secondary" type="button" @click="moving = null">{{ t('common.cancel') }}</Button>
+        <Button type="button" data-testid="move-here" @click="doMove">{{ t('drive.moveHere') }}</Button>
       </div>
     </Overlay>
     <NotePlacePicker :open="!!elsewhere" mode="move" drawing :current="ws" @close="elsewhere = null" @pick="sendTo" />
@@ -938,14 +940,14 @@ defineExpose({ here, reload: load, addFiles })
     <Overlay :open="!!versionsOf" :title="versionsOf ? t('drive.versionsTitle', { name: nameOf(versionsOf) }) : ''" size="sm" @close="versionsOf = null">
       <p class="mb-3 text-[12.5px] leading-snug text-text-3">{{ t('drive.versionsHint') }}</p>
       <div class="move-list" data-testid="versions">
-        <div v-for="(v, i) in versions" :key="v.id" class="move-row !cursor-default" data-testid="version-row">
+        <div v-for="(v, i) in versions" :key="v.id" class="move-row cursor-default!" data-testid="version-row">
           <span class="w-7 shrink-0 text-[12px] tabular-nums text-text-3">v{{ versions.length - i }}</span>
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[13.5px]">{{ when(v.created_at) }}<template v-if="people.get(v.owner_id)"> · {{ people.get(v.owner_id) }}</template></span>
             <span class="block text-[12px] text-text-3">{{ sizeText(v.size, loc) }}<template v-if="v.current"> · {{ t('drive.current') }}</template></span>
           </span>
-          <button type="button" class="icon-btn h-7 w-7" :title="t('drive.download')" :aria-label="t('drive.download')" @click="downloadUpload(v.url, v.name)"><Download class="h-4 w-4" /></button>
-          <button v-if="!v.current && editable" type="button" class="btn btn-sm" data-testid="version-current" @click="makeCurrent(v)">{{ t('drive.makeCurrent') }}</button>
+          <Button variant="ghost" size="icon" type="button" class="text-text-2 h-7 w-7" :title="t('drive.download')" :aria-label="t('drive.download')" @click="downloadUpload(v.url, v.name)"><Download class="h-4 w-4" /></Button>
+          <Button variant="secondary" size="sm" v-if="!v.current && editable" type="button" data-testid="version-current" @click="makeCurrent(v)">{{ t('drive.makeCurrent') }}</Button>
         </div>
       </div>
     </Overlay>
@@ -954,7 +956,7 @@ defineExpose({ here, reload: load, addFiles })
 
 <style scoped>
 .fb-main.dropping {
-  border-radius: 14px;
+  border-radius: 12px;
   outline: 2px dashed var(--accent);
   outline-offset: 6px;
 }
@@ -976,12 +978,12 @@ defineExpose({ here, reload: load, addFiles })
   font-weight: 600;
   background: var(--surface);
   color: var(--text-2);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .trash-list {
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .trash-row {
   display: flex;
@@ -990,7 +992,7 @@ defineExpose({ here, reload: load, addFiles })
   padding: 10px 14px;
 }
 .trash-row + .trash-row {
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .project {
   display: flex;
@@ -998,9 +1000,9 @@ defineExpose({ here, reload: load, addFiles })
   gap: 12px;
   margin-bottom: 20px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border);
+  box-shadow: 0 0 0 1px var(--border);
 }
 .project .bar {
   position: relative;
@@ -1058,16 +1060,6 @@ defineExpose({ here, reload: load, addFiles })
 .crumb.over {
   background: var(--fill-2);
 }
-/* The app's segmented control (.seg), with icons. */
-.seg button {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  color: var(--text-2);
-}
-.seg button.on {
-  color: var(--text);
-}
 .folders {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1078,7 +1070,7 @@ defineExpose({ here, reload: load, addFiles })
   align-items: center;
   gap: 10px;
   padding: 10px 8px 10px 12px;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   cursor: pointer;
@@ -1103,8 +1095,8 @@ defineExpose({ here, reload: load, addFiles })
 }
 .card-f {
   overflow: hidden;
-  border: 0.5px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
   cursor: pointer;
   transition: box-shadow var(--speed);
@@ -1119,7 +1111,7 @@ defineExpose({ here, reload: load, addFiles })
   overflow: hidden;
   padding: 10px;
   background: #fff;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .pic img {
   width: 100%;
@@ -1133,7 +1125,7 @@ defineExpose({ here, reload: load, addFiles })
 }
 .fb-list th {
   padding: 6px 10px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
   font-weight: 600;
   text-align: left;
@@ -1142,7 +1134,7 @@ defineExpose({ here, reload: load, addFiles })
 .fb-list td {
   max-width: 0;
   padding: 7px 10px;
-  border-bottom: 0.5px solid var(--line-soft, var(--border));
+  border-bottom: 1px solid var(--line-soft, var(--border));
   white-space: nowrap;
 }
 .fb-list td:first-child {
@@ -1165,8 +1157,8 @@ defineExpose({ here, reload: load, addFiles })
 .fb-info {
   position: sticky;
   top: 16px;
-  border: 0.5px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
 }
 .info-body {
@@ -1174,7 +1166,7 @@ defineExpose({ here, reload: load, addFiles })
 }
 .info-pic {
   height: 150px;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 10px;
 }
 .info-rows {
@@ -1201,7 +1193,7 @@ defineExpose({ here, reload: load, addFiles })
 .move-list {
   max-height: 50vh;
   overflow-y: auto;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 10px;
 }
 .move-row {
@@ -1217,7 +1209,7 @@ defineExpose({ here, reload: load, addFiles })
   background: var(--fill-2);
 }
 .move-row.on {
-  background: var(--accent-bg, var(--fill));
+  background: var(--fill);
   color: var(--accent-text, var(--accent));
 }
 </style>

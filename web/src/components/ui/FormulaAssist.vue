@@ -138,7 +138,7 @@ const pos = computed(() => {
 .fx-foot {
   margin-top: 2px;
   padding: 4px 8px 2px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
   font: 11.5px var(--font-mono);
   color: var(--text-2);
 }

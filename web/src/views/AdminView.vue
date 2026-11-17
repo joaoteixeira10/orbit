@@ -34,7 +34,12 @@ import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 import DevThemesCard from '@/components/admin/DevThemesCard.vue'
 import HolidayThemesCard from '@/components/admin/HolidayThemesCard.vue'
+import SeasonThemesCard from '@/components/admin/SeasonThemesCard.vue'
 import AssistantCard from '@/components/admin/AssistantCard.vue'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
+import { Textarea } from '@/components/shadcn/textarea'
 
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -887,7 +892,7 @@ function switchTab(t: Tab) {
     <!-- ===== Users ===== -->
     <section v-if="tab === 'users'">
       <div class="mb-3 flex justify-end">
-        <button class="btn-primary" @click="showUser = true"><Plus class="h-4 w-4" /> {{ t('admin.newUser') }}</button>
+        <Button @click="showUser = true"><Plus class="h-4 w-4" /> {{ t('admin.newUser') }}</Button>
       </div>
       <div class="card overflow-hidden">
         <div class="overflow-x-auto"><table class="w-full min-w-[640px]">
@@ -899,7 +904,7 @@ function switchTab(t: Tab) {
               <td class="td">
                 <div class="font-medium">
                   {{ u.username }}
-                  <span v-if="u.id === auth.user?.id" class="ml-1 rounded bg-accent-bg px-1.5 py-0.5 text-[10px] font-medium text-accent-text">{{ t('admin.you') }}</span>
+                  <span v-if="u.id === auth.user?.id" class="ml-1 rounded-sm bg-accent-bg px-1.5 py-0.5 text-[10px] font-medium text-accent-text">{{ t('admin.you') }}</span>
                 </div>
                 <div v-if="u.display_name && u.display_name !== u.username" class="text-[12px] text-text-3">{{ u.display_name }}</div>
               </td>
@@ -919,16 +924,16 @@ function switchTab(t: Tab) {
               <td class="td whitespace-nowrap text-text-2" :title="u.last_login_at ? fmtDate(u.last_login_at) : ''">{{ u.last_login_at ? ago(u.last_login_at) : t('admin.never') }}</td>
               <td class="td">
                 <div class="flex justify-end gap-1">
-                  <button class="btn-ghost px-2 py-1" :title="t('admin.edit')" @click="openEditUser(u)"><Pencil class="h-4 w-4" /></button>
-                  <button v-if="u.locked_until" class="btn-ghost px-2 py-1" :title="t('admin.unlock')" @click="unlockUser(u)"><LockOpen class="h-4 w-4" /></button>
-                  <button v-if="!u.oidc" class="btn-ghost px-2 py-1" :title="t('admin.resetPassword')" @click="resetTarget = u"><KeyRound class="h-4 w-4" /></button>
-                  <button class="btn-ghost px-2 py-1" :title="t('admin.forceLogout')" @click="logoutTarget = u"><LogOut class="h-4 w-4" /></button>
+                  <Button variant="ghost" class="px-2 py-1" :title="t('admin.edit')" @click="openEditUser(u)"><Pencil class="h-4 w-4" /></Button>
+                  <Button variant="ghost" v-if="u.locked_until" class="px-2 py-1" :title="t('admin.unlock')" @click="unlockUser(u)"><LockOpen class="h-4 w-4" /></Button>
+                  <Button variant="ghost" v-if="!u.oidc" class="px-2 py-1" :title="t('admin.resetPassword')" @click="resetTarget = u"><KeyRound class="h-4 w-4" /></Button>
+                  <Button variant="ghost" class="px-2 py-1" :title="t('admin.forceLogout')" @click="logoutTarget = u"><LogOut class="h-4 w-4" /></Button>
                   <template v-if="u.id !== auth.user?.id">
-                    <button v-if="u.disabled" class="btn-ghost px-2 py-1 text-ok-text" :title="t('admin.enableUser')" @click="setDisabled(u, false)"><UserCheck class="h-4 w-4" /></button>
-                    <button v-else class="btn-ghost px-2 py-1 text-warn-text" :title="t('admin.disableUser')" @click="disableTarget = u"><UserX class="h-4 w-4" /></button>
+                    <Button variant="ghost" v-if="u.disabled" class="px-2 py-1 text-ok-text" :title="t('admin.enableUser')" @click="setDisabled(u, false)"><UserCheck class="h-4 w-4" /></Button>
+                    <Button variant="ghost" v-else class="px-2 py-1 text-warn-text" :title="t('admin.disableUser')" @click="disableTarget = u"><UserX class="h-4 w-4" /></Button>
                   </template>
-                  <button v-if="canImpersonate(u)" class="btn-ghost px-2 py-1" :title="t('impersonate.action')" @click="impersonate(u)"><VenetianMask class="h-4 w-4" /></button>
-                  <button v-if="u.id !== auth.user?.id" class="btn-ghost px-2 py-1 text-crit-text" :title="t('common.delete')" @click="deleteUserTarget = u"><Trash2 class="h-4 w-4" /></button>
+                  <Button variant="ghost" v-if="canImpersonate(u)" class="px-2 py-1" :title="t('impersonate.action')" @click="impersonate(u)"><VenetianMask class="h-4 w-4" /></Button>
+                  <Button variant="ghost" v-if="u.id !== auth.user?.id" class="px-2 py-1 text-crit-text" :title="t('common.delete')" @click="deleteUserTarget = u"><Trash2 class="h-4 w-4" /></Button>
                 </div>
               </td>
             </tr>
@@ -944,7 +949,7 @@ function switchTab(t: Tab) {
 
     <section v-else-if="tab === 'roles'">
       <div class="mb-3 flex justify-end">
-        <button class="btn-primary" @click="openCreateRole"><Plus class="h-4 w-4" /> {{ t('admin.newRole') }}</button>
+        <Button @click="openCreateRole"><Plus class="h-4 w-4" /> {{ t('admin.newRole') }}</Button>
       </div>
       <div class="flex flex-col gap-4">
         <div v-for="r in roles" :key="r.id" class="card role-card overflow-hidden" :class="roleFlashing(r.id) && 'row-flash'">
@@ -952,13 +957,13 @@ function switchTab(t: Tab) {
             <div class="min-w-0">
               <h3 class="font-mono text-[13.5px] font-semibold">
                 {{ r.name }}
-                <span v-if="r.builtin" class="ml-1 rounded bg-surface-3 px-1.5 py-0.5 font-sans text-[10px] font-medium uppercase text-text-3">{{ t('admin.builtin') }}</span>
+                <span v-if="r.builtin" class="pill ml-1 font-sans">{{ t('admin.builtin') }}</span>
               </h3>
               <div class="text-[12px] text-text-3">{{ roleDescription(r) || roleSummary(r) }}</div>
             </div>
             <div class="flex gap-1">
-              <button class="btn-ghost px-2 py-1" :disabled="r.builtin" :title="r.builtin ? t('admin.builtinImmutable') : t('admin.edit')" @click="!r.builtin && openEditRole(r)"><Pencil class="h-4 w-4" /></button>
-              <button class="btn-ghost px-2 py-1 text-crit-text" :disabled="r.builtin" :title="t('common.delete')" @click="!r.builtin && (deleteRoleTarget = r)"><Trash2 class="h-4 w-4" /></button>
+              <Button variant="ghost" class="px-2 py-1" :disabled="r.builtin" :title="r.builtin ? t('admin.builtinImmutable') : t('admin.edit')" @click="!r.builtin && openEditRole(r)"><Pencil class="h-4 w-4" /></Button>
+              <Button variant="ghost" class="px-2 py-1 text-crit-text" :disabled="r.builtin" :title="t('common.delete')" @click="!r.builtin && (deleteRoleTarget = r)"><Trash2 class="h-4 w-4" /></Button>
             </div>
           </div>
           <div class="grid md:grid-cols-2">
@@ -974,11 +979,11 @@ function switchTab(t: Tab) {
                   <span v-if="!roleMembers(r).length" class="text-[12px] text-text-3">{{ t('admin.noMembers') }}</span>
                 </div>
                 <div v-if="nonMembers(r).length" class="flex gap-1.5">
-                  <select v-model="addMember[r.id]" class="input min-w-0 flex-1 py-1">
+                  <NativeSelect size="sm" v-model="addMember[r.id]" class="min-w-0 flex-1 w-full">
                     <option :value="undefined">{{ t('admin.addMember') }}</option>
                     <option v-for="u in nonMembers(r)" :key="u.id" :value="u.id">{{ u.username }}</option>
-                  </select>
-                  <button class="btn-ghost" :disabled="!addMember[r.id]" @click="addMemberTo(r)">{{ t('admin.add') }}</button>
+                  </NativeSelect>
+                  <Button variant="ghost" :disabled="!addMember[r.id]" @click="addMemberTo(r)">{{ t('admin.add') }}</Button>
                 </div>
               </template>
               <p v-else class="text-[12px] text-text-3">{{ t('admin.membersNeedUsers') }}</p>
@@ -989,7 +994,7 @@ function switchTab(t: Tab) {
               <p v-if="r.superuser" class="text-[12.5px] font-medium text-violet">{{ t('admin.fullAccess') }}</p>
               <template v-else>
                 <div v-if="r.global_privileges.length" class="mb-2 flex flex-wrap gap-1">
-                  <span v-for="p in r.global_privileges" :key="p" class="rounded bg-surface-3 px-1.5 py-0.5 text-[11.5px] text-text-2">{{ privLabel(p) }}</span>
+                  <span v-for="p in r.global_privileges" :key="p" class="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[11.5px] text-text-2">{{ privLabel(p) }}</span>
                 </div>
                 <p v-if="!r.global_privileges.length" class="text-[12px] text-text-3">{{ t('admin.noPrivileges') }}</p>
               </template>
@@ -1014,14 +1019,14 @@ function switchTab(t: Tab) {
               <td class="td">
                 <span v-if="!tk.privileges?.length && !tk.read_only" class="text-text-3">{{ t('admin.tokenFull') }}</span>
                 <span v-else class="flex flex-wrap gap-1">
-                  <span v-if="tk.read_only" class="pill !text-[11px]">{{ t('settings.tokenReadOnly') }}</span>
-                  <span v-for="p in tk.privileges ?? []" :key="p" class="pill !text-[11px]">{{ privLabel(p) }}</span>
+                  <span v-if="tk.read_only" class="pill text-[11px]!">{{ t('settings.tokenReadOnly') }}</span>
+                  <span v-for="p in tk.privileges ?? []" :key="p" class="pill text-[11px]!">{{ privLabel(p) }}</span>
                 </span>
               </td>
               <td class="td text-text-2">{{ tk.last_used_at ? ago(tk.last_used_at) : t('admin.never') }}</td>
               <td class="td text-text-2">{{ tk.expires_at ? fmtDate(tk.expires_at) : t('admin.never') }}</td>
               <td class="td text-right">
-                <button class="btn-ghost px-2 py-1 text-crit-text" :title="t('admin.revoke')" @click="revokeTarget = tk"><Trash2 class="h-4 w-4" /></button>
+                <Button variant="ghost" class="px-2 py-1 text-crit-text" :title="t('admin.revoke')" @click="revokeTarget = tk"><Trash2 class="h-4 w-4" /></Button>
               </td>
             </tr>
             <tr v-if="!allTokens.length"><td class="td text-text-3" colspan="6">{{ t('admin.noTokens') }}</td></tr>
@@ -1038,13 +1043,13 @@ function switchTab(t: Tab) {
       <div class="card overflow-hidden">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3"><SlidersHorizontal class="h-[18px] w-[18px] text-text-2" /><h3 class="text-[14px] font-semibold">{{ t('adm.branding.identity') }}</h3></div>
         <div class="flex flex-col gap-4 p-5">
-          <div><label class="label">{{ t('adm.branding.appName') }}</label><input v-model="brandForm.app_name" class="input" placeholder="Orbit" /></div>
+          <div><label class="label">{{ t('adm.branding.appName') }}</label><Input v-model="brandForm.app_name" placeholder="Orbit" /></div>
           <div>
             <div class="lockable" :class="{ locked: brandForm.developer_themes_enabled }">
               <label class="label">{{ t('adm.branding.accent') }}</label>
               <div class="flex items-center gap-2">
                 <input :value="brandForm.accent_color || '#007AFF'" type="color" class="h-10 w-12 shrink-0 rounded-lg border border-border bg-surface-2" @input="brandForm.accent_color = ($event.target as HTMLInputElement).value" />
-                <input v-model="brandForm.accent_color" class="input font-mono" placeholder="#007AFF" />
+                <Input v-model="brandForm.accent_color" class="font-mono" placeholder="#007AFF" />
               </div>
               <div class="mt-2 flex gap-2">
                 <button
@@ -1081,6 +1086,9 @@ function switchTab(t: Tab) {
       <!-- Holiday themes: off, each in its season, or one now -->
       <HolidayThemesCard />
 
+      <!-- Season themes: off, the season today is in, or one now -->
+      <SeasonThemesCard />
+
       <!-- Page history: how many versions a page keeps -->
       <div class="card overflow-hidden" data-testid="history-admin">
         <div class="flex items-center gap-2 border-b border-border px-5 py-3">
@@ -1090,10 +1098,10 @@ function switchTab(t: Tab) {
           <p class="text-[12px] text-text-3">{{ t('history.keptHint') }}</p>
           <label class="flex items-center gap-2 text-[13px]">
             {{ t('history.keep') }}
-            <input v-model.number="versionsKept" class="input !w-24" type="number" min="5" max="1000" data-testid="versions-kept" />
+            <Input v-model.number="versionsKept" class="w-24!" type="number" min="5" max="1000" data-testid="versions-kept" />
             {{ t('history.perPage') }}
           </label>
-          <div><button type="submit" class="btn-primary btn-sm" data-testid="versions-kept-save">{{ t('common.save') }}</button></div>
+          <div><Button size="sm" type="submit" data-testid="versions-kept-save">{{ t('common.save') }}</Button></div>
         </form>
       </div>
 
@@ -1119,7 +1127,7 @@ function switchTab(t: Tab) {
               <div><div class="text-[13px] font-semibold">{{ t('adm.branding.loginMessage') }}</div><div class="text-[12px] text-text-3">{{ t('adm.branding.loginMessageHint') }}</div></div>
               <Toggle v-model="customLoginMessage" />
             </div>
-            <textarea v-if="customLoginMessage" v-model="loginMessage" class="input mt-3 h-20" :placeholder="t('adm.branding.loginMessagePlaceholder')"></textarea>
+            <Textarea v-if="customLoginMessage" v-model="loginMessage" class="mt-3 h-20" :placeholder="t('adm.branding.loginMessagePlaceholder')" />
           </div>
         </div>
       </div>
@@ -1131,14 +1139,14 @@ function switchTab(t: Tab) {
             <div class="lockable" :class="{ locked: previewLogoTheme }">
               <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">{{ t('adm.branding.logo') }}</span> {{ t('adm.branding.logoHint') }}</div>
               <div class="mb-2 flex h-20 items-center justify-center rounded-xl border border-border bg-surface-2">
-                <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="max-h-14 rounded" />
+                <img v-if="brandForm.logo_data_url" :src="brandForm.logo_data_url" class="max-h-14 rounded-sm" />
                 <span v-else class="text-[12px] text-text-3">{{ t('adm.branding.noLogo') }}</span>
               </div>
               <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border-2 px-3 py-3">
                 <span class="text-[13px]"><span class="font-medium">{{ t('adm.branding.uploadLogo') }}</span><br /><span class="text-[12px] text-text-3">{{ t('adm.branding.logoFormats') }}</span></span>
                 <div class="flex shrink-0 items-center gap-2">
-                  <button v-if="brandForm.logo_data_url" type="button" class="btn-ghost" @click="brandForm.logo_data_url = ''">{{ t('adm.remove') }}</button>
-                  <label class="btn-ghost cursor-pointer">{{ t('adm.chooseFile') }}<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'logo_data_url')" /></label>
+                  <Button variant="ghost" v-if="brandForm.logo_data_url" type="button" @click="brandForm.logo_data_url = ''">{{ t('adm.remove') }}</Button>
+                  <Button as="label" variant="ghost" class="cursor-pointer">{{ t('adm.chooseFile') }}<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'logo_data_url')" /></Button>
                 </div>
               </div>
             </div>
@@ -1152,12 +1160,12 @@ function switchTab(t: Tab) {
               <div class="mb-1.5 text-[12px] text-text-2"><span class="font-semibold text-text">{{ t('adm.branding.favicon') }}</span> {{ t('adm.branding.faviconHint') }}</div>
               <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border-2 px-3 py-3">
                 <span class="flex items-center gap-3 text-[13px]">
-                  <img v-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-7 w-7 rounded" />
+                  <img v-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-7 w-7 rounded-sm" />
                   <span><span class="font-medium">{{ t('adm.branding.uploadFavicon') }}</span><br /><span class="text-[12px] text-text-3">{{ t('adm.branding.faviconFormats') }}</span></span>
                 </span>
                 <div class="flex shrink-0 items-center gap-2">
-                  <button v-if="brandForm.favicon_data_url" type="button" class="btn-ghost" @click="brandForm.favicon_data_url = ''">{{ t('adm.remove') }}</button>
-                  <label class="btn-ghost cursor-pointer">{{ t('adm.chooseFile') }}<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'favicon_data_url')" /></label>
+                  <Button variant="ghost" v-if="brandForm.favicon_data_url" type="button" @click="brandForm.favicon_data_url = ''">{{ t('adm.remove') }}</Button>
+                  <Button as="label" variant="ghost" class="cursor-pointer">{{ t('adm.chooseFile') }}<input type="file" accept="image/*" class="hidden" @change="onFile($event, 'favicon_data_url')" /></Button>
                 </div>
               </div>
             </div>
@@ -1177,8 +1185,8 @@ function switchTab(t: Tab) {
             <!-- browser-tab strip (favicon) -->
             <div class="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-2.5">
               <img v-if="previewFavTheme" :src="previewCrest" alt="" class="h-6 w-6" />
-              <img v-else-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-6 w-6 rounded" />
-              <img v-else :src="DEFAULT_MARK" alt="" class="h-6 w-6 rounded" />
+              <img v-else-if="brandForm.favicon_data_url" :src="brandForm.favicon_data_url" class="h-6 w-6 rounded-sm" />
+              <img v-else :src="DEFAULT_MARK" alt="" class="h-6 w-6 rounded-sm" />
               <span class="text-[13px] font-semibold">{{ brandForm.app_name || 'Orbit' }}</span>
             </div>
             <!-- sidebar brand (mark + wordmark), honouring the show-logo/name toggles -->
@@ -1194,7 +1202,7 @@ function switchTab(t: Tab) {
               </div>
             </div>
             <div class="flex items-center gap-3 p-3">
-              <button class="btn-primary" :style="previewBtnStyle">{{ t('adm.branding.previewButton') }}</button>
+              <Button :style="previewBtnStyle">{{ t('adm.branding.previewButton') }}</Button>
               <a class="text-[12px] hover:underline" :style="{ color: previewAccent?.accent || 'var(--accent)' }">{{ t('adm.branding.previewLink') }}</a>
             </div>
           </div>
@@ -1203,7 +1211,7 @@ function switchTab(t: Tab) {
 
       </div><!-- /right column -->
 
-      <div class="flex justify-end lg:col-span-2"><button class="btn-primary" @click="saveBranding"><Send class="h-4 w-4" /> {{ t('adm.branding.save') }}</button></div>
+      <div class="flex justify-end lg:col-span-2"><Button @click="saveBranding"><Send class="h-4 w-4" /> {{ t('adm.branding.save') }}</Button></div>
     </section>
 
     <!-- ===== Notifications ===== -->
@@ -1213,7 +1221,7 @@ function switchTab(t: Tab) {
           {{ t('adm.notify.intro') }}
         </p>
 
-        <div class="columns-1 gap-x-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
+        <div class="columns-1 gap-x-4 lg:columns-2 *:mb-4 *:break-inside-avoid">
         <!-- Email -->
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between">
@@ -1222,16 +1230,16 @@ function switchTab(t: Tab) {
           </div>
           <div v-if="notifCfg.email.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">{{ t('adm.notify.host') }}</label><input v-model="notifCfg.email.host" class="input" placeholder="smtp.example.org" /></div>
-              <div><label class="label">{{ t('adm.notify.port') }}</label><input v-model.number="notifCfg.email.port" type="number" class="input" placeholder="587" /></div>
+              <div><label class="label">{{ t('adm.notify.host') }}</label><Input v-model="notifCfg.email.host" placeholder="smtp.example.org" /></div>
+              <div><label class="label">{{ t('adm.notify.port') }}</label><Input v-model.number="notifCfg.email.port" type="number" placeholder="587" /></div>
             </div>
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">{{ t('admin.colUsername') }}</label><input v-model="notifCfg.email.username" class="input" /></div>
-              <div><label class="label">{{ t('adm.password') }}</label><input v-model="notifCfg.email.password" type="password" class="input" /></div>
+              <div><label class="label">{{ t('admin.colUsername') }}</label><Input v-model="notifCfg.email.username" /></div>
+              <div><label class="label">{{ t('adm.password') }}</label><Input v-model="notifCfg.email.password" type="password" /></div>
             </div>
-            <div><label class="label">{{ t('adm.notify.from') }}</label><input v-model="notifCfg.email.from" class="input" placeholder="orbit@example.org" /></div>
+            <div><label class="label">{{ t('adm.notify.from') }}</label><Input v-model="notifCfg.email.from" placeholder="orbit@example.org" /></div>
             <Checkbox v-model="notifCfg.email.start_tls" class="text-text-2">{{ t('adm.notify.startTls') }}</Checkbox>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'email'" @click="testChannel('email')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'email'" @click="testChannel('email')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1239,8 +1247,8 @@ function switchTab(t: Tab) {
         <div class="card p-5">
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Discord</h3><Toggle v-model="notifCfg.discord.enabled" /></div>
           <div v-if="notifCfg.discord.enabled" class="flex flex-col gap-3">
-            <div><label class="label">{{ t('adm.notify.webhookUrl') }}</label><input v-model="notifCfg.discord.webhook_url" class="input" placeholder="https://discord.com/api/webhooks/…" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'discord'" @click="testChannel('discord')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div><label class="label">{{ t('adm.notify.webhookUrl') }}</label><Input v-model="notifCfg.discord.webhook_url" placeholder="https://discord.com/api/webhooks/…" /></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'discord'" @click="testChannel('discord')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1249,10 +1257,10 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Telegram</h3><Toggle v-model="notifCfg.telegram.enabled" /></div>
           <div v-if="notifCfg.telegram.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">{{ t('adm.notify.botToken') }}</label><input v-model="notifCfg.telegram.bot_token" class="input" /></div>
-              <div><label class="label">{{ t('adm.notify.chatId') }}</label><input v-model="notifCfg.telegram.chat_id" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.botToken') }}</label><Input v-model="notifCfg.telegram.bot_token" /></div>
+              <div><label class="label">{{ t('adm.notify.chatId') }}</label><Input v-model="notifCfg.telegram.chat_id" /></div>
             </div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'telegram'" @click="testChannel('telegram')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'telegram'" @click="testChannel('telegram')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1261,11 +1269,11 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">ntfy</h3><Toggle v-model="notifCfg.ntfy.enabled" /></div>
           <div v-if="notifCfg.ntfy.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">{{ t('adm.notify.serverUrl') }}</label><input v-model="notifCfg.ntfy.server_url" class="input" placeholder="https://ntfy.sh" /></div>
-              <div><label class="label">{{ t('adm.notify.topic') }}</label><input v-model="notifCfg.ntfy.topic" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.serverUrl') }}</label><Input v-model="notifCfg.ntfy.server_url" placeholder="https://ntfy.sh" /></div>
+              <div><label class="label">{{ t('adm.notify.topic') }}</label><Input v-model="notifCfg.ntfy.topic" /></div>
             </div>
-            <div><label class="label">{{ t('adm.notify.tokenOptional') }}</label><input v-model="notifCfg.ntfy.token" class="input" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'ntfy'" @click="testChannel('ntfy')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div><label class="label">{{ t('adm.notify.tokenOptional') }}</label><Input v-model="notifCfg.ntfy.token" /></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'ntfy'" @click="testChannel('ntfy')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1274,10 +1282,10 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Gotify</h3><Toggle v-model="notifCfg.gotify.enabled" /></div>
           <div v-if="notifCfg.gotify.enabled" class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="label">{{ t('adm.notify.serverUrl') }}</label><input v-model="notifCfg.gotify.server_url" class="input" placeholder="https://gotify.example.org" /></div>
-              <div><label class="label">{{ t('adm.notify.appToken') }}</label><input v-model="notifCfg.gotify.token" class="input" /></div>
+              <div><label class="label">{{ t('adm.notify.serverUrl') }}</label><Input v-model="notifCfg.gotify.server_url" placeholder="https://gotify.example.org" /></div>
+              <div><label class="label">{{ t('adm.notify.appToken') }}</label><Input v-model="notifCfg.gotify.token" /></div>
             </div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'gotify'" @click="testChannel('gotify')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'gotify'" @click="testChannel('gotify')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1286,8 +1294,8 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Microsoft Teams</h3><Toggle v-model="notifCfg.teams.enabled" /></div>
           <div v-if="notifCfg.teams.enabled" class="flex flex-col gap-3">
             <i18n-t scope="global" keypath="adm.notify.teamsHint" tag="p" class="text-[12px] text-text-3"><template #path><b>{{ t('adm.notify.teamsPath') }}</b></template></i18n-t>
-            <div><label class="label">{{ t('adm.notify.workflowUrl') }}</label><input v-model="notifCfg.teams.webhook_url" class="input" placeholder="https://….logic.azure.com/workflows/…" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'teams'" @click="testChannel('teams')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div><label class="label">{{ t('adm.notify.workflowUrl') }}</label><Input v-model="notifCfg.teams.webhook_url" placeholder="https://….logic.azure.com/workflows/…" /></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'teams'" @click="testChannel('teams')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1296,8 +1304,8 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">Slack</h3><Toggle v-model="notifCfg.slack.enabled" /></div>
           <div v-if="notifCfg.slack.enabled" class="flex flex-col gap-3">
             <i18n-t scope="global" keypath="adm.notify.slackHint" tag="p" class="text-[12px] text-text-3"><template #hook><b>{{ t('adm.notify.slackHook') }}</b></template></i18n-t>
-            <div><label class="label">{{ t('adm.notify.webhookUrl') }}</label><input v-model="notifCfg.slack.webhook_url" class="input" placeholder="https://hooks.slack.com/services/…" /></div>
-            <div class="flex justify-end"><button class="btn-ghost" :disabled="testing === 'slack'" @click="testChannel('slack')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</button></div>
+            <div><label class="label">{{ t('adm.notify.webhookUrl') }}</label><Input v-model="notifCfg.slack.webhook_url" placeholder="https://hooks.slack.com/services/…" /></div>
+            <div class="flex justify-end"><Button variant="ghost" :disabled="testing === 'slack'" @click="testChannel('slack')"><Send class="h-4 w-4" /> {{ t('adm.test') }}</Button></div>
           </div>
         </div>
 
@@ -1306,8 +1314,8 @@ function switchTab(t: Tab) {
           <div class="mb-3 flex items-center justify-between"><h3 class="text-[14px] font-semibold">{{ t('adm.notify.webhook') }}</h3><Toggle v-model="notifCfg.webhook.enabled" /></div>
           <div v-if="notifCfg.webhook.enabled" class="flex flex-col gap-3">
             <i18n-t scope="global" keypath="adm.notify.webhookHint" tag="p" class="text-[12px] text-text-3"><template #event><code>X-Orbit-Event: audit.user.create</code></template><template #header><code>X-Orbit-Signature</code></template></i18n-t>
-            <div><label class="label">URL</label><input v-model="notifCfg.webhook.url" class="input" placeholder="https://hooks.example.org/orbit" /></div>
-            <div><label class="label">{{ t('adm.notify.secret') }}</label><input v-model="notifCfg.webhook.secret" type="password" class="input" :placeholder="t('adm.notify.secretPlaceholder')" /></div>
+            <div><label class="label">URL</label><Input v-model="notifCfg.webhook.url" placeholder="https://hooks.example.org/orbit" /></div>
+            <div><label class="label">{{ t('adm.notify.secret') }}</label><Input v-model="notifCfg.webhook.secret" type="password" :placeholder="t('adm.notify.secretPlaceholder')" /></div>
           </div>
         </div>
 
@@ -1316,7 +1324,7 @@ function switchTab(t: Tab) {
 
         <p class="text-[12.5px] text-text-3">{{ t('adm.notify.perUser') }}</p>
 
-        <div class="flex justify-end"><button class="btn-primary" @click="saveNotifConfig">{{ t('common.save') }}</button></div>
+        <div class="flex justify-end"><Button @click="saveNotifConfig">{{ t('common.save') }}</Button></div>
       </div>
       <div v-else class="text-[13px] text-text-3">{{ t('common.loading') }}</div>
     </section>
@@ -1400,7 +1408,7 @@ function switchTab(t: Tab) {
           <!-- "Sign in with Gitea": the servers' registrations (with git on) -->
           <GitSignInApps v-if="f.key === 'git_integration' && featureFlags.git_integration !== false" class="-mt-2" />
           <!-- The kinds people may add as their own (with that flag on) -->
-          <div v-if="f.key === 'personal_channels' && featureFlags.personal_channels !== false" class="-mt-2 rounded-xl bg-fill-2 p-3" data-testid="personal-kinds">
+          <div v-if="f.key === 'personal_channels' && featureFlags.personal_channels !== false" class="-mt-2 rounded-lg border border-border p-3" data-testid="personal-kinds">
             <div class="text-[12px] text-text-2">{{ t('adm.owner.feature.ownChannelsKinds') }}</div>
             <div class="mt-2 flex flex-wrap gap-x-5 gap-y-2">
               <Checkbox v-for="k in PERSONAL_KINDS" :key="k" :model-value="personalKinds.includes(k)" @update:model-value="(v) => togglePersonalKind(k, v)">{{ personalLabel(k) }}</Checkbox>
@@ -1417,18 +1425,18 @@ function switchTab(t: Tab) {
         </div>
         <form class="flex flex-col gap-3 p-5" @submit.prevent="saveGoogleApp()">
           <p class="text-[12px] leading-relaxed text-text-3">{{ t('adm.owner.googleHint') }}</p>
-          <div v-if="googleApp" class="rounded-xl bg-fill-2 p-3 text-[12px]">
+          <div v-if="googleApp" class="rounded-lg border border-border p-3 text-[12px]">
             <div class="mb-1 text-text-2">{{ t('adm.owner.googleRedirect') }}</div>
             <div class="flex items-center gap-2">
               <code class="min-w-0 flex-1 break-all font-mono text-[11.5px]">{{ googleApp.redirect_uri }}</code>
               <CopyButton :value="googleApp.redirect_uri" />
             </div>
           </div>
-          <input v-model="googleId" class="input" :placeholder="t('adm.owner.googleId')" :aria-label="t('adm.owner.googleId')" autocomplete="off" spellcheck="false" data-testid="google-client-id" />
-          <input v-model="googleSecret" class="input" type="password" autocomplete="new-password" :placeholder="googleApp?.has_secret ? t('adm.owner.googleSecretKept') : t('adm.owner.googleSecret')" :aria-label="t('adm.owner.googleSecret')" data-testid="google-client-secret" />
+          <Input v-model="googleId" :placeholder="t('adm.owner.googleId')" :aria-label="t('adm.owner.googleId')" autocomplete="off" spellcheck="false" data-testid="google-client-id" />
+          <Input v-model="googleSecret" type="password" autocomplete="new-password" :placeholder="googleApp?.has_secret ? t('adm.owner.googleSecretKept') : t('adm.owner.googleSecret')" :aria-label="t('adm.owner.googleSecret')" data-testid="google-client-secret" />
           <div class="flex flex-wrap gap-2">
-            <button type="submit" class="btn-primary btn-sm" :disabled="!googleId.trim() || (!googleSecret.trim() && !googleApp?.has_secret)">{{ t('adm.owner.googleSave') }}</button>
-            <button v-if="googleApp?.client_id" type="button" class="btn btn-sm !text-danger" @click="saveGoogleApp(true)">{{ t('adm.owner.googleClear') }}</button>
+            <Button size="sm" type="submit" :disabled="!googleId.trim() || (!googleSecret.trim() && !googleApp?.has_secret)">{{ t('adm.owner.googleSave') }}</Button>
+            <Button variant="secondary" size="sm" v-if="googleApp?.client_id" type="button" class="text-danger!" @click="saveGoogleApp(true)">{{ t('adm.owner.googleClear') }}</Button>
           </div>
         </form>
       </div>
@@ -1440,10 +1448,10 @@ function switchTab(t: Tab) {
         </div>
         <form class="flex flex-col gap-3 p-5" @submit.prevent="saveDrawio(drawioUrl)">
           <p class="text-[12px] text-text-3">{{ t('adm.owner.drawioHint') }}</p>
-          <input v-model="drawioUrl" class="input" type="url" placeholder="https://embed.diagrams.net" :aria-label="t('adm.owner.drawio')" data-testid="drawio-url" />
+          <Input v-model="drawioUrl" type="url" placeholder="https://embed.diagrams.net" :aria-label="t('adm.owner.drawio')" data-testid="drawio-url" />
           <div class="flex flex-wrap gap-2">
-            <button type="submit" class="btn-primary btn-sm">{{ t('adm.owner.drawioSave') }}</button>
-            <button type="button" class="btn btn-sm" @click="saveDrawio('')">{{ t('adm.owner.drawioReset') }}</button>
+            <Button size="sm" type="submit" >{{ t('adm.owner.drawioSave') }}</Button>
+            <Button variant="secondary" size="sm" type="button" @click="saveDrawio('')">{{ t('adm.owner.drawioReset') }}</Button>
           </div>
         </form>
       </div>
@@ -1486,8 +1494,8 @@ function switchTab(t: Tab) {
           <div v-if="alertAvailable.includes('email')" class="border-t border-border pt-4">
             <label class="label">{{ t('adm.owner.alertEmail') }}</label>
             <div class="flex gap-2">
-              <input v-model="alertEmail" class="input" :placeholder="t('adm.owner.alertEmailPlaceholder')" />
-              <button class="btn-ghost shrink-0" @click="saveAlertEmail">{{ t('common.save') }}</button>
+              <Input v-model="alertEmail" :placeholder="t('adm.owner.alertEmailPlaceholder')" />
+              <Button variant="ghost" class="shrink-0" @click="saveAlertEmail">{{ t('common.save') }}</Button>
             </div>
           </div>
         </div>
@@ -1498,8 +1506,8 @@ function switchTab(t: Tab) {
       <BackupCard />
 
       <!-- Danger zone: actions you can't undo yourself. -->
-      <div class="card overflow-hidden border-crit-border">
-        <div class="flex items-center gap-2 border-b border-crit-border bg-crit-bg px-5 py-3">
+      <div class="card overflow-hidden ring-1 ring-crit-border">
+        <div class="flex items-center gap-2 border-b border-crit-border px-5 py-3">
           <TriangleAlert class="h-[18px] w-[18px] text-crit-text" /><h3 class="text-[14px] font-semibold text-crit-text">{{ t('owner.dangerZone') }}</h3>
         </div>
         <div class="flex flex-wrap items-center gap-4 p-5">
@@ -1507,11 +1515,11 @@ function switchTab(t: Tab) {
             <div class="text-[13px] font-semibold">{{ t('owner.transferTitle') }}</div>
             <div class="text-[12px] text-text-3">{{ t('owner.transferHint') }}</div>
           </div>
-          <select v-model="transferTarget" class="input w-auto min-w-[200px]">
+          <NativeSelect v-model="transferTarget" class="w-auto min-w-[200px]">
             <option :value="null">{{ t('owner.selectUser') }}</option>
             <option v-for="u in transferCandidates" :key="u.id" :value="u.id">{{ u.username }}</option>
-          </select>
-          <button class="btn-danger" :disabled="!transferTarget" @click="transferConfirm = true">{{ t('owner.transferBtn') }}</button>
+          </NativeSelect>
+          <Button variant="destructive" :disabled="!transferTarget" @click="transferConfirm = true">{{ t('owner.transferBtn') }}</Button>
         </div>
       </div>
     </section>
@@ -1530,20 +1538,20 @@ function switchTab(t: Tab) {
     <!-- ===== New user modal ===== -->
     <Overlay :open="showUser" :title="t('admin.newUser')" mode="centered" @close="showUser = false">
       <form class="flex flex-col gap-4" @submit.prevent="createUser">
-        <div><label class="label">{{ t('admin.colUsername') }}</label><input v-model="userForm.username" class="input" /></div>
-        <div><label class="label">{{ t('admin.displayName') }}</label><input v-model="userForm.display_name" class="input" /></div>
-        <div><label class="label">{{ t('admin.colEmail') }}</label><input v-model="userForm.email" type="email" class="input" /></div>
+        <div><label class="label">{{ t('admin.colUsername') }}</label><Input v-model="userForm.username" /></div>
+        <div><label class="label">{{ t('admin.displayName') }}</label><Input v-model="userForm.display_name" /></div>
+        <div><label class="label">{{ t('admin.colEmail') }}</label><Input v-model="userForm.email" type="email" /></div>
         <Checkbox v-model="userForm.generate_password" class="text-text-2">{{ t('admin.generateTemp') }}</Checkbox>
         <div v-if="!userForm.generate_password">
           <label class="label">{{ t('adm.users.passwordMin') }}</label>
-          <input v-model="userForm.password" type="password" class="input" />
+          <Input v-model="userForm.password" type="password" />
         </div>
         <div><label class="label">{{ t('admin.colRoles') }}</label><RoleSelect v-model="userForm.role_ids" :roles="roles" /></div>
         <Checkbox v-if="!userForm.generate_password" v-model="userForm.must_change_password" class="text-text-2">{{ t('adm.users.mustChangeFirst') }}</Checkbox>
         <Checkbox v-model="userForm.otp_required" class="text-text-2">{{ t('admin.requireOtp') }}</Checkbox>
         <div class="mt-1 flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showUser = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary">{{ t('adm.users.createUser') }}</button>
+          <Button variant="ghost" type="button" @click="showUser = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" >{{ t('adm.users.createUser') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -1554,13 +1562,13 @@ function switchTab(t: Tab) {
         <p class="rounded-lg bg-warn-bg px-3 py-2 text-[12px] text-warn-text">
           {{ t('adm.users.credsOnce') }}
         </p>
-        <div class="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-1.5">
+        <div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5">
           <span class="text-text-3">{{ t('admin.colUsername') }}</span><span class="font-medium">{{ createdCreds.username }}</span>
-          <span class="text-text-3">{{ t('adm.password') }}</span><code class="select-all rounded bg-surface-2 px-2 py-1 font-mono">{{ createdCreds.password }}</code>
+          <span class="text-text-3">{{ t('adm.password') }}</span><code class="select-all rounded-sm bg-surface-2 px-2 py-1 font-mono">{{ createdCreds.password }}</code>
         </div>
         <div class="mt-1 flex justify-end gap-2">
-          <button class="btn-ghost" @click="copyCreds"><Copy class="h-4 w-4" /> {{ t('adm.users.copyPassword') }}</button>
-          <button class="btn-primary" @click="createdCreds = null">{{ t('common.done') }}</button>
+          <Button variant="ghost" @click="copyCreds"><Copy class="h-4 w-4" /> {{ t('adm.users.copyPassword') }}</Button>
+          <Button @click="createdCreds = null">{{ t('common.done') }}</Button>
         </div>
       </div>
     </Overlay>
@@ -1573,11 +1581,11 @@ function switchTab(t: Tab) {
         </i18n-t>
         <div>
           <label class="label">{{ t('admin.displayName') }}</label>
-          <input v-model="editUserForm.display_name" class="input" :disabled="editUserTarget?.oidc" />
+          <Input v-model="editUserForm.display_name" :disabled="editUserTarget?.oidc" />
         </div>
         <div>
           <label class="label">{{ t('admin.colEmail') }}</label>
-          <input v-model="editUserForm.email" type="email" class="input" :disabled="editUserTarget?.oidc" />
+          <Input v-model="editUserForm.email" type="email" :disabled="editUserTarget?.oidc" />
         </div>
         <div><label class="label">{{ t('admin.colRoles') }}</label><RoleSelect v-model="editUserForm.role_ids" :roles="roles" /></div>
 
@@ -1604,9 +1612,9 @@ function switchTab(t: Tab) {
               {{ editUserTarget?.otp_enabled ? t('adm.users.otpOn') : t('adm.users.otpOff') }}
             </div>
           </div>
-          <button type="button" class="btn-ghost" :disabled="!editUserTarget?.otp_enabled" @click="resetUserOtp">
+          <Button variant="ghost" type="button" :disabled="!editUserTarget?.otp_enabled" @click="resetUserOtp">
             {{ t('adm.users.resetOtp') }}
-          </button>
+          </Button>
         </div>
 
         <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
@@ -1614,12 +1622,12 @@ function switchTab(t: Tab) {
             <div class="text-[13px] font-semibold">{{ t('settings.passkeys') }}</div>
             <div class="text-[12px] text-text-3">{{ t('adm.users.passkeysHint') }}</div>
           </div>
-          <button type="button" class="btn-ghost" @click="resetUserWebauthn">{{ t('adm.users.resetPasskeys') }}</button>
+          <Button variant="ghost" type="button" @click="resetUserWebauthn">{{ t('adm.users.resetPasskeys') }}</Button>
         </div>
 
         <div class="mt-1 flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showEditUser = false">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary">{{ t('adm.users.saveChanges') }}</button>
+          <Button variant="ghost" type="button" @click="showEditUser = false">{{ t('common.cancel') }}</Button>
+          <Button type="submit" >{{ t('adm.users.saveChanges') }}</Button>
         </div>
       </form>
     </Overlay>
@@ -1631,11 +1639,11 @@ function switchTab(t: Tab) {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="label">{{ t('common.name') }} <span class="text-text-3">{{ t('adm.roles.required') }}</span></label>
-            <input v-model="roleForm.name" class="input" :placeholder="t('adm.roles.namePlaceholder')" />
+            <Input v-model="roleForm.name" :placeholder="t('adm.roles.namePlaceholder')" />
           </div>
           <div>
             <label class="label">{{ t('admin.colDescription') }} <span class="text-text-3">{{ t('adm.roles.optional') }}</span></label>
-            <input v-model="roleForm.description" class="input" :placeholder="t('adm.roles.descPlaceholder')" />
+            <Input v-model="roleForm.description" :placeholder="t('adm.roles.descPlaceholder')" />
           </div>
         </div>
 
@@ -1643,10 +1651,10 @@ function switchTab(t: Tab) {
         <div>
           <div class="mb-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-[11px] font-semibold uppercase tracking-wide text-text-3">{{ t('adm.roles.globalPrivs') }}</span>
+              <span class="text-[12px] font-medium text-text-2">{{ t('adm.roles.globalPrivs') }}</span>
               <span class="rounded-full bg-surface-3 px-1.5 py-0.5 text-[11px] text-text-2">{{ t('adm.roles.selected', { n: roleForm.global_privileges.length, total: GLOBAL_PRIVILEGES.length }) }}</span>
             </div>
-            <button type="button" class="btn-ghost px-2.5 py-1" @click="toggleAllGlobal">{{ allGlobalSelected ? t('adm.roles.clearAll') : t('adm.roles.selectAll') }}</button>
+            <Button variant="ghost" type="button" class="px-2.5 py-1" @click="toggleAllGlobal">{{ allGlobalSelected ? t('adm.roles.clearAll') : t('adm.roles.selectAll') }}</Button>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <button
@@ -1664,14 +1672,14 @@ function switchTab(t: Tab) {
                 <div class="flex items-center gap-1.5 text-[13px] font-medium">{{ gp.label }}<Lock v-if="gp.ownerOnly && !auth.isOwner" class="h-3 w-3 text-text-3" /></div>
                 <div class="text-[11px] text-text-3">{{ gp.desc }}</div>
               </div>
-              <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border" :class="roleForm.global_privileges.includes(gp.id) ? 'border-accent bg-accent text-accent-fg' : 'border-border-2'">
+              <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border" :class="roleForm.global_privileges.includes(gp.id) ? 'border-accent bg-accent text-accent-fg' : 'border-border-2'">
                 <Check v-if="roleForm.global_privileges.includes(gp.id)" class="h-3 w-3" />
               </span>
             </button>
           </div>
         </div>
 
-        <p class="rounded-xl bg-fill-2 px-3 py-2.5 text-[12.5px] text-text-2">
+        <p class="rounded-lg border border-border px-3 py-2.5 text-[12.5px] text-text-2">
           {{ t('adm.roles.explain') }}
         </p>
 
@@ -1679,8 +1687,8 @@ function switchTab(t: Tab) {
         <div class="flex items-center justify-between border-t border-border pt-4">
           <span class="text-[12px] text-text-3">{{ t('adm.roles.applyNow') }}</span>
           <div class="flex gap-2">
-            <button type="button" class="btn-ghost" @click="showRole = false">{{ t('common.cancel') }}</button>
-            <button type="submit" class="btn-primary">{{ t('adm.roles.saveRole') }}</button>
+            <Button variant="ghost" type="button" @click="showRole = false">{{ t('common.cancel') }}</Button>
+            <Button type="submit" >{{ t('adm.roles.saveRole') }}</Button>
           </div>
         </div>
       </form>
@@ -1692,13 +1700,13 @@ function switchTab(t: Tab) {
         <i18n-t scope="global" keypath="adm.reset.setFor" tag="p" class="text-[13px] text-text-2"><template #user><b>{{ resetTarget?.username }}</b></template></i18n-t>
         <Checkbox v-model="resetGenerate" class="text-text-2">{{ t('admin.generateTemp') }}</Checkbox>
         <template v-if="!resetGenerate">
-          <input v-model="newPassword" type="password" class="input" :placeholder="t('adm.reset.newPassword')" />
+          <Input v-model="newPassword" type="password" :placeholder="t('adm.reset.newPassword')" />
           <Checkbox v-model="resetMustChange" class="text-text-2">{{ t('adm.reset.mustChange') }}</Checkbox>
         </template>
         <p class="text-[12px] text-text-3">{{ t('adm.reset.signsOut') }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="resetTarget = null">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn-primary">{{ t('adm.reset.reset') }}</button>
+          <Button variant="ghost" type="button" @click="resetTarget = null">{{ t('common.cancel') }}</Button>
+          <Button type="submit" >{{ t('adm.reset.reset') }}</Button>
         </div>
       </form>
     </Overlay>

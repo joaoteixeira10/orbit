@@ -109,8 +109,8 @@ async function answer(deny: boolean) {
   cursor: pointer;
 }
 .fields .choice input {
-  width: auto;
-  height: auto;
+  width: 16px;
+  height: 16px;
   margin-top: 3px;
   padding: 0;
   flex: none;

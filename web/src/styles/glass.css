@@ -1,0 +1,225 @@
+/* Liquid glass (each person's, Settings → Appearance): the navigation and
+   floating layers — the sidebar, the bars, every modal window, popover, menu
+   and toast — turn to glass over a soft wash of colour; what they hold (the
+   cards, lists, editors) stays solid, as Apple's. stores/prefs.ts sets
+   html.glass and --glass, 0–1: how liquid it is (clearer, blurrier, brighter
+   edges). Unlayered, after the components, so it wins over their grounds.
+   Every window alike (the blueprint's uniform overlays); a holiday or season
+   theme's colours show through, as they set the same tokens. */
+
+html.glass {
+  /* How much of the window's own colour stays: nearly all at the low end,
+     under half at the top. */
+  --g-alpha: calc(90% - var(--glass) * 48%);
+  --g-blur: calc(8px + var(--glass) * 24px);
+  --g-filter: blur(var(--g-blur)) saturate(calc(1.1 + var(--glass) * 0.8));
+  /* The light on the edges: a bright top rim, a fine ring all round. */
+  --g-hi: rgb(255 255 255 / calc(0.35 + var(--glass) * 0.5));
+  --g-rim: rgb(255 255 255 / calc(0.2 + var(--glass) * 0.35));
+  /* A sheen across the face, from the top left. */
+  --g-sheen: linear-gradient(155deg, rgb(255 255 255 / calc(var(--glass) * 0.32)), rgb(255 255 255 / 0) 34%, rgb(255 255 255 / 0) 72%, rgb(255 255 255 / calc(var(--glass) * 0.1)));
+  --g-shadow: 0 8px 32px rgb(0 0 0 / calc(0.06 + var(--glass) * 0.08)), 0 1px 3px rgb(0 0 0 / 0.06);
+  /* The wash behind it all: the accent and two neighbours of it, stronger
+     as the glass gets clearer (a holiday or season gives its own). */
+  --g-tint-1: var(--accent);
+  --g-tint-2: oklch(from var(--accent) l c calc(h + 70));
+  --g-tint-3: oklch(from var(--accent) l c calc(h - 80));
+  --g-base: var(--bg);
+}
+html.glass.dark {
+  --g-hi: rgb(255 255 255 / calc(0.1 + var(--glass) * 0.2));
+  --g-rim: rgb(255 255 255 / calc(0.08 + var(--glass) * 0.14));
+  --g-sheen: linear-gradient(155deg, rgb(255 255 255 / calc(var(--glass) * 0.1)), rgb(255 255 255 / 0) 34%, rgb(255 255 255 / 0) 72%, rgb(255 255 255 / calc(var(--glass) * 0.04)));
+  --g-shadow: 0 8px 32px rgb(0 0 0 / calc(0.3 + var(--glass) * 0.2)), 0 1px 3px rgb(0 0 0 / 0.3);
+}
+html.glass.holiday {
+  --g-tint-1: var(--h-primary);
+  --g-tint-2: var(--h-secondary);
+  --g-tint-3: var(--h-tag);
+  --g-base: var(--h-bg);
+}
+
+/* ---- The wash: the app's ground, the colours drifting in from the corners.
+   The main column lets it through; the cards on it stay solid. ---- */
+html.glass .app {
+  background:
+    radial-gradient(60vw 55vh at 0% 0%, color-mix(in srgb, var(--g-tint-1) calc(var(--glass) * 26%), transparent), transparent 70%),
+    radial-gradient(55vw 55vh at 100% 8%, color-mix(in srgb, var(--g-tint-2) calc(var(--glass) * 20%), transparent), transparent 70%),
+    radial-gradient(70vw 60vh at 55% 105%, color-mix(in srgb, var(--g-tint-3) calc(var(--glass) * 18%), transparent), transparent 70%),
+    var(--g-base);
+  background-attachment: fixed;
+}
+html.glass main.main,
+html.glass .rail-col {
+  background: transparent;
+}
+
+/* ---- The glass itself: one recipe; --g-ground is the window's own colour. ---- */
+html.glass #sidebar,
+html.glass .topbar,
+html.glass .tabbar,
+html.glass .rail-drawer,
+html.glass .sheet-panel,
+html.glass .ai-panel,
+html.glass .viewer-panel,
+html.glass .embed-panel,
+html.glass .hist-panel,
+html.glass .draw-sheet,
+html.glass .cmd,
+html.glass .popover,
+html.glass .toast,
+html.glass [data-slot="popover-content"],
+html.glass [data-slot="select-content"],
+html.glass [data-slot="dropdown-menu-content"] {
+  background: var(--g-sheen), color-mix(in srgb, var(--g-ground) var(--g-alpha), transparent);
+  backdrop-filter: var(--g-filter);
+  box-shadow: inset 0 1px 0 0 var(--g-hi), inset 0 0 0 1px var(--g-rim), var(--g-shadow);
+  border-color: transparent;
+}
+html.glass .sheet-panel,
+html.glass .ai-panel,
+html.glass .viewer-panel,
+html.glass .embed-panel,
+html.glass .hist-panel,
+html.glass .draw-sheet,
+html.glass .cmd {
+  --g-ground: var(--sheet-bg);
+}
+html.glass #sidebar,
+html.glass .rail-drawer {
+  --g-ground: var(--side-solid);
+}
+html.glass .topbar,
+html.glass .tabbar {
+  --g-ground: var(--bg);
+}
+html.glass .popover,
+html.glass .toast,
+html.glass [data-slot="popover-content"],
+html.glass [data-slot="select-content"],
+html.glass [data-slot="dropdown-menu-content"] {
+  --g-ground: var(--surface);
+  /* Small and full of words: more frosted than a window, as Apple's menus. */
+  --g-alpha: calc(92% - var(--glass) * 30%);
+}
+/* A window's dimmed backdrop leaves the blurring to the window: a blurred
+   parent would keep the window's own glass from seeing the page. */
+html.glass .sheet-backdrop,
+html.glass .cmd-backdrop,
+html.glass .viewer-backdrop,
+html.glass .embed-backdrop,
+html.glass .hist-backdrop,
+html.glass .ai-backdrop {
+  backdrop-filter: none;
+}
+/* A coloured note keeps its colour (its colour is its content); a plain one
+   is the glass. Inside a window, what painted the window's ground lets the
+   glass through. */
+html.glass .tsheet,
+html.glass .sheet-panel:has(.note-sheet[data-note=""]),
+html.glass .sheet-panel [data-note=""] {
+  --note-bg: transparent;
+}
+html.glass .tsheet {
+  background: transparent;
+}
+
+/* ---- The sidebar floats: a pane of glass inset from the window's edges,
+   rounded (wide windows; the drawer on narrow ones keeps to the edge). ---- */
+@media (min-width: 1024px) {
+  html.glass #sidebar {
+    top: 8px;
+    height: calc(100dvh - 16px);
+    margin: 8px 0 8px 8px;
+    border-radius: 18px;
+    border-right: 0;
+  }
+  html.glass .app.side-hidden #sidebar {
+    margin: 0;
+  }
+}
+/* ---- The scene: with a season or holiday theme on, a landscape takes the
+   wash's place (components/holiday/GlassScene.vue), and the cards on it turn
+   to a lighter glass too — near solid at the low end, so the words stay easy.
+   A holiday has no landscape colours of its own: mixes of its palette. ---- */
+html.glass.holiday {
+  --sc-sky: var(--h-scSky, color-mix(in oklab, var(--h-secondary) 14%, var(--h-bg)));
+  --sc-low: var(--h-scLow, color-mix(in oklab, var(--h-primary) 12%, var(--h-bg)));
+  --sc-sun: var(--h-scSun, color-mix(in oklab, var(--h-secondary) 28%, var(--h-bg)));
+  --sc-r1: var(--h-scR1, color-mix(in oklab, var(--h-primary) 14%, var(--h-bg)));
+  --sc-r2: var(--h-scR2, color-mix(in oklab, var(--h-primary) 24%, var(--h-bg)));
+  --sc-r3: var(--h-scR3, color-mix(in oklab, var(--h-primary) 34%, var(--h-bg)));
+  --sc-r4: var(--h-scR4, color-mix(in oklab, var(--h-primary) 46%, var(--h-bg)));
+  --sc-r5: var(--h-scR5, color-mix(in oklab, var(--h-primary) 58%, var(--h-bg)));
+  --sc-mist: var(--h-scMist, var(--h-bg));
+}
+html.glass.scene .app {
+  background: transparent;
+}
+/* A veil of the ground over the landscape, thinner as the glass clears. */
+html.glass .glass-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--g-base) calc(55% - var(--glass) * 40%), transparent);
+}
+html.glass.dark .glass-scene::after {
+  background: color-mix(in srgb, var(--g-base) calc(40% - var(--glass) * 32%), transparent);
+}
+html.glass.scene main.main .card,
+html.glass.scene main.main .group {
+  background: var(--g-sheen), color-mix(in srgb, var(--surface) calc(97% - var(--glass) * 22%), transparent);
+  backdrop-filter: blur(calc(var(--g-blur) * 0.6)) saturate(1.3);
+  box-shadow: inset 0 1px 0 0 var(--g-hi), 0 0 0 1px var(--g-rim), 0 4px 18px rgb(0 0 0 / calc(0.04 + var(--glass) * 0.05));
+}
+/* The lists' column beside Tasks: a pane of glass, as the sidebar. */
+html.glass.scene .tasks-view .lists-pane {
+  background: var(--g-sheen), color-mix(in srgb, var(--side-solid) var(--g-alpha), transparent);
+  backdrop-filter: var(--g-filter);
+}
+
+/* The bars along the top and bottom: glass, without the inset rim's sides. */
+html.glass .topbar {
+  box-shadow: inset 0 -1px 0 0 var(--g-rim);
+}
+html.glass .tabbar {
+  box-shadow: inset 0 1px 0 0 var(--g-hi), 0 -4px 24px rgb(0 0 0 / 0.06);
+}
+
+/* Reduce transparency (the system's setting): solid again. */
+@media (prefers-reduced-transparency: reduce) {
+  html.glass #sidebar,
+  html.glass .topbar,
+  html.glass .tabbar,
+  html.glass .rail-drawer,
+  html.glass .sheet-panel,
+  html.glass .ai-panel,
+  html.glass .viewer-panel,
+  html.glass .embed-panel,
+  html.glass .hist-panel,
+  html.glass .draw-sheet,
+  html.glass .cmd,
+  html.glass .popover,
+  html.glass .toast,
+  html.glass [data-slot="popover-content"],
+  html.glass [data-slot="select-content"],
+  html.glass [data-slot="dropdown-menu-content"] {
+    background: var(--g-ground);
+    backdrop-filter: none;
+  }
+  html.glass .glass-scene {
+    display: none;
+  }
+  html.glass.scene .app {
+    background: var(--g-base);
+  }
+  html.glass.scene main.main .card,
+  html.glass.scene main.main .group {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+  html.glass.scene .tasks-view .lists-pane {
+    background: var(--side-solid);
+    backdrop-filter: none;
+  }
+}

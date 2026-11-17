@@ -7,6 +7,7 @@ import NoteFields from './NoteFields.vue'
 import NoteColorPicker from './NoteColorPicker.vue'
 import { draftOf, inputOf, isEmptyDraft, toChecklist, toText, type Draft } from './noteModel'
 import type { NoteInput } from '@/api/planner'
+import { Button } from '@/components/shadcn/button'
 
 // The "Take a note…" box above the wall. It opens into a title and a text
 // (or checklist) with a colour, checklist and pin toolbar; a click outside,
@@ -83,34 +84,34 @@ defineExpose({ start })
   <div ref="root" class="capture" :class="{ open }" :data-note="open ? draft.color : ''" @keydown="onKey">
     <div v-if="!open" class="flex items-center">
       <button class="cap-prompt" @click="start(false)">{{ props.placeholder || t('notes.takeNote') }}</button>
-      <button class="tb mr-2" :aria-label="t('notes.newList')" :title="t('notes.newList')" @click="start(true)">
+      <Button variant="ghost" size="icon" class="tb mr-2 rounded-full text-text-2" :aria-label="t('notes.newList')" :title="t('notes.newList')" @click="start(true)">
         <SquareCheck class="h-[19px] w-[19px]" />
-      </button>
+      </Button>
     </div>
 
     <template v-else>
       <div class="relative px-4 pt-3">
         <NoteFields ref="fields" v-model="draft" @submit="close" />
-        <button
-          class="tb pin absolute right-2 top-2"
+        <Button variant="ghost" size="icon"
+          class="tb pin absolute right-2 top-2 rounded-full text-text-2"
           :class="{ on: draft.pinned }"
           :aria-label="draft.pinned ? t('notes.unpin') : t('notes.pin')"
           :title="draft.pinned ? t('notes.unpin') : t('notes.pin')"
           @click="draft.pinned = !draft.pinned"
         >
           <Pin class="h-4 w-4" :fill="draft.pinned ? 'currentColor' : 'none'" />
-        </button>
+        </Button>
       </div>
       <div class="flex items-center gap-0.5 px-2 pb-2 pt-2">
-        <button ref="colorBtn" class="tb" :class="{ on: picking }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="picking = !picking">
+        <Button variant="ghost" size="icon" ref="colorBtn" class="tb rounded-full text-text-2" :class="{ on: picking }" :aria-label="t('notes.color')" :title="t('notes.color')" @click="picking = !picking">
           <Palette class="h-[18px] w-[18px]" />
-        </button>
-        <button class="tb" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
+        </Button>
+        <Button variant="ghost" size="icon" class="tb rounded-full text-text-2" :aria-label="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" :title="draft.checklist ? t('notes.hideChecks') : t('notes.showChecks')" @click="toggleChecklist">
           <Type v-if="draft.checklist" class="h-[18px] w-[18px]" />
           <SquareCheck v-else class="h-[18px] w-[18px]" />
-        </button>
+        </Button>
         <span class="ml-auto mr-3 hidden text-[12px] text-text-3 sm:inline">{{ t('notes.shortcut') }}</span>
-        <button class="btn btn-sm close-btn" @click="close">{{ t('common.close') }}</button>
+        <Button variant="secondary" size="sm" class="close-btn" @click="close">{{ t('common.close') }}</Button>
       </div>
       <Popover v-if="picking" :anchor="colorBtn" placement="bottom-start" @close="picking = false">
         <NoteColorPicker v-model="draft.color" />
@@ -125,19 +126,19 @@ defineExpose({ start })
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--note-bg, var(--surface));
-  box-shadow: 0 0 0 0.5px var(--border), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
   transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 html.dark .capture {
-  box-shadow: 0 0 0 0.5px var(--border), 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 .capture.open {
-  box-shadow: 0 0 0 0.5px var(--border), 0 2px 6px rgba(0, 0, 0, 0.05), 0 12px 36px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 0 0 1px var(--border), 0 2px 6px rgba(0, 0, 0, 0.05), 0 12px 36px rgba(0, 0, 0, 0.12);
 }
 html.dark .capture.open {
-  box-shadow: 0 0 0 0.5px var(--border-2), 0 12px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1px var(--border-2), 0 12px 36px rgba(0, 0, 0, 0.45);
 }
 .cap-prompt {
   flex: 1;
@@ -148,20 +149,6 @@ html.dark .capture.open {
   font-weight: 500;
   color: var(--text-3);
   cursor: text;
-}
-.tb {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  color: var(--text-2);
-  transition: background 0.15s var(--ease), color 0.15s;
-}
-.tb:hover,
-.tb.on {
-  background: var(--fill);
-  color: var(--text);
 }
 .tb.pin.on {
   background: transparent;

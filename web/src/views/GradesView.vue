@@ -11,6 +11,9 @@ import { onLiveEvent } from '@/lib/live'
 import { CLIENT_ID } from '@/lib/api'
 import { fmtDate, locale, parseDate, todayStr } from '@/lib/dates'
 import { average, fmtMark, needed, passes } from '@/lib/grades'
+import { Button } from '@/components/shadcn/button'
+import { Input } from '@/components/shadcn/input'
+import { NativeSelect } from '@/components/shadcn/native-select'
 
 // Grades: the person's own marks in each course (nobody else sees them),
 // each course's weighted average, the overall one (courses weighed by their
@@ -176,9 +179,9 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
       </div>
       <label class="inline-flex shrink-0 items-center gap-2 text-[13px] text-text-2">
         {{ t('school.scale') }}
-        <select v-if="isOwner && !workspace?.archived_at" class="input !w-auto !py-1 text-[13.5px]" :value="scale" @change="setScale(Number(($event.target as HTMLSelectElement).value))">
+        <NativeSelect size="sm" v-if="isOwner && !workspace?.archived_at" class="w-auto" :model-value="scale" @change="setScale(Number(($event.target as HTMLSelectElement).value))">
           <option v-for="n in [20, 100, 10, 5]" :key="n" :value="n">{{ n }}</option>
-        </select>
+        </NativeSelect>
         <b v-else class="text-text">{{ scale }}</b>
       </label>
     </header>
@@ -197,15 +200,14 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
           <h2 class="min-w-0 flex-1 truncate text-[16px] font-semibold">{{ c.name }}<span v-if="c.weight !== 1" class="ml-1.5 text-[12px] font-normal text-text-3">{{ t('school.weightOf', { w: c.weight }) }}</span></h2>
           <label class="inline-flex items-center gap-1.5 text-[12.5px] text-text-2">
             {{ t('school.goal') }}
-            <input
-              v-model="goals[c.id]"
-              class="input !w-16 !py-0.5 text-right text-[13.5px]"
-              inputmode="decimal"
-              :placeholder="'–'"
-              :disabled="!canWrite"
-              @blur="saveGoal(c)"
-              @keydown.enter="($event.target as HTMLInputElement).blur()"
-            />
+            <Input
+ v-model="goals[c.id]"
+ class="w-16! py-0.5! text-right text-[13.5px]"
+ inputmode="decimal"
+ :placeholder="'–'"
+ :disabled="!canWrite"
+ @blur="saveGoal(c)"
+ @keydown.enter="($event.target as HTMLInputElement).blur()" />
           </label>
           <span class="avg" :class="{ low: avgOf(c.id) != null && !passes(avgOf(c.id)!) }" :title="t('school.average')">{{ avgOf(c.id) == null ? '–' : mark(avgOf(c.id)!) }}</span>
         </header>
@@ -213,34 +215,34 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
         <div class="rows">
           <template v-for="g in gradesOf(c.id)" :key="g.id">
             <form v-if="editing === g.id" class="row edit" @submit.prevent="saveEdit" @keydown.esc="editing = ''">
-              <input v-model="edit.title" class="input min-w-0 flex-1 !py-1 text-[13.5px]" maxlength="200" :aria-label="t('school.gradeTitle')" />
-              <input v-model="edit.date" type="date" class="input !w-auto !py-1 text-[13px]" :aria-label="t('school.date')" />
-              <input v-model="edit.score" class="input !w-16 !py-1 text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.score')" />
+              <Input v-model="edit.title" class="min-w-0 flex-1 py-1! text-[13.5px]" maxlength="200" :aria-label="t('school.gradeTitle')" />
+              <Input v-model="edit.date" type="date" class="w-auto! py-1! text-[13px]" :aria-label="t('school.date')" />
+              <Input v-model="edit.score" class="w-16! py-1! text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.score')" />
               <span class="text-text-3">/</span>
-              <input v-model="edit.out_of" class="input !w-16 !py-1 text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.outOf')" />
+              <Input v-model="edit.out_of" class="w-16! py-1! text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.outOf')" />
               <span class="text-text-3">×</span>
-              <input v-model="edit.weight" class="input !w-14 !py-1 text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.gradeWeight')" :title="t('school.gradeWeight')" />
-              <button type="submit" class="icon-btn h-7 w-7" :aria-label="t('common.save')"><Check class="h-4 w-4" /></button>
+              <Input v-model="edit.weight" class="w-14! py-1! text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.gradeWeight')" :title="t('school.gradeWeight')" />
+              <Button variant="ghost" size="icon" type="submit" class="text-text-2 h-7 w-7" :aria-label="t('common.save')"><Check class="h-4 w-4" /></Button>
             </form>
             <div v-else class="row" :class="{ clickable: canWrite }" @click="startEdit(g)">
               <span class="min-w-0 flex-1 truncate text-[14px]">{{ g.title }}</span>
               <span class="text-[12.5px] text-text-3">{{ dateLabel(g.date) }}</span>
               <span v-if="g.weight !== 1" class="text-[12px] text-text-3">{{ t('school.weightOf', { w: g.weight }) }}</span>
               <span class="score" :class="{ low: g.score / g.out_of < 0.5 }">{{ fmtMark(g.score, locale()) }}<small>/{{ fmtMark(g.out_of, locale()) }}</small></span>
-              <button v-if="canWrite" class="icon-btn h-6 w-6" :title="t('school.removeGrade')" :aria-label="t('school.removeGrade')" @click.stop="removeGrade(g)"><X class="h-3.5 w-3.5" /></button>
+              <Button variant="ghost" size="icon" v-if="canWrite" class="text-text-2 h-6 w-6" :title="t('school.removeGrade')" :aria-label="t('school.removeGrade')" @click.stop="removeGrade(g)"><X class="h-3.5 w-3.5" /></Button>
             </div>
           </template>
           <p v-if="!gradesOf(c.id).length" class="row text-[13.5px] text-text-3">{{ t('school.noGrades') }}</p>
 
           <form v-if="canWrite" class="row add" @submit.prevent="addGrade(c)">
-            <input v-model="draftOf(c.id).title" class="input min-w-0 flex-1 !py-1 text-[13.5px]" :placeholder="t('school.gradeTitlePh')" maxlength="200" :aria-label="t('school.gradeTitle')" />
-            <input v-model="draftOf(c.id).date" type="date" class="input !w-auto !py-1 text-[13px]" :aria-label="t('school.date')" />
-            <input v-model="draftOf(c.id).score" class="input !w-16 !py-1 text-right text-[13.5px]" inputmode="decimal" :placeholder="t('school.score')" :aria-label="t('school.score')" />
+            <Input v-model="draftOf(c.id).title" class="min-w-0 flex-1 py-1! text-[13.5px]" :placeholder="t('school.gradeTitlePh')" maxlength="200" :aria-label="t('school.gradeTitle')" />
+            <Input v-model="draftOf(c.id).date" type="date" class="w-auto! py-1! text-[13px]" :aria-label="t('school.date')" />
+            <Input v-model="draftOf(c.id).score" class="w-16! py-1! text-right text-[13.5px]" inputmode="decimal" :placeholder="t('school.score')" :aria-label="t('school.score')" />
             <span class="text-text-3">/</span>
-            <input v-model="draftOf(c.id).out_of" class="input !w-16 !py-1 text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.outOf')" />
+            <Input v-model="draftOf(c.id).out_of" class="w-16! py-1! text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.outOf')" />
             <span class="text-text-3">×</span>
-              <input v-model="draftOf(c.id).weight" class="input !w-14 !py-1 text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.gradeWeight')" :title="t('school.gradeWeight')" />
-            <button type="submit" class="btn btn-sm" :disabled="!validDraft(draftOf(c.id))"><Plus class="h-3.5 w-3.5" />{{ t('school.addGrade') }}</button>
+              <Input v-model="draftOf(c.id).weight" class="w-14! py-1! text-right text-[13.5px]" inputmode="decimal" :aria-label="t('school.gradeWeight')" :title="t('school.gradeWeight')" />
+            <Button variant="secondary" size="sm" type="submit" :disabled="!validDraft(draftOf(c.id))"><Plus class="h-3.5 w-3.5" />{{ t('school.addGrade') }}</Button>
           </form>
         </div>
 
@@ -248,7 +250,7 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
           <b class="text-[13px]">{{ t('school.need') }}</b>
           <label class="inline-flex items-center gap-1.5 text-[12.5px] text-text-2">
             {{ t('school.needWeight') }}
-            <input v-model.number="needW[c.id]" type="number" min="0.1" step="0.5" class="input !w-16 !py-0.5 text-right text-[13px]" />
+            <Input v-model.number="needW[c.id]" type="number" min="0.1" step="0.5" class="w-16! py-0.5! text-right text-[13px]" />
           </label>
           <span class="text-[13px] text-text-2" data-testid="need">{{ need(c) }}</span>
         </footer>
@@ -261,8 +263,8 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
       <template v-if="canEditCourses">
         <p class="subhead mx-auto mt-1 max-w-sm">{{ t('school.noCourseYet') }}</p>
         <form class="mx-auto mt-4 flex max-w-xs gap-2" @submit.prevent="addCourse">
-          <input v-model="newCourse" class="input flex-1" :placeholder="t('school.namePh')" maxlength="120" />
-          <button class="btn-primary" :disabled="!newCourse.trim()"><Plus class="h-4 w-4" /></button>
+          <Input v-model="newCourse" class="flex-1" :placeholder="t('school.namePh')" maxlength="120" />
+          <Button :disabled="!newCourse.trim()"><Plus class="h-4 w-4" /></Button>
         </form>
       </template>
     </div>
@@ -276,8 +278,8 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
 }
 .card {
   background: var(--surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow-sm), 0 0 0 0.5px var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
 }
 .overall {
   display: flex;
@@ -286,7 +288,7 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
   padding: 16px 20px;
 }
 .big {
-  font: 700 34px var(--font-display);
+  font: 600 34px var(--font-sans);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -301,7 +303,7 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .dot {
   width: 10px;
@@ -316,7 +318,7 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
   padding: 3px 8px;
   border-radius: 10px;
   background: var(--fill-2);
-  font: 700 18px var(--font-display);
+  font: 600 18px var(--font-sans);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -357,7 +359,7 @@ const dateLabel = (d: string | null) => (d ? fmtDate(parseDate(d)) : '')
   align-items: center;
   gap: 6px 14px;
   padding: 10px 16px 12px;
-  border-top: 0.5px solid var(--border);
+  border-top: 1px solid var(--border);
   background: var(--fill-2);
 }
 </style>

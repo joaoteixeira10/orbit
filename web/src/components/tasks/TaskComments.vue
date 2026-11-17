@@ -14,6 +14,7 @@ import { CLIENT_ID } from '@/lib/api'
 import { dueLabel, locale } from '@/lib/dates'
 import { fileSize, uploadBlobUrl, uploadFile, uploadsApi, type Upload } from '@/lib/uploads'
 import { openFile } from '@/lib/fileView'
+import { Button } from '@/components/shadcn/button'
 
 // A task's activity, as in Planner: oldest first — its comments (Markdown,
 // with author and when; the author edits or deletes theirs, an owner any),
@@ -278,7 +279,7 @@ function onKey(e: KeyboardEvent) {
     <header class="act-head">
       <h3 class="min-w-0 flex-1 text-[15px] font-semibold">{{ t('comments.activity') }}</h3>
       <button v-if="activity.length" type="button" class="text-[12.5px] text-accent-text hover:underline" @click="setShow(!showActivity)">{{ showActivity ? t('comments.hideActivity') : t('comments.showActivity') }}</button>
-      <button v-if="side" type="button" class="icon-btn h-7 w-7" :aria-label="t('common.close')" :title="t('common.close')" @click="emit('close')"><X class="h-4 w-4" /></button>
+      <Button variant="ghost" size="icon" v-if="side" type="button" class="text-text-2 h-7 w-7" :aria-label="t('common.close')" :title="t('common.close')" @click="emit('close')"><X class="h-4 w-4" /></Button>
     </header>
     <ol class="act-list">
       <li v-for="it in timeline" :key="keyOf(it)" :class="it.a ? 'act' : 'post'" :data-testid="it.a ? 'activity-line' : it.f ? 'activity-file' : undefined">
@@ -301,7 +302,7 @@ function onKey(e: KeyboardEvent) {
                   <span class="block text-[12px] text-text-3">{{ fileSize(it.f.size) }}</span>
                 </span>
               </button>
-              <button v-if="canAttach" type="button" class="icon-btn h-6 w-6 shrink-0" :aria-label="t('comments.removeFile', { name: it.f.name })" :title="t('comments.removeFile', { name: it.f.name })" data-testid="activity-file-remove" @click="removeFile(it.f)"><X class="h-3.5 w-3.5" /></button>
+              <Button variant="ghost" size="icon" v-if="canAttach" type="button" class="text-text-2 h-6 w-6 shrink-0" :aria-label="t('comments.removeFile', { name: it.f.name })" :title="t('comments.removeFile', { name: it.f.name })" data-testid="activity-file-remove" @click="removeFile(it.f)"><X class="h-3.5 w-3.5" /></Button>
             </div>
           </div>
         </template>
@@ -310,18 +311,18 @@ function onKey(e: KeyboardEvent) {
           <div class="min-w-0 flex-1">
             <div class="flex items-baseline gap-2">
               <b class="truncate text-[13.5px]">{{ it.c.author_name }}</b>
-              <span v-if="it.c.git_author" class="pill shrink-0 !py-0 text-[11px]">{{ t('comments.fromGit') }}</span>
+              <span v-if="it.c.git_author" class="pill shrink-0 py-0! text-[11px]">{{ t('comments.fromGit') }}</span>
               <span class="shrink-0 text-[12px] text-text-3" :title="new Date(it.c.created_at).toLocaleString()">{{ when(it.c.created_at) }}<template v-if="it.c.edited_at"> · {{ t('comments.edited') }}</template></span>
               <span class="ml-auto flex shrink-0 gap-0.5">
-                <button v-if="canWrite && it.c.author_id === auth.user?.id && editing !== it.c.id" class="icon-btn h-6 w-6" :title="t('comments.edit')" :aria-label="t('comments.edit')" @click="startEdit(it.c)"><Pencil class="h-3.5 w-3.5" /></button>
-                <button v-if="canWrite && (it.c.author_id === auth.user?.id || isOwner)" class="icon-btn h-6 w-6" :title="t('comments.delete')" :aria-label="t('comments.delete')" @click="askDelete = it.c"><Trash2 class="h-3.5 w-3.5" /></button>
+                <Button variant="ghost" size="icon" v-if="canWrite && it.c.author_id === auth.user?.id && editing !== it.c.id" class="text-text-2 h-6 w-6" :title="t('comments.edit')" :aria-label="t('comments.edit')" @click="startEdit(it.c)"><Pencil class="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" v-if="canWrite && (it.c.author_id === auth.user?.id || isOwner)" class="text-text-2 h-6 w-6" :title="t('comments.delete')" :aria-label="t('comments.delete')" @click="askDelete = it.c"><Trash2 class="h-3.5 w-3.5" /></Button>
               </span>
             </div>
             <form v-if="editing === it.c.id" class="mt-1 space-y-1.5" @submit.prevent="saveEdit(it.c)">
               <textarea v-model="editText" class="comment-edit" rows="3" maxlength="10000" @keydown.meta.enter.prevent="saveEdit(it.c)" @keydown.ctrl.enter.prevent="saveEdit(it.c)" @keydown.esc.stop="editing = ''" />
               <div class="flex justify-end gap-2">
-                <button type="button" class="btn btn-sm" @click="editing = ''">{{ t('comments.cancel') }}</button>
-                <button class="btn-primary btn-sm" :disabled="!editText.trim()">{{ t('comments.save') }}</button>
+                <Button variant="secondary" size="sm" type="button" @click="editing = ''">{{ t('comments.cancel') }}</Button>
+                <Button size="sm" :disabled="!editText.trim()">{{ t('comments.save') }}</Button>
               </div>
             </form>
             <div v-else class="bubble"><MarkdownView class="comment-md" :content="it.c.body" :editable="false" breaks /></div>
@@ -359,9 +360,9 @@ function onKey(e: KeyboardEvent) {
           <template v-if="canAttach">
             <input ref="fileEl" type="file" multiple class="hidden" data-testid="comment-files" @change="attach(($event.target as HTMLInputElement).files); ($event.target as HTMLInputElement).value = ''" />
             <span v-if="uploading" class="mr-auto pl-1 text-[12px] text-text-3">{{ t('comments.uploading') }}</span>
-            <button type="button" class="icon-btn h-8 w-8" :title="t('comments.attach')" :aria-label="t('comments.attach')" @click="fileEl?.click()"><Paperclip class="h-4 w-4" /></button>
+            <Button variant="ghost" size="icon" type="button" class="text-text-2 h-8 w-8" :title="t('comments.attach')" :aria-label="t('comments.attach')" @click="fileEl?.click()"><Paperclip class="h-4 w-4" /></Button>
           </template>
-          <button class="btn-primary btn-sm !px-4" :disabled="!draft.trim() || sending">{{ t('comments.send') }}</button>
+          <Button size="sm" class="px-4!" :disabled="!draft.trim() || sending">{{ t('comments.send') }}</Button>
         </div>
       </div>
       <p class="mt-1.5 px-1 text-[11.5px] text-text-3">{{ t('comments.sendHint') }}</p>
@@ -393,7 +394,7 @@ function onKey(e: KeyboardEvent) {
   height: 100%;
 }
 .act-col.side .act-head {
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 14px;
 }
 .act-col.side .act-list {
@@ -435,7 +436,7 @@ function onKey(e: KeyboardEvent) {
   margin-top: 6px;
   padding: 10px 10px 10px 12px;
   border-radius: 12px;
-  box-shadow: 0 0 0 0.5px var(--border-2);
+  box-shadow: 0 0 0 1px var(--border-2);
   background: var(--surface);
 }
 .file-card:hover {
@@ -470,10 +471,10 @@ function onKey(e: KeyboardEvent) {
   position: relative;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 0 0 0.5px var(--border-2);
+  box-shadow: 0 0 0 1px var(--border-2);
 }
 .composer:focus-within {
-  box-shadow: 0 0 0 0.5px var(--accent), 0 0 0 3px var(--ring);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 0 3px var(--ring);
 }
 .composer.over {
   box-shadow: 0 0 0 2px var(--accent);
@@ -522,7 +523,7 @@ function onKey(e: KeyboardEvent) {
   padding: 4px;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: var(--shadow-lg), 0 0 0 0.5px var(--border);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border);
 }
 .mentions button {
   display: flex;

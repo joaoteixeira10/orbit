@@ -1,0 +1,97 @@
+/* shadcn-vue (src/components/shadcn, added with its CLI; see components.json).
+
+   Its components ask for shadcn's colour names (bg-primary, border-input,
+   text-muted-foreground…). They are mapped here onto Orbit's own tokens, so
+   the components wear the Apple look and follow light/dark, the person's
+   accent, a developer theme and a workspace's colour like everything else.
+   We don't run `shadcn-vue init`: it would write its own --accent, --border
+   and --ring over Orbit's, and load a web font from Google.
+
+   "accent" is Orbit's already (the blue); shadcn uses it only for the
+   highlighted item of a menu or a select, which then looks as on a Mac. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-fg);
+  --color-secondary: var(--fill);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--fill);
+  --color-muted-foreground: var(--text-2);
+  --color-accent-foreground: var(--accent-fg);
+  --color-destructive: var(--danger);
+  --color-input: var(--border-2);
+  --color-ring: var(--accent);
+}
+
+/* shadcn's base layer gives every border its colour; only for its parts
+   here (they all carry data-slot), so Orbit's own markup is untouched. */
+@layer base {
+  [data-slot] {
+    border-color: var(--border);
+  }
+}
+
+/* The variants its components use (from shadcn-vue/tailwind.css, 2.9.0). */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
+/* A toolbar button that is on (Orbit marks it with .on): filled. Outside the
+   layers, so it beats the button's own classes. */
+[data-slot="button"].on {
+  background: var(--fill);
+  color: var(--text);
+}

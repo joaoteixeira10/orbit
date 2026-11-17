@@ -8,6 +8,7 @@ import CodeArea from '@/components/editor/CodeArea.vue'
 import { guestApi, type GuestPage, type GuestShare } from '@/lib/shareApi'
 import { ApiError } from '@/lib/api'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
+import { Button } from '@/components/shadcn/button'
 
 // /shared/<link>: a page someone opened to anyone with the link — no
 // account. It reads like the page in Orbit (with what it shows in place);
@@ -136,16 +137,16 @@ async function save() {
           <h1 v-if="!editing" class="min-w-0 flex-1 text-[32px] font-bold leading-tight" data-testid="guest-title">
             <span v-if="page.icon" class="mr-2">{{ page.icon }}</span>{{ page.title || t('pages.untitled') }}
           </h1>
-          <input v-else v-model="draftTitle" class="min-w-0 flex-1 rounded-lg bg-fill-2 px-3 py-1.5 text-[26px] font-bold outline-none" maxlength="300" data-testid="guest-title-input" />
+          <input v-else v-model="draftTitle" class="rounded-lg min-w-0 flex-1 px-3 py-1.5 text-[26px] font-bold outline-hidden border border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50" maxlength="300" data-testid="guest-title-input" />
           <template v-if="share.can_edit">
-            <button v-if="!editing" type="button" class="btn btn-sm shrink-0" data-testid="guest-edit" @click="startEdit"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</button>
+            <Button variant="secondary" size="sm" v-if="!editing" type="button" class="shrink-0" data-testid="guest-edit" @click="startEdit"><Pencil class="h-3.5 w-3.5" />{{ t('editor.edit') }}</Button>
             <template v-else>
-              <button type="button" class="btn btn-sm shrink-0" @click="editing = false">{{ t('common.cancel') }}</button>
-              <button type="button" class="btn-primary btn-sm shrink-0" :disabled="saving" data-testid="guest-save" @click="save">{{ t('common.save') }}</button>
+              <Button variant="secondary" size="sm" type="button" class="shrink-0" @click="editing = false">{{ t('common.cancel') }}</Button>
+              <Button size="sm" type="button" class="shrink-0" :disabled="saving" data-testid="guest-save" @click="save">{{ t('common.save') }}</Button>
             </template>
           </template>
         </div>
-        <p v-if="note" class="mb-3 rounded-lg bg-fill-2 px-3 py-2 text-[12.5px] text-text-2" role="status" data-testid="guest-note">{{ note }}</p>
+        <p v-if="note" class="mb-3 rounded-lg border border-border px-3 py-2 text-[12.5px] text-text-2" role="status" data-testid="guest-note">{{ note }}</p>
         <CodeArea v-if="editing" v-model="draft" markdown :label="t('guest.text')" testid="guest-text" />
         <MarkdownView v-else-if="page.content?.trim()" :content="page.content" :editable="false" :guest="token" @page="show" />
         <p v-else class="text-[14px] text-text-3">{{ t('guest.empty') }}</p>
@@ -169,7 +170,7 @@ async function save() {
   align-items: center;
   gap: 10px;
   padding: 10px clamp(14px, 3vw, 28px);
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(12px);
 }

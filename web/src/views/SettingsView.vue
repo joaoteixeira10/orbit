@@ -26,7 +26,7 @@ import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import OtpSetup from '@/components/ui/OtpSetup.vue'
 import CodeInput from '@/components/ui/CodeInput.vue'
-import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot, Sparkles, LockKeyhole } from 'lucide-vue-next'
+import { User, Palette, Globe, Lock, Bell, ShieldCheck, KeyRound, Fingerprint, Trash2, Terminal, Copy, Sun, Moon, Monitor, SunMoon, Eye, EyeOff, Upload, MonitorSmartphone, Smartphone, Laptop, LogOut, CalendarRange, Plus, ExternalLink, GitBranch, Bot, Sparkles, LockKeyhole } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { calendarApi, type Feed } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
@@ -124,6 +124,7 @@ const themes: { value: Theme; label: string; icon: any }[] = [
   { value: 'light', label: t('settings.themeLight'), icon: Sun },
   { value: 'dark', label: t('settings.themeDark'), icon: Moon },
   { value: 'system', label: t('settings.themeSystem'), icon: Monitor },
+  { value: 'daynight', label: t('settings.themeDayNight'), icon: SunMoon },
 ]
 // Sheets, diagrams and whiteboards: as Orbit, or always light / dark.
 const editorKinds: EditorKind[] = ['sheets', 'diagrams', 'whiteboards']
@@ -511,9 +512,23 @@ onMounted(loadSessions)
             <div class="flex items-center justify-between gap-4">
               <div><div class="text-[13px] font-semibold">{{ t('acct.appearance.theme') }}</div><div class="text-[12px] text-text-3">{{ t('acct.appearance.themeHint') }}</div></div>
               <div class="seg">
-                <button v-for="t in themes" :key="t.value" class="inline-flex items-center gap-1.5" :class="{ on: prefs.theme === t.value }" @click="prefs.setTheme(t.value)">
+                <button v-for="t in themes" :key="t.value" class="inline-flex items-center gap-1.5" :class="{ on: prefs.theme === t.value }" :data-testid="`theme-${t.value}`" @click="prefs.setTheme(t.value)">
                   <component :is="t.icon" class="h-3.5 w-3.5" /> {{ t.label }}
                 </button>
+              </div>
+            </div>
+            <!-- Day and night: when each begins. -->
+            <div v-if="prefs.theme === 'daynight'" class="-mt-2 flex flex-wrap items-center justify-between gap-3" data-testid="daynight-times">
+              <div class="text-[12px] text-text-3">{{ t('settings.dayNightHint') }}</div>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 text-[13px] text-text-2">
+                  <Sun class="h-3.5 w-3.5" />{{ t('settings.dayFrom') }}
+                  <Input type="time" class="h-8 w-[110px]" :model-value="prefs.dayFrom" data-testid="day-from" @change="(e: Event) => prefs.setDayNight((e.target as HTMLInputElement).value || '07:00', prefs.nightFrom)" />
+                </label>
+                <label class="flex items-center gap-2 text-[13px] text-text-2">
+                  <Moon class="h-3.5 w-3.5" />{{ t('settings.nightFrom') }}
+                  <Input type="time" class="h-8 w-[110px]" :model-value="prefs.nightFrom" data-testid="night-from" @change="(e: Event) => prefs.setDayNight(prefs.dayFrom, (e.target as HTMLInputElement).value || '20:00')" />
+                </label>
               </div>
             </div>
             <!-- Liquid glass: 0 (off, solid) to 100 (clearest). -->

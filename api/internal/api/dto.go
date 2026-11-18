@@ -75,7 +75,7 @@ type resetPasswordRequest struct {
 
 type updatePrefsRequest struct {
 	Timezone       *string       `json:"timezone"`
-	Theme          *models.Theme `json:"theme" binding:"omitempty,oneof=light dark system"`
+	Theme          *models.Theme `json:"theme" binding:"omitempty,oneof=light dark system daynight"`
 	AccentColor    *string       `json:"accent_color"` // #rrggbb or "" (validated in the handler)
 	NotifyEvents   *bool         `json:"notify_events"`
 	NotifyChannels *[]string     `json:"notify_channels"`
@@ -92,10 +92,10 @@ type updatePrefsRequest struct {
 	PageEditor    *string                    `json:"page_editor" binding:"omitempty,oneof=visual markdown"`
 	DevTheme      *string                    `json:"dev_theme" binding:"omitempty,max=10"`
 	// HolidayTheme / SeasonTheme: "" (as the instance), off, auto or one of them.
-	HolidayTheme *string `json:"holiday_theme" binding:"omitempty,max=12"`
-	SeasonTheme  *string `json:"season_theme" binding:"omitempty,max=12"`
-	RemoteImages  *string                    `json:"remote_images" binding:"omitempty,oneof=ask always"`
-	SketchColors  *[]string                  `json:"sketch_colors" binding:"omitempty,max=40"`
+	HolidayTheme *string   `json:"holiday_theme" binding:"omitempty,max=12"`
+	SeasonTheme  *string   `json:"season_theme" binding:"omitempty,max=12"`
+	RemoteImages *string   `json:"remote_images" binding:"omitempty,oneof=ask always"`
+	SketchColors *[]string `json:"sketch_colors" binding:"omitempty,max=40"`
 	// Sheets, diagrams, whiteboards: "light" or "dark" whatever Orbit's
 	// theme; "follow" (or leaving one out) follows it.
 	EditorThemes *map[string]string `json:"editor_themes"`
@@ -105,6 +105,9 @@ type updatePrefsRequest struct {
 	// Own lengths for the focus timer, in minutes (1–180), besides 15, 25, 50.
 	FocusLengths *[]int `json:"focus_lengths" binding:"omitempty,max=8"`
 	// Quiet hours: "HH:MM" each ("" both = none); reminders through or not.
+	// DayFrom / NightFrom: with the daynight theme, when light and dark begin (HH:MM).
+	DayFrom        *string `json:"day_from"`
+	NightFrom      *string `json:"night_from"`
 	QuietFrom      *string `json:"quiet_from"`
 	QuietTo        *string `json:"quiet_to"`
 	QuietReminders *bool   `json:"quiet_reminders"`

@@ -142,6 +142,9 @@ const (
 	ThemeLight  Theme = "light"
 	ThemeDark   Theme = "dark"
 	ThemeSystem Theme = "system"
+	// ThemeDayNight: light by day, dark by night, at the times the person
+	// sets (UserPrefs.DayFrom, NightFrom), by their device's clock.
+	ThemeDayNight Theme = "daynight"
 )
 
 // UserPrefs are server-side per-user UI settings (so they follow the user
@@ -216,6 +219,10 @@ type UserPrefs struct {
 	// Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
 	// reaches devices or channels then (it waits in the inbox, and one
 	// summary goes when they end) — reminders too, unless QuietReminders.
+	// DayFrom / NightFrom: with the "daynight" theme, when light and dark
+	// begin (HH:MM; "" = 07:00 and 20:00).
+	DayFrom        string `gorm:"size:5" json:"day_from"`
+	NightFrom      string `gorm:"size:5" json:"night_from"`
 	QuietFrom      string `gorm:"size:5" json:"quiet_from"`
 	QuietTo        string `gorm:"size:5" json:"quiet_to"`
 	QuietReminders bool   `gorm:"not null;default:false" json:"quiet_reminders"`

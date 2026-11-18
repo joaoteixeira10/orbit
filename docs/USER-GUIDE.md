@@ -1675,7 +1675,9 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
 - **Account** — photo, display name, email.
 - **Locked notes and pages** — set, change or forget your lock PIN (see
   [Locked notes and pages](#locked-notes-and-pages)).
-- **Appearance** — **Light**, **Dark** or **Automatic**; a personal **accent
+- **Appearance** — **Light**, **Dark**, **Automatic** (as the device) or
+  **Day & night** (light by day, dark by night, from the times you set —
+  07:00 and 20:00 by default — by this device's clock); a personal **accent
   colour**. **Liquid glass**: from **Solid** to **Clear** — the sidebar, the
   bars, windows, popovers and menus as glass over a soft wash of colour (and,
   with a holiday or season theme on, a landscape behind the cards); what they
@@ -1870,7 +1872,7 @@ SSO users don't need creating. They appear at their first SSO sign-in.
 | **Reset password** | Local accounts only. **Generate a temporary password** (shown once), or type one and choose **Require a new password at next sign-in**. The user is signed out everywhere. |
 | **Force sign-out** | Signs the user out of every device. They must sign in again. |
 | **Disable** / **Enable** | Disable asks first, then signs the user out everywhere. They can't sign in or use API tokens until enabled. Enabling does not bring old sessions back. Not shown for yourself. |
-| **Impersonate** | Only when the owner turned on impersonation and you hold **Impersonate users**. Signs you in as that user for up to 15 minutes, with a banner — you see their workspaces; **Return to my account** brings back yours. Not for yourself, disabled users or the owner; only the owner may impersonate an admin. Actions show `via <you>` in the audit log. |
+| **Impersonate** | Only when the owner turned on impersonation and you hold **Impersonate users**. Signs you in as that user for up to 15 minutes, in its own amber theme — a frame round the window, a tinted sidebar and a bar saying whose account it is, over every other theme — so it's never mistaken for your own session; you see their workspaces; **Return to my account** brings back yours. Not for yourself, disabled users or the owner; only the owner may impersonate an admin. Actions show `via <you>` in the audit log. |
 | **Delete** | Removes the account for good. Not shown for yourself. Workspaces the user was alone in are deleted with it; in shared ones another member (an editor first) becomes owner if they were the last. |
 
 Safety rules the server enforces:

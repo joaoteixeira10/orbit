@@ -254,3 +254,27 @@ func TestPersonalHolidayThemes(t *testing.T) {
 		t.Errorf("back to the instance's: %q %q", p.HolidayTheme, p.SeasonTheme)
 	}
 }
+
+// TestDayNightTheme: the "daynight" theme is accepted, its times default to
+// 07:00 and 20:00, take any HH:MM, and refuse anything else.
+func TestDayNightTheme(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p prefsResponse
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.DayFrom != "07:00" || p.NightFrom != "20:00" {
+		t.Fatalf("defaults: %q %q", p.DayFrom, p.NightFrom)
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"theme":"daynight","day_from":"06:30","night_from":"21:15"}`, owner); w.Code != http.StatusOK {
+		t.Fatalf("set: %d %s", w.Code, w.Body.String())
+	}
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.Theme != "daynight" || p.DayFrom != "06:30" || p.NightFrom != "21:15" {
+		t.Errorf("kept: %q %q %q", p.Theme, p.DayFrom, p.NightFrom)
+	}
+	for _, body := range []string{`{"day_from":"25:00"}`, `{"night_from":"8pm"}`, `{"theme":"dusk"}`} {
+		if w := authdo(r, "PUT", "/api/v1/me/prefs", body, owner); w.Code != http.StatusBadRequest {
+			t.Errorf("%s: %d", body, w.Code)
+		}
+	}
+}

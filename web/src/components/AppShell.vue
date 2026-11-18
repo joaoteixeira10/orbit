@@ -56,6 +56,15 @@ const holiday = useHolidayStore()
 const assistant = useAssistantStore()
 void assistant.loadStatus()
 watch(() => [holiday.look?.id, holiday.mode], () => holiday.apply(), { immediate: true })
+// Impersonating: its own theme over every other (branding, holiday stores).
+watch(
+  () => !!auth.impersonator,
+  (on) => {
+    branding.impersonating = on
+    branding.applyAccent()
+  },
+  { immediate: true },
+)
 const holidayClock = window.setInterval(() => holiday.tick(), 60_000)
 // Its falling snow, bats, confetti… over every page: each person's Effects,
 // never with reduced motion.
@@ -1042,13 +1051,20 @@ html.holiday span.me-avatar {
   border-bottom: 1px solid var(--border);
 }
 .imp-banner {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 16px;
-  background: var(--warn-bg);
-  color: var(--warn-text);
+  background: var(--accent);
+  color: var(--accent-fg);
   font-size: 13px;
+  font-weight: 600;
+}
+.imp-banner > span {
+  flex: 1;
 }
 .tabbar {
   position: fixed;

@@ -32,6 +32,11 @@ merge, not at release time.
   default). Then Settings → Appearance has Holiday theme and Season theme:
   as for everyone, off, automatic or one always.
 - Calendar's **Today** lights up today, also when you're already there.
+- **Day & night** — Settings → Appearance: light by day and dark by night,
+  at times you choose (07:00 and 20:00 by default), switching by itself.
+- **Impersonating has its own theme**: an amber frame round the window, a
+  tinted sidebar and a bar saying whose account it is, over every other
+  theme.
 
 ### Changed
 
@@ -72,6 +77,8 @@ merge, not at release time.
   stops the server or the other reminders.
 - iPhone and iPad no longer zoom in when a text field is tapped, or on a
   quick double tap (pinching still zooms).
+- After **Impersonate** (and after transferring ownership) an empty error
+  showed and the page didn't move: it now opens Today.
 - The priority flag and task rows under a developer theme no longer show a
   box behind them.
 - A page template picked on a page already open for editing together

@@ -292,6 +292,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv11", "ss01";
 }
+/* Impersonating (stores/branding.ts): an amber frame round the whole window
+   and a tinted sidebar, over every theme — never mistaken for one's own
+   session. */
+html.impersonating body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+html.impersonating #sidebar {
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 8%, transparent);
+}
 /* A developer theme: a soft wash of its colour from the top right of the
    main column (AppShell's <main class="main">, not the rows' .main buttons;
    a holiday theme paints its own, the liquid glass its wash). */

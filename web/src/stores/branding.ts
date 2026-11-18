@@ -70,6 +70,9 @@ export const useBrandingStore = defineStore('branding', {
     holidayTheme: 'off' as HolidaySetting,
     // Season themes (the owner's): off, auto (the season today is in) or one now.
     seasonTheme: 'off' as SeasonSetting,
+    // An admin is using the app as someone else (impersonation): its own
+    // theme then, over every other (set by the shell from the auth store).
+    impersonating: false,
     // The owner lets each person pick their own holiday / season theme.
     holidaysPersonal: false,
     seasonsPersonal: false,
@@ -92,6 +95,7 @@ export const useBrandingStore = defineStore('branding', {
     // The active developer theme: this person's own when the owner allows it,
     // else the instance's; null for none.
     theme(): DevTheme | null {
+      if (this.impersonating) return null
       if (this.devThemesPersonal && this.userDevTheme) {
         if (this.userDevTheme === 'none') return null
         if (isDevThemeId(this.userDevTheme)) return DEV_THEMES[this.userDevTheme]
@@ -178,6 +182,7 @@ export const useBrandingStore = defineStore('branding', {
       this.dark = root.classList.contains('dark')
       // A developer theme also washes the top of the page in its colour.
       root.classList.toggle('dev-theme', !!this.theme)
+      root.classList.toggle('impersonating', this.impersonating)
       const setRamp = (accent: string, strong: string, fg: string, text = accent) => {
         root.style.setProperty('--accent', accent)
         root.style.setProperty('--accent-strong', strong)
@@ -188,7 +193,12 @@ export const useBrandingStore = defineStore('branding', {
         root.style.setProperty('--accent-fg', fg)
         root.style.setProperty('--ring', `color-mix(in srgb, ${accent} 38%, transparent)`)
       }
-      if (this.userAccentColor) {
+      if (this.impersonating) {
+        // Impersonating: amber, whatever anyone chose — so it's never
+        // mistaken for one's own session (styles/main.css frames the window).
+        if (this.dark) setRamp('#fbbf24', '#f59e0b', '#1c1300', '#fcd34d')
+        else setRamp('#f59e0b', '#d97706', '#1c1300', '#b45309')
+      } else if (this.userAccentColor) {
         // Personal accent wins over the org accent and any developer theme (the
         // theme still owns the mark / wordmark / favicon — only the colour changes).
         setRamp(this.userAccentColor, `color-mix(in srgb, ${this.userAccentColor} 78%, #000)`, '#fff')

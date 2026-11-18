@@ -17,6 +17,9 @@ onMounted(() => {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (prefs.theme === 'system') prefs.applyTheme()
   })
+  // Day and night: checked each minute, and when the app comes back to screen.
+  setInterval(() => prefs.tickTheme(), 60_000)
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && prefs.tickTheme())
 })
 </script>
 

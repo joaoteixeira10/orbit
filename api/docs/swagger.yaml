@@ -2896,6 +2896,10 @@ definitions:
       channel_details:
         description: titles in shared channels too
         type: boolean
+      day_from:
+        description: 'Quiet hours ("" = none): nothing to devices or channels between
+          them.'
+        type: string
       dev_theme:
         description: '"" (as the instance) | none | a theme id'
         type: string
@@ -2927,6 +2931,9 @@ definitions:
         type: string
       locale:
         type: string
+      night_from:
+        description: and dark from
+        type: string
       notify_channels:
         items:
           type: string
@@ -2946,8 +2953,6 @@ definitions:
         description: it's quiet now
         type: boolean
       quiet_from:
-        description: 'Quiet hours ("" = none): nothing to devices or channels between
-          them.'
         type: string
       quiet_reminders:
         type: boolean
@@ -3650,6 +3655,11 @@ definitions:
         type: object
       channel_details:
         type: boolean
+      day_from:
+        description: |-
+          Quiet hours: "HH:MM" each ("" both = none); reminders through or not.
+          DayFrom / NightFrom: with the daynight theme, when light and dark begin (HH:MM).
+        type: string
       dev_theme:
         maxLength: 10
         type: string
@@ -3692,6 +3702,8 @@ definitions:
       locale:
         maxLength: 8
         type: string
+      night_from:
+        type: string
       notify_channels:
         items:
           type: string
@@ -3711,8 +3723,6 @@ definitions:
         - markdown
         type: string
       quiet_from:
-        description: 'Quiet hours: "HH:MM" each ("" both = none); reminders through
-          or not.'
         type: string
       quiet_reminders:
         type: boolean
@@ -3738,6 +3748,7 @@ definitions:
         - light
         - dark
         - system
+        - daynight
       time_format:
         enum:
         - 24h
@@ -4745,11 +4756,13 @@ definitions:
     - light
     - dark
     - system
+    - daynight
     type: string
     x-enum-varnames:
     - ThemeLight
     - ThemeDark
     - ThemeSystem
+    - ThemeDayNight
   models.User:
     properties:
       avatar_url:
@@ -4844,6 +4857,14 @@ definitions:
         type: boolean
       created_at:
         type: string
+      day_from:
+        description: |-
+          Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
+          reaches devices or channels then (it waits in the inbox, and one
+          summary goes when they end) — reminders too, unless QuietReminders.
+          DayFrom / NightFrom: with the "daynight" theme, when light and dark
+          begin (HH:MM; "" = 07:00 and 20:00).
+        type: string
       dev_theme:
         description: |-
           DevTheme is this user's own developer theme, when the owner lets each
@@ -4895,6 +4916,8 @@ definitions:
           Locale is the interface language (en, pt), for text sent from the
           server: push notifications, channels, the summary.
         type: string
+      night_from:
+        type: string
       notify_events:
         description: |-
           Notifications: master toggle for reminders (tasks due, events starting)
@@ -4907,10 +4930,6 @@ definitions:
           or "markdown" (the source). Pages are Markdown either way.
         type: string
       quiet_from:
-        description: |-
-          Quiet hours, "HH:MM" to "HH:MM" in the user's zone ("" = none): nothing
-          reaches devices or channels then (it waits in the inbox, and one
-          summary goes when they end) — reminders too, unless QuietReminders.
         type: string
       quiet_reminders:
         type: boolean

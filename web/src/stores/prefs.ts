@@ -4,7 +4,8 @@ import { api } from '@/lib/api'
 import { mediaPrefs } from '@/lib/media'
 import { applyMotion, themeSweep } from '@/lib/motion'
 
-export type Theme = 'light' | 'dark' | 'system'
+// daynight: light by day, dark by night, at the person's times (this device's clock).
+export type Theme = 'light' | 'dark' | 'system' | 'daynight'
 export type TimeFormat = '24h' | '12h'
 // How pages are edited: visually (blocks) or as Markdown source.
 export type PageEditorMode = 'visual' | 'markdown'
@@ -31,6 +32,8 @@ interface ServerPrefs {
   locale?: string
   page_editor?: PageEditorMode
   dev_theme?: string // "" = as the instance | none | a developer theme id
+  day_from?: string // daynight theme: light from (HH:MM)
+  night_from?: string // and dark from
   holiday_theme?: string // "" = as the instance | off | auto | a holiday
   season_theme?: string // "" = as the instance | off | auto | a season
   remote_images?: 'ask' | 'always'
@@ -108,11 +111,28 @@ function pushHolidays(holiday: string, season: string) {
   })
 }
 
+// isNight: is it dark time now, between nightFrom and dayFrom (either may be
+// the earlier; the night runs over midnight when dayFrom comes first).
+export function isNight(now: Date, dayFrom: string, nightFrom: string): boolean {
+  const min = (hm: string) => {
+    const [h, m] = hm.split(':').map(Number)
+    return (h || 0) * 60 + (m || 0)
+  }
+  const t = now.getHours() * 60 + now.getMinutes()
+  const day = min(dayFrom)
+  const night = min(nightFrom)
+  if (day === night) return false
+  return day < night ? t < day || t >= night : t >= night && t < day
+}
+
 // Per-user UI preferences. Backed by the server (UserPrefs) so they follow the
 // user across devices; localStorage is a cache for instant first paint.
 export const usePrefsStore = defineStore('prefs', {
   state: () => ({
     theme: (localStorage.getItem('orbit_theme') as Theme) || 'system',
+    // With the daynight theme: when light and dark begin (HH:MM).
+    dayFrom: localStorage.getItem('orbit_day_from') || '07:00',
+    nightFrom: localStorage.getItem('orbit_night_from') || '20:00',
     // "local" = use the device/browser timezone (the default).
     timezone: localStorage.getItem('orbit_timezone') || 'local',
     // Personal accent override ("" = follow the org accent).
@@ -145,7 +165,27 @@ export const usePrefsStore = defineStore('prefs', {
     isDark(): boolean {
       if (this.theme === 'dark') return true
       if (this.theme === 'light') return false
+      if (this.theme === 'daynight') return isNight(new Date(), this.dayFrom, this.nightFrom)
       return window.matchMedia('(prefers-color-scheme: dark)').matches
+    },
+    // Each minute (the app's clock): with the daynight theme, day turns to
+    // night (and back) on its own — with the same sweep as a click.
+    tickTheme() {
+      if (this.theme !== 'daynight') return
+      const dark = this.isDark()
+      if (dark === document.documentElement.classList.contains('dark')) return
+      themeSweep(async () => {
+        this.applyTheme()
+        await import('@/stores/branding')
+      })
+    },
+    async setDayNight(dayFrom: string, nightFrom: string) {
+      this.dayFrom = dayFrom
+      this.nightFrom = nightFrom
+      localStorage.setItem('orbit_day_from', dayFrom)
+      localStorage.setItem('orbit_night_from', nightFrom)
+      this.tickTheme()
+      await this.persist({ day_from: dayFrom, night_from: nightFrom })
     },
     applyTheme() {
       document.documentElement.classList.toggle('dark', this.isDark())
@@ -172,6 +212,10 @@ export const usePrefsStore = defineStore('prefs', {
       localStorage.setItem('orbit_week_start', String(this.weekStart))
       localStorage.setItem('orbit_time_format', this.timeFormat)
       localStorage.setItem('orbit_theme', p.theme)
+      this.dayFrom = p.day_from || '07:00'
+      this.nightFrom = p.night_from || '20:00'
+      localStorage.setItem('orbit_day_from', this.dayFrom)
+      localStorage.setItem('orbit_night_from', this.nightFrom)
       localStorage.setItem('orbit_timezone', p.timezone)
       localStorage.setItem('orbit_accent', this.accentColor)
       pushAccent(this.accentColor)

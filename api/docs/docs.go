@@ -16617,6 +16617,10 @@ const docTemplate = `{
                     "description": "titles in shared channels too",
                     "type": "boolean"
                 },
+                "day_from": {
+                    "description": "Quiet hours (\"\" = none): nothing to devices or channels between them.",
+                    "type": "string"
+                },
                 "dev_theme": {
                     "description": "\"\" (as the instance) | none | a theme id",
                     "type": "string"
@@ -16656,6 +16660,10 @@ const docTemplate = `{
                 "locale": {
                     "type": "string"
                 },
+                "night_from": {
+                    "description": "and dark from",
+                    "type": "string"
+                },
                 "notify_channels": {
                     "type": "array",
                     "items": {
@@ -16681,7 +16689,6 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "quiet_from": {
-                    "description": "Quiet hours (\"\" = none): nothing to devices or channels between them.",
                     "type": "string"
                 },
                 "quiet_reminders": {
@@ -17661,6 +17668,10 @@ const docTemplate = `{
                 "channel_details": {
                     "type": "boolean"
                 },
+                "day_from": {
+                    "description": "Quiet hours: \"HH:MM\" each (\"\" both = none); reminders through or not.\nDayFrom / NightFrom: with the daynight theme, when light and dark begin (HH:MM).",
+                    "type": "string"
+                },
                 "dev_theme": {
                     "type": "string",
                     "maxLength": 10
@@ -17710,6 +17721,9 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 8
                 },
+                "night_from": {
+                    "type": "string"
+                },
                 "notify_channels": {
                     "type": "array",
                     "items": {
@@ -17734,7 +17748,6 @@ const docTemplate = `{
                     ]
                 },
                 "quiet_from": {
-                    "description": "Quiet hours: \"HH:MM\" each (\"\" both = none); reminders through or not.",
                     "type": "string"
                 },
                 "quiet_reminders": {
@@ -17765,7 +17778,8 @@ const docTemplate = `{
                     "enum": [
                         "light",
                         "dark",
-                        "system"
+                        "system",
+                        "daynight"
                     ],
                     "allOf": [
                         {
@@ -19198,12 +19212,14 @@ const docTemplate = `{
             "enum": [
                 "light",
                 "dark",
-                "system"
+                "system",
+                "daynight"
             ],
             "x-enum-varnames": [
                 "ThemeLight",
                 "ThemeDark",
-                "ThemeSystem"
+                "ThemeSystem",
+                "ThemeDayNight"
             ]
         },
         "models.User": {
@@ -19303,6 +19319,10 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "day_from": {
+                    "description": "Quiet hours, \"HH:MM\" to \"HH:MM\" in the user's zone (\"\" = none): nothing\nreaches devices or channels then (it waits in the inbox, and one\nsummary goes when they end) — reminders too, unless QuietReminders.\nDayFrom / NightFrom: with the \"daynight\" theme, when light and dark\nbegin (HH:MM; \"\" = 07:00 and 20:00).",
+                    "type": "string"
+                },
                 "dev_theme": {
                     "description": "DevTheme is this user's own developer theme, when the owner lets each\nperson choose: \"\" = as the instance, \"none\", or a theme id.",
                     "type": "string"
@@ -19345,6 +19365,9 @@ const docTemplate = `{
                     "description": "Locale is the interface language (en, pt), for text sent from the\nserver: push notifications, channels, the summary.",
                     "type": "string"
                 },
+                "night_from": {
+                    "type": "string"
+                },
                 "notify_events": {
                     "description": "Notifications: master toggle for reminders (tasks due, events starting)\n+ chosen channel keys (JSON []string), restricted to the channels the\nadmin has enabled.",
                     "type": "boolean"
@@ -19354,7 +19377,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "quiet_from": {
-                    "description": "Quiet hours, \"HH:MM\" to \"HH:MM\" in the user's zone (\"\" = none): nothing\nreaches devices or channels then (it waits in the inbox, and one\nsummary goes when they end) — reminders too, unless QuietReminders.",
                     "type": "string"
                 },
                 "quiet_reminders": {

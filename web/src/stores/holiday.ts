@@ -20,6 +20,7 @@ export const useHolidayStore = defineStore('holiday', {
   getters: {
     active(): Holiday | null {
       const b = useBrandingStore()
+      if (b.impersonating) return null // the impersonation theme instead
       const set = b.effectiveHolidayTheme
       return set === 'off' ? null : resolveHoliday(set, this.now)
     },
@@ -27,6 +28,7 @@ export const useHolidayStore = defineStore('holiday', {
     season(): Season | null {
       if (this.active) return null
       const b = useBrandingStore()
+      if (b.impersonating) return null
       const set = b.effectiveSeasonTheme
       return set === 'off' ? null : resolveSeason(set, this.now)
     },

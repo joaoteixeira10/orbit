@@ -38,6 +38,8 @@ type prefsResponse struct {
 	CalendarColors map[string]string `json:"calendar_colors"`
 	FocusLengths   []int             `json:"focus_lengths"` // own focus timer lengths, minutes
 	// Quiet hours ("" = none): nothing to devices or channels between them.
+	DayFrom        string `json:"day_from"`   // daynight theme: light from (HH:MM)
+	NightFrom      string `json:"night_from"` // and dark from
 	QuietFrom      string `json:"quiet_from"`
 	QuietTo        string `json:"quiet_to"`
 	QuietReminders bool   `json:"quiet_reminders"`
@@ -97,6 +99,8 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		SeasonTheme:    p.SeasonTheme,
 		RemoteImages:   orDefault(p.RemoteImages, "ask"),
 		SketchColors:   colors,
+		DayFrom:        orDefault(p.DayFrom, "07:00"),
+		NightFrom:      orDefault(p.NightFrom, "20:00"),
 		QuietFrom:      p.QuietFrom,
 		QuietTo:        p.QuietTo,
 		QuietReminders: p.QuietReminders,
@@ -278,6 +282,19 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 		}
 		if *q.v != "" && !inbox.ValidClock(*q.v) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "quiet hours are HH:MM"})
+			return
+		}
+		updates[q.col] = *q.v
+	}
+	for _, q := range []struct {
+		v   *string
+		col string
+	}{{req.DayFrom, "day_from"}, {req.NightFrom, "night_from"}} {
+		if q.v == nil {
+			continue
+		}
+		if !inbox.ValidClock(*q.v) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "day_from and night_from are HH:MM"})
 			return
 		}
 		updates[q.col] = *q.v

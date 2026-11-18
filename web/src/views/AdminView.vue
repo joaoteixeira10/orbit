@@ -321,7 +321,7 @@ async function impersonate(u: User) {
   try {
     await auth.startImpersonation(u.id)
     toast.success(t('impersonate.started', { user: u.username }))
-    router.push({ name: 'dashboard' })
+    router.push({ name: 'home' })
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -858,7 +858,7 @@ async function runTransfer() {
     toast.success(t('adm.owner.transferred'))
     await auth.fetchMe() // we're no longer the owner → the whole Owner area disappears
     transferTarget.value = null
-    if (!auth.isOwner) router.push({ name: 'dashboard' })
+    if (!auth.isOwner) router.push({ name: 'home' })
   } catch (e: any) {
     toast.error(e.message)
   }

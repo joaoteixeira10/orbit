@@ -647,17 +647,21 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 
       <!-- Narrow screens: a slim bar with the menu and search. -->
       <header v-if="narrow || sideHidden" class="topbar">
-        <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('nav.openMenu')" aria-controls="sidebar" :aria-expanded="drawerOpen" @click="toggleSide">
-          <Menu v-if="narrow" class="h-5 w-5" />
-          <PanelLeft v-else class="h-[18px] w-[18px]" />
-        </Button>
-        <div class="flex min-w-0 flex-1 items-center justify-center gap-2 font-semibold">
+        <div class="tb-side">
+          <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('nav.openMenu')" aria-controls="sidebar" :aria-expanded="drawerOpen" @click="toggleSide">
+            <Menu v-if="narrow" class="h-5 w-5" />
+            <PanelLeft v-else class="h-[18px] w-[18px]" />
+          </Button>
+        </div>
+        <div class="flex min-w-0 items-center justify-center gap-2 font-semibold" data-testid="topbar-title">
           <WsIcon v-if="currentWs" :icon="currentWs.icon" :color="currentWs.color" :size="20" :name="currentWs.name" />
           <span class="truncate">{{ currentWs?.name ?? branding.appName }}</span>
         </div>
-        <Button variant="ghost" size="icon" v-if="assistant.enabled" class="text-text-2" :aria-label="t('assistant.open')" @click="assistant.open = !assistant.open"><Sparkles class="h-[18px] w-[18px]" /></Button>
-        <InboxButton placement="bottom-end" />
-        <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></Button>
+        <div class="tb-side justify-end">
+          <Button variant="ghost" size="icon" v-if="assistant.enabled" class="text-text-2" :aria-label="t('assistant.open')" @click="assistant.open = !assistant.open"><Sparkles class="h-[18px] w-[18px]" /></Button>
+          <InboxButton placement="bottom-end" />
+          <Button variant="ghost" size="icon" class="text-text-2" :aria-label="t('nav.search')" @click="paletteOpen = true"><Search class="h-[18px] w-[18px]" /></Button>
+        </div>
       </header>
 
       <div ref="contentEl" class="content" :class="{ 'with-tabs': phone }">
@@ -1041,7 +1045,10 @@ html.holiday span.me-avatar {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
+  /* Three columns, the sides alike: the title stays in the middle of the
+     screen however many buttons each side has (a long one gives way). */
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
   align-items: center;
   gap: 8px;
   height: calc(48px + env(safe-area-inset-top));
@@ -1050,6 +1057,10 @@ html.holiday span.me-avatar {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--border);
+}
+.tb-side {
+  display: flex;
+  align-items: center;
 }
 .imp-banner {
   position: sticky;

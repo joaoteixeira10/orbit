@@ -565,7 +565,7 @@ async function startFocus() {
                 <span class="flex-1">{{ t('tasks.status') }}</span>
                 <DropdownMenu :modal="false">
                   <DropdownMenuTrigger as-child>
-                    <Button variant="outline" size="sm" class="w-40 justify-between font-normal" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.status')" data-testid="task-status">{{ column?.c.name ?? '–' }}<ChevronDown class="text-text-3" /></Button>
+                    <Button variant="outline" size="sm" class="w-40 justify-between font-normal" :disabled="!editable || !!task.parent_id" :aria-label="t('tasks.status')" data-testid="task-status"><span class="min-w-0 truncate">{{ column?.c.name ?? '–' }}</span><ChevronDown class="text-text-3" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" class="w-52" data-testid="task-status-menu">
                     <DropdownMenuRadioGroup :model-value="task.column_id" @update:model-value="(v) => setStatus(String(v))">

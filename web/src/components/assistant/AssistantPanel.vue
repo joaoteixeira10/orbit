@@ -142,27 +142,54 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKey))
 
 // On a phone the panel is the whole screen, but the keyboard covers the
 // bottom of it (iOS doesn't shrink the page for it): it takes the part
-// that's visible, so the message box stays above the keyboard.
+// that's visible, so the message box stays above the keyboard. iOS reports
+// that part late while the keyboard slides (and iOS 26 can leave it out of
+// date), so it's measured again each frame for a moment after any change
+// (the keyboard, a field focused, the page scrolled under it); with the
+// keyboard down it's simply the whole screen.
 const fit = ref<{ top: number; height: number; keyboard: boolean } | null>(null)
-function fitScreen() {
+function measure() {
   const v = window.visualViewport
   if (!v || window.innerWidth >= 640) {
     fit.value = null
     return
   }
-  fit.value = { top: v.offsetTop, height: v.height, keyboard: window.innerHeight - v.height > 120 }
+  if (!store.open) return
+  const keyboard = window.innerHeight - v.height > 120
+  const f = keyboard ? { top: Math.max(0, Math.round(v.offsetTop)), height: Math.round(v.height), keyboard } : null
+  if (f?.top !== fit.value?.top || f?.height !== fit.value?.height) fit.value = f
+}
+let settleUntil = 0
+let frame = 0
+function fitScreen() {
+  measure()
+  settleUntil = performance.now() + 900
+  if (frame) return
+  const tick = () => {
+    measure()
+    frame = performance.now() < settleUntil ? requestAnimationFrame(tick) : 0
+  }
+  frame = requestAnimationFrame(tick)
 }
 const fitStyle = computed(() => (fit.value ? { top: `${fit.value.top}px`, height: `${fit.value.height}px`, bottom: 'auto' } : undefined))
 onMounted(() => {
   window.visualViewport?.addEventListener('resize', fitScreen)
   window.visualViewport?.addEventListener('scroll', fitScreen)
   window.addEventListener('resize', fitScreen)
+  window.addEventListener('scroll', fitScreen, { passive: true })
+  document.addEventListener('focusin', fitScreen)
+  document.addEventListener('focusout', fitScreen)
   fitScreen()
 })
+watch(() => store.open, (o) => o && fitScreen())
 onUnmounted(() => {
   window.visualViewport?.removeEventListener('resize', fitScreen)
   window.visualViewport?.removeEventListener('scroll', fitScreen)
   window.removeEventListener('resize', fitScreen)
+  window.removeEventListener('scroll', fitScreen)
+  document.removeEventListener('focusin', fitScreen)
+  document.removeEventListener('focusout', fitScreen)
+  cancelAnimationFrame(frame)
 })
 
 const left = computed(() => store.left)

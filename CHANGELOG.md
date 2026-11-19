@@ -6,6 +6,18 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Fixed
+
+- A long status name ran out of its field in a task's details, and long
+  list and goal names were cut off mid-letter: they now end in "…". A test
+  now checks the main screens with long names for anything that runs out.
+- On a phone, the name in the top bar sits in the middle again with the
+  assistant's button on.
+- On an iPhone, the assistant with the keyboard up could sit too high — its
+  top under the status bar, the page showing between it and the keyboard: it
+  now follows the keyboard as it settles (iOS 26 reports it late), and fills
+  the screen again once the keyboard is down.
+
 ## [0.7.0] - 2026-11-19
 
 ### Added

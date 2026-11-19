@@ -4392,3 +4392,93 @@ test('the assistant: people may use their own model; a workspace’s owners can 
   await expect(sect.getByTestId('ws-assistant-notes')).toHaveCount(0)
   await expect.poll(async () => (await (await request.get(`/api/v1/workspaces/${ws.id}`, { headers: H })).json()).workspace.assistant_off).toBe(true)
 })
+
+// overflowing lists the controls (buttons, links, selects, menu items, tabs,
+// badges) whose content runs past their edge, or is cut off with no "…".
+async function overflowing(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const out: string[] = []
+    const sel = 'button, select, a, [role=combobox], [role=menuitem], [role=menuitemradio], [role=option], [role=tab], [data-slot=badge]'
+    const name = (el: Element) => `${el.tagName.toLowerCase()}${el.getAttribute('data-testid') ? `[${el.getAttribute('data-testid')}]` : ''}${el.getAttribute('aria-label') ? `{${el.getAttribute('aria-label')}}` : ''}`
+    for (const el of document.querySelectorAll(sel)) {
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden' || el.closest('.ProseMirror, [contenteditable], .cm-editor')) continue
+      if (el instanceof HTMLSelectElement) {
+        // Its chosen text against the room left of the arrow.
+        const cs = getComputedStyle(el)
+        const txt = el.selectedOptions[0]?.text ?? ''
+        const cx = document.createElement('canvas').getContext('2d')!
+        cx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+        if (cx.measureText(txt).width > el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) + 1 && cs.textOverflow !== 'ellipsis') out.push(`${name(el)}: "${txt}" cut`)
+        continue
+      }
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT)
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        let cr: DOMRect
+        if (n.nodeType === Node.TEXT_NODE) {
+          if (!n.textContent!.trim()) continue
+          const rg = document.createRange()
+          rg.selectNodeContents(n)
+          cr = rg.getBoundingClientRect()
+        } else cr = (n as Element).getBoundingClientRect()
+        if (!cr.width || (cr.right <= r.right + 1.5 && cr.left >= r.left - 1.5)) continue
+        // Fine when a box inside the control cuts it: text with a "…", a picture by its frame.
+        let ok = false
+        for (let p = n.parentElement; p && p !== el.parentElement; p = p.parentElement) {
+          const cs = getComputedStyle(p)
+          if (cs.overflowX !== 'visible' && (n.nodeType !== Node.TEXT_NODE || cs.textOverflow === 'ellipsis')) {
+            ok = true
+            break
+          }
+        }
+        if (!ok) {
+          out.push(`${name(el)}: "${(n.textContent ?? '').trim().slice(0, 60)}" runs out`)
+          break
+        }
+      }
+    }
+    return [...new Set(out)]
+  })
+}
+
+test('long names stay inside their buttons and fields, on a wide screen and a phone', async ({ page, request }) => {
+  test.setTimeout(120_000)
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const LONG = 'Semana 16 - 20 Novembro de 2026, entrega final'
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: `Desenvolvimento ${LONG}`, kind: 'work', starter: false, modules: ['home', 'tasks', 'board', 'calendar', 'goals', 'timeline'] } })).json()
+  const list = await (await request.post(`/api/v1/workspaces/${ws.id}/lists`, { headers: H, data: { name: `Lista ${LONG}` } })).json()
+  const lists = await (await request.get(`/api/v1/workspaces/${ws.id}/lists`, { headers: H })).json()
+  const cols = lists.find((l: { id: string }) => l.id === list.id).columns.map((c: { name: string }, i: number) => (i === 0 ? { ...c, name: LONG } : c))
+  await request.put(`/api/v1/lists/${list.id}`, { headers: H, data: { columns: cols } })
+  const goal = await (await request.post(`/api/v1/workspaces/${ws.id}/goals`, { headers: H, data: { title: `Objetivo ${LONG}` } })).json()
+  const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: `Servidor SMTP ${LONG}`, list_id: list.id, column_id: cols[0].id, tags: ['semana-16-entrega-final-do-servidor'], goal_id: goal.id, due_date: new Date().toISOString().slice(0, 10) } })).json()
+  await signIn(page, NEW_PASSWORD)
+
+  const found: string[] = []
+  const check = async (where: string) => {
+    await page.waitForTimeout(800)
+    for (const o of await overflowing(page)) found.push(`${where} — ${o}`)
+  }
+  for (const [width, height, size] of [[1400, 900, 'wide'], [390, 844, 'phone']] as const) {
+    await page.setViewportSize({ width, height })
+    for (const [path, where] of [['/', 'Today'], [`/w/${ws.id}`, 'home'], [`/w/${ws.id}/tasks/${list.id}`, 'tasks'], [`/w/${ws.id}/board/${list.id}`, 'board'], [`/w/${ws.id}/calendar`, 'calendar'], [`/w/${ws.id}/goals`, 'goals'], [`/w/${ws.id}/timeline`, 'timeline'], ['/settings', 'settings']]) {
+      await page.goto(path)
+      await check(`${size} ${where}`)
+    }
+    await page.goto(`/w/${ws.id}/tasks/all?task=${task.id}`)
+    await expect(page.getByTestId('task-status')).toBeVisible()
+    await check(`${size} task`)
+    await page.getByTestId('task-status').click()
+    await expect(page.getByTestId('task-status-menu')).toBeVisible()
+    await check(`${size} task's status menu`)
+    await page.keyboard.press('Escape')
+  }
+  expect(found).toEqual([])
+
+  // The phone's top bar: its title in the middle of the screen, however many
+  // buttons each side has.
+  await page.goto('/')
+  const title = (await page.getByTestId('topbar-title').boundingBox())!
+  expect(Math.abs(title.x + title.width / 2 - 390 / 2)).toBeLessThan(2)
+})

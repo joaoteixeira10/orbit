@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-19
+
 ### Added
 
 - **Apps** — a module: your other tools (a Gitea, a Grafana, a wiki) open

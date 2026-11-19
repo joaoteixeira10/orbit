@@ -114,6 +114,7 @@ var impersonatedNames = map[string]struct {
 	"tasks": {&models.Task{}, "title"}, "pages": {&models.Page{}, "title"}, "notes": {&models.Note{}, "title"},
 	"lists": {&models.TaskList{}, "name"}, "events": {&models.Event{}, "title"}, "comments": {&models.TaskComment{}, "body"},
 	"habits": {&models.Habit{}, "title"}, "goals": {&models.Goal{}, "title"}, "bookmarks": {&models.Bookmark{}, "title"},
+	"apps":   {&models.WorkspaceApp{}, "name"},
 	"sheets": {&models.Sheet{}, "title"}, "diagrams": {&models.Diagram{}, "title"}, "drawings": {&models.Drawing{}, "title"},
 	"folders": {&models.Folder{}, "name"}, "files": {&models.Upload{}, "name"}, "uploads": {&models.Upload{}, "name"},
 	"courses": {&models.Course{}, "name"}, "grades": {&models.Grade{}, "title"}, "smart-lists": {&models.SmartList{}, "name"},

@@ -1234,6 +1234,102 @@ test('bookmarks: a link kept, tagged, read later and read', async ({ page, reque
   await page.screenshot({ path: 'test-results/bookmarks.png' })
 })
 
+test('apps: other sites as tabs — one shown in its frame, one that refuses said in words', async ({ page, request }) => {
+  // Two sites on this machine: one lets others show it, one refuses (as
+  // Gitea does by default, X-Frame-Options: SAMEORIGIN).
+  const open = createServer((_q, r) => r.writeHead(200, { 'Content-Type': 'text/html' }).end('<h1>Open site</h1>'))
+  const shy = createServer((_q, r) => r.writeHead(200, { 'Content-Type': 'text/html', 'X-Frame-Options': 'SAMEORIGIN' }).end('<h1>Shy site</h1>'))
+  await new Promise<void>((ok) => open.listen(0, '127.0.0.1', ok))
+  await new Promise<void>((ok) => shy.listen(0, '127.0.0.1', ok))
+  const at = (s: typeof open) => `http://127.0.0.1:${(s.address() as { port: number }).port}`
+  try {
+    const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+    const H = { Authorization: `Bearer ${login.access_token}` }
+    const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Ops', kind: 'work', modules: ['home', 'apps'] } })).json()
+    // Not allowed yet: refused.
+    expect((await request.post(`/api/v1/workspaces/${ws.id}/apps`, { headers: H, data: { url: at(open) } })).status()).toBe(400)
+
+    await signIn(page, NEW_PASSWORD)
+    await page.setViewportSize({ width: 1200, height: 820 })
+    // The owner allows both sites (Admin → Owner → Apps).
+    await page.goto('/owner')
+    await page.locator('.subtab', { hasText: 'Owner' }).click()
+    await page.getByTestId('embed-sites').fill(`${at(open)}\n${at(shy)}`)
+    await page.getByTestId('apps-admin').getByRole('button', { name: 'Save sites' }).click()
+    await expect(page.getByText('Sites saved')).toBeVisible()
+
+    await page.goto(`/w/${ws.id}/apps`) // a fresh page: its CSP names the sites
+    await expect(page.getByText('No apps yet')).toBeVisible()
+    await page.getByTestId('app-add').first().click()
+    await page.getByTestId('app-url').fill(`${at(open)}/`)
+    await page.getByTestId('app-name').fill('Grafana')
+    await page.getByTestId('app-save').click()
+    await expect(page.getByTestId('app-tab')).toHaveText(['Grafana'])
+    await expect(page.frameLocator('[data-testid="app-frame"]').getByRole('heading', { name: 'Open site' })).toBeVisible()
+
+    await page.getByTestId('app-add').click()
+    await page.getByTestId('app-url').fill(`${at(shy)}/`)
+    await page.getByTestId('app-save').click()
+    await expect(page.getByTestId('app-refused')).toContainText('doesn’t let other sites show it')
+    await expect(page.getByRole('link', { name: 'Open in a new tab' }).last()).toHaveAttribute('href', `${at(shy)}/`)
+    await page.waitForTimeout(600) // the window folds away, the tab's highlight glides
+    await page.screenshot({ path: 'test-results/apps-refused.png' })
+
+    // Back to the first: still loaded, shown again.
+    await page.getByTestId('app-tab').filter({ hasText: 'Grafana' }).click()
+    await expect(page.frameLocator('[data-testid="app-frame"]:visible').getByRole('heading', { name: 'Open site' })).toBeVisible()
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: 'test-results/apps.png' })
+    await page.setViewportSize({ width: 390, height: 780 })
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: 'test-results/apps-phone.png' })
+  } finally {
+    open.close()
+    shy.close()
+  }
+})
+
+test('day & night: dark from the minute it is set to, and kept', async ({ page }) => {
+  const day = new Date()
+  day.setHours(12, 0, 30, 0) // half a minute in: the switch must still come at 12:01:00
+  await page.clock.install({ time: day })
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/settings')
+  await page.getByText('Appearance').first().click()
+  await page.getByTestId('theme-daynight').click()
+  const html = page.locator('html')
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/) // 12:00, light from 07:00
+  await page.getByTestId('night-from').fill('12:01')
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/)
+  await page.clock.runFor(31_000) // 12:01:01
+  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/)
+  await page.getByTestId('day-from').fill('12:00') // light again from 12:00 to 12:01: already past, so still dark
+  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/)
+  await page.reload()
+  await expect(page.getByTestId('night-from')).toHaveValue('12:01')
+  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/)
+  await page.getByTestId('theme-light').click() // leave it as it was for the tests after
+  await page.getByTestId('day-from').waitFor({ state: 'detached' })
+})
+
+test('background: each person picks what is behind the page, and it is kept', async ({ page }) => {
+  await signIn(page, NEW_PASSWORD)
+  await page.goto('/settings')
+  await page.getByText('Appearance').first().click()
+  await expect(page.getByTestId('bg-plain')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('bg-dots').click()
+  await expect(page.locator('html')).toHaveAttribute('data-bg', 'dots')
+  // The main column wears it: a dot grid among its layers.
+  const ground = () => page.locator('main.main').evaluate((el) => getComputedStyle(el).backgroundImage)
+  expect(await ground()).toContain('radial-gradient')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-bg', 'dots')
+  await page.getByText('Appearance').first().click()
+  await expect(page.getByTestId('bg-dots')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('bg-plain').click() // leave it as it was for the tests after
+  await expect(page.locator('html')).not.toHaveAttribute('data-bg', /.+/)
+})
+
 // A two-page PDF (a red and a blue box), small enough to write by hand.
 function tinyPdf(): Buffer {
   const streams = ['1 0 0 rg 20 20 160 60 re f', '0 0 1 rg 20 20 160 60 re f']

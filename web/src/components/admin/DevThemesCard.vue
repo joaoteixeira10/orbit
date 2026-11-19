@@ -2,7 +2,7 @@
 // SHARED — from ../blueprint/shared/dev-themes (copied by blueprint/sync-themes.sh).
 // Change it there, not here: the same file is in every project.
 //
-// Owner → Branding → Developer themes: the master switch, the four theme
+// Owner → Branding → Developer themes: the master switch, the seven theme
 // cards, and per asset the theme's or the owner's own (the accent always
 // follows the theme). The view owns the form and saves it; this card only
 // edits its fields. Its words are its own (English and Portuguese, below),

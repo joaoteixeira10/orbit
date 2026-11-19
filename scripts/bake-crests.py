@@ -25,7 +25,7 @@ from fontTools.pens.transformPen import TransformPen
 
 FONT = "web/public/fonts/unifrakturcook-700.woff2"
 DST = "web/public/dev-themes/crest-{}"
-INKS = ["dark", "bone", "blue", "gold", "red", "green"]
+INKS = ["dark", "bone", "blue", "gold", "red", "green", "purple", "orange"]
 PNGS = ["192", "512", "touch-180", "maskable-512"]
 
 if len(sys.argv) < 2:

@@ -104,6 +104,52 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  api.appCheckResponse:
+    properties:
+      frameable:
+        description: |-
+          Frameable: yes (it may be shown here), no (it refuses: its headers, or
+          it sends you to a site that isn't allowed) or unknown (Orbit couldn't
+          reach it — the browser may still).
+        type: string
+      site:
+        type: string
+      why:
+        description: 'no: headers | elsewhere'
+        type: string
+    type: object
+  api.appRequest:
+    properties:
+      name:
+        maxLength: 80
+        type: string
+      url:
+        type: string
+    type: object
+  api.appResponse:
+    properties:
+      allowed:
+        description: |-
+          Allowed: its address is on an allowed site still (the owner may have
+          taken the site off the list since).
+        type: boolean
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      position:
+        type: integer
+      updated_at:
+        type: string
+      url:
+        type: string
+      workspace_id:
+        type: string
+    type: object
   api.assistantApplyRequest:
     properties:
       approve:
@@ -532,7 +578,7 @@ definitions:
         description: login page auto-starts SSO (unless ?local=1)
         type: boolean
       developer_theme:
-        description: blue | gold | red | ink | green
+        description: blue | gold | red | ink | green | purple | orange
         type: string
       developer_themes_enabled:
         type: boolean
@@ -1054,6 +1100,13 @@ definitions:
         type: string
       version:
         type: integer
+    type: object
+  api.embedSitesResponse:
+    properties:
+      sites:
+        items:
+          type: string
+        type: array
     type: object
   api.endImpersonationRequest:
     properties:
@@ -2887,6 +2940,10 @@ definitions:
       animations:
         description: 'Animations: the app''s motion on, or off (still).'
         type: boolean
+      background:
+        description: 'Background: what''s behind the page — plain, glow, dots, grid
+          or aurora.'
+        type: string
       calendar_colors:
         additionalProperties:
           type: string
@@ -3646,6 +3703,15 @@ definitions:
       animations:
         description: 'Animations: the app''s motion on (default) or off.'
         type: boolean
+      background:
+        description: 'Background: plain (default), glow, dots, grid or aurora.'
+        enum:
+        - plain
+        - glow
+        - dots
+        - grid
+        - aurora
+        type: string
       calendar_colors:
         additionalProperties:
           type: string
@@ -3792,6 +3858,13 @@ definitions:
       drawio_url:
         description: '"" goes back to DRAWIO_URL (or draw.io''s own)'
         type: string
+      embed_sites:
+        description: |-
+          EmbedSites: the sites the Apps module may show (origins; "*." for
+          subdomains). Once saved it wins over EMBED_SITES, even empty.
+        items:
+          type: string
+        type: array
       favicon_data_url:
         type: string
       holiday_theme:
@@ -4842,6 +4915,11 @@ definitions:
           Animations: the app's motion (switching theme, opening pages, finishing
           a task…); off keeps it still. The system's reduced motion wins either way.
         type: boolean
+      background:
+        description: |-
+          Background: what's behind the page — "" / plain, glow, dots, grid or
+          aurora (the accent's colours; a holiday or season lends its own).
+        type: string
       calendar_colors:
         description: |-
           CalendarColors are this person's own colours for calendars (JSON
@@ -5213,6 +5291,69 @@ paths:
       summary: Revoke any API token (admin)
       tags:
       - users
+  /apps/{id}:
+    delete:
+      parameters:
+      - description: App id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove an app
+      tags:
+      - apps
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: App id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Its name and/or address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.appRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.appResponse'
+      security:
+      - BearerAuth: []
+      summary: Change an app
+      tags:
+      - apps
+  /apps/{id}/check:
+    get:
+      parameters:
+      - description: App id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.appCheckResponse'
+      security:
+      - BearerAuth: []
+      summary: Can an app be shown in a frame?
+      tags:
+      - apps
   /assistant:
     get:
       produces:
@@ -6699,6 +6840,20 @@ paths:
       summary: Move a drawing
       tags:
       - drawings
+  /embed-sites:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.embedSitesResponse'
+      security:
+      - BearerAuth: []
+      summary: The sites the Apps module may show
+      tags:
+      - apps
   /events/{id}:
     delete:
       parameters:
@@ -11224,6 +11379,79 @@ paths:
       summary: A workspace's activity
       tags:
       - workspaces
+  /workspaces/{ws}/apps:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.appResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: A workspace's apps
+      tags:
+      - apps
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: Its name and address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.appRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.appResponse'
+      security:
+      - BearerAuth: []
+      summary: Add an app
+      tags:
+      - apps
+  /workspaces/{ws}/apps/order:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: App ids in order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.orderRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reorder a workspace's apps
+      tags:
+      - apps
   /workspaces/{ws}/bookmarks:
     get:
       parameters:

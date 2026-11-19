@@ -112,16 +112,20 @@ html.glass .hist-backdrop,
 html.glass .ai-backdrop {
   backdrop-filter: none;
 }
-/* A coloured note keeps its colour (its colour is its content); a plain one
-   is the glass. Inside a window, what painted the window's ground lets the
-   glass through. */
+/* Inside a window, what painted the window's ground lets the glass through. */
 html.glass .tsheet,
-html.glass .sheet-panel:has(.note-sheet[data-note=""]),
 html.glass .sheet-panel [data-note=""] {
   --note-bg: transparent;
 }
 html.glass .tsheet {
   background: transparent;
+}
+/* A coloured note's window keeps its colour, solid (noteColors.ts, its
+   colour is its content). A plain note's is near solid too, as they are (the
+   owner's choice, 2026-11-18: notes read as paper, not glass): a hint of
+   glass, over noteColors.ts's !important ground. */
+html.glass .sheet-panel:has(.note-sheet[data-note=""]) {
+  background: var(--g-sheen), color-mix(in srgb, var(--g-ground) calc(98% - var(--glass) * 6%), transparent) !important;
 }
 
 /* ---- The sidebar floats: a pane of glass inset from the window's edges,
@@ -221,5 +225,8 @@ html.glass .tabbar {
   html.glass.scene .tasks-view .lists-pane {
     background: var(--side-solid);
     backdrop-filter: none;
+  }
+  html.glass .sheet-panel:has(.note-sheet[data-note=""]) {
+    background: var(--g-ground) !important;
   }
 }

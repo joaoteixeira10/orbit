@@ -120,7 +120,8 @@ func New(d Deps) *gin.Engine {
 	r.Use(requestID())
 	r.Use(requestLogger(d.Log))
 	h.refreshDrawio()
-	r.Use(securityHeaders(nil, drawioOrigin))
+	h.refreshEmbedSites()
+	r.Use(securityHeaders(nil, frameOrigins))
 	// Cap request bodies.
 	// Uploads have their own, larger limit (UPLOAD_MAX_MB, in the handler).
 	r.Use(limitBody(d.Cfg.MaxBodyBytes, func(p string) bool {
@@ -338,6 +339,14 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/bookmarks/:id", h.deleteBookmark)
 			authed.POST("/bookmarks/:id/refresh", h.refreshBookmark)
 			authed.GET("/bookmarks/:id/image", h.bookmarkImage)
+			// Apps: other sites shown in a frame, on the owner's allowed sites.
+			authed.GET("/embed-sites", h.listEmbedSites)
+			authed.GET("/workspaces/:ws/apps", h.listApps)
+			authed.POST("/workspaces/:ws/apps", h.createApp)
+			authed.PUT("/workspaces/:ws/apps/order", h.orderApps)
+			authed.PUT("/apps/:id", h.updateApp)
+			authed.DELETE("/apps/:id", h.deleteApp)
+			authed.GET("/apps/:id/check", h.checkApp)
 			authed.GET("/workspaces/:ws/journal/:date", h.getJournalDay)
 			authed.PUT("/workspaces/:ws/journal/:date", h.putJournalDay)
 			authed.POST("/workspaces/:ws/goals", h.createGoal)

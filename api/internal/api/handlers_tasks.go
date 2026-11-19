@@ -771,11 +771,14 @@ func (h *Handlers) updateTask(c *gin.Context) {
 	h.db.First(&list, "id = ?", t.ListID)
 	moved := false
 	if req.ListID != nil && *req.ListID != t.ListID && t.ParentID == nil {
-		if h.db.First(&list, "id = ? AND workspace_id = ?", *req.ListID, t.WorkspaceID).Error != nil {
+		// A fresh value: GORM adds the primary key of a loaded struct to
+		// First's conditions, so reusing `list` would also ask for the old id.
+		var to models.TaskList
+		if h.db.First(&to, "id = ? AND workspace_id = ?", *req.ListID, t.WorkspaceID).Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "that list isn't in this workspace"})
 			return
 		}
-		t.ListID, moved = list.ID, true
+		list, t.ListID, moved = to, to.ID, true
 	}
 	cols := planner.DecodeColumns(list.Columns)
 	col, found := planner.FindColumn(cols, t.ColumnID)

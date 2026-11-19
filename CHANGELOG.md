@@ -8,6 +8,11 @@ merge, not at release time.
 
 ### Added
 
+- **Apps** — a module: your other tools (a Gitea, a Grafana, a wiki) open
+  inside the workspace, one tab each, full-size. Only on the sites Orbit's
+  owner allows (Owner → Owner → Apps, or `EMBED_SITES`). A site that won't
+  be shown inside another says so, with Open in a new tab; a tab you've
+  opened stays loaded.
 - **Season themes** — Owner → Branding: Spring, Summer, Autumn and Winter,
   off, automatic (the season today is in) or one always. The whole app in
   the season's colours, petals, summer light, leaves or snow drifting
@@ -32,13 +37,22 @@ merge, not at release time.
   default). Then Settings → Appearance has Holiday theme and Season theme:
   as for everyone, off, automatic or one always.
 - Calendar's **Today** lights up today, also when you're already there.
+- **Background** — Settings → Appearance, each person's: Plain, Glow, Dots,
+  Grid or Aurora behind the page, in the accent's colours (a holiday or
+  season theme lends its own), with or without liquid glass.
 - **Day & night** — Settings → Appearance: light by day and dark by night,
   at times you choose (07:00 and 20:00 by default), switching by itself.
 - **Impersonating has its own theme**: an amber frame round the window, a
   tinted sidebar and a bar saying whose account it is, over every other
   theme.
+- **Two more developer themes**: **Royal Purple** and **Ember Orange**, each
+  with its UBonito crest (seven in all).
 
 ### Changed
+
+- **Forest Green** (developer theme) takes the updated UBonito pack's forest
+  green: the wordmark in green with a light outline, as the other themes',
+  and a deeper accent. All the crests come from the updated pack.
 
 - **A new look across the app**: shadcn-vue's components (on Tailwind CSS
   4) on Orbit's own colours — switches, checkboxes, buttons, fields,
@@ -66,6 +80,8 @@ merge, not at release time.
 
 ### Fixed
 
+- Moving a task to another list from its details (List) failed with "that
+  list isn't in this workspace"; dragging it worked.
 - The bell on a phone showed an old list after the app had been in the
   background (a reminder that came then wasn't there): it now catches up
   when opened, when you come back to the app and after the connection

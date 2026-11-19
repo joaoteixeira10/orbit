@@ -1,7 +1,7 @@
 // SHARED — from ../blueprint/shared/dev-themes (copied by blueprint/sync-themes.sh).
 // Change it there, not here: the same file is in every project.
 //
-// The four curated "developer themes": a closed set, no free colour picker
+// The seven curated "developer themes": a closed set, no free colour picker
 // while the flag is on. Each locks the accent and brings the project's UBonito
 // crest (the owner's design, baked to font-independent SVGs under /dev-themes/
 // by scripts/bake-crests.py; used for the in-app mark and the favicon) and the
@@ -11,7 +11,7 @@
 // -touch-180.png (iPhone / iPad home screen: square, opaque — iOS rounds it)
 // and -maskable-512.png (Android: square, the emblem in the safe circle).
 
-export type DevThemeId = 'blue' | 'gold' | 'red' | 'ink' | 'green'
+export type DevThemeId = 'blue' | 'gold' | 'red' | 'ink' | 'green' | 'purple' | 'orange'
 
 export interface DevTheme {
   id: DevThemeId
@@ -83,16 +83,36 @@ export const DEV_THEMES: Record<DevThemeId, DevTheme> = {
   },
   green: {
     id: 'green',
-    // White on this green is too faint (2.4:1): a dark label, as Gold Leaf.
-    accent: '#2fbf6a', onAccent: '#06120b', accentStrong: '#25a85b',
-    textLight: '#1e7b45',
-    mark: '#0b1c12', halo: '#2fbf6a', badge: '#0b1c12',
+    // The pack's forest green (wordmark and mark). White on it is too faint
+    // (3.5:1): a dark label, as Gold Leaf.
+    accent: '#1f9e55', onAccent: '#06120b', accentStrong: '#1a8648',
+    textLight: '#1e7b45', textDark: '#2fbf6a',
+    mark: '#1f9e55', halo: '#e3f5ea', badge: '#0b1c12',
     ground: 'radial-gradient(120% 120% at 50% 0%, #10261a, #06120b)',
     crest: crest('green'), crestPng: crestPng('green'), ink: 'green',
   },
+  purple: {
+    id: 'purple',
+    accent: '#7c3aed', onAccent: '#ffffff', accentStrong: '#6526d4',
+    textDark: '#a98af7',
+    mark: '#7c3aed', halo: '#efe6fd', badge: '#150c26',
+    ground: 'radial-gradient(120% 120% at 50% 0%, #22163a, #0d0819)',
+    crest: crest('purple'), crestPng: crestPng('purple'), ink: 'purple',
+  },
+  orange: {
+    id: 'orange',
+    // White on this orange is too faint (3.3:1): a dark label.
+    accent: '#e8650f', onAccent: '#1c0e04', accentStrong: '#c9550a',
+    textLight: '#b04c08', textDark: '#f2781f',
+    mark: '#e8650f', halo: '#fbeee2', badge: '#1c0e04',
+    ground: 'radial-gradient(120% 120% at 50% 0%, #2a1608, #120903)',
+    crest: crest('orange'), crestPng: crestPng('orange'), ink: 'orange',
+  },
 }
 
-export const DEV_THEME_LIST: DevTheme[] = [DEV_THEMES.blue, DEV_THEMES.gold, DEV_THEMES.red, DEV_THEMES.ink, DEV_THEMES.green]
+export const DEV_THEME_LIST: DevTheme[] = [
+  DEV_THEMES.blue, DEV_THEMES.gold, DEV_THEMES.red, DEV_THEMES.ink, DEV_THEMES.green, DEV_THEMES.purple, DEV_THEMES.orange,
+]
 
 // isDevThemeId tells a stored value is one of the themes.
 export function isDevThemeId(v: unknown): v is DevThemeId {
@@ -102,8 +122,8 @@ export function isDevThemeId(v: unknown): v is DevThemeId {
 // The themes' names, in every locale the projects have (the card and the
 // settings use them; a project without one of these locales gets English).
 export const DEV_THEME_NAMES: Record<string, Record<DevThemeId, string>> = {
-  en: { blue: 'Steel Blue', gold: 'Gold Leaf', red: 'Blood Red', ink: 'Ink', green: 'Forest Green' },
-  pt: { blue: 'Azul Aço', gold: 'Folha de Ouro', red: 'Vermelho Sangue', ink: 'Tinta', green: 'Verde Floresta' },
+  en: { blue: 'Steel Blue', gold: 'Gold Leaf', red: 'Blood Red', ink: 'Ink', green: 'Forest Green', purple: 'Royal Purple', orange: 'Ember Orange' },
+  pt: { blue: 'Azul Aço', gold: 'Folha de Ouro', red: 'Vermelho Sangue', ink: 'Tinta', green: 'Verde Floresta', purple: 'Púrpura Real', orange: 'Laranja Brasa' },
 }
 
 export interface ResolvedThemeAccent {

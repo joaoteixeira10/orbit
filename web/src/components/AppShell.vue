@@ -360,12 +360,13 @@ watch(() => route.fullPath, () => (drawerOpen.value = false))
 // Pages with a canvas or an editor (drawings, whiteboards, sheets, diagrams,
 // files, pages with their embeds): they measure where they are as they open,
 // so they only fade in, never move.
-const CANVAS = new Set(['my-drawing', 'ws-whiteboard', 'ws-sheet', 'ws-diagram', 'my-file', 'ws-file', 'ws-page'])
+const CANVAS = new Set(['my-drawing', 'ws-whiteboard', 'ws-sheet', 'ws-diagram', 'my-file', 'ws-file', 'ws-page', 'ws-apps'])
 // A page that opens fades and rises in (not a window opening over it: the
 // path only). The page itself moves, not the column it sits in.
 const contentEl = ref<HTMLElement | null>(null)
 watch(
-  () => route.path,
+  // Apps' tabs change the address but not the page: no fade between them.
+  () => (route.name === 'ws-apps' ? `apps:${String(route.params.ws)}` : route.path),
   () => nextTick(() => pageIn(contentEl.value?.firstElementChild, !CANVAS.has(String(route.name)))),
 )
 // The sidebar's highlight glides from the page you left to the one you

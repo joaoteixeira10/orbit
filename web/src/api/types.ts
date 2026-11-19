@@ -94,7 +94,7 @@ export interface Branding {
   auto_sso: boolean
   // Developer themes (owner): a curated accent + UBonito crest / wordmark / favicon.
   developer_themes_enabled?: boolean
-  developer_theme?: 'blue' | 'gold' | 'red' | 'ink' | 'green'
+  developer_theme?: 'blue' | 'gold' | 'red' | 'ink' | 'green' | 'purple' | 'orange'
   developer_themes_personal?: boolean // each person may pick their own
   holiday_theme?: string // off | auto | christmas | halloween | nye | easter | santos | lunar
   season_theme?: string // off | auto | spring | summer | autumn | winter (a holiday in its days wins)
@@ -104,6 +104,7 @@ export interface Branding {
   asset_source_wordmark?: 'theme' | 'keep'
   asset_source_favicon?: 'theme' | 'keep'
   drawio_url?: string // where Diagrams load the draw.io editor from
+  embed_sites?: string[] // write-only (PUT /settings): the sites Apps may show; read with GET /embed-sites
   page_versions_kept?: number // how many versions each page's history keeps
 }
 

@@ -11,7 +11,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n, I18nT } from 'vue-i18n'
 import { setLocale, currentLocale, SUPPORTED_LOCALES, type LocaleCode } from '@/i18n'
-import { usePrefsStore, type EditorKind, type EditorTheme, type Theme } from '@/stores/prefs'
+import { BACKDROPS, usePrefsStore, type EditorKind, type EditorTheme, type Theme } from '@/stores/prefs'
 import { api, setAccessToken } from '@/lib/api'
 import { meApi, sessionsApi, type SessionInfo } from '@/api'
 import { passkeysApi, webauthnSupported } from '@/api/webauthn'
@@ -529,6 +529,27 @@ onMounted(loadSessions)
                   <Moon class="h-3.5 w-3.5" />{{ t('settings.nightFrom') }}
                   <Input type="time" class="h-8 w-[110px]" :model-value="prefs.nightFrom" data-testid="night-from" @change="(e: Event) => prefs.setDayNight(prefs.dayFrom, (e.target as HTMLInputElement).value || '20:00')" />
                 </label>
+              </div>
+            </div>
+            <!-- Background: what's behind the page (styles/backdrop.css). -->
+            <div class="border-t border-border pt-5" data-testid="background-setting">
+              <div class="text-[13px] font-semibold">{{ t('acct.appearance.background') }}</div>
+              <div class="text-[12px] text-text-3">{{ t('acct.appearance.backgroundHint') }}</div>
+              <div class="bk-picker mt-3" role="radiogroup" :aria-label="t('acct.appearance.background')">
+                <button
+                  v-for="b in BACKDROPS"
+                  :key="b"
+                  type="button"
+                  role="radio"
+                  class="bk-opt"
+                  :class="{ on: prefs.background === b }"
+                  :aria-checked="prefs.background === b"
+                  :data-testid="`bg-${b}`"
+                  @click="prefs.setBackground(b)"
+                >
+                  <span class="bk-art" :data-art="b" aria-hidden="true"><span class="bk-card" /></span>
+                  <span class="bk-name">{{ t(`acct.appearance.bg.${b}`) }}</span>
+                </button>
               </div>
             </div>
             <!-- Liquid glass: 0 (off, solid) to 100 (clearest). -->
@@ -1072,6 +1093,54 @@ onMounted(loadSessions)
 </template>
 
 <style scoped>
+/* Background: a tile each, the background itself with a card on it. */
+.bk-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px;
+}
+.bk-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 5px 5px 7px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color var(--speed), box-shadow var(--speed);
+}
+.bk-opt:hover {
+  border-color: var(--border-2);
+}
+.bk-opt.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--text);
+}
+.bk-art {
+  position: relative;
+  display: block;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--line-soft, var(--border));
+}
+.bk-card {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 30%;
+  bottom: -6px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.bk-name {
+  font-weight: 500;
+}
 /* Liquid glass's preview: a pane over shapes, so the blur shows. */
 .glass-preview {
   position: relative;

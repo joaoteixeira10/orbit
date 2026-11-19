@@ -74,7 +74,7 @@ func requestLogger(log *zap.Logger) gin.HandlerFunc {
 // branding logos, same-origin /api XHR).
 // extraConnectSrc, when non-nil, returns an extra origin to allow in the CSP
 // connect-src (Orbit passes nil: same-origin only); extraFrameSrc one to allow
-// in frame-src (Orbit's draw.io editor).
+// in frame-src (Orbit's draw.io editor and the Apps module's sites).
 func securityHeaders(extraConnectSrc, extraFrameSrc func() string) gin.HandlerFunc {
 	build := func() string {
 		connect := "'self'"

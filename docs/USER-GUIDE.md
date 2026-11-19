@@ -31,11 +31,12 @@ the [API](API.md).
 20. [Goals](#20-goals)
 21. [Journal](#21-journal)
 22. [Bookmarks](#22-bookmarks)
-23. [Notifications](#23-notifications)
-24. [Your settings](#24-your-settings)
-25. [Administration](#25-administration)
-26. [Owner controls](#26-owner-controls)
-27. [On a phone](#27-on-a-phone)
+23. [Apps](#23-apps)
+24. [Notifications](#24-notifications)
+25. [Your settings](#25-your-settings)
+26. [Administration](#26-administration)
+27. [Owner controls](#27-owner-controls)
+28. [On a phone](#28-on-a-phone)
 
 ---
 
@@ -1605,7 +1606,35 @@ and nobody reads anyone else's (search finds yours for you only).
 - Search (⌘K) finds bookmarks by their title, description, site, address
   and notes; choosing one opens the link.
 
-## 23. Notifications
+## 23. Apps
+
+**Apps** (a module) shows your other tools — a Gitea, a Grafana, a wiki —
+inside the workspace, one **tab** each, full-size. Only on the **sites
+Orbit's owner allows** (Owner → Owner → Apps).
+
+- **Add app** (editors): its **address** (any page on an allowed site) and
+  a **name** (the site's, if you leave it empty). It opens as the last tab.
+- Click a tab to switch. A tab you've opened **stays loaded**: going back
+  to it doesn't load it again. **↻** reloads it; **↗** opens it in a tab of
+  its own.
+- `⋯` → **Edit** (name, address), **Move left / right**, **Remove**
+  (it goes from the workspace; the site isn't touched).
+- **The site keeps its own sign-in**: you sign in to it inside the tab, as
+  you would in its own. Orbit never hands it anything. A browser keeps that
+  sign-in only when the site and Orbit share a domain (for example
+  `gitea.example.org` and `orbit.example.org`); on unrelated domains some
+  browsers (Safari) block it, so open the site in its own tab instead.
+- **A site that won't be shown inside another** (Gitea, by default, says
+  `X-Frame-Options: SAMEORIGIN`) says so in words, with **Open in a new
+  tab**. Its administrator can let Orbit show it: allow Orbit's address in
+  its `Content-Security-Policy: frame-ancestors`, and drop or change its
+  `X-Frame-Options` (in Gitea, `X_FRAME_OPTIONS` in `app.ini`; in Grafana,
+  `allow_embedding = true`). A page that sends you to another, not allowed,
+  address (often a sign-in page) is said too.
+- If the owner later takes a site off the list, its apps stay but show
+  that it isn't allowed any more.
+
+## 24. Notifications
 
 Everything lands in the **bell** (top of the sidebar; top bar on a phone),
 with a red count of what's unread. Click one to open what it's about; **Mark
@@ -1668,7 +1697,7 @@ macOS Chrome), a push has a **Snooze 1 h** button.
 Notifications sent outside the app (devices, channels) are written in the
 language you last used Orbit in. The bell keeps 90 days.
 
-## 24. Your settings
+## 25. Your settings
 
 Your name at the bottom of the sidebar → **Settings**. Sections:
 
@@ -1678,7 +1707,12 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
 - **Appearance** — **Light**, **Dark**, **Automatic** (as the device) or
   **Day & night** (light by day, dark by night, from the times you set —
   07:00 and 20:00 by default — by this device's clock); a personal **accent
-  colour**. **Liquid glass**: from **Solid** to **Clear** — the sidebar, the
+  colour**. **Background**: what's behind the page — **Plain**, **Glow** (soft
+  light of your accent's colours from the corners), **Dots** or **Grid** (the
+  glow over a faint dot or line grid that fades toward the edges) or
+  **Aurora** (wider, stronger bands of colour); it stays still as you scroll,
+  the cards on it stay solid, and a holiday or season theme lends its
+  colours (with liquid glass, its landscape shows instead). **Liquid glass**: from **Solid** to **Clear** — the sidebar, the
   bars, windows, popovers and menus as glass over a soft wash of colour (and,
   with a holiday or season theme on, a landscape behind the cards); what they
   hold stays solid. **Animations** (on by default): motion as you work —
@@ -1690,7 +1724,7 @@ Your name at the bottom of the sidebar → **Settings**. Sections:
   say Sheets and draw.io light in a dark Orbit (draw.io takes it when it
   next opens).
   When the owner lets each person choose, **Developer theme**: as the
-  instance (the default), none, or one of the five themes — for you only.
+  instance (the default), none, or one of the seven themes — for you only.
   Likewise, when the owner allows each, **Holiday theme** and **Season
   theme**: your own — as for everyone, off, automatic (each in its days) or
   one of them always.
@@ -1805,7 +1839,7 @@ Your conversations are kept for you: the clock icon lists them — open one to
 carry on, delete one, or **Delete all**; **+** starts a new one. The owner may
 set a daily number of messages (the window says how many are left).
 
-## 25. Administration
+## 26. Administration
 
 Your name → **Admin** appears when you hold an admin privilege. Tabs:
 **Users** and **API tokens** (need **Manage users**), **Roles** (**Manage
@@ -1918,7 +1952,7 @@ Every user's API tokens: **Name** (with its prefix), **Owner**, **Limits**
 (read-only, or the privileges it keeps), **Last used**, **Expires**. The bin
 icon **Revoke**s one; anything using it stops at once.
 
-## 26. Owner controls
+## 27. Owner controls
 
 The instance **owner** is one account with the final say: the first admin,
 until they transfer it. Your name → **Owner** has these tabs: **Owner**,
@@ -1962,6 +1996,15 @@ listed in `AI_SERVERS` (see [Configuration](CONFIGURATION.md)).
 editor from — draw.io's own (`embed.diagrams.net`, the default), or your
 own draw.io container. **Use the default** goes back to `DRAWIO_URL` (or
 draw.io's own).
+
+**Apps (other sites)**: the sites workspaces with the [Apps](#23-apps)
+module may show inside Orbit, one per line — `https://gitea.example.org`,
+`http://grafana:3000` (with its port), or `https://*.example.org` for all
+its subdomains. Only these may be framed (Orbit's Content-Security-Policy
+names exactly them), and an app's address must be on one. Until you save
+the list, `EMBED_SITES` gives it. Each site must also let Orbit show it (see
+[Apps](#23-apps)). Orbit tabs already open show a newly allowed site after a
+reload.
 
 **Feature flags** (only the owner changes them):
 
@@ -2023,8 +2066,8 @@ sidebar**, a **Custom login page message**, and your own **logo** and
 **favicon** (without them Orbit shows its planet icon).
 
 **Developer themes** (off by default): turn on **Enable developer themes** and
-pick one of five — **Steel Blue**, **Gold Leaf**, **Blood Red**, **Ink**,
-**Forest Green**. A
+pick one of seven — **Steel Blue**, **Gold Leaf**, **Blood Red**, **Ink**,
+**Forest Green**, **Royal Purple**, **Ember Orange**. A
 theme sets the accent colour for everyone (the accent picker is locked, with a
 note) and brings the UBonito Orbit crest (the blackletter "U" on Orbit's ring)
 and the blackletter **UBonito** wordmark. Under **Apply the theme's assets — or
@@ -2151,7 +2194,7 @@ removing someone there deactivates them here (their work stays). See
 Step-by-step guides: [SSO-entra](SSO-entra.md) (Microsoft Entra ID) and
 [SSO-authentik](SSO-authentik.md).
 
-## 27. On a phone
+## 28. On a phone
 
 Open Orbit in Safari and **Share → Add to Home Screen** (Chrome on Android:
 **Install app**). It opens full screen, without the browser bar. On a phone:

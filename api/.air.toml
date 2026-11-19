@@ -8,6 +8,10 @@ tmp_dir = "tmp"
 [build]
   cmd = "go build -o ./tmp/server ./cmd/server"
   bin = "./tmp/server"
+  # air runs it through `sh -c`; without exec, Debian's sh stays as its
+  # parent, takes the interrupt and leaves the server holding :8080, so
+  # every rebuild after fails with "address already in use".
+  full_bin = "exec ./tmp/server"
   include_ext = ["go"]
   exclude_dir = ["tmp", "docs"]
   exclude_regex = ["_test\\.go"]

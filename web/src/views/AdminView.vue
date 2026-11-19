@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { onLiveEvent } from '@/lib/live'
 import { useFlash } from '@/lib/highlight'
+import { appsApi } from '@/lib/apps'
 import { usersApi, apiTokensAdminApi, rolesApi, settingsApi, notifyApi, securityApi, featuresApi, ownerApi, type CreateUserInput, type RoleInput } from '@/api'
 import type { User, Role, NotifConfig, APIToken } from '@/api/types'
 import { useAuthStore } from '@/stores/auth'
@@ -25,7 +26,7 @@ import {
   Plus, Trash2, KeyRound, Pencil, Send, Check, Copy,
   Users, ShieldCheck, Palette, Bell, Lock, Image as ImageIcon, SlidersHorizontal, Eye, LogIn, LogOut, VenetianMask,
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
-  Info, Workflow, CalendarDays,
+  Info, Workflow, CalendarDays, AppWindow,
   History, UsersRound,
 } from 'lucide-vue-next'
 import CopyButton from '@/components/ui/CopyButton.vue'
@@ -724,6 +725,18 @@ async function saveDrawio(v: string) {
     branding.apply(b)
     drawioUrl.value = branding.drawioUrl
     toast.success(t('adm.owner.drawioSaved'))
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+// The sites the Apps module may show in a frame.
+const embedSites = ref('')
+void appsApi.sites().then((s) => (embedSites.value = s.sites.join('\n'))).catch(() => undefined)
+async function saveEmbedSites() {
+  try {
+    await settingsApi.update({ embed_sites: embedSites.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) })
+    embedSites.value = (await appsApi.sites()).sites.join('\n')
+    toast.success(t('adm.owner.appsSaved'))
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -1452,6 +1465,20 @@ function switchTab(t: Tab) {
           <div class="flex flex-wrap gap-2">
             <Button size="sm" type="submit" >{{ t('adm.owner.drawioSave') }}</Button>
             <Button variant="secondary" size="sm" type="button" @click="saveDrawio('')">{{ t('adm.owner.drawioReset') }}</Button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Apps: the sites workspaces may show in a frame -->
+      <div class="card overflow-hidden" data-testid="apps-admin">
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3">
+          <AppWindow class="h-[18px] w-[18px] text-accent" /><h3 class="text-[14px] font-semibold">{{ t('adm.owner.apps') }}</h3>
+        </div>
+        <form class="flex flex-col gap-3 p-5" @submit.prevent="saveEmbedSites">
+          <p class="text-[12px] text-text-3">{{ t('adm.owner.appsHint') }}</p>
+          <Textarea v-model="embedSites" rows="4" class="font-mono text-[12.5px]" placeholder="https://gitea.example.org" spellcheck="false" :aria-label="t('adm.owner.apps')" data-testid="embed-sites" />
+          <div class="flex flex-wrap gap-2">
+            <Button size="sm" type="submit">{{ t('adm.owner.appsSave') }}</Button>
           </div>
         </form>
       </div>

@@ -21,6 +21,7 @@ const (
 	ModGoals     = "goals"       // goals with progress from their tasks
 	ModJournal   = "journal"     // a page a day, with a mood
 	ModBookmarks = "bookmarks"   // links with a preview, tags, read later
+	ModApps      = "apps"        // other sites (a Gitea, a Grafana) shown in a frame, as tabs
 	ModSheets    = "sheets"      // spreadsheets (cells, Excel's formulas)
 	ModDiagrams  = "diagrams"    // draw.io diagrams
 	ModFiles     = "files"       // the workspace's folders: files, pages, sheets, diagrams, whiteboards (on by default)
@@ -54,6 +55,7 @@ var Catalog = []Module{
 	{Key: ModJournal, Icon: "notebook-pen"},
 	{Key: ModGoals, Icon: "target"},
 	{Key: ModBookmarks, Icon: "bookmark"},
+	{Key: ModApps, Icon: "app-window"},
 	{Key: ModFocus, Icon: "timer"},
 }
 

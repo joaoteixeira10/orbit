@@ -4,7 +4,7 @@
 //
 // Settings → Appearance → Developer theme, when the owner lets each person
 // choose (Owner → Branding): the instance's theme (the default), none, or one
-// of the five. The value is the person's preference: '' = as the instance,
+// of the seven. The value is the person's preference: '' = as the instance,
 // 'none', or a theme id. The view stores it; this only picks.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'

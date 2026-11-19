@@ -75,29 +75,30 @@ type (
 
 // Archive is workspace.json.
 type Archive struct {
-	Format         string               `json:"format"`
-	Version        int                  `json:"version"`
-	ExportedAt     time.Time            `json:"exported_at"`
-	App            string               `json:"app_version"`
-	Workspace      xWorkspace           `json:"workspace"`
-	People         []Person             `json:"people"`
-	Lists          []xList              `json:"lists"`
-	Tasks          []xTask              `json:"tasks"`
-	Pages          []models.Page        `json:"pages"`
-	Notes          []xNote              `json:"notes"`
-	Events         []xEvent             `json:"events"`
-	Courses        []models.Course      `json:"courses"`
-	Slots          []models.CourseSlot  `json:"course_slots"`
-	Comments       []models.TaskComment `json:"comments"`
-	Grades         []models.Grade       `json:"grades"`
-	Goals          []models.CourseGoal  `json:"goals"`
-	Files          []models.Upload      `json:"files"`
-	Drawings       []models.Drawing     `json:"drawings,omitempty"` // whiteboards and notes' drawings
-	WorkspaceGoals []models.Goal        `json:"workspace_goals,omitempty"`
-	Sheets         []xSheet             `json:"sheets,omitempty"`
-	Diagrams       []xDiagram           `json:"diagrams,omitempty"`
-	Folders        []models.Folder      `json:"folders,omitempty"`
-	Bookmarks      []models.Bookmark    `json:"bookmarks,omitempty"` // their pictures are read again
+	Format         string                `json:"format"`
+	Version        int                   `json:"version"`
+	ExportedAt     time.Time             `json:"exported_at"`
+	App            string                `json:"app_version"`
+	Workspace      xWorkspace            `json:"workspace"`
+	People         []Person              `json:"people"`
+	Lists          []xList               `json:"lists"`
+	Tasks          []xTask               `json:"tasks"`
+	Pages          []models.Page         `json:"pages"`
+	Notes          []xNote               `json:"notes"`
+	Events         []xEvent              `json:"events"`
+	Courses        []models.Course       `json:"courses"`
+	Slots          []models.CourseSlot   `json:"course_slots"`
+	Comments       []models.TaskComment  `json:"comments"`
+	Grades         []models.Grade        `json:"grades"`
+	Goals          []models.CourseGoal   `json:"goals"`
+	Files          []models.Upload       `json:"files"`
+	Drawings       []models.Drawing      `json:"drawings,omitempty"` // whiteboards and notes' drawings
+	WorkspaceGoals []models.Goal         `json:"workspace_goals,omitempty"`
+	Sheets         []xSheet              `json:"sheets,omitempty"`
+	Diagrams       []xDiagram            `json:"diagrams,omitempty"`
+	Folders        []models.Folder       `json:"folders,omitempty"`
+	Bookmarks      []models.Bookmark     `json:"bookmarks,omitempty"` // their pictures are read again
+	Apps           []models.WorkspaceApp `json:"apps,omitempty"`
 	// The exporter's own habits and the days they were done.
 	Habits      []models.Habit      `json:"habits,omitempty"`
 	HabitChecks []models.HabitCheck `json:"habit_checks,omitempty"`
@@ -245,6 +246,7 @@ func Export(db *gorm.DB, wsID, uid, app string, w io.Writer, now time.Time, hide
 		a.Diagrams = append(a.Diagrams, xDiagram{Diagram: d, Text: d.Text})
 	}
 	db.Where("workspace_id = ?", wsID).Order("created_at").Find(&a.Bookmarks)
+	db.Where("workspace_id = ?", wsID).Order("position, created_at").Find(&a.Apps)
 	db.Where("workspace_id = ? AND owner_id = ?", wsID, uid).Order("rank").Find(&a.Habits)
 	habitIDs := []string{""}
 	for _, hb := range a.Habits {
@@ -546,6 +548,13 @@ func Import(db *gorm.DB, a *Archive, z *zip.Reader, o Options) (models.Workspace
 			b := x
 			b.ID, b.WorkspaceID, b.CreatedBy, b.HasImage = "", ws.ID, who(x.CreatedBy), false
 			if err := tx.Create(&b).Error; err != nil {
+				return err
+			}
+		}
+		for _, x := range a.Apps {
+			ap := x
+			ap.ID, ap.WorkspaceID, ap.CreatedBy = "", ws.ID, who(x.CreatedBy)
+			if err := tx.Create(&ap).Error; err != nil {
 				return err
 			}
 		}

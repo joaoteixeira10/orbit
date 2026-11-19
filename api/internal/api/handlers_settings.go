@@ -24,7 +24,7 @@ const (
 	// Developer themes: a closed set of curated themes (accent + UBonito Orbit
 	// crest + "UBonito" wordmark); per asset, the theme's or the org's own.
 	keyDevThemesEnabled  = "developer_themes_enabled"
-	keyDevTheme          = "developer_theme"           // blue | gold | red | ink | green
+	keyDevTheme          = "developer_theme"           // blue | gold | red | ink | green | purple | orange
 	keyDevThemesPersonal = "developer_themes_personal" // each person may pick their own
 	keyAssetSrcLogo      = "asset_source_logo"         // theme | keep
 	keyAssetSrcWordmark  = "asset_source_wordmark"     // theme | keep
@@ -42,7 +42,7 @@ const (
 // validDevTheme / validAssetSource clamp stored values to the closed sets.
 func validDevTheme(s string) string {
 	switch s {
-	case "blue", "gold", "red", "ink", "green":
+	case "blue", "gold", "red", "ink", "green", "purple", "orange":
 		return s
 	}
 	return "blue"
@@ -91,7 +91,7 @@ type brandingResponse struct {
 	AutoSSO             bool        `json:"auto_sso"`             // login page auto-starts SSO (unless ?local=1)
 
 	DeveloperThemesEnabled  bool   `json:"developer_themes_enabled"`
-	DeveloperTheme          string `json:"developer_theme"` // blue | gold | red | ink | green
+	DeveloperTheme          string `json:"developer_theme"` // blue | gold | red | ink | green | purple | orange
 	DeveloperThemesPersonal bool   `json:"developer_themes_personal"`
 	AssetSourceLogo         string `json:"asset_source_logo"`     // theme | keep
 	AssetSourceWordmark     string `json:"asset_source_wordmark"` // theme | keep
@@ -134,6 +134,9 @@ type updateSettingsRequest struct {
 	SeasonThemesPersonal  *bool `json:"season_themes_personal"`
 
 	DrawioURL *string `json:"drawio_url"` // "" goes back to DRAWIO_URL (or draw.io's own)
+	// EmbedSites: the sites the Apps module may show (origins; "*." for
+	// subdomains). Once saved it wins over EMBED_SITES, even empty.
+	EmbedSites *[]string `json:"embed_sites"`
 	// PageVersionsKept: how many versions each page keeps (5–1000).
 	PageVersionsKept *int `json:"page_versions_kept" binding:"omitempty,min=5,max=1000"`
 }
@@ -216,8 +219,24 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "the draw.io address must be an http(s) address, with no query"})
 		return
 	}
+	var sites []string
+	if req.EmbedSites != nil {
+		var bad string
+		if sites, bad = cleanEmbedSites(*req.EmbedSites); bad != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "“" + bad + "” isn't a site: write it as https://host or https://host:port (https://*.host for its subdomains)"})
+			return
+		}
+		if len(sites) > maxEmbedSites {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "up to 50 sites"})
+			return
+		}
+	}
 	if req.DrawioURL != nil {
 		h.setSetting(keyDrawioURL, cleanDrawioURL(*req.DrawioURL))
+	}
+	if req.EmbedSites != nil {
+		h.setSetting(keyEmbedSites, encodeList(sites))
+		h.refreshEmbedSites()
 	}
 	if req.PageVersionsKept != nil {
 		h.setSetting(keyVersionsKept, strconv.Itoa(*req.PageVersionsKept))

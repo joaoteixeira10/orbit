@@ -12,6 +12,7 @@
 @import "./shadcn.css";
 /* Liquid glass (each person's): unlayered, so it wins over the grounds. */
 @import "./glass.css";
+@import "./backdrop.css";
 @import "./motion.css";
 
 /* Dark mode follows the .dark class on <html>. */

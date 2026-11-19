@@ -116,6 +116,8 @@ export const plEn = {
     bookmarksDesc: 'Links worth keeping, with a preview, tags and read-later',
     focus: 'Focus timer',
     focusDesc: 'Work in focused stretches on a task; the time is logged on it',
+    apps: 'Apps',
+    appsDesc: 'Your other tools — a Gitea, a Grafana, a wiki — open here as tabs',
   },
   roles: { owner: 'Owner', editor: 'Editor', viewer: 'Viewer' },
   pages: {
@@ -445,6 +447,8 @@ export const plPt: typeof plEn = {
     bookmarksDesc: 'Ligações a guardar, com pré-visualização, etiquetas e para ler depois',
     focus: 'Temporizador de foco',
     focusDesc: 'Trabalhe em blocos concentrados numa tarefa; o tempo fica registado nela',
+    apps: 'Aplicações',
+    appsDesc: 'As suas outras ferramentas — um Gitea, um Grafana, uma wiki — abertas aqui em separadores',
   },
   roles: { owner: 'Proprietário', editor: 'Editor', viewer: 'Leitor' },
   pages: {

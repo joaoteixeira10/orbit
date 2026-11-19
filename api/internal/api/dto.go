@@ -117,4 +117,6 @@ type updatePrefsRequest struct {
 	Glass *int `json:"glass" binding:"omitempty,min=0,max=100"`
 	// Animations: the app's motion on (default) or off.
 	Animations *bool `json:"animations"`
+	// Background: plain (default), glow, dots, grid or aurora.
+	Background *string `json:"background" binding:"omitempty,oneof=plain glow dots grid aurora"`
 }

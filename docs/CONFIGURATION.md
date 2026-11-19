@@ -180,6 +180,23 @@ load nothing from outside, run draw.io's container next to Orbit and point
 (`jgraph/drawio`, Apache 2.0). Serve it on HTTPS when Orbit is (a browser
 won't frame `http://` in an `https://` page).
 
+## Apps (other sites in a frame)
+
+| Variable | Req | Default | Notes |
+|---|---|---|---|
+| `EMBED_SITES` | – | – | The sites the Apps module may show in a frame: a comma list of origins (`https://gitea.example.org,http://grafana:3000,https://*.example.org`). The owner sets them in **Owner → Owner → Apps**; once saved there, that list wins (even empty). They are added to the Content-Security-Policy's `frame-src`, and an app's address must be on one. |
+
+Each site must also let Orbit show it: its `Content-Security-Policy:
+frame-ancestors` must name Orbit's address, and its `X-Frame-Options` must
+not be `DENY` or `SAMEORIGIN` (Gitea's default — its `X_FRAME_OPTIONS` in
+`app.ini`; Grafana needs `allow_embedding = true`). Orbit asks each site
+once when its tab opens, and says so when it refuses; that check fetches
+the address from Orbit's server, only on the allowed sites, following
+redirects only while they stay on them. Serve the sites on HTTPS when Orbit
+is (a browser won't frame `http://` in an `https://` page), and on the same
+domain as Orbit if people sign in to them inside Orbit: some browsers
+(Safari) block a framed site's cookies when it's on another domain.
+
 ## Git
 
 | Variable | Req | Default | Notes |

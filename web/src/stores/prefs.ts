@@ -44,6 +44,19 @@ interface ServerPrefs {
   holiday_effects?: boolean // a holiday theme's falling snow, bats, confetti…
   glass?: number // liquid glass: 0 (solid) to 100
   animations?: boolean // the app's motion (off = still)
+  background?: Backdrop // what's behind the page
+}
+
+// What's behind the page (styles/backdrop.css): the plain ground, a glow of
+// the accent's colours, the glow with a dot grid or a line grid, or an
+// aurora. Each person's own.
+export const BACKDROPS = ['plain', 'glow', 'dots', 'grid', 'aurora'] as const
+export type Backdrop = (typeof BACKDROPS)[number]
+const asBackdrop = (v: unknown): Backdrop => (BACKDROPS.includes(v as Backdrop) ? (v as Backdrop) : 'plain')
+function applyBackdrop(b: Backdrop) {
+  const root = document.documentElement
+  if (b === 'plain') delete root.dataset.bg
+  else root.dataset.bg = b
 }
 
 // Liquid glass on <html>: the class, and how liquid as --glass (0–1).
@@ -148,6 +161,7 @@ export const usePrefsStore = defineStore('prefs', {
     // Liquid glass: how much the sidebar, bars, windows and menus are glass
     // (0 = solid, the default; to 100).
     glass: readGlass(),
+    background: asBackdrop(localStorage.getItem('orbit_background')),
     // The app's motion: switching theme, opening pages, finishing a task…
     animations: localStorage.getItem('orbit_animations') !== '0',
     weekStart: (Number(localStorage.getItem('orbit_week_start') ?? localeDefaults().weekStart) === 0 ? 0 : 1) as 0 | 1,
@@ -190,6 +204,7 @@ export const usePrefsStore = defineStore('prefs', {
     applyTheme() {
       document.documentElement.classList.toggle('dark', this.isDark())
       applyGlass(this.glass)
+      applyBackdrop(this.background)
       applyMotion(this.animations)
       // Re-resolve accent + favicon (the manifest background follows light/dark).
       // Lazy import avoids a store cycle and tolerates branding not yet loaded.
@@ -234,6 +249,8 @@ export const usePrefsStore = defineStore('prefs', {
       localStorage.setItem('orbit_glass', String(this.glass))
       this.animations = p.animations !== false
       localStorage.setItem('orbit_animations', this.animations ? '1' : '0')
+      this.background = asBackdrop(p.background)
+      localStorage.setItem('orbit_background', this.background)
       localStorage.setItem('orbit_editor_themes', JSON.stringify(this.editorThemes))
       mediaPrefs.remoteImages = this.remoteImages
       localStorage.setItem('orbit_remote_images', this.remoteImages)
@@ -345,6 +362,13 @@ export const usePrefsStore = defineStore('prefs', {
       applyGlass(this.glass)
       window.clearTimeout(glassTimer)
       glassTimer = window.setTimeout(() => void this.persist({ glass: this.glass }), 400)
+    },
+    // What's behind the page.
+    async setBackground(b: Backdrop) {
+      this.background = asBackdrop(b)
+      localStorage.setItem('orbit_background', this.background)
+      applyBackdrop(this.background)
+      await this.persist({ background: this.background })
     },
     // The app's animations on or off (the system's reduced motion still wins).
     async setAnimations(on: boolean) {

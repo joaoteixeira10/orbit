@@ -235,6 +235,9 @@ type UserPrefs struct {
 	// Animations: the app's motion (switching theme, opening pages, finishing
 	// a task…); off keeps it still. The system's reduced motion wins either way.
 	Animations bool `gorm:"not null;default:true" json:"animations"`
+	// Background: what's behind the page — "" / plain, glow, dots, grid or
+	// aurora (the accent's colours; a holiday or season lends its own).
+	Background string `gorm:"size:12" json:"background"`
 }
 
 // RefreshToken allows revocable refresh of short-lived JWT access tokens.
@@ -463,6 +466,7 @@ func AllModels() []any {
 		&JournalEntry{},
 		&Bookmark{},
 		&BookmarkImage{},
+		&WorkspaceApp{},
 		&CalDAVLink{},
 		&CalDAVItem{},
 		&CalendarFeed{},

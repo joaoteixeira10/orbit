@@ -49,6 +49,8 @@ type prefsResponse struct {
 	HolidayEffects bool `json:"holiday_effects"`
 	// Glass: how much the sidebar, bars, windows and menus are liquid glass (0–100; 0 = solid).
 	Glass int `json:"glass"`
+	// Background: what's behind the page — plain, glow, dots, grid or aurora.
+	Background string `json:"background"`
 	// Animations: the app's motion on, or off (still).
 	Animations bool `json:"animations"`
 }
@@ -108,6 +110,7 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 		HolidayEffects: p.HolidayEffects,
 		Glass:          p.Glass,
 		Animations:     p.Animations,
+		Background:     orDefault(p.Background, "plain"),
 	}
 }
 
@@ -311,9 +314,12 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 	if req.Animations != nil {
 		updates["animations"] = *req.Animations
 	}
+	if req.Background != nil {
+		updates["background"] = *req.Background
+	}
 	if req.DevTheme != nil {
 		if *req.DevTheme != "" && *req.DevTheme != "none" && validDevTheme(*req.DevTheme) != *req.DevTheme {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "dev_theme must be empty, none, blue, gold, red, ink or green"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "dev_theme must be empty, none, blue, gold, red, ink, green, purple or orange"})
 			return
 		}
 		updates["dev_theme"] = *req.DevTheme

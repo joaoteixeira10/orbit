@@ -49,6 +49,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'w/:ws/courses', name: 'ws-courses', component: () => import('@/views/CoursesView.vue') },
       { path: 'w/:ws/grades', name: 'ws-grades', component: () => import('@/views/GradesView.vue') },
       { path: 'w/:ws/bookmarks', name: 'ws-bookmarks', component: () => import('@/views/BookmarksView.vue') },
+      { path: 'w/:ws/apps/:id?', name: 'ws-apps', component: () => import('@/views/AppsView.vue') },
       { path: 'w/:ws/journal', name: 'ws-journal', component: () => import('@/views/JournalView.vue') },
       { path: 'w/:ws/goals', name: 'ws-goals', component: () => import('@/views/GoalsView.vue') },
       { path: 'w/:ws/focus', name: 'ws-focus', component: () => import('@/views/FocusView.vue') },

@@ -368,6 +368,21 @@ type BookmarkImage struct {
 	Data []byte `gorm:"not null"`
 }
 
+// ---- Apps -------------------------------------------------------------------
+
+// WorkspaceApp is a site pinned in a workspace with the Apps module (a
+// Gitea, a Grafana, a wiki): shown full-size in a frame, as a tab. Its
+// address must be on a site Orbit's owner allows (embed_sites). Position
+// orders the tabs.
+type WorkspaceApp struct {
+	Base
+	WorkspaceID string `gorm:"size:36;not null;index" json:"workspace_id"`
+	Name        string `gorm:"size:80;not null" json:"name"`
+	URL         string `gorm:"size:2000;not null" json:"url"`
+	Position    int    `gorm:"not null;default:0" json:"position"`
+	CreatedBy   string `gorm:"size:36" json:"created_by"`
+}
+
 // ---- Journal ----------------------------------------------------------------
 
 // JournalEntry is one day of someone's journal in a workspace with the

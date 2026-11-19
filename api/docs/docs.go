@@ -94,6 +94,109 @@ const docTemplate = `{
                 }
             }
         },
+        "/apps/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "Change an app",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Its name and/or address",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.appRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.appResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "Remove an app",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/apps/{id}/check": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "Can an app be shown in a frame?",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.appCheckResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant": {
             "get": {
                 "security": [
@@ -2499,6 +2602,30 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Drawing"
+                        }
+                    }
+                }
+            }
+        },
+        "/embed-sites": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "The sites the Apps module may show",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.embedSitesResponse"
                         }
                     }
                 }
@@ -9918,6 +10045,124 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/apps": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "A workspace's apps",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.appResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "Add an app",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Its name and address",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.appRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.appResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/apps/order": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "apps"
+                ],
+                "summary": "Reorder a workspace's apps",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "App ids in order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.orderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/bookmarks": {
             "get": {
                 "security": [
@@ -12641,6 +12886,67 @@ const docTemplate = `{
                 }
             }
         },
+        "api.appCheckResponse": {
+            "type": "object",
+            "properties": {
+                "frameable": {
+                    "description": "Frameable: yes (it may be shown here), no (it refuses: its headers, or\nit sends you to a site that isn't allowed) or unknown (Orbit couldn't\nreach it — the browser may still).",
+                    "type": "string"
+                },
+                "site": {
+                    "type": "string"
+                },
+                "why": {
+                    "description": "no: headers | elsewhere",
+                    "type": "string"
+                }
+            }
+        },
+        "api.appRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 80
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.appResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "description": "Allowed: its address is on an allowed site still (the owner may have\ntaken the site off the list since).",
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "api.assistantApplyRequest": {
             "type": "object",
             "properties": {
@@ -13238,7 +13544,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "developer_theme": {
-                    "description": "blue | gold | red | ink | green",
+                    "description": "blue | gold | red | ink | green | purple | orange",
                     "type": "string"
                 },
                 "developer_themes_enabled": {
@@ -13976,6 +14282,17 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.embedSitesResponse": {
+            "type": "object",
+            "properties": {
+                "sites": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -16606,6 +16923,10 @@ const docTemplate = `{
                     "description": "Animations: the app's motion on, or off (still).",
                     "type": "boolean"
                 },
+                "background": {
+                    "description": "Background: what's behind the page — plain, glow, dots, grid or aurora.",
+                    "type": "string"
+                },
                 "calendar_colors": {
                     "description": "CalendarColors: own colours for calendars (a workspace id, list:\u003cid\u003e, sub:\u003cid\u003e, holidays).",
                     "type": "object",
@@ -17658,6 +17979,17 @@ const docTemplate = `{
                     "description": "Animations: the app's motion on (default) or off.",
                     "type": "boolean"
                 },
+                "background": {
+                    "description": "Background: plain (default), glow, dots, grid or aurora.",
+                    "type": "string",
+                    "enum": [
+                        "plain",
+                        "glow",
+                        "dots",
+                        "grid",
+                        "aurora"
+                    ]
+                },
                 "calendar_colors": {
                     "description": "Own colours for calendars: key → \"#rrggbb\", or \"\" to use the\ncalendar's own again.",
                     "type": "object",
@@ -17850,6 +18182,13 @@ const docTemplate = `{
                 "drawio_url": {
                     "description": "\"\" goes back to DRAWIO_URL (or draw.io's own)",
                     "type": "string"
+                },
+                "embed_sites": {
+                    "description": "EmbedSites: the sites the Apps module may show (origins; \"*.\" for\nsubdomains). Once saved it wins over EMBED_SITES, even empty.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "favicon_data_url": {
                     "type": "string"
@@ -19307,6 +19646,10 @@ const docTemplate = `{
                 "animations": {
                     "description": "Animations: the app's motion (switching theme, opening pages, finishing\na task…); off keeps it still. The system's reduced motion wins either way.",
                     "type": "boolean"
+                },
+                "background": {
+                    "description": "Background: what's behind the page — \"\" / plain, glow, dots, grid or\naurora (the accent's colours; a holiday or season lends its own).",
+                    "type": "string"
                 },
                 "calendar_colors": {
                     "description": "CalendarColors are this person's own colours for calendars (JSON\n{key: \"#rrggbb\"}; keys: a workspace id, \"list:\u003cid\u003e\", \"sub:\u003cid\u003e\",\n\"holidays\"); absent = the calendar's own colour.",

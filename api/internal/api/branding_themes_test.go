@@ -26,15 +26,16 @@ func TestDeveloperThemes(t *testing.T) {
 	if !b.DeveloperThemesEnabled || b.DeveloperTheme != "ink" || b.AssetSourceLogo != "keep" || b.AssetSourceFavicon != "theme" {
 		t.Errorf("after save: %+v", b)
 	}
-	authdo(r, "PUT", "/api/v1/settings", `{"developer_theme":"purple"}`, owner)
+	authdo(r, "PUT", "/api/v1/settings", `{"developer_theme":"teal"}`, owner)
 	_ = json.Unmarshal(do(r, "GET", "/api/v1/branding", "").Body.Bytes(), &b)
 	if b.DeveloperTheme != "blue" {
 		t.Errorf("an unknown theme is clamped to blue: %q", b.DeveloperTheme)
 	}
 }
 
-// TestDeveloperThemesGreenAndPersonal: Forest Green is a theme; the owner can
-// let each person choose, and a person's choice is a checked preference.
+// TestDeveloperThemesGreenAndPersonal: Forest Green is a theme (and Royal
+// Purple and Ember Orange); the owner can let each person choose, and a
+// person's choice is a checked preference.
 func TestDeveloperThemesGreenAndPersonal(t *testing.T) {
 	r, _ := newTestRouterDB(t, false)
 	owner := loginTok(t, r, "admin", "adminpass")
@@ -44,12 +45,19 @@ func TestDeveloperThemesGreenAndPersonal(t *testing.T) {
 	if b.DeveloperTheme != "green" || !b.DeveloperThemesPersonal {
 		t.Fatalf("branding: %+v", b)
 	}
-	for _, v := range []string{"", "none", "gold", "green"} {
+	for _, v := range []string{"purple", "orange"} {
+		authdo(r, "PUT", "/api/v1/settings", `{"developer_theme":"`+v+`"}`, owner)
+		_ = json.Unmarshal(do(r, "GET", "/api/v1/branding", "").Body.Bytes(), &b)
+		if b.DeveloperTheme != v {
+			t.Errorf("instance theme %s: %q", v, b.DeveloperTheme)
+		}
+	}
+	for _, v := range []string{"", "none", "gold", "green", "purple", "orange"} {
 		if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"dev_theme":"`+v+`"}`, owner); w.Code != http.StatusOK {
 			t.Errorf("dev_theme %q: %d %s", v, w.Code, w.Body.String())
 		}
 	}
-	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"dev_theme":"purple"}`, owner); w.Code != http.StatusBadRequest {
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"dev_theme":"teal"}`, owner); w.Code != http.StatusBadRequest {
 		t.Errorf("an unknown theme was accepted: %d", w.Code)
 	}
 }
@@ -276,5 +284,29 @@ func TestDayNightTheme(t *testing.T) {
 		if w := authdo(r, "PUT", "/api/v1/me/prefs", body, owner); w.Code != http.StatusBadRequest {
 			t.Errorf("%s: %d", body, w.Code)
 		}
+	}
+}
+
+// TestBackgroundPref: plain by default; each person's choice of the five is
+// kept, anything else refused.
+func TestBackgroundPref(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p prefsResponse
+	_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+	if p.Background != "plain" {
+		t.Fatalf("default: %q", p.Background)
+	}
+	for _, bg := range []string{"glow", "dots", "grid", "aurora", "plain"} {
+		if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"background":"`+bg+`"}`, owner); w.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", bg, w.Code, w.Body.String())
+		}
+		_ = json.Unmarshal(authdo(r, "GET", "/api/v1/me/prefs", "", owner).Body.Bytes(), &p)
+		if p.Background != bg {
+			t.Errorf("kept %s: %q", bg, p.Background)
+		}
+	}
+	if w := authdo(r, "PUT", "/api/v1/me/prefs", `{"background":"stars"}`, owner); w.Code != http.StatusBadRequest {
+		t.Errorf("stars: %d", w.Code)
 	}
 }

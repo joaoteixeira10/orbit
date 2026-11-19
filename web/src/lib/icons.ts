@@ -9,7 +9,7 @@ import {
   Home, House, Landmark, Laptop, Leaf, Lightbulb, ListChecks, Mountain, Music, NotebookPen, Palette, PawPrint, Pencil,
   Plane, Repeat, Rocket, ShoppingCart, Sparkles, Star, Stethoscope, Sun, Target, Timer, Trophy, Users, Wallet, Wrench,
   Bell, Baby, Bike, Brush, Sheet, Workflow, Building2, Clapperboard, Languages, Microscope, PiggyBank, Shirt, Sprout, Tent, Ticket,
-  StickyNote, ChartGantt, ChartPie, GitBranch,
+  StickyNote, ChartGantt, ChartPie, GitBranch, AppWindow,
 } from 'lucide-vue-next'
 
 export const ICONS: Record<string, Component> = {
@@ -24,7 +24,7 @@ export const ICONS: Record<string, Component> = {
   'shopping-cart': ShoppingCart, shirt: Shirt, gift: Gift, wallet: Wallet, 'piggy-bank': PiggyBank, music: Music,
   film: Film, clapperboard: Clapperboard, 'gamepad-2': Gamepad2, camera: Camera, palette: Palette, brush: Brush, sheet: Sheet, workflow: Workflow,
   ticket: Ticket, bell: Bell, timer: Timer, repeat: Repeat, bookmark: Bookmark,
-  'sticky-note': StickyNote, 'chart-gantt': ChartGantt, 'chart-pie': ChartPie, 'git-branch': GitBranch,
+  'sticky-note': StickyNote, 'chart-gantt': ChartGantt, 'chart-pie': ChartPie, 'git-branch': GitBranch, 'app-window': AppWindow,
 }
 
 // The picker's order: a few rows by theme.
@@ -34,7 +34,7 @@ export const ICON_CHOICES = Object.keys(ICONS).filter((k) => k !== 'home')
 export const MODULE_ROUTES: Record<string, string> = {
   home: 'ws', notes: 'ws-notes', pages: 'ws-pages', tasks: 'ws-tasks', board: 'ws-board',
   timeline: 'ws-timeline', charts: 'ws-charts', calendar: 'ws-calendar', courses: 'ws-courses', grades: 'ws-grades',
-  whiteboards: 'ws-whiteboards', sheets: 'ws-sheets', diagrams: 'ws-diagrams', files: 'ws-files', habits: 'ws-habits', focus: 'ws-focus', goals: 'ws-goals', journal: 'ws-journal', bookmarks: 'ws-bookmarks',
+  whiteboards: 'ws-whiteboards', sheets: 'ws-sheets', diagrams: 'ws-diagrams', files: 'ws-files', habits: 'ws-habits', focus: 'ws-focus', goals: 'ws-goals', journal: 'ws-journal', bookmarks: 'ws-bookmarks', apps: 'ws-apps',
 }
 
 // Apple's system colours (light values; tiles keep them in dark mode too).

@@ -3781,6 +3781,12 @@ test('workspace modules: the owner drags one to a new place, and the sidebar fol
     await expect(page.getByRole('dialog').locator('.group-row[data-id="notes"]')).toBeVisible({ timeout: 1500 })
   }).toPass()
   const dialog = page.getByRole('dialog')
+  // Measured once the window has finished sliding in.
+  await expect.poll(async () => {
+    const y1 = (await dialog.locator('.group-row[data-id="notes"]').boundingBox())?.y
+    await page.waitForTimeout(120)
+    return y1 === (await dialog.locator('.group-row[data-id="notes"]').boundingBox())?.y
+  }).toBe(true)
   // Notes, by its grip, above Tasks.
   const a = (await dialog.locator('.group-row[data-id="notes"] .drag').boundingBox())!
   const b = (await dialog.locator('.group-row[data-id="tasks"]').boundingBox())!

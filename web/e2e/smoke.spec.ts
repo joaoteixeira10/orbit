@@ -1367,11 +1367,23 @@ test('Quick Draw: its own canvas — pens, hold to snap, a real eraser, colours 
   const cx = box.x + box.width / 2
   const cy = box.y + box.height / 2 - 60
 
+  // The first save is slow: the circle is drawn while it's on its way, and is
+  // saved after it all the same (it was once lost).
+  let slowed = false
+  await page.route(`**/api/v1/drawings/${id}*`, async (r) => {
+    if (r.request().method() === 'PUT' && r.request().postData()?.includes('"scene"') && !slowed) {
+      slowed = true
+      await new Promise((res) => setTimeout(res, 3000))
+    }
+    await r.continue()
+  })
+
   // A line with the pen.
   await page.mouse.move(cx - 200, cy)
   await page.mouse.down()
   await page.mouse.move(cx + 200, cy + 40, { steps: 20 })
   await page.mouse.up()
+  await page.waitForTimeout(1500) // its save under way
   // A wobbly circle, held at the end: it snaps into a clean one.
   await page.mouse.move(cx + 60, cy + 150)
   await page.mouse.down()

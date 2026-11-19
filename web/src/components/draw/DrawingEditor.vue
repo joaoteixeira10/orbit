@@ -33,6 +33,9 @@ const canvasReady = ref(false)
 const state = ref<'idle' | 'waiting' | 'saving' | 'saved' | 'error'>('idle')
 let timer: ReturnType<typeof setTimeout> | undefined
 let running: Promise<void> = Promise.resolve()
+// Counts the changes: a save that ends with a newer one waiting leaves it
+// waiting (a stroke made while the last was saving is saved too).
+let edits = 0
 
 async function load() {
   try {
@@ -50,6 +53,7 @@ function changed() {
   willSave()
 }
 function willSave() {
+  edits++
   state.value = 'waiting'
   clearTimeout(timer)
   timer = setTimeout(() => void save(), 1200)
@@ -131,13 +135,14 @@ function save(extra: { title?: string } = {}): Promise<void> {
       state.value = 'idle'
       return
     }
+    const gen = edits
     const snap = state.value === 'waiting' ? await canvas.value?.snapshot() : null
     if (!snap && extra.title === undefined) return
     state.value = 'saving'
     try {
       const saved = await drawingsApi.save(d.id, { ...(snap ?? {}), ...extra, version: d.version }, !!shared.value)
       drawing.value = { ...d, ...saved, scene: saved.scene ?? d.scene }
-      state.value = 'saved'
+      state.value = edits === gen ? 'saved' : 'waiting'
       emit('saved', drawing.value)
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 409 && shared.value) {

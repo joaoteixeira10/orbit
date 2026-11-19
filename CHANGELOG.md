@@ -84,6 +84,8 @@ merge, not at release time.
 
 - Moving a task to another list from its details (List) failed with "that
   list isn't in this workspace"; dragging it worked.
+- A stroke drawn on a whiteboard or in Quick Draw while the one before it was
+  still saving could be lost; it is now saved after it.
 - The bell on a phone showed an old list after the app had been in the
   background (a reminder that came then wasn't there): it now catches up
   when opened, when you come back to the app and after the connection

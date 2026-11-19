@@ -48,9 +48,11 @@ const description = ref('')
 const notes = ref('')
 const modules = ref<ModuleKey[]>([])
 
+// Filled in as it opens, and again if it was opened before the workspace had
+// loaded, or is asked for another workspace or tab while open.
 watch(
-  () => props.open,
-  async (o) => {
+  [() => props.open, () => props.wsId, () => props.initialTab, () => !!ws.value],
+  async ([o]) => {
     if (!o || !ws.value) return
     tab.value = props.initialTab ?? 'general'
     name.value = ws.value.name

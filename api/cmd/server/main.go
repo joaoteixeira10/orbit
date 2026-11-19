@@ -5,7 +5,7 @@
 // TLS_KEY_FILE.
 //
 //	@title			Orbit API
-//	@version		0.7.0
+//	@version		0.7.1
 //	@description	Workspaces for school, work and life: pages, tasks, boards and calendars.
 //	@BasePath		/api/v1
 //

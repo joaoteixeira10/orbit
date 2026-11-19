@@ -6,6 +6,8 @@ merge, not at release time.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-19
+
 ### Fixed
 
 - A long status name ran out of its field in a task's details, and long

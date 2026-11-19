@@ -2941,16 +2941,18 @@ test('files shown in place: a Word document, slides, a spreadsheet, a PDF\'s pag
   const task = await (await request.post(`/api/v1/workspaces/${ws.id}/tasks`, { headers: H, data: { title: 'Pay rent', list_id: list.id } })).json()
   await request.post(`/api/v1/uploads?target=task&target_id=${task.id}`, { headers: H, multipart: { file: { name: 'receipt.pdf', mimeType: 'application/pdf', buffer: textPdf(['Paid']) } } })
   await page.goto(`/w/${ws.id}/tasks/all?task=${task.id}`)
-  await page.getByText('receipt.pdf').click()
+  // The attachment itself (the pointer left on it shows its name in a tooltip too).
+  const receipt = page.getByRole('button', { name: /^PDF receipt\.pdf/ })
+  await receipt.click()
   await expect(viewer.getByTestId('viewer-pdf').locator('canvas.drawn')).toHaveCount(1)
   await viewer.getByTestId('viewer-close').click()
   await expect(viewer).toBeHidden()
-  await expect(page.getByText('receipt.pdf')).toBeVisible() // the task is still open
-  await page.getByText('receipt.pdf').click()
+  await expect(receipt).toBeVisible() // the task is still open
+  await receipt.click()
   await expect(viewer).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(viewer).toBeHidden()
-  await expect(page.getByText('receipt.pdf')).toBeVisible()
+  await expect(receipt).toBeVisible()
 })
 
 // signInAs signs someone else in (a second browser), setting a new password

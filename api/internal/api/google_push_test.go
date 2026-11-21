@@ -30,10 +30,10 @@ func TestGooglePush(t *testing.T) {
 	var stopped []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.URL.Path == "/token":
+		switch r.URL.Path {
+		case "/token":
 			_, _ = w.Write([]byte(`{"access_token":"acc-1","expires_in":3600}`))
-		case r.URL.Path == "/calendar/v3/calendars/work-cal/events/watch":
+		case "/calendar/v3/calendars/work-cal/events/watch":
 			if r.Header.Get("Authorization") != "Bearer acc-1" {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
@@ -45,7 +45,7 @@ func TestGooglePush(t *testing.T) {
 			mu.Unlock()
 			exp := strconv.FormatInt(time.Now().Add(7*24*time.Hour).UnixMilli(), 10)
 			_, _ = w.Write([]byte(`{"id":"` + body["id"].(string) + `","resourceId":"res-1","expiration":"` + exp + `"}`))
-		case r.URL.Path == "/calendar/v3/channels/stop":
+		case "/calendar/v3/channels/stop":
 			var body map[string]string
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			mu.Lock()

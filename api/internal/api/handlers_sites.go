@@ -648,7 +648,7 @@ func (h *Handlers) siteRobots(c *gin.Context, slug string) {
 
 // siteTags are the page's head tags for a site's page: its title and words
 // for link previews, and whether search engines may list it.
-func (h *Handlers) siteTags(c *gin.Context, slug, pageID string) (title, desc string, indexed, ok bool) {
+func (h *Handlers) siteTags(slug, pageID string) (title, desc string, indexed, ok bool) {
 	ps, found := h.siteBySlug(slug)
 	if !found {
 		return "", "", false, false
@@ -691,7 +691,7 @@ func (h *Handlers) siteHead(c *gin.Context) string {
 	} else {
 		return ""
 	}
-	title, desc, indexed, ok := h.siteTags(c, s, page)
+	title, desc, indexed, ok := h.siteTags(s, page)
 	if !ok {
 		return `<meta name="robots" content="noindex, nofollow" />`
 	}

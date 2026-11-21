@@ -87,6 +87,10 @@ export interface Branding {
   show_app_name: boolean
   show_logo: boolean
   login_message: string
+  has_terms?: boolean // the owner wrote terms of service (/terms)
+  // Write-only through PUT /settings (read at /legal/privacy and /legal/terms).
+  privacy_policy?: string
+  terms_of_service?: string
   oidc_enabled: boolean
   sso_providers?: { id: string; name: string; kind: string }[]
   hide_local_login: boolean

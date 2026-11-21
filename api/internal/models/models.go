@@ -213,6 +213,11 @@ type UserPrefs struct {
 	// {key: "#rrggbb"}; keys: a workspace id, "list:<id>", "sub:<id>",
 	// "holidays"); absent = the calendar's own colour.
 	CalendarColors JSONText `gorm:"type:text" json:"calendar_colors"`
+	// CalendarHidden is which calendars this person keeps out of view, per
+	// calendar (JSON {scope: [key]}; scope "all" is the calendar of all
+	// workspaces, else a workspace id; keys as for CalendarColors, plus
+	// "events:<workspace id>" for a workspace's own events there).
+	CalendarHidden JSONText `gorm:"type:text" json:"calendar_hidden"`
 	// FocusLengths are this person's own lengths for the focus timer, in
 	// minutes (JSON []int), besides 15, 25 and 50.
 	FocusLengths JSONText `gorm:"type:text" json:"focus_lengths"`
@@ -425,6 +430,7 @@ func AllModels() []any {
 		&Page{},
 		&PageVersion{},
 		&ShareLink{},
+		&Site{},
 		&PageChange{},
 		&Form{},
 		&PageFavorite{},

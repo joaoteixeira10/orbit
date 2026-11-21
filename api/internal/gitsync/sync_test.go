@@ -46,10 +46,12 @@ type fakeGitea struct {
 	milestones []Milestone
 	hooks      map[int64]map[string]any
 	hookDenied bool
+	// Files at /attachments/<uuid> (a signed-in account's only).
+	files map[string][]byte
 }
 
 func newFake() *fakeGitea {
-	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{}, hooks: map[int64]map[string]any{},
+	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{}, hooks: map[int64]map[string]any{}, files: map[string][]byte{},
 		milestones: []Milestone{{ID: 501, Number: 1, Title: "v1.0"}, {ID: 502, Number: 2, Title: "v2.0"}},
 		labels:     []Label{{ID: 1, Name: "Doing"}, {ID: 2, Name: "Review"}, {ID: 3, Name: "bug"}}}
 }
@@ -299,6 +301,44 @@ func (f *fakeGitea) handler() http.Handler {
 		c := f.comment(num(r), "ana", in.Body) // the only token is ana's
 		w.WriteHeader(http.StatusCreated)
 		writeJSON(w, c)
+	}))
+	mux.HandleFunc("GET /attachments/{uuid}", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		data, ok := f.files[r.PathValue("uuid")]
+		f.mu.Unlock()
+		if r.Header.Get("Authorization") != "token good" || !ok {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(data)
+	})
+	mux.HandleFunc("POST /api/v1/repos/o/r/issues/comments/{id}/assets", write(func(w http.ResponseWriter, r *http.Request) {
+		file, fh, err := r.FormFile("attachment")
+		if err != nil {
+			http.Error(w, `{"message":"no file"}`, http.StatusBadRequest)
+			return
+		}
+		data, _ := io.ReadAll(file)
+		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		f.mu.Lock()
+		uuid := "up-" + strconv.Itoa(len(f.files)+1)
+		f.files[uuid] = data
+		a := Asset{Name: fh.Filename, UUID: uuid, URL: "http://" + r.Host + "/attachments/" + uuid}
+		for n, cs := range f.comments {
+			for i := range cs {
+				if cs[i].ID == id {
+					f.comments[n][i].Assets = append(f.comments[n][i].Assets, a)
+				}
+			}
+		}
+		f.mu.Unlock()
+		w.WriteHeader(http.StatusCreated)
+		writeJSON(w, a)
+	}))
+	mux.HandleFunc("DELETE /api/v1/repos/o/r/issues/comments/{id}", write(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		f.editComment(id, "")
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	mux.HandleFunc("PATCH /api/v1/repos/o/r/issues/comments/{id}", write(func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
@@ -1102,5 +1142,120 @@ func TestHooks(t *testing.T) {
 	f.e.DisableHook(context.Background(), f.ana, &f.link)
 	if err := f.e.VerifyHook(f.link, body, h); err == nil {
 		t.Fatal("still verifying after turning off")
+	}
+}
+
+// TestCommentFiles: a comment's pictures on the server, and the files
+// attached under it, come into the task as its files (the comment showing
+// Orbit's copies; others' pictures left alone); a file added in Orbit goes
+// to the issue as a comment with it, isn't brought back as a comment, and
+// its comment goes when the file does.
+func TestCommentFiles(t *testing.T) {
+	f := setup(t)
+	f.fake.add("Fix login")
+	f.sync(t)
+	png := []byte("\x89PNG\r\n\x1a\n" + strings.Repeat("x", 64))
+	f.fake.files["u1"] = png
+	f.fake.files["u2"] = []byte("the log")
+	f.fake.comment(1, "zed", "Look: ![shot.png](/attachments/u1) and ![x](https://example.com/x.png)")
+	c := f.fake.comment(1, "ana", "see attached")
+	f.fake.mu.Lock()
+	for i := range f.fake.comments[1] {
+		if f.fake.comments[1][i].ID == c.ID {
+			f.fake.comments[1][i].Assets = []Asset{{Name: "log.txt", UUID: "u2", URL: f.srv.URL + "/attachments/u2"}}
+		}
+	}
+	f.fake.mu.Unlock()
+	f.sync(t)
+
+	task := f.task(t)
+	var cs []models.TaskComment
+	f.db.Where("task_id = ?", task.ID).Order("git_comment_id").Find(&cs)
+	var files []models.Upload
+	f.db.Where("target = ? AND target_id = ?", "task", task.ID).Order("name").Find(&files)
+	if len(cs) != 2 || len(files) != 2 {
+		t.Fatalf("comments %+v, files %+v", cs, files)
+	}
+	logFile, shot := files[0], files[1]
+	if shot.Name != "shot.png" || shot.Type != "image/png" || shot.GitURL != f.srv.URL+"/attachments/u1" || logFile.Name != "log.txt" {
+		t.Fatalf("files: %+v", files)
+	}
+	want := "Look: ![shot.png](/api/v1/uploads/" + shot.ID + "/shot.png) and ![x](https://example.com/x.png)"
+	if cs[0].Body != want {
+		t.Errorf("picture comment:\n got %q\nwant %q", cs[0].Body, want)
+	}
+	if !strings.Contains(cs[1].Body, "📎 [log.txt](/api/v1/uploads/"+logFile.ID+"/log.txt)") {
+		t.Errorf("attached file: %q", cs[1].Body)
+	}
+	// Synced again: nothing new.
+	f.sync(t)
+	var n int64
+	f.db.Model(&models.Upload{}).Where("target_id = ?", task.ID).Count(&n)
+	if n != 2 {
+		t.Errorf("files after a second sync: %d", n)
+	}
+
+	// From Orbit: a file on the task goes to the issue.
+	mine := models.Upload{WorkspaceID: task.WorkspaceID, OwnerID: f.ana, Target: "task", TargetID: task.ID, Name: "plan.txt"}
+	f.db.Create(&mine)
+	if err := f.e.PushFile(context.Background(), f.ana, "Ana", &task, &mine, []byte("the plan")); err != nil {
+		t.Fatal(err)
+	}
+	remote := f.fake.comments[1]
+	last := remote[len(remote)-1]
+	if last.Body != "📎 **plan.txt**" || len(last.Assets) != 1 || last.Assets[0].Name != "plan.txt" || mine.GitCommentID != last.ID || !strings.Contains(mine.GitURL, "/attachments/") {
+		t.Fatalf("pushed: %+v / %+v", last, mine)
+	}
+	f.sync(t)
+	f.db.Where("task_id = ?", task.ID).Find(&cs)
+	if len(cs) != 2 {
+		t.Errorf("the file's comment came back as a comment: %+v", cs)
+	}
+	if err := f.e.DropFile(context.Background(), f.ana, &task, mine); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.fake.comments[1]) != 2 {
+		t.Errorf("its comment should be gone: %+v", f.fake.comments[1])
+	}
+
+	// An edit in Orbit sends the server's addresses, not Orbit's.
+	if got := f.e.remoteLinks(cs[0].Body); !strings.Contains(got, f.srv.URL+"/attachments/u1") || strings.Contains(got, "/api/v1/uploads/") {
+		t.Errorf("remote links: %q", got)
+	}
+}
+
+// TestStale: comments brought before pictures were are fixed on the next sync.
+func TestStale(t *testing.T) {
+	for body, want := range map[string]bool{
+		"![a](/attachments/x)":                                                          true,
+		"![a](/api/v1/uploads/1/a.png)":                                                 false,
+		"![a](https://github.com/user-attachments/assets/1)":                            true,
+		"[a link](https://example.com)":                                                 false,
+		"<img src=\"https://private-user-images.githubusercontent.com/1/a.png?jwt=x\">": true,
+	} {
+		if stale(body) != want {
+			t.Errorf("stale(%q) != %v", body, want)
+		}
+	}
+}
+
+// TestFileAddresses: which addresses in a comment are the server's own
+// files, and where each is fetched from; GitHub's pictures from the
+// comment's HTML, signed.
+func TestFileAddresses(t *testing.T) {
+	gl := &Client{base: "https://gitlab.example.org", kind: KindGitLab}
+	if got, ok := gl.serverFile("/uploads/abc123/shot.png", "team/app", "web"); !ok || got != "https://gitlab.example.org/api/v4/projects/team%2Fapp%2Fweb/uploads/abc123/shot.png" {
+		t.Errorf("gitlab: %q %v", got, ok)
+	}
+	if _, ok := gl.serverFile("https://elsewhere.org/uploads/a/b.png", "o", "r"); ok {
+		t.Error("another host isn't the server's")
+	}
+	gt := &Client{base: "https://git.example.org/gitea", kind: KindGitea}
+	if got, ok := gt.serverFile("/gitea/attachments/u1", "o", "r"); !ok || got != "https://git.example.org/gitea/attachments/u1" {
+		t.Errorf("gitea: %q %v", got, ok)
+	}
+	html := `<p><a href="x"><img src="https://private-user-images.githubusercontent.com/1/a.png?jwt=t&amp;x=1" alt="a"></a> <img src="https://example.com/b.png"></p>`
+	if got := ghSigned(html); len(got) != 1 || got[0] != "https://private-user-images.githubusercontent.com/1/a.png?jwt=t&x=1" {
+		t.Errorf("github signed: %v", got)
 	}
 }

@@ -24,10 +24,15 @@ type uploadResponse struct {
 	models.Upload
 	URL   string `json:"url"`
 	Image bool   `json:"image"` // shown in the page (a raster image)
+	// FromGit: brought from a comment on the task's git issue (it shows in
+	// that comment).
+	FromGit bool `json:"from_git,omitempty"`
+	// GitError: why a task's new file didn't reach its git issue.
+	GitError string `json:"git_error,omitempty"`
 }
 
 func toUploadResponse(u models.Upload) uploadResponse {
-	return uploadResponse{Upload: u, URL: uploads.URL(u), Image: uploads.Inline(u.Type)}
+	return uploadResponse{Upload: u, URL: uploads.URL(u), Image: uploads.Inline(u.Type), FromGit: u.GitURL != "" && u.GitCommentID == 0}
 }
 
 // uploadTarget checks the caller may see (need = viewer) or change (editor)
@@ -164,7 +169,28 @@ func (h *Handlers) uploadFile(c *gin.Context) {
 	if wsID != "" {
 		h.publishWS(c, wsID, "uploads")
 	}
-	c.JSON(http.StatusCreated, toUploadResponse(u))
+	out := toUploadResponse(u)
+	out.GitError = h.gitFile(c, &u, data)
+	c.JSON(http.StatusCreated, out)
+}
+
+// gitFile sends a task's new file to its git issue, as a comment with it;
+// it returns the error to show, if any.
+func (h *Handlers) gitFile(c *gin.Context, u *models.Upload, data []byte) string {
+	if u.Target != uploads.Task || !h.gitOn() {
+		return ""
+	}
+	var t models.Task
+	if h.db.First(&t, "id = ?", u.TargetID).Error != nil || t.GitIssueID == 0 {
+		return ""
+	}
+	ctx, cancel := gitCtx(c)
+	defer cancel()
+	uid := auth.UserID(c)
+	if err := h.git.PushFile(ctx, uid, h.actorName(uid), &t, u, data); err != nil {
+		return "the file is in Orbit, but not on git: " + err.Error()
+	}
+	return ""
 }
 
 // listUploads lists the files on a page, task or note.
@@ -309,6 +335,15 @@ func (h *Handlers) deleteUpload(c *gin.Context) {
 	if err != nil {
 		h.internalError(c, err, "could not delete the file")
 		return
+	}
+	// A file sent to a git issue: its comment there goes too.
+	if u.GitCommentID != 0 && u.Target == uploads.Task && h.gitOn() {
+		var t models.Task
+		if h.db.First(&t, "id = ?", u.TargetID).Error == nil {
+			ctx, cancel := gitCtx(c)
+			_ = h.git.DropFile(ctx, auth.UserID(c), &t, u)
+			cancel()
+		}
 	}
 	if u.WorkspaceID != "" {
 		h.publishWS(c, u.WorkspaceID, "uploads")

@@ -50,6 +50,9 @@ type Syncer struct {
 	// Bearer gives a link signed in with a provider (Google) its access
 	// token; links without a provider use their user name and password.
 	Bearer func(ctx context.Context, link models.CalDAVLink) (string, error)
+	// Watch keeps a provider's link watched for instant updates (Google),
+	// after each timed sync; nil: none.
+	Watch func(ctx context.Context, link models.CalDAVLink)
 
 	mu      sync.Mutex
 	running map[string]bool // link id → again after this one
@@ -106,19 +109,31 @@ func (s *Syncer) Account(username, password string) *Client {
 // Seal stores a password sealed with the master key.
 func (s *Syncer) Seal(password string) ([]byte, error) { return s.sealer.Seal([]byte(password)) }
 
-// Kick syncs a workspace's link soon (after a change in Orbit), in the
-// background.
+// Kick syncs a workspace's links soon (after a change in Orbit), in the
+// background (the read-only ones have nothing to send).
 func (s *Syncer) Kick(wsID string) {
-	var link models.CalDAVLink
-	if s.db.Where("workspace_id = ?", wsID).First(&link).Error != nil {
+	var ids []string
+	s.db.Model(&models.CalDAVLink{}).Where("workspace_id = ? AND read_only = ?", wsID, false).Pluck("id", &ids)
+	if len(ids) == 0 {
 		return
 	}
 	go func() {
 		time.Sleep(s.delay)
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 		defer cancel()
-		_ = s.Sync(ctx, link.ID)
+		for _, id := range ids {
+			_ = s.Sync(ctx, id)
+		}
 	}()
+}
+
+// CalendarOf is which of a workspace's events a link keeps in step: an
+// extra calendar its own, the main one the workspace's own Events.
+func CalendarOf(link models.CalDAVLink) string {
+	if link.Extra {
+		return link.ID
+	}
+	return ""
 }
 
 // RunAll syncs every link (the timer).
@@ -130,6 +145,12 @@ func (s *Syncer) RunAll(ctx context.Context) {
 			return
 		}
 		_ = s.Sync(ctx, id)
+		if s.Watch != nil {
+			var link models.CalDAVLink
+			if s.db.First(&link, "id = ?", id).Error == nil && link.Provider != "" {
+				s.Watch(ctx, link)
+			}
+		}
 	}
 }
 
@@ -214,7 +235,7 @@ func (s *Syncer) pass(ctx context.Context, cl *Client, link *models.CalDAVLink) 
 		}
 	}
 	var evs []models.Event
-	s.db.Where("workspace_id = ? AND (course_id = '' OR course_id IS NULL)", link.WorkspaceID).Find(&evs)
+	s.db.Where("workspace_id = ? AND (course_id = '' OR course_id IS NULL) AND calendar_id = ?", link.WorkspaceID, CalendarOf(*link)).Find(&evs)
 	byID := map[string]*models.Event{}
 	for i := range evs {
 		byID[evs[i].ID] = &evs[i]
@@ -252,7 +273,7 @@ func (s *Syncer) pass(ctx context.Context, cl *Client, link *models.CalDAVLink) 
 			continue
 		}
 		if ev := byID[it.EventID]; ev != nil {
-			if changedSince(*ev, *it) {
+			if changedSince(*ev, *it) && !link.ReadOnly {
 				// Changed here since: it goes back up as a new object.
 				s.db.Delete(it)
 				delete(byEvent, it.EventID)
@@ -266,6 +287,10 @@ func (s *Syncer) pass(ctx context.Context, cl *Client, link *models.CalDAVLink) 
 		s.db.Delete(it)
 		delete(byEvent, it.EventID)
 		delete(byURL, u)
+	}
+
+	if link.ReadOnly {
+		return res, nil // nothing goes back to a calendar that may only be read
 	}
 
 	// 3. Changed or deleted in Orbit.
@@ -355,7 +380,7 @@ func (s *Syncer) pull(link *models.CalDAVLink, o Object, etag string, byURL map[
 	if it != nil {
 		ev = byID[it.EventID]
 	}
-	if ev != nil && changedSince(*ev, *it) && !r.Modified.IsZero() && r.Modified.Before(ev.UpdatedAt) {
+	if ev != nil && !link.ReadOnly && changedSince(*ev, *it) && !r.Modified.IsZero() && r.Modified.Before(ev.UpdatedAt) {
 		// Changed on both sides, Orbit's later: keep it (it goes up below).
 		s.db.Model(it).Update("e_tag", etag)
 		it.ETag = etag
@@ -363,7 +388,7 @@ func (s *Syncer) pull(link *models.CalDAVLink, o Object, etag string, byURL map[
 	}
 	isNew := ev == nil
 	if isNew {
-		ev = &models.Event{WorkspaceID: link.WorkspaceID, CreatedBy: link.CreatedBy}
+		ev = &models.Event{WorkspaceID: link.WorkspaceID, CreatedBy: link.CreatedBy, CalendarID: CalendarOf(*link)}
 	}
 	if !apply(ev, r) && !isNew {
 		s.db.Model(it).Updates(map[string]any{"e_tag": etag, "stamp": stamp(ev.UpdatedAt)})

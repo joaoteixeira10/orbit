@@ -6,6 +6,54 @@ merge, not at release time.
 
 ## [Unreleased]
 
+### Added
+
+- **Several calendars of one account in a workspace.** Beside the calendar
+  that is the workspace's own Events, the sync panel adds the account's
+  other calendars (Google's, or iCloud's / Nextcloud's), each a calendar of
+  its own in the workspace — its name, its colour, its tick. A new event
+  picks which one it goes in, and choosing another moves it there too. One
+  the account may only read (Google's birthdays, a calendar shared
+  read-only) only comes in, and its events can't be changed in Orbit.
+- **Pictures and files in git-synced comments.** A comment's pictures on
+  Gitea, GitLab or GitHub, and the files attached under a Gitea comment,
+  come into the task as its files and show in the comment (they were broken
+  images). A file added to a linked task goes to its issue as a comment
+  with the file (on GitHub, which takes no files from apps, the comment
+  names it), and that comment goes when the file does.
+
+- **Choose what the calendar of all workspaces shows.** The arrow beside a
+  workspace opens its parts — its events, each list, each subscribed
+  calendar — each with its own tick: a list like *Shows* can stay in its
+  workspace's calendar but out of the merged one. Which calendars you hid
+  is now kept with your account, so every device shows the same (it was
+  kept in each browser).
+- **Instant updates from Google Calendar.** With a public `https` address
+  (`PUBLIC_URL`), Orbit asks Google to tell it of every change to a synced
+  calendar and syncs it at once, instead of within five minutes; the sync
+  panel says so, or why not. The five-minute sync goes on as a safety net.
+- **Publish a workspace as a website.** Its owners pick which pages go on it
+  (each with the pages inside it) in workspace settings → Website; anyone
+  reads it without an account at `/site/<name>`, with the pages down the
+  side and a search across them. Restricted and locked pages never go on
+  it. Optionally a domain of its own (through the reverse proxy; there only
+  the website is served), and search engines may list it (a sitemap) when
+  its owners say so. The owner can turn websites off (Owner → Features).
+- **A privacy policy and terms of service** at `/privacy` and `/terms`,
+  linked from the sign-in page and written by the owner (Owner → Branding →
+  Privacy and terms). Until then the privacy policy is Orbit's own text, in
+  the reader's language. Google asks for one before people can sync their
+  Google Calendar.
+
+### Fixed
+
+- Signing in with Google or listing its calendars said only "couldn't reach
+  Google" or a bare status: it now says Google's own reason (e.g. the
+  Calendar API being off in the project, a permission not ticked) or the
+  network's, which step failed, and logs it.
+- The E2E tests on Gitea stopped at "Playwright does not support chromium
+  on ubuntu26.04": they now run in Playwright's own image.
+
 ## [0.7.1] - 2026-11-19
 
 ### Fixed

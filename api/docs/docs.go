@@ -3590,6 +3590,45 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/google/push": {
+            "post": {
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "A change in a watched Google calendar (called by Google)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The watch",
+                        "name": "X-Goog-Channel-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "The watch's secret",
+                        "name": "X-Goog-Channel-Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "sync, exists or not_exists",
+                        "name": "X-Goog-Resource-State",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
         "/google/status": {
             "get": {
                 "security": [
@@ -4281,6 +4320,43 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/api.inviteSignupResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/legal/{doc}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get the privacy policy or terms of service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "privacy or terms",
+                        "name": "doc",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.legalResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -8671,6 +8747,180 @@ const docTemplate = `{
                 }
             }
         },
+        "/site/{slug}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "A published website (no account)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The website's name",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/site/{slug}/embed/{kind}/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "What a website's page shows",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The website's name",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "sheet, diagram or board",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Its id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/site/{slug}/pages/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "A page of a published website",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The website's name",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Page id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.guestPage"
+                        }
+                    }
+                }
+            }
+        },
+        "/site/{slug}/search": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "Search a published website",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The website's name",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Words to find",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.siteHit"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/site/{slug}/uploads/{id}/{name}": {
+            "get": {
+                "tags": [
+                    "sites"
+                ],
+                "summary": "A website's file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The website's name",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Upload id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/smart-lists/{id}": {
             "put": {
                 "security": [
@@ -10412,6 +10662,139 @@ const docTemplate = `{
                         "name": "ws",
                         "in": "path",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/caldav/{link}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Stop syncing one calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "The synced calendar",
+                        "name": "link",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.caldavLinkResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/caldav/{link}/calendars": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "The calendars of a synced calendar's account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "A synced calendar",
+                        "name": "link",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.accountCalendar"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Sync another calendar of the account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "A synced calendar of that account",
+                        "name": "link",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The calendar",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.moreCalendarRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -12376,6 +12759,107 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/site": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "The workspace's website",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.siteResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "Publish the workspace as a website, or change it",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.siteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.siteResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "sites"
+                ],
+                "summary": "Take the workspace's website down",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/smart-lists": {
             "get": {
                 "security": [
@@ -12794,6 +13278,28 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "api.accountCalendar": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "key": {
+                    "description": "Google: its id; CalDAV: its address",
+                    "type": "string"
+                },
+                "linked": {
+                    "description": "synced in this workspace already",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "writable": {
+                    "type": "boolean"
                 }
             }
         },
@@ -13560,6 +14066,10 @@ const docTemplate = `{
                 "favicon_data_url": {
                     "type": "string"
                 },
+                "has_terms": {
+                    "description": "the owner wrote terms of service (/terms)",
+                    "type": "boolean"
+                },
                 "hide_local_login": {
                     "description": "hide the password form on /login (when SSO is available)",
                     "type": "boolean"
@@ -13670,7 +14180,19 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "link": {
-                    "$ref": "#/definitions/models.CalDAVLink"
+                    "description": "the one that is the workspace's own Events",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.CalDAVLink"
+                        }
+                    ]
+                },
+                "links": {
+                    "description": "Links: every calendar the workspace syncs, that one first.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CalDAVLink"
+                    }
                 }
             }
         },
@@ -14311,6 +14833,11 @@ const docTemplate = `{
                 "all_day": {
                     "type": "boolean"
                 },
+                "calendar_id": {
+                    "description": "CalendarID: an extra synced calendar to put it in (\"\" the workspace's\nown Events).",
+                    "type": "string",
+                    "maxLength": 36
+                },
                 "color": {
                     "type": "string"
                 },
@@ -14351,6 +14878,10 @@ const docTemplate = `{
             "properties": {
                 "all_day": {
                     "type": "boolean"
+                },
+                "calendar_id": {
+                    "description": "CalendarID: an extra synced calendar it's in (a CalDAVLink's id; \"\"\nthe workspace's own Events).",
+                    "type": "string"
                 },
                 "color": {
                     "type": "string"
@@ -14469,6 +15000,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "folder_id": {
+                    "type": "string"
+                },
+                "from_git": {
+                    "description": "FromGit: brought from a comment on the task's git issue (it shows in\nthat comment).",
+                    "type": "boolean"
+                },
+                "git_error": {
+                    "description": "GitError: why a task's new file didn't reach its git issue.",
+                    "type": "string"
+                },
+                "git_url": {
+                    "description": "A task's file in step with its git issue: GitURL is where it is on the\ngit server (brought from a comment there, or sent with one), and\nGitCommentID the comment Orbit sent it with (that comment isn't\nbrought back as a comment of its own).",
                     "type": "string"
                 },
                 "id": {
@@ -15877,6 +16420,18 @@ const docTemplate = `{
                 }
             }
         },
+        "api.legalResponse": {
+            "type": "object",
+            "properties": {
+                "app_name": {
+                    "type": "string"
+                },
+                "text": {
+                    "description": "Text is the owner's Markdown; \"\" for privacy means the built-in text\n(the page shows it in the reader's language).",
+                    "type": "string"
+                }
+            }
+        },
         "api.listRequest": {
             "type": "object",
             "properties": {
@@ -16073,6 +16628,26 @@ const docTemplate = `{
                         "editor",
                         "viewer"
                     ]
+                }
+            }
+        },
+        "api.moreCalendarRequest": {
+            "type": "object",
+            "required": [
+                "key"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "maxLength": 9
+                },
+                "key": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 200
                 }
             }
         },
@@ -16396,6 +16971,10 @@ const docTemplate = `{
                 "all_day": {
                     "type": "boolean"
                 },
+                "calendar_id": {
+                    "description": "CalendarID: an extra synced calendar the event is in (\"\" its\nworkspace's own Events); ReadOnly: that calendar may only be read.",
+                    "type": "string"
+                },
                 "color": {
                     "type": "string"
                 },
@@ -16421,6 +17000,9 @@ const docTemplate = `{
                 },
                 "own_color": {
                     "description": "the event's own, not its calendar's",
+                    "type": "boolean"
+                },
+                "read_only": {
                     "type": "boolean"
                 },
                 "recurring": {
@@ -16932,6 +17514,16 @@ const docTemplate = `{
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
+                    }
+                },
+                "calendar_hidden": {
+                    "description": "CalendarHidden: the calendars kept out of view, per calendar (\"all\" or a workspace id).",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 },
                 "channel_details": {
@@ -17473,6 +18065,97 @@ const docTemplate = `{
                 }
             }
         },
+        "api.siteHit": {
+            "type": "object",
+            "properties": {
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "snippet": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.siteRequest": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "maxLength": 253
+                },
+                "indexed": {
+                    "type": "boolean"
+                },
+                "page_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "published": {
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200
+                }
+            }
+        },
+        "api.siteResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indexed": {
+                    "type": "boolean"
+                },
+                "page_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "path": {
+                    "description": "/site/\u003cslug\u003e",
+                    "type": "string"
+                },
+                "published": {
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "api.slotRequest": {
             "type": "object",
             "required": [
@@ -17997,6 +18680,16 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "calendar_hidden": {
+                    "description": "Calendars kept out of view: per calendar (\"all\", or a workspace id),\nits whole list of keys ([] = all shown again); other calendars stay.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
                 "channel_details": {
                     "type": "boolean"
                 },
@@ -18223,6 +18916,11 @@ const docTemplate = `{
                     "maximum": 1000,
                     "minimum": 5
                 },
+                "privacy_policy": {
+                    "description": "PrivacyPolicy / Terms: Markdown shown at /privacy and /terms (\"\" = the\nbuilt-in privacy text; no terms page).",
+                    "type": "string",
+                    "maxLength": 50000
+                },
                 "season_theme": {
                     "description": "SeasonTheme: off, auto (the season today is in) or one of them now.",
                     "type": "string",
@@ -18243,6 +18941,10 @@ const docTemplate = `{
                 },
                 "show_logo": {
                     "type": "boolean"
+                },
+                "terms_of_service": {
+                    "type": "string",
+                    "maxLength": 50000
                 }
             }
         },
@@ -18324,6 +19026,18 @@ const docTemplate = `{
                     "description": "FolderID: a file of its own's folder (\"\" the top); an attachment shows\nwhere what it's on is (a task: its list's folder; a page: its own).",
                     "type": "string"
                 },
+                "from_git": {
+                    "description": "FromGit: brought from a comment on the task's git issue (it shows in\nthat comment).",
+                    "type": "boolean"
+                },
+                "git_error": {
+                    "description": "GitError: why a task's new file didn't reach its git issue.",
+                    "type": "string"
+                },
+                "git_url": {
+                    "description": "A task's file in step with its git issue: GitURL is where it is on the\ngit server (brought from a comment there, or sent with one), and\nGitCommentID the comment Orbit sent it with (that comment isn't\nbrought back as a comment of its own).",
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -18394,6 +19108,18 @@ const docTemplate = `{
                 },
                 "folder_id": {
                     "description": "FolderID: a file of its own's folder (\"\" the top); an attachment shows\nwhere what it's on is (a task: its list's folder; a page: its own).",
+                    "type": "string"
+                },
+                "from_git": {
+                    "description": "FromGit: brought from a comment on the task's git issue (it shows in\nthat comment).",
+                    "type": "boolean"
+                },
+                "git_error": {
+                    "description": "GitError: why a task's new file didn't reach its git issue.",
+                    "type": "string"
+                },
+                "git_url": {
+                    "description": "A task's file in step with its git issue: GitURL is where it is on the\ngit server (brought from a comment there, or sent with one), and\nGitCommentID the comment Orbit sent it with (that comment isn't\nbrought back as a comment of its own).",
                     "type": "string"
                 },
                 "id": {
@@ -19116,6 +19842,9 @@ const docTemplate = `{
                 "calendar_url": {
                     "type": "string"
                 },
+                "color": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -19124,6 +19853,10 @@ const docTemplate = `{
                 },
                 "event_count": {
                     "type": "integer"
+                },
+                "extra": {
+                    "description": "Extra: another calendar of the account, beside the one that is the\nworkspace's own Events (one per workspace, Extra false): its events\nare its own (Event.CalendarID), shown as a calendar of their own, in\nColor. ReadOnly: one the account may only read (Google's birthdays, a\ncalendar shared read-only): its events only come in.",
+                    "type": "boolean"
                 },
                 "host": {
                     "description": "shown",
@@ -19139,6 +19872,13 @@ const docTemplate = `{
                     "description": "Provider: \"\" a CalDAV account (user name and password); \"google\" a\nGoogle account (signed in; PasswordSealed holds its refresh token).",
                     "type": "string"
                 },
+                "pushed_at": {
+                    "description": "when Google last said it changed",
+                    "type": "string"
+                },
+                "read_only": {
+                    "type": "boolean"
+                },
                 "synced_at": {
                     "type": "string"
                 },
@@ -19146,6 +19886,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                },
+                "watch_error": {
+                    "type": "string"
+                },
+                "watch_until": {
                     "type": "string"
                 },
                 "workspace_id": {
@@ -19653,6 +20399,10 @@ const docTemplate = `{
                 },
                 "calendar_colors": {
                     "description": "CalendarColors are this person's own colours for calendars (JSON\n{key: \"#rrggbb\"}; keys: a workspace id, \"list:\u003cid\u003e\", \"sub:\u003cid\u003e\",\n\"holidays\"); absent = the calendar's own colour.",
+                    "type": "string"
+                },
+                "calendar_hidden": {
+                    "description": "CalendarHidden is which calendars this person keeps out of view, per\ncalendar (JSON {scope: [key]}; scope \"all\" is the calendar of all\nworkspaces, else a workspace id; keys as for CalendarColors, plus\n\"events:\u003cworkspace id\u003e\" for a workspace's own events there).",
                     "type": "string"
                 },
                 "channel_details": {

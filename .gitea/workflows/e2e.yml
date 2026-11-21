@@ -1,7 +1,8 @@
 # End-to-end (Playwright). Builds the single binary (SPA embedded), then in ONE
 # step boots it and runs the browser tests against it — the server must stay up
 # for the whole test, and a backgrounded process from a previous step does NOT
-# survive into the next on act_runner. Runs on every PR + on demand.
+# survive into the next on act_runner. Runs on every PR + on demand, in
+# Playwright's own image (see container: below).
 name: E2E
 
 on:
@@ -15,6 +16,13 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    # Inside Playwright's own image (Ubuntu 24.04, Chromium and its system
+    # libraries already there), whatever Ubuntu the runner's default image
+    # moves to: Playwright supports only the releases it was built for (1.60
+    # refused the runner's 26.04). Keep its tag on the version in
+    # web/package-lock.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
     # A CalDAV server for the two-way calendar test (any password). Reached
     # by its service name — a private address the guarded dialer allows
     # (localhost it refuses).
@@ -45,10 +53,6 @@ jobs:
           rm -rf api/internal/webui/dist
           cp -r web/dist api/internal/webui/dist
           (cd api && go build -o /tmp/orbit ./cmd/server)
-
-      - name: Install Playwright browser
-        working-directory: web
-        run: npx playwright install --with-deps chromium
 
       - name: Run E2E (server + tests in one step)
         working-directory: web

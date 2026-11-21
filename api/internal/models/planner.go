@@ -141,6 +141,24 @@ type ShareLink struct {
 	CreatedBy   string     `gorm:"size:36" json:"created_by"`
 }
 
+// Site publishes some of a workspace's pages as a read-only website, open to
+// anyone: the pages its owners picked (PageIDs, JSON []string, in order) and
+// what's under them — never a trashed, locked or restricted page, nor what's
+// under it. It lives at /site/<Slug>, and at Domain too when one is set (the
+// reverse proxy sends that domain to Orbit, with its certificate). Indexed:
+// search engines may list it (a sitemap); otherwise they're asked not to.
+type Site struct {
+	Base
+	WorkspaceID string `gorm:"size:36;not null;uniqueIndex" json:"workspace_id"`
+	Slug        string `gorm:"size:40;not null;uniqueIndex" json:"slug"`
+	Title       string `gorm:"size:200" json:"title"`
+	Domain      string `gorm:"size:253;not null;default:'';index" json:"domain"`
+	PageIDs     string `gorm:"type:text" json:"-"`
+	Published   bool   `gorm:"not null;default:false" json:"published"`
+	Indexed     bool   `gorm:"not null;default:false" json:"indexed"`
+	CreatedBy   string `gorm:"size:36" json:"created_by"`
+}
+
 // Form asks anyone with its link — or the workspace's people — for a row of
 // a database (PageID): its fields are some of the database's properties
 // (Fields, JSON []FormField; "title" is the row's name). Each answer is a
@@ -585,6 +603,9 @@ type Event struct {
 	// CourseID: a class of a course's timetable. The course owns it (its
 	// slots make and change it); only single classes can be cancelled here.
 	CourseID string `gorm:"size:36;index" json:"course_id,omitempty"`
+	// CalendarID: an extra synced calendar it's in (a CalDAVLink's id; ""
+	// the workspace's own Events).
+	CalendarID string `gorm:"size:36;not null;default:'';index" json:"calendar_id,omitempty"`
 }
 
 // CalendarSubscription is a read-only ICS calendar shown in a workspace
@@ -624,7 +645,15 @@ type ExternalEvent struct {
 // an app-specific one, for iCloud — is sealed.
 type CalDAVLink struct {
 	Base
-	WorkspaceID string `gorm:"size:36;not null;uniqueIndex" json:"workspace_id"`
+	WorkspaceID string `gorm:"size:36;not null;index:idx_caldav_links_ws" json:"workspace_id"`
+	// Extra: another calendar of the account, beside the one that is the
+	// workspace's own Events (one per workspace, Extra false): its events
+	// are its own (Event.CalendarID), shown as a calendar of their own, in
+	// Color. ReadOnly: one the account may only read (Google's birthdays, a
+	// calendar shared read-only): its events only come in.
+	Extra    bool   `gorm:"not null;default:false" json:"extra"`
+	Color    string `gorm:"size:9" json:"color"`
+	ReadOnly bool   `gorm:"not null;default:false" json:"read_only"`
 	// Provider: "" a CalDAV account (user name and password); "google" a
 	// Google account (signed in; PasswordSealed holds its refresh token).
 	Provider       string     `gorm:"size:12;not null;default:''" json:"provider"`
@@ -637,6 +666,18 @@ type CalDAVLink struct {
 	SyncedAt       *time.Time `json:"synced_at,omitempty"`
 	LastError      string     `gorm:"size:500" json:"last_error,omitempty"`
 	EventCount     int        `gorm:"not null;default:0" json:"event_count"`
+	// Instant updates (Google): Google calls Orbit on every change of the
+	// calendar, through a channel that lapses (WatchUntil) and is renewed.
+	// The channel's id finds the link; its token (only its sha256 here)
+	// proves the call is Google's. WatchError: why there's none (the
+	// 5-minute sync goes on regardless).
+	WatchChannel   string     `gorm:"size:64;index" json:"-"`
+	WatchResource  string     `gorm:"size:200" json:"-"`
+	WatchTokenHash string     `gorm:"size:64" json:"-"`
+	WatchUntil     *time.Time `json:"watch_until,omitempty"`
+	WatchTriedAt   *time.Time `json:"-"`
+	WatchError     string     `gorm:"size:500" json:"watch_error,omitempty"`
+	PushedAt       *time.Time `json:"pushed_at,omitempty"` // when Google last said it changed
 }
 
 // CalDAVItem pairs an event with its object on the server: its address, the
@@ -785,6 +826,12 @@ type Upload struct {
 	// What it was on, when that went for good (it became a file of its own).
 	WasKind  string `gorm:"size:8" json:"was_kind,omitempty"`
 	WasTitle string `gorm:"size:300" json:"was_title,omitempty"`
+	// A task's file in step with its git issue: GitURL is where it is on the
+	// git server (brought from a comment there, or sent with one), and
+	// GitCommentID the comment Orbit sent it with (that comment isn't
+	// brought back as a comment of its own).
+	GitURL       string `gorm:"size:1000" json:"git_url,omitempty"`
+	GitCommentID int64  `gorm:"not null;default:0;index" json:"-"`
 }
 
 // Blob holds a file's bytes when they're kept in the database, by their

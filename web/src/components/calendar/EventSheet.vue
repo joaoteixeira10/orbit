@@ -5,7 +5,7 @@ import { Trash2, Check } from 'lucide-vue-next'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import Confirm from '@/components/ui/Confirm.vue'
-import { calendarApi, type CalEvent, type EventInput, type Occurrence, type Workspace } from '@/api/planner'
+import { calendarApi, type CalDAVLink, type CalEvent, type EventInput, type Occurrence, type Workspace } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'
 import { COLORS } from '@/lib/icons'
@@ -52,6 +52,9 @@ const customRule = ref('')
 const color = ref('')
 const remind = ref('') // minutes before, "" = none
 const wsSel = ref('')
+// Which calendar of the workspace: its own Events, or an extra synced one.
+const calSel = ref('')
+const calendars = ref<CalDAVLink[]>([])
 let lastTimed: { start: string; end: string } | null = null
 let origTiming = ''
 
@@ -66,6 +69,7 @@ function reset() {
   customRule.value = ''
   color.value = ''
   remind.value = ''
+  calSel.value = ''
   tz.value = deviceTZ()
   lastTimed = null
 }
@@ -100,6 +104,7 @@ watch(
         customRule.value = e.rrule
         color.value = e.color
         remind.value = e.remind_minutes == null ? '' : String(e.remind_minutes)
+        calSel.value = e.calendar_id ?? ''
         origTiming = JSON.stringify(timing())
       } catch (err: any) {
         toast.error(err.message)
@@ -120,6 +125,20 @@ watch(
 )
 
 const wsId = computed(() => props.occurrence?.workspace_id || wsSel.value || props.ws)
+// The workspace's extra calendars an event can go in (not the read-only ones).
+watch(
+  [() => props.open, wsId],
+  async ([o, ws]) => {
+    calendars.value = []
+    if (!o || !ws) return
+    try {
+      calendars.value = ((await calendarApi.caldav(ws)).links ?? []).filter((l) => l.extra && !l.read_only)
+    } catch {
+      /* only Events */
+    }
+    if (calSel.value && !calendars.value.some((l) => l.id === calSel.value)) calSel.value = ''
+  },
+)
 const wsColor = computed(() => wss.byId(wsId.value)?.color ?? 'var(--accent)')
 const showPicker = computed(() => !editing.value && props.choices.length > 0)
 
@@ -214,6 +233,7 @@ async function save() {
       if (color.value !== e.color) body.color = color.value
       const before = e.remind_minutes == null ? '' : String(e.remind_minutes)
       if (remind.value !== before) body.remind_minutes = remind.value === '' ? -1 : Number(remind.value)
+      if (calSel.value !== (e.calendar_id ?? '')) body.calendar_id = calSel.value
       if (props.occurrence?.recurring) {
         // A series: which ones? (asked; saved from there)
         pending.value = body
@@ -226,6 +246,7 @@ async function save() {
       if (rule.value) body.rrule = rule.value
       if (color.value) body.color = color.value
       if (remind.value !== '') body.remind_minutes = Number(remind.value)
+      if (calSel.value) body.calendar_id = calSel.value
       await calendarApi.createEvent(wsSel.value || props.ws, body)
       if (showPicker.value) {
         try {
@@ -357,6 +378,14 @@ async function remove(onlyThis: boolean, following = false) {
           <span class="flex-1 text-[14px]">{{ t('cal.workspace') }}</span>
           <NativeSelect size="sm" v-model="wsSel" class="w-auto max-w-[60%]">
             <option v-for="w in choices" :key="w.id" :value="w.id">{{ w.name }}</option>
+          </NativeSelect>
+        </label>
+        <label v-if="calendars.length" class="group-row">
+          <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: calendars.find((l) => l.id === calSel)?.color || wsColor }" />
+          <span class="flex-1 text-[14px]">{{ t('cal.calendar') }}</span>
+          <NativeSelect size="sm" v-model="calSel" class="w-auto max-w-[60%]" data-testid="event-calendar">
+            <option value="">{{ t('cal.events') }}</option>
+            <option v-for="l in calendars" :key="l.id" :value="l.id">{{ l.calendar_name || l.host }}</option>
           </NativeSelect>
         </label>
         <label class="group-row">

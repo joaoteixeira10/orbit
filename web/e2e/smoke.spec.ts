@@ -3767,6 +3767,96 @@ test('a workspace calendar: each list a calendar in its colour, mine to change; 
   await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
   await page.reload()
   await expect(page.getByRole('checkbox', { name: 'Errands', exact: true }).locator('.box')).toHaveCSS('background-color', 'rgb(52, 199, 89)')
+
+  // On the calendar of all workspaces: Shows left out there only, kept for
+  // every device (after a reload too), while the workspace still shows it.
+  await page.goto('/calendar?date=2026-12-10')
+  const all = page.locator('.mg-cell[data-day="2026-12-10"]')
+  await expect(all).toContainText('New episode')
+  await page.getByTestId(`cal-parts-${ws.id}`).click()
+  await page.getByTestId(`cal-src-list:${b.id}`).click()
+  await expect(all).not.toContainText('New episode')
+  await expect(all).toContainText('Post office')
+  await expect(page.getByTestId(`cal-src-${ws.id}`)).toHaveAttribute('aria-checked', 'mixed')
+  await page.reload()
+  await expect(page.locator('.mg-cell[data-day="2026-12-10"]')).toContainText('Post office')
+  await expect(page.locator('.mg-cell[data-day="2026-12-10"]')).not.toContainText('New episode')
+  await expect(page.getByTestId(`cal-src-${ws.id}`)).toHaveAttribute('aria-checked', 'mixed')
+  await page.goto(`/w/${ws.id}/calendar?date=2026-12-10`)
+  await expect(page.locator('.mg-cell[data-day="2026-12-10"]')).toContainText('New episode')
+  const prefs = await (await request.get('/api/v1/me/prefs', { headers: H })).json()
+  expect(prefs.calendar_hidden?.all).toEqual([`list:${b.id}`])
+  await request.put('/api/v1/me/prefs', { headers: H, data: { calendar_hidden: { all: [] } } })
+})
+
+test('a workspace published as a website: the owner picks pages; anyone reads and searches them', async ({ page, request, browser }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  const ws = await (await request.post('/api/v1/workspaces', { headers: H, data: { name: 'Handbook', kind: 'work', starter: false, modules: ['home', 'pages'] } })).json()
+  const mk = async (data: object) => (await (await request.post(`/api/v1/workspaces/${ws.id}/pages`, { headers: H, data })).json()).id as string
+  const guide = await mk({ title: 'Guide', content: 'Start here.' })
+  await mk({ title: 'Install', content: 'Use docker compose to run it.', parent_id: guide })
+  await mk({ title: 'Internal notes', content: 'Not for the site.' })
+
+  // The owner: workspace settings → Website.
+  await signIn(page, NEW_PASSWORD)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await expect(page.locator('#sidebar')).toBeVisible()
+  await page.evaluate((id) => window.dispatchEvent(new CustomEvent('orbit:settings', { detail: { ws: id, tab: 'site' } })), ws.id)
+  const settings = page.getByTestId('site-settings')
+  await expect(settings).toBeVisible()
+  await expect(page.getByTestId('site-slug')).toHaveValue('handbook')
+  await page.getByTestId(`site-page-${guide}`).click()
+  await page.getByTestId('site-published').click()
+  await page.getByTestId('site-save').click()
+  await expect(page.getByTestId('site-url')).toContainText('/site/handbook')
+
+  // Anyone, without an account.
+  const ctx = await browser.newContext()
+  const anon = await ctx.newPage()
+  await anon.goto('/site/handbook')
+  await expect(anon.getByTestId('site-title')).toHaveText('Handbook')
+  await expect(anon.getByTestId('site-page-title')).toHaveText('Guide')
+  await expect(anon.getByTestId('site-nav-page')).toHaveText(['Guide', 'Install'])
+  await expect(anon.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
+  await anon.getByTestId('site-nav-page').filter({ hasText: 'Install' }).click()
+  await expect(anon).toHaveURL(/\/site\/handbook\/p\//)
+  await expect(anon.getByTestId('site-page')).toContainText('docker compose')
+  await anon.getByTestId('site-search').fill('start')
+  await expect(anon.getByTestId('site-hits')).toContainText('Guide')
+  await anon.getByTestId('site-hits').getByRole('option').first().click()
+  await expect(anon.getByTestId('site-page-title')).toHaveText('Guide')
+  // On a phone the pages open from the menu.
+  await anon.setViewportSize({ width: 390, height: 800 })
+  await expect(anon.getByTestId('site-nav-page').first()).toBeHidden()
+  await anon.getByRole('button', { name: 'Pages' }).click()
+  await expect(anon.getByTestId('site-nav-page').first()).toBeVisible()
+  await ctx.close()
+
+  await request.delete(`/api/v1/workspaces/${ws.id}/site`, { headers: H })
+})
+
+test('the privacy policy and terms: public, linked from the sign-in page, written by the owner', async ({ page, request }) => {
+  const login = await (await request.post('/api/v1/auth/login', { data: { username: ADMIN_USER, password: NEW_PASSWORD } })).json()
+  const H = { Authorization: `Bearer ${login.access_token}` }
+  // Orbit's own text until the owner writes one; no terms.
+  await page.goto('/login')
+  await expect(page.getByTestId('login-terms')).toHaveCount(0)
+  await page.getByTestId('login-privacy').click()
+  await expect(page).toHaveURL(/\/privacy$/)
+  await expect(page.getByTestId('legal-title')).toHaveText('Privacy policy')
+  await expect(page.getByTestId('legal-text')).toContainText('Google API Services User Data Policy')
+  await page.goto('/terms')
+  await expect(page.getByTestId('legal-missing')).toBeVisible()
+
+  expect((await request.put('/api/v1/settings', { headers: H, data: { privacy_policy: '## Ours\n\nWe keep little.', terms_of_service: 'Be kind.' } })).ok()).toBeTruthy()
+  await page.goto('/login')
+  await page.getByTestId('login-terms').click()
+  await expect(page.getByTestId('legal-text')).toContainText('Be kind.')
+  await page.goto('/privacy')
+  await expect(page.getByTestId('legal-text')).toContainText('We keep little.')
+  await expect(page.getByTestId('legal-text')).not.toContainText('Google API Services')
+  await request.put('/api/v1/settings', { headers: H, data: { privacy_policy: '', terms_of_service: '' } })
 })
 
 test('workspace modules: the owner drags one to a new place, and the sidebar follows', async ({ page, request }) => {

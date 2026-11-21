@@ -161,6 +161,12 @@ func (c *Client) GitHub() bool { return c.kind == KindGitHub }
 func (c *Client) HasDue() bool { return c.kind != KindGitHub }
 
 func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, out any) error {
+	return c.doAs(ctx, method, path, q, in, out, "")
+}
+
+// doAs is do asking GitHub for another form of the answer (accept; "" its
+// usual JSON).
+func (c *Client) doAs(ctx context.Context, method, path string, q url.Values, in, out any, accept string) error {
 	u := apiRoot(c.base, c.kind) + path
 	if len(q) > 0 {
 		u += "?" + q.Encode()
@@ -183,6 +189,9 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, in, 
 	} else if c.GitHub() {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 		req.Header.Set("Accept", "application/vnd.github+json")
+		if accept != "" {
+			req.Header.Set("Accept", accept)
+		}
 		req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	} else {
 		req.Header.Set("Authorization", "token "+c.token)

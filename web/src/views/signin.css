@@ -195,6 +195,21 @@ h1 {
   font-size: 12px;
   color: var(--text-3);
 }
+.legal-links {
+  display: block;
+  margin-top: 6px;
+}
+.legal-links a {
+  color: var(--text-3);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal-links a:hover {
+  color: var(--text-2);
+}
+.legal-links a + a {
+  margin-left: 14px;
+}
 /* A developer theme: its dark ground (as on its card in Branding) with a soft
    glow of its accent; the text outside the card turns light. */
 .login.themed {

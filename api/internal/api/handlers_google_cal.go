@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -181,18 +182,21 @@ func (h *Handlers) googleCallback(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
+	step := "signing in"
 	tok, err := google.Exchange(ctx, app, h.googleRedirect(c), c.Query("code"), st.Verifier)
 	var email string
 	if err == nil {
+		step = "reading your Google account"
 		email, err = google.Email(ctx, tok.Access)
 	}
 	var sealed []byte
 	if err == nil {
+		step = "keeping the sign-in"
 		sealed, err = h.sealer.Seal([]byte(tok.Refresh))
 	}
 	if err != nil {
-		h.log.Warn("google sign-in failed", zap.Error(err))
-		done(st.WS, "google_error="+url.QueryEscape(err.Error()))
+		h.log.Warn("google sign-in failed", zap.String("step", step), zap.Error(err))
+		done(st.WS, "google_error="+url.QueryEscape(step+": "+err.Error()))
 		return
 	}
 	key, err := h.ephemeral.Put(ephemeral.KindGooglePending, googlePending{UserID: st.UserID, WS: st.WS, Refresh: sealed, Email: email}, 15*time.Minute)
@@ -243,13 +247,16 @@ func (h *Handlers) googleCalendars(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
+	step := "renewing the Google sign-in"
 	access, err := h.googleAccess(ctx, "pending:"+c.Query("pending"), p.Refresh)
 	var cals []google.Calendar
 	if err == nil {
+		step = "listing your Google calendars"
 		cals, err = google.Calendars(ctx, access)
 	}
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		h.log.Warn("google calendars failed", zap.String("step", step), zap.Error(err))
+		c.JSON(http.StatusBadGateway, gin.H{"error": step + ": " + err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"email": p.Email, "calendars": cals})
@@ -286,13 +293,14 @@ func (h *Handlers) linkGoogle(c *gin.Context) {
 	if !ok {
 		return
 	}
+	h.unwatchGoogle(ws.ID, false) // a link it replaces
 	link := models.CalDAVLink{
 		WorkspaceID: ws.ID, Provider: "google", CalendarURL: google.CalDAVURL(req.CalendarID), CalendarName: strings.TrimSpace(req.CalendarName),
 		Host: "calendar.google.com", Username: p.Email, PasswordSealed: p.Refresh, CreatedBy: auth.UserID(c),
 	}
 	err := h.db.Transaction(func(tx *gorm.DB) error {
 		var old models.CalDAVLink
-		if tx.Where("workspace_id = ?", ws.ID).First(&old).Error == nil {
+		if tx.Where("workspace_id = ? AND extra = ?", ws.ID, false).First(&old).Error == nil {
 			if err := tx.Where("link_id = ?", old.ID).Delete(&models.CalDAVItem{}).Error; err != nil {
 				return err
 			}
@@ -314,9 +322,13 @@ func (h *Handlers) linkGoogle(c *gin.Context) {
 	defer cancel()
 	_ = h.dav.Sync(ctx, link.ID) // the error is on the link
 	h.db.First(&link, "id = ?", link.ID)
+	h.googleWatch(ctx, link) // instant updates from now on (or why not, on the link)
+	h.db.First(&link, "id = ?", link.ID)
 	h.recordCtx(c, "workspace.caldav_link", "workspace", ws.ID, gin.H{"host": link.Host, "calendar": link.CalendarName, "provider": "google"})
 	h.publishWS(c, ws.ID, "events")
-	c.JSON(http.StatusOK, caldavLinkResponse{Link: &link})
+	out := h.caldavLinks(ws.ID)
+	out.Link = &link
+	c.JSON(http.StatusOK, out)
 }
 
 // ---- Access tokens: kept while they last, refreshed when they don't ----
@@ -374,5 +386,10 @@ func (h *Handlers) googleBearer(ctx context.Context, link models.CalDAVLink) (st
 	if link.Provider != "google" {
 		return "", errors.New("unknown sign-in provider " + link.Provider)
 	}
-	return h.googleAccess(ctx, link.ID, link.PasswordSealed)
+	access, err := h.googleAccess(ctx, link.ID, link.PasswordSealed)
+	if err != nil {
+		h.log.Warn("google sign-in renewal failed", zap.String("link", link.ID), zap.Error(err))
+		return "", fmt.Errorf("renewing the Google sign-in: %w", err)
+	}
+	return access, nil
 }

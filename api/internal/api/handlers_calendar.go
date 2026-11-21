@@ -40,6 +40,10 @@ type occurrence struct {
 	Recurring      bool      `json:"recurring"`
 	CourseID       string    `json:"course_id,omitempty"` // a class of a course
 	TZ             string    `json:"tz,omitempty"`        // an Orbit event's own time zone
+	// CalendarID: an extra synced calendar the event is in ("" its
+	// workspace's own Events); ReadOnly: that calendar may only be read.
+	CalendarID string `json:"calendar_id,omitempty"`
+	ReadOnly   bool   `json:"read_only,omitempty"`
 }
 
 type calendarResponse struct {
@@ -101,8 +105,18 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 
 	var events []models.Event
 	h.db.Where("workspace_id IN ? AND starts_at < ? AND (until IS NULL OR until > ?)", wsIDs, to, from).Find(&events)
+	// Extra synced calendars: their colours, and which may only be read.
+	var extras []models.CalDAVLink
+	h.db.Select("id", "color", "read_only").Where("workspace_id IN ? AND extra = ?", wsIDs, true).Find(&extras)
+	calOf := map[string]models.CalDAVLink{}
+	for _, l := range extras {
+		calOf[l.ID] = l
+	}
 	for _, ev := range events {
 		color := ev.Color
+		if color == "" && ev.CalendarID != "" {
+			color = calOf[ev.CalendarID].Color
+		}
 		if color == "" {
 			color = colors[ev.WorkspaceID]
 		}
@@ -111,6 +125,7 @@ func (h *Handlers) calendarFor(wsIDs []string, from, to time.Time, fromDate, toD
 			resp.Events = append(resp.Events, occurrence{
 				Kind: "event", ID: ev.ID, WorkspaceID: ev.WorkspaceID, Title: ev.Title, Location: ev.Location, Notes: ev.Notes,
 				Start: s, End: s.Add(dur), AllDay: ev.AllDay, Color: color, OwnColor: ev.Color != "", Recurring: ev.RRule != "", CourseID: ev.CourseID, TZ: ev.TZ,
+				CalendarID: ev.CalendarID, ReadOnly: calOf[ev.CalendarID].ReadOnly,
 			})
 		}
 	}
@@ -208,6 +223,9 @@ type eventRequest struct {
 	Color    *string    `json:"color"`
 	// RemindMinutes before each occurrence; a negative value removes the reminder.
 	RemindMinutes *int `json:"remind_minutes" binding:"omitempty,max=40320"`
+	// CalendarID: an extra synced calendar to put it in ("" the workspace's
+	// own Events).
+	CalendarID *string `json:"calendar_id" binding:"omitempty,max=36"`
 }
 
 type eventResponse struct {
@@ -346,6 +364,12 @@ func (h *Handlers) createEvent(c *gin.Context) {
 		return
 	}
 	ev := models.Event{WorkspaceID: ws.ID, CreatedBy: auth.UserID(c), TZ: "UTC"}
+	if req.CalendarID != nil {
+		if !h.eventCalendar(c, ws.ID, *req.CalendarID) {
+			return
+		}
+		ev.CalendarID = *req.CalendarID
+	}
 	if msg := applyEvent(req, &ev); msg != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -403,9 +427,19 @@ func (h *Handlers) updateEvent(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "this is a class of a course: change it in Courses"})
 		return
 	}
+	if h.readOnlyCalendar(c, ev) {
+		return
+	}
 	var req eventRequest
 	if !bindJSON(c, &req) {
 		return
+	}
+	// Another calendar: it leaves the one it was in (there too) for that one.
+	if req.CalendarID != nil && *req.CalendarID != ev.CalendarID {
+		if !h.eventCalendar(c, ev.WorkspaceID, *req.CalendarID) {
+			return
+		}
+		ev.CalendarID = *req.CalendarID
 	}
 	if scope := c.Query("scope"); ev.RRule != "" && (scope == "this" || scope == "following") {
 		at, ok := h.occurrenceOf(c, ev)
@@ -449,7 +483,7 @@ func (h *Handlers) updateEvent(c *gin.Context) {
 //	@Router		/events/{id} [delete]
 func (h *Handlers) deleteEvent(c *gin.Context) {
 	ev, ok := h.eventAccess(c, models.WSEditor)
-	if !ok {
+	if !ok || h.readOnlyCalendar(c, ev) {
 		return
 	}
 	if o := c.Query("occurrence"); o != "" && ev.RRule != "" && c.Query("scope") == "following" {

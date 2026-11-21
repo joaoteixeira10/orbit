@@ -43,8 +43,9 @@ func (m *gCal) ListCalendars(context.Context) ([]dav.Calendar, error) {
 	return []dav.Calendar{{Path: gEvents, Name: "Work", SupportedComponentSet: []string{"VEVENT"}}}, nil
 }
 func (m *gCal) GetCalendar(_ context.Context, p string) (*dav.Calendar, error) {
-	if p == gEvents {
-		return &dav.Calendar{Path: gEvents, Name: "Work", SupportedComponentSet: []string{"VEVENT"}}, nil
+	// Any calendar's events (several calendars of one account).
+	if strings.HasPrefix(p, "/caldav/v2/") && strings.HasSuffix(p, "/events/") && strings.Count(p, "/") == 5 {
+		return &dav.Calendar{Path: p, Name: "Work", SupportedComponentSet: []string{"VEVENT"}}, nil
 	}
 	return nil, webdav.NewHTTPError(http.StatusNotFound, errors.New("no calendar"))
 }
@@ -255,6 +256,10 @@ func TestGoogleCalendar(t *testing.T) {
 	decode(t, w, &linked)
 	if linked.Link == nil || linked.Link.Provider != "google" || linked.Link.Username != "ana@example.com" || linked.Link.LastError != "" {
 		t.Fatalf("link: %+v", linked.Link)
+	}
+	// No public https address here: no instant updates, and the link says why.
+	if !strings.Contains(linked.Link.WatchError, "PUBLIC_URL") || linked.Link.WatchUntil != nil {
+		t.Errorf("watch without a public address: %q", linked.Link.WatchError)
 	}
 	var titles []string
 	db.Model(&models.Event{}).Where("workspace_id = ?", ws.ID).Order("title").Pluck("title", &titles)

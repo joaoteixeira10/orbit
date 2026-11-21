@@ -21,7 +21,9 @@ import (
 // CalDAV server (iCloud, Nextcloud, Fastmail…). Owners set it up.
 
 type caldavLinkResponse struct {
-	Link *models.CalDAVLink `json:"link"`
+	Link *models.CalDAVLink `json:"link"` // the one that is the workspace's own Events
+	// Links: every calendar the workspace syncs, that one first.
+	Links []models.CalDAVLink `json:"links,omitempty"`
 }
 
 // caldavOwner checks the feature and that the caller owns the workspace.
@@ -48,12 +50,19 @@ func (h *Handlers) getCalDAV(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var link models.CalDAVLink
-	if h.db.Where("workspace_id = ?", ws.ID).First(&link).Error != nil {
-		c.JSON(http.StatusOK, caldavLinkResponse{})
-		return
+	c.JSON(http.StatusOK, h.caldavLinks(ws.ID))
+}
+
+// caldavLinks is what a workspace syncs: its main link (its own Events) and
+// every calendar, that one first.
+func (h *Handlers) caldavLinks(wsID string) caldavLinkResponse {
+	var links []models.CalDAVLink
+	h.db.Where("workspace_id = ?", wsID).Order("extra, created_at").Find(&links)
+	out := caldavLinkResponse{Links: links}
+	if len(links) > 0 && !links[0].Extra {
+		out.Link = &links[0]
 	}
-	c.JSON(http.StatusOK, caldavLinkResponse{Link: &link})
+	return out
 }
 
 type caldavAccountRequest struct {
@@ -151,13 +160,14 @@ func (h *Handlers) setCalDAV(c *gin.Context) {
 		return
 	}
 	u, _ := url.Parse(cal)
+	h.unwatchGoogle(ws.ID, false) // a Google link it replaces
 	link := models.CalDAVLink{
 		WorkspaceID: ws.ID, CalendarURL: cal, CalendarName: strings.TrimSpace(req.CalendarName), Host: u.Hostname(),
 		Username: strings.TrimSpace(req.Username), PasswordSealed: sealed, CreatedBy: auth.UserID(c),
 	}
 	err = h.db.Transaction(func(tx *gorm.DB) error {
 		var old models.CalDAVLink
-		if tx.Where("workspace_id = ?", ws.ID).First(&old).Error == nil {
+		if tx.Where("workspace_id = ? AND extra = ?", ws.ID, false).First(&old).Error == nil {
 			if err := tx.Where("link_id = ?", old.ID).Delete(&models.CalDAVItem{}).Error; err != nil {
 				return err
 			}
@@ -194,16 +204,22 @@ func (h *Handlers) syncCalDAV(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var link models.CalDAVLink
-	if h.db.Where("workspace_id = ?", ws.ID).First(&link).Error != nil {
+	var links []models.CalDAVLink
+	h.db.Where("workspace_id = ?", ws.ID).Find(&links)
+	if len(links) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "this workspace's calendar isn't synced"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
 	defer cancel()
-	_ = h.dav.Sync(ctx, link.ID)
-	h.db.First(&link, "id = ?", link.ID)
-	c.JSON(http.StatusOK, caldavLinkResponse{Link: &link})
+	for _, link := range links {
+		_ = h.dav.Sync(ctx, link.ID)
+		if link.Provider == "google" {
+			h.db.First(&link, "id = ?", link.ID)
+			h.watchGoogle(ctx, link, true) // instant updates, if they lapsed or failed
+		}
+	}
+	c.JSON(http.StatusOK, h.caldavLinks(ws.ID))
 }
 
 // deleteCalDAV stops the sync; the events stay on both sides (owners).
@@ -219,10 +235,12 @@ func (h *Handlers) deleteCalDAV(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var links []string
-	h.db.Model(&models.CalDAVLink{}).Where("workspace_id = ?", ws.ID).Pluck("id", &links)
-	h.db.Where("link_id IN ?", append(links, "")).Delete(&models.CalDAVItem{})
-	h.db.Where("workspace_id = ?", ws.ID).Delete(&models.CalDAVLink{})
+	h.unwatchGoogle(ws.ID, true)
+	var links []models.CalDAVLink
+	h.db.Where("workspace_id = ?", ws.ID).Find(&links)
+	for _, l := range links {
+		h.dropLink(l)
+	}
 	h.recordCtx(c, "workspace.caldav_unlink", "workspace", ws.ID, nil)
 	c.Status(http.StatusNoContent)
 }

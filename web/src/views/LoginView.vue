@@ -292,7 +292,13 @@ function backToCredentials() {
         </div>
       </form>
 
-      <div class="foot">{{ t('login.footer', { app: branding.appName }) }}</div>
+      <div class="foot">
+        {{ t('login.footer', { app: branding.appName }) }}
+        <span class="legal-links">
+          <RouterLink to="/privacy" data-testid="login-privacy">{{ t('legal.privacy') }}</RouterLink>
+          <RouterLink v-if="branding.hasTerms" to="/terms" data-testid="login-terms">{{ t('legal.terms') }}</RouterLink>
+        </span>
+      </div>
     </main>
   </div>
 </template>

@@ -516,6 +516,7 @@ func (h *Handlers) deleteWorkspace(c *gin.Context) {
 		return
 	}
 	members := h.memberIDs(ws.ID)
+	h.unwatchGoogle(ws.ID, true) // Google stops calling about its calendars
 	if err := h.db.Transaction(func(tx *gorm.DB) error { return purgeWorkspace(tx, ws.ID) }); err != nil {
 		h.internalError(c, err, "could not delete the workspace")
 		return
@@ -543,6 +544,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.CalendarSubscription{}).Error },
 		func() error { return tx.Where("link_id IN ?", append(davLinks, "")).Delete(&models.CalDAVItem{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.CalDAVLink{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Site{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Event{}).Error },
 		func() error { return uploads.Delete(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskComment{}).Error },

@@ -212,8 +212,8 @@ async function movePage(ws: string, id: string, parent: string | null, after: st
 const paletteOpen = ref(false)
 const newWsOpen = ref(false)
 const settingsFor = ref('')
-const settingsTab = ref<'general' | 'modules' | 'members'>('general')
-function openSettings(id: string, tab: 'general' | 'modules' | 'members' = 'general') {
+const settingsTab = ref<'general' | 'modules' | 'members' | 'site'>('general')
+function openSettings(id: string, tab: 'general' | 'modules' | 'members' | 'site' = 'general') {
   settingsTab.value = tab
   settingsFor.value = id
   wsMenu.value = ''
@@ -269,7 +269,7 @@ function onNewTask(ws: string) {
 }
 // Views ask for the sheets through window events (no prop drilling).
 function onOpenSettings(e: Event) {
-  const d = (e as CustomEvent).detail as { ws: string; tab?: 'general' | 'modules' | 'members' }
+  const d = (e as CustomEvent).detail as { ws: string; tab?: 'general' | 'modules' | 'members' | 'site' }
   openSettings(d.ws, d.tab)
 }
 function onNewWorkspace() {

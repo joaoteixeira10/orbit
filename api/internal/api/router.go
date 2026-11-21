@@ -81,6 +81,8 @@ type Handlers struct {
 	googleTokens tokenCache
 	// room: who's on what now, and editing together's start locks (memory).
 	room *collab.Room
+	// sites: published websites' own domains (cached).
+	sites siteDomains
 }
 
 // New builds the configured *gin.Engine.
@@ -99,10 +101,14 @@ func New(d Deps) *gin.Engine {
 	if h.dav.Bearer == nil {
 		h.dav.Bearer = h.googleBearer // Google links sign in with a token
 	}
+	if h.dav.Watch == nil {
+		h.dav.Watch = h.googleWatch // and are watched, for instant updates
+	}
 	if h.git == nil {
 		h.git = gitsync.New(d.DB, d.Sealer, d.Cfg.GitServers, d.Log)
 		h.git.NotifyHub(d.Events)
 	}
+	h.git.Quota = d.Cfg.UploadQuotaBytes
 	migratePagesToMarkdown(d.DB, d.Log)
 	exportDomainMetrics(d.DB)
 	// Calendar apps poll feeds; they get their own, looser per-IP limit.
@@ -132,6 +138,8 @@ func New(d Deps) *gin.Engine {
 			strings.HasPrefix(p, "/api/v1/diagrams/") || strings.HasSuffix(p, "/diagrams")
 	}))
 	r.Use(metricsMiddleware())
+	// A published website's own domain serves only that website.
+	r.Use(h.siteHost)
 
 	// Defence-in-depth brute-force throttle for credential/second-factor
 	// endpoints (per-IP, configurable via AUTH_RATE_*). The upstream proxy may
@@ -153,6 +161,8 @@ func New(d Deps) *gin.Engine {
 
 	// SCIM 2.0 for identity providers (Okta, Entra): its own token, its own base URL.
 	h.scimRoutes(r)
+	// A listed website's sitemap, at Orbit's address.
+	r.GET("/site/:slug/sitemap.xml", h.siteSitemap)
 
 	v1 := r.Group("/api/v1")
 	{
@@ -160,6 +170,7 @@ func New(d Deps) *gin.Engine {
 		v1.GET("/readyz", h.ready)
 		v1.GET("/version", h.version)
 		v1.GET("/branding", h.getBranding) // public: SPA theming at boot
+		v1.GET("/legal/:doc", h.getLegal)  // public: privacy policy, terms
 
 		// --- Auth (public) ---
 		v1.POST("/auth/login", authLimit, h.login)
@@ -176,6 +187,13 @@ func New(d Deps) *gin.Engine {
 		// "Sign in with Gitea" comes back here (the state names who started it).
 		v1.GET("/git/oauth/callback", authLimit, h.gitOAuthCallback)
 		v1.GET("/google/oauth/callback", authLimit, h.googleCallback)
+		v1.POST("/google/push", feedLimit, h.googlePush) // Google: a watched calendar changed
+		// Published websites (no account).
+		v1.GET("/site/:slug", feedLimit, h.siteOpen)
+		v1.GET("/site/:slug/pages/:id", feedLimit, h.sitePage)
+		v1.GET("/site/:slug/search", feedLimit, h.siteSearch)
+		v1.GET("/site/:slug/embed/:kind/:id", feedLimit, h.siteEmbed)
+		v1.GET("/site/:slug/uploads/:id/*name", feedLimit, h.siteUpload)
 		// A repository's webhook (signed with the list's secret).
 		v1.POST("/git/hook/:link", feedLimit, h.gitHook)
 		// A push notification's "Snooze" button (a signed link).
@@ -329,6 +347,9 @@ func New(d Deps) *gin.Engine {
 			authed.DELETE("/workspaces/:ws/members/:uid", h.removeMember)
 			authed.GET("/workspaces/:ws/activity", h.workspaceActivity)
 			authed.GET("/workspaces/:ws/caldav", h.getCalDAV)
+			authed.GET("/workspaces/:ws/site", h.getSite)
+			authed.PUT("/workspaces/:ws/site", h.putSite)
+			authed.DELETE("/workspaces/:ws/site", h.deleteSite)
 			authed.GET("/workspaces/:ws/drawings", h.listDrawings)
 			authed.GET("/workspaces/:ws/habits", h.listHabits)
 			authed.GET("/workspaces/:ws/goals", h.listGoals)
@@ -459,6 +480,9 @@ func New(d Deps) *gin.Engine {
 			authed.POST("/notes/:id/drawing", h.noteDrawingOf)
 			authed.PUT("/workspaces/:ws/caldav", h.setCalDAV)
 			authed.DELETE("/workspaces/:ws/caldav", h.deleteCalDAV)
+			authed.GET("/workspaces/:ws/caldav/:link/calendars", h.caldavAccountCalendars)
+			authed.POST("/workspaces/:ws/caldav/:link/calendars", h.caldavAddCalendar)
+			authed.DELETE("/workspaces/:ws/caldav/:link", h.caldavRemoveCalendar)
 			authed.POST("/workspaces/:ws/caldav/calendars", h.caldavCalendars)
 			authed.POST("/workspaces/:ws/caldav/sync", h.syncCalDAV)
 			authed.GET("/holidays/countries", h.holidayCountries)
@@ -689,7 +713,15 @@ func registerSPA(r *gin.Engine, h *Handlers) {
 			}
 		}
 		if index, err := fs.ReadFile(dist, "index.html"); err == nil && bytes.Contains(index, []byte("</head>")) {
-			page := bytes.Replace(index, []byte("</head>"), []byte("  "+h.previewTags(c)+"\n  </head>"), 1)
+			head := h.previewTags(c)
+			if site := h.siteHead(c); site != "" {
+				// A website's page: its own title (instead of the app's), and robots.
+				if strings.Contains(site, "<title>") {
+					index = bytes.Replace(index, []byte("<title>Orbit</title>"), nil, 1)
+				}
+				head = site + "\n    " + head
+			}
+			page := bytes.Replace(index, []byte("</head>"), []byte("  "+head+"\n  </head>"), 1)
 			c.Header("Cache-Control", "no-cache")
 			c.Data(http.StatusOK, "text/html; charset=utf-8", page)
 			return

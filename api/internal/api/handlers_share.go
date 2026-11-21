@@ -443,6 +443,12 @@ func (h *Handlers) guestEmbed(c *gin.Context) {
 	if !ok {
 		return
 	}
+	h.serveEmbed(c, g)
+}
+
+// serveEmbed is a sheet, diagram or whiteboard shown in one of g's pages
+// (a guest link's, or a published site's).
+func (h *Handlers) serveEmbed(c *gin.Context, g guestShare) {
 	id := c.Param("id")
 	notFound := func() { c.JSON(http.StatusNotFound, gin.H{"error": "not found"}) }
 	switch c.Param("kind") {
@@ -489,6 +495,12 @@ func (h *Handlers) guestUpload(c *gin.Context) {
 	if !ok {
 		return
 	}
+	h.serveShared(c, g, "private, max-age=3600")
+}
+
+// serveShared is a picture or file of one of g's pages (a guest link's, or
+// a published site's), with how long it may be cached.
+func (h *Handlers) serveShared(c *gin.Context, g guestShare, cache string) {
 	var u models.Upload
 	if h.db.First(&u, "id = ?", c.Param("id")).Error != nil || u.Target != uploads.Page || !g.pages[u.TargetID] {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
@@ -507,6 +519,6 @@ func (h *Handlers) guestUpload(c *gin.Context) {
 	head.Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": u.Name}))
 	head.Set("X-Content-Type-Options", "nosniff")
 	head.Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	head.Set("Cache-Control", "private, max-age=3600")
+	head.Set("Cache-Control", cache)
 	c.Data(http.StatusOK, typ, data)
 }

@@ -44,6 +44,21 @@ definitions:
           type: string
         type: array
     type: object
+  api.accountCalendar:
+    properties:
+      color:
+        type: string
+      key:
+        description: 'Google: its id; CalDAV: its address'
+        type: string
+      linked:
+        description: synced in this workspace already
+        type: boolean
+      name:
+        type: string
+      writable:
+        type: boolean
+    type: object
   api.activityLine:
     properties:
       actor_avatar:
@@ -589,6 +604,9 @@ definitions:
         type: string
       favicon_data_url:
         type: string
+      has_terms:
+        description: the owner wrote terms of service (/terms)
+        type: boolean
       hide_local_login:
         description: hide the password form on /login (when SSO is available)
         type: boolean
@@ -673,7 +691,14 @@ definitions:
   api.caldavLinkResponse:
     properties:
       link:
-        $ref: '#/definitions/models.CalDAVLink'
+        allOf:
+        - $ref: '#/definitions/models.CalDAVLink'
+        description: the one that is the workspace's own Events
+      links:
+        description: 'Links: every calendar the workspace syncs, that one first.'
+        items:
+          $ref: '#/definitions/models.CalDAVLink'
+        type: array
     type: object
   api.calendarResponse:
     properties:
@@ -1118,6 +1143,12 @@ definitions:
     properties:
       all_day:
         type: boolean
+      calendar_id:
+        description: |-
+          CalendarID: an extra synced calendar to put it in ("" the workspace's
+          own Events).
+        maxLength: 36
+        type: string
       color:
         type: string
       ends_at:
@@ -1148,6 +1179,11 @@ definitions:
     properties:
       all_day:
         type: boolean
+      calendar_id:
+        description: |-
+          CalendarID: an extra synced calendar it's in (a CalDAVLink's id; ""
+          the workspace's own Events).
+        type: string
       color:
         type: string
       course_id:
@@ -1231,6 +1267,21 @@ definitions:
         description: 'in the trash: when it goes for good'
         type: string
       folder_id:
+        type: string
+      from_git:
+        description: |-
+          FromGit: brought from a comment on the task's git issue (it shows in
+          that comment).
+        type: boolean
+      git_error:
+        description: 'GitError: why a task''s new file didn''t reach its git issue.'
+        type: string
+      git_url:
+        description: |-
+          A task's file in step with its git issue: GitURL is where it is on the
+          git server (brought from a comment there, or sent with one), and
+          GitCommentID the comment Orbit sent it with (that comment isn't
+          brought back as a comment of its own).
         type: string
       id:
         type: string
@@ -2202,6 +2253,16 @@ definitions:
           $ref: '#/definitions/api.journalDay'
         type: array
     type: object
+  api.legalResponse:
+    properties:
+      app_name:
+        type: string
+      text:
+        description: |-
+          Text is the owner's Markdown; "" for privacy means the built-in text
+          (the page shows it in the reader's language).
+        type: string
+    type: object
   api.listRequest:
     properties:
       archived:
@@ -2342,6 +2403,20 @@ definitions:
         type: string
     required:
     - role
+    type: object
+  api.moreCalendarRequest:
+    properties:
+      color:
+        maxLength: 9
+        type: string
+      key:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 200
+        type: string
+    required:
+    - key
     type: object
   api.moveDrawingRequest:
     properties:
@@ -2571,6 +2646,11 @@ definitions:
     properties:
       all_day:
         type: boolean
+      calendar_id:
+        description: |-
+          CalendarID: an extra synced calendar the event is in ("" its
+          workspace's own Events); ReadOnly: that calendar may only be read.
+        type: string
       color:
         type: string
       course_id:
@@ -2589,6 +2669,8 @@ definitions:
         type: string
       own_color:
         description: the event's own, not its calendar's
+        type: boolean
+      read_only:
         type: boolean
       recurring:
         type: boolean
@@ -2949,6 +3031,14 @@ definitions:
           type: string
         description: 'CalendarColors: own colours for calendars (a workspace id, list:<id>,
           sub:<id>, holidays).'
+        type: object
+      calendar_hidden:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        description: 'CalendarHidden: the calendars kept out of view, per calendar
+          ("all" or a workspace id).'
         type: object
       channel_details:
         description: titles in shared channels too
@@ -3325,6 +3415,67 @@ definitions:
         type: string
       version:
         type: integer
+    type: object
+  api.siteHit:
+    properties:
+      icon:
+        type: string
+      id:
+        type: string
+      snippet:
+        type: string
+      title:
+        type: string
+    type: object
+  api.siteRequest:
+    properties:
+      domain:
+        maxLength: 253
+        type: string
+      indexed:
+        type: boolean
+      page_ids:
+        items:
+          type: string
+        type: array
+      published:
+        type: boolean
+      slug:
+        maxLength: 40
+        type: string
+      title:
+        maxLength: 200
+        type: string
+    type: object
+  api.siteResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      domain:
+        type: string
+      id:
+        type: string
+      indexed:
+        type: boolean
+      page_ids:
+        items:
+          type: string
+        type: array
+      path:
+        description: /site/<slug>
+        type: string
+      published:
+        type: boolean
+      slug:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      workspace_id:
+        type: string
     type: object
   api.slotRequest:
     properties:
@@ -3719,6 +3870,15 @@ definitions:
           Own colours for calendars: key → "#rrggbb", or "" to use the
           calendar's own again.
         type: object
+      calendar_hidden:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        description: |-
+          Calendars kept out of view: per calendar ("all", or a workspace id),
+          its whole list of keys ([] = all shown again); other calendars stay.
+        type: object
       channel_details:
         type: boolean
       day_from:
@@ -3893,6 +4053,12 @@ definitions:
         maximum: 1000
         minimum: 5
         type: integer
+      privacy_policy:
+        description: |-
+          PrivacyPolicy / Terms: Markdown shown at /privacy and /terms ("" = the
+          built-in privacy text; no terms page).
+        maxLength: 50000
+        type: string
       season_theme:
         description: 'SeasonTheme: off, auto (the season today is in) or one of them
           now.'
@@ -3910,6 +4076,9 @@ definitions:
         type: boolean
       show_logo:
         type: boolean
+      terms_of_service:
+        maxLength: 50000
+        type: string
     type: object
   api.updateUserRequest:
     properties:
@@ -3968,6 +4137,21 @@ definitions:
           FolderID: a file of its own's folder ("" the top); an attachment shows
           where what it's on is (a task: its list's folder; a page: its own).
         type: string
+      from_git:
+        description: |-
+          FromGit: brought from a comment on the task's git issue (it shows in
+          that comment).
+        type: boolean
+      git_error:
+        description: 'GitError: why a task''s new file didn''t reach its git issue.'
+        type: string
+      git_url:
+        description: |-
+          A task's file in step with its git issue: GitURL is where it is on the
+          git server (brought from a comment there, or sent with one), and
+          GitCommentID the comment Orbit sent it with (that comment isn't
+          brought back as a comment of its own).
+        type: string
       id:
         type: string
       image:
@@ -4024,6 +4208,21 @@ definitions:
         description: |-
           FolderID: a file of its own's folder ("" the top); an attachment shows
           where what it's on is (a task: its list's folder; a page: its own).
+        type: string
+      from_git:
+        description: |-
+          FromGit: brought from a comment on the task's git issue (it shows in
+          that comment).
+        type: boolean
+      git_error:
+        description: 'GitError: why a task''s new file didn''t reach its git issue.'
+        type: string
+      git_url:
+        description: |-
+          A task's file in step with its git issue: GitURL is where it is on the
+          git server (brought from a comment there, or sent with one), and
+          GitCommentID the comment Orbit sent it with (that comment isn't
+          brought back as a comment of its own).
         type: string
       id:
         type: string
@@ -4532,12 +4731,22 @@ definitions:
         type: string
       calendar_url:
         type: string
+      color:
+        type: string
       created_at:
         type: string
       created_by:
         type: string
       event_count:
         type: integer
+      extra:
+        description: |-
+          Extra: another calendar of the account, beside the one that is the
+          workspace's own Events (one per workspace, Extra false): its events
+          are its own (Event.CalendarID), shown as a calendar of their own, in
+          Color. ReadOnly: one the account may only read (Google's birthdays, a
+          calendar shared read-only): its events only come in.
+        type: boolean
       host:
         description: shown
         type: string
@@ -4550,11 +4759,20 @@ definitions:
           Provider: "" a CalDAV account (user name and password); "google" a
           Google account (signed in; PasswordSealed holds its refresh token).
         type: string
+      pushed_at:
+        description: when Google last said it changed
+        type: string
+      read_only:
+        type: boolean
       synced_at:
         type: string
       updated_at:
         type: string
       username:
+        type: string
+      watch_error:
+        type: string
+      watch_until:
         type: string
       workspace_id:
         type: string
@@ -4925,6 +5143,13 @@ definitions:
           CalendarColors are this person's own colours for calendars (JSON
           {key: "#rrggbb"}; keys: a workspace id, "list:<id>", "sub:<id>",
           "holidays"); absent = the calendar's own colour.
+        type: string
+      calendar_hidden:
+        description: |-
+          CalendarHidden is which calendars this person keeps out of view, per
+          calendar (JSON {scope: [key]}; scope "all" is the calendar of all
+          workspaces, else a workspace id; keys as for CalendarColors, plus
+          "events:<workspace id>" for a workspace's own events there).
         type: string
       channel_details:
         description: |-
@@ -7447,6 +7672,32 @@ paths:
       summary: Google sign-in callback
       tags:
       - calendar
+  /google/push:
+    post:
+      parameters:
+      - description: The watch
+        in: header
+        name: X-Goog-Channel-ID
+        required: true
+        type: string
+      - description: The watch's secret
+        in: header
+        name: X-Goog-Channel-Token
+        required: true
+        type: string
+      - description: sync, exists or not_exists
+        in: header
+        name: X-Goog-Resource-State
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "403":
+          description: Forbidden
+      summary: A change in a watched Google calendar (called by Google)
+      tags:
+      - calendar
   /google/status:
     get:
       produces:
@@ -7878,6 +8129,30 @@ paths:
       summary: Create an account through an invite link
       tags:
       - workspaces
+  /legal/{doc}:
+    get:
+      parameters:
+      - description: privacy or terms
+        in: path
+        name: doc
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.legalResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the privacy policy or terms of service
+      tags:
+      - settings
   /links/{id}:
     delete:
       parameters:
@@ -10559,6 +10834,121 @@ paths:
       summary: Save a sheet
       tags:
       - sheets
+  /site/{slug}:
+    get:
+      parameters:
+      - description: The website's name
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: A published website (no account)
+      tags:
+      - sites
+  /site/{slug}/embed/{kind}/{id}:
+    get:
+      parameters:
+      - description: The website's name
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: sheet, diagram or board
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Its id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: What a website's page shows
+      tags:
+      - sites
+  /site/{slug}/pages/{id}:
+    get:
+      parameters:
+      - description: The website's name
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Page id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.guestPage'
+      summary: A page of a published website
+      tags:
+      - sites
+  /site/{slug}/search:
+    get:
+      parameters:
+      - description: The website's name
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Words to find
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.siteHit'
+            type: array
+      summary: Search a published website
+      tags:
+      - sites
+  /site/{slug}/uploads/{id}/{name}:
+    get:
+      parameters:
+      - description: The website's name
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Upload id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: A website's file
+      tags:
+      - sites
   /smart-lists/{id}:
     delete:
       parameters:
@@ -11561,6 +11951,90 @@ paths:
       security:
       - BearerAuth: []
       summary: Sync a workspace's calendar with a CalDAV calendar
+      tags:
+      - calendar
+  /workspaces/{ws}/caldav/{link}:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The synced calendar
+        in: path
+        name: link
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.caldavLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: Stop syncing one calendar
+      tags:
+      - calendar
+  /workspaces/{ws}/caldav/{link}/calendars:
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: A synced calendar
+        in: path
+        name: link
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.accountCalendar'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: The calendars of a synced calendar's account
+      tags:
+      - calendar
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: A synced calendar of that account
+        in: path
+        name: link
+        required: true
+        type: string
+      - description: The calendar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.moreCalendarRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.caldavLinkResponse'
+      security:
+      - BearerAuth: []
+      summary: Sync another calendar of the account
       tags:
       - calendar
   /workspaces/{ws}/caldav/calendars:
@@ -12827,6 +13301,68 @@ paths:
       summary: New sheet
       tags:
       - sheets
+  /workspaces/{ws}/site:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Take the workspace's website down
+      tags:
+      - sites
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.siteResponse'
+      security:
+      - BearerAuth: []
+      summary: The workspace's website
+      tags:
+      - sites
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.siteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.siteResponse'
+      security:
+      - BearerAuth: []
+      summary: Publish the workspace as a website, or change it
+      tags:
+      - sites
   /workspaces/{ws}/smart-lists:
     get:
       parameters:

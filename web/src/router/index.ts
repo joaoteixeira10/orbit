@@ -21,6 +21,18 @@ const routes: RouteRecordRaw[] = [
   // A page opened to anyone with its link, and a public form: no account.
   { path: '/shared/:token', name: 'guest', component: () => import('@/views/GuestView.vue'), meta: { public: true } },
   { path: '/form/:token', name: 'public-form', component: () => import('@/views/FormView.vue'), meta: { public: true } },
+  // The instance's privacy policy and terms: open to all (the sign-in page links them).
+  { path: '/privacy', name: 'privacy', component: () => import('@/views/LegalView.vue'), props: { doc: 'privacy' }, meta: { public: true } },
+  { path: '/terms', name: 'terms', component: () => import('@/views/LegalView.vue'), props: { doc: 'terms' }, meta: { public: true } },
+  // A workspace published as a website: open to all.
+  { path: '/site/:slug', name: 'site', component: () => import('@/views/SiteView.vue'), props: (r) => ({ slug: String(r.params.slug), base: `/site/${String(r.params.slug)}` }), meta: { public: true } },
+  {
+    path: '/site/:slug/p/:page',
+    name: 'site-page',
+    component: () => import('@/views/SiteView.vue'),
+    props: (r) => ({ slug: String(r.params.slug), base: `/site/${String(r.params.slug)}`, page: String(r.params.page) }),
+    meta: { public: true },
+  },
   // An app (an assistant, through MCP) asking to use Orbit as you.
   { path: '/oauth/authorize', name: 'oauth', component: () => import('@/views/OAuthView.vue') },
   {
@@ -77,9 +89,18 @@ const routes: RouteRecordRaw[] = [
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
+// On a published website's own domain (the server names it in the page),
+// only that website: its pages, nothing else of Orbit.
+export const siteHost = document.querySelector('meta[name="orbit-site"]')?.getAttribute('content') || ''
+const siteRoutes: RouteRecordRaw[] = [
+  { path: '/', name: 'site', component: () => import('@/views/SiteView.vue'), props: { slug: siteHost, base: '' }, meta: { public: true } },
+  { path: '/p/:page', name: 'site-page', component: () => import('@/views/SiteView.vue'), props: (r) => ({ slug: siteHost, base: '', page: String(r.params.page) }), meta: { public: true } },
+  { path: '/:pathMatch(.*)*', redirect: '/' },
+]
+
 export const router = createRouter({
   history: createWebHistory(),
-  routes,
+  routes: siteHost ? siteRoutes : routes,
   scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
 })
 

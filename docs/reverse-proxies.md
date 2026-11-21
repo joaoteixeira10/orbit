@@ -282,6 +282,18 @@ TLS_KEY_FILE=/certs/orbit.example.org.key    # private key, PEM
 You can also combine both: the proxy terminates the public TLS and talks HTTPS
 to Orbit, to encrypt the hop between them.
 
+## A website's own domain
+
+A workspace published as a website (workspace settings → **Website**) can
+have a domain of its own, e.g. `docs.example.org`. Give it a certificate and
+send it to Orbit exactly as Orbit's own host name (same upstream, same
+headers — `Host` must reach Orbit unchanged). Orbit answers that host with
+the website only: no sign-in and no other part of Orbit, and `/robots.txt`
+and `/sitemap.xml` for search engines. With nginx, add the name to the
+`server_name` of Orbit's server block (or a copy of it with its own
+certificate); with Caddy, a second site address with the same
+`reverse_proxy`; with Traefik, a second `Host(...)` in the router's rule.
+
 ## 9. Check it
 
 1. `curl -s https://orbit.example.org/api/v1/healthz` returns `{"status":"ok"}`.

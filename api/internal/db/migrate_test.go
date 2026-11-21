@@ -83,3 +83,26 @@ func TestMigrateListFolders(t *testing.T) {
 		t.Fatal("a second start joined the folder again")
 	}
 }
+
+// TestMigrateCalendarLinks: the old one-calendar-per-workspace index goes,
+// so a workspace can sync several.
+func TestMigrateCalendarLinks(t *testing.T) {
+	g, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := g.AutoMigrate(models.AllModels()...); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.Exec("CREATE UNIQUE INDEX idx_cal_dav_links_workspace_id ON cal_dav_links(workspace_id)").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(g); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := g.Create(&models.CalDAVLink{WorkspaceID: "w1", CalendarURL: "https://x/" + string(rune('a'+i))}).Error; err != nil {
+			t.Fatalf("link %d: %v", i, err)
+		}
+	}
+}

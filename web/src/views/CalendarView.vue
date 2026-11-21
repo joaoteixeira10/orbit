@@ -17,7 +17,7 @@ import type { DraggedTask } from '@/lib/taskDrag'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'
 import { toEntry, type CalView, type Entry, type TaskItem } from '@/components/calendar/model'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
-import { blocksApi, calendarApi, tasksApi, type TimeBlock, type CalendarData, type EventInput, type Occurrence, type Subscription, type Task, type Workspace } from '@/api/planner'
+import { blocksApi, calendarApi, tasksApi, type CalDAVLink, type TimeBlock, type CalendarData, type EventInput, type Occurrence, type Subscription, type Task, type Workspace } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useTasksStore } from '@/stores/tasks'
 import { usePrefsStore } from '@/stores/prefs'
@@ -108,35 +108,54 @@ watch(wide, (w) => {
   rightOpen.value = w && readFlag('orbit_cal_right', false)
 })
 
-// ---- Which calendars show: per workspace on the merged calendar; in one
-// workspace its own events, its tasks and each subscribed calendar ----
+// ---- Which calendars show: on the merged calendar each workspace, and
+// within it its events, each list and each subscribed calendar; in one
+// workspace its own events, its tasks and each subscribed calendar. Kept
+// with the person's preferences, so every device shows the same ----
 const scope = computed(() => wsId.value || 'all')
-function readHidden(): Set<string> {
-  try {
-    const all = JSON.parse(localStorage.getItem('orbit_cal_hidden') || '{}')
-    return new Set(Array.isArray(all[scope.value]) ? all[scope.value] : [])
-  } catch {
-    return new Set()
-  }
-}
-const hidden = ref<Set<string>>(readHidden())
-watch(scope, () => (hidden.value = readHidden()))
+const hidden = computed(() => new Set(prefs.calendarHidden[scope.value] ?? []))
 function toggleSource(id: string) {
   const next = new Set(hidden.value)
   if (next.has(id)) next.delete(id)
   else next.add(id)
-  hidden.value = next
-  try {
-    const all = JSON.parse(localStorage.getItem('orbit_cal_hidden') || '{}')
-    all[scope.value] = [...next]
-    localStorage.setItem('orbit_cal_hidden', JSON.stringify(all))
-  } catch {
-    /* private mode */
-  }
+  void prefs.setCalendarHidden(scope.value, [...next])
 }
 const subs = ref<Subscription[]>([])
+// On the merged calendar: each workspace's subscribed calendars, for its parts.
+const subsOf = ref<Record<string, Subscription[]>>({})
+// Each workspace's extra synced calendars (its own Events aside).
+const extrasOf = ref<Record<string, CalDAVLink[]>>({})
+async function loadExtras(ws: string) {
+  if (auth.features.caldav_sync === false) return
+  try {
+    const r = await calendarApi.caldav(ws)
+    extrasOf.value = { ...extrasOf.value, [ws]: (r.links ?? []).filter((l) => l.extra) }
+  } catch {
+    /* none to show */
+  }
+}
+async function loadParts(ws: string) {
+  const w = wss.byId(ws)
+  if (!w) return
+  if (w.modules.includes('tasks') && !tasksStore.lists[ws]) void tasksStore.loadLists(ws).catch(() => {})
+  if (!extrasOf.value[ws]) void loadExtras(ws)
+  if (subsOf.value[ws] || auth.features.calendar_subscriptions === false) return
+  try {
+    const list = await calendarApi.subscriptions(ws)
+    subsOf.value = { ...subsOf.value, [ws]: list }
+  } catch {
+    /* none to show */
+  }
+}
+// What's hidden shows as a part ticked off: so the parts are known at once.
+watch(
+  () => (wsId.value ? '' : wss.active.filter((w) => w.modules.includes('calendar')).map((w) => w.id).join(',')),
+  (ids) => ids && ids.split(',').forEach((id) => void loadParts(id)),
+  { immediate: true },
+)
 async function loadSubs() {
   subs.value = []
+  if (wsId.value) void loadExtras(wsId.value)
   if (!wsId.value || auth.features.calendar_subscriptions === false) return
   try {
     subs.value = await calendarApi.subscriptions(wsId.value)
@@ -156,6 +175,7 @@ function colorOfOcc(o: Occurrence): string {
   if (o.kind === 'holiday') return own('holidays') || HOLIDAY_GREY
   if (o.kind === 'external') return own(`sub:${o.subscription_id}`) || o.color || wsColor(o.workspace_id)
   if (o.own_color) return o.color // an event's own colour wins
+  if (o.calendar_id) return own(`cal:${o.calendar_id}`) || o.color || wsColor(o.workspace_id) // an extra synced calendar's
   return wsColor(o.workspace_id)
 }
 // A task: its list's colour in a workspace's calendar; the workspace's on all of them.
@@ -167,13 +187,34 @@ const sources = computed<CalSource[]>(() => {
   const hol: CalSource = { id: 'holidays', key: 'holidays', name: t('cal.holidays'), color: own('holidays') || HOLIDAY_GREY, base: HOLIDAY_GREY }
   if (!wsId.value) {
     const list = wss.active.filter((w) => w.modules.includes('calendar'))
-    return [...list.map((w) => ({ id: w.id, key: w.id, name: w.name, color: wsColor(w.id), base: w.color })), ...(list.some((w) => w.holidays) ? [hol] : [])]
+    return [
+      ...list.map((w) => {
+        const c = wsColor(w.id)
+        // Its parts, in the workspace's colour (as they show here).
+        const children: CalSource[] = [
+          { id: `events:${w.id}`, name: t('cal.events'), color: c },
+          ...(extrasOf.value[w.id] ?? []).map((l) => ({ id: `cal:${l.id}`, name: l.calendar_name || l.host, color: own(`cal:${l.id}`) || l.color || c })),
+          ...(w.modules.includes('tasks') ? tasksStore.listsOf(w.id) : []).map((l) => ({ id: `list:${l.id}`, name: l.name, color: c })),
+          ...(subsOf.value[w.id] ?? []).map((sub) => ({ id: `sub:${sub.id}`, name: sub.name, color: own(`sub:${sub.id}`) || sub.color || c })),
+        ]
+        return { id: w.id, key: w.id, name: w.name, color: c, base: w.color, children }
+      }),
+      ...(list.some((w) => w.holidays) ? [hol] : []),
+    ]
   }
   const w = workspace.value
   const base = w?.color || ''
   return [
     // The workspace's own events (not its tasks): "Events" here.
     { id: 'events', key: wsId.value, name: t('cal.events'), color: wsColor(wsId.value), base },
+    // Each extra synced calendar (Google's "Eventos", "Aniversários"…) as its own.
+    ...(extrasOf.value[wsId.value] ?? []).map((l) => ({
+      id: `cal:${l.id}`,
+      key: `cal:${l.id}`,
+      name: l.calendar_name || l.host,
+      color: own(`cal:${l.id}`) || l.color || base,
+      base: l.color || base,
+    })),
     // Each list as its own calendar, in the list's colour.
     ...(w?.modules.includes('tasks') ? tasksStore.listsOf(wsId.value) : []).map((l) => ({
       id: `list:${l.id}`,
@@ -209,9 +250,21 @@ async function setHolidays(code: string) {
   }
 }
 function visible(o: { occ?: Occurrence; task?: Task }): boolean {
-  if (o.occ?.kind === 'holiday') return !hidden.value.has('holidays')
-  if (o.occ) return !hidden.value.has(wsId.value ? (o.occ.kind === 'external' ? o.occ.subscription_id ?? '' : 'events') : o.occ.workspace_id)
-  if (o.task) return !hidden.value.has(wsId.value ? `list:${o.task.list_id}` : o.task.workspace_id)
+  const h = hidden.value
+  if (o.occ?.kind === 'holiday') return !h.has('holidays')
+  if (wsId.value) {
+    if (o.occ?.calendar_id) return !h.has(`cal:${o.occ.calendar_id}`)
+    if (o.occ) return !h.has(o.occ.kind === 'external' ? o.occ.subscription_id ?? '' : 'events')
+    if (o.task) return !h.has(`list:${o.task.list_id}`)
+    return true
+  }
+  // All workspaces: the workspace, then the part of it.
+  if (o.occ)
+    return (
+      !h.has(o.occ.workspace_id) &&
+      !h.has(o.occ.kind === 'external' ? `sub:${o.occ.subscription_id}` : o.occ.calendar_id ? `cal:${o.occ.calendar_id}` : `events:${o.occ.workspace_id}`)
+    )
+  if (o.task) return !h.has(o.task.workspace_id) && !h.has(`list:${o.task.list_id}`)
   return true
 }
 const paneWs = computed(() => (wsId.value ? [wsId.value] : wss.active.filter((w) => w.modules.includes('tasks')).map((w) => w.id)))
@@ -413,7 +466,8 @@ const detailName = computed(() => {
   const e = detail.value
   if (!e) return ''
   const wsName = wss.byId(e.occ.workspace_id)?.name ?? ''
-  const sub = e.occ.subscription_id ? subNames.value[e.occ.subscription_id] : ''
+  const extra = e.occ.calendar_id ? extrasOf.value[e.occ.workspace_id]?.find((l) => l.id === e.occ.calendar_id)?.calendar_name : ''
+  const sub = e.occ.subscription_id ? subNames.value[e.occ.subscription_id] : extra || ''
   if (!sub) return wsName
   return wsId.value ? sub : `${sub} · ${wsName}`
 })
@@ -536,6 +590,7 @@ function googleDone() {
 }
 function onSubsChanged() {
   subsLoaded.clear()
+  if (!wsId.value) extrasOf.value = {}
   void loadSubs()
   void load()
 }
@@ -596,6 +651,7 @@ const views: CalView[] = ['day', 'week', 'month']
         @go="(d) => ((cursor = d), !wide && (leftOpen = false))"
         :holidays="holidaysCtl"
         @toggle="toggleSource"
+        @expand="loadParts"
         @add="subsOpen = true"
         @holidays="setHolidays"
         @color="(key, c) => prefs.setCalendarColor(key, c)"

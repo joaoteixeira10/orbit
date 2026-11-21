@@ -191,3 +191,21 @@ func TestCalendarColors(t *testing.T) {
 		t.Errorf("saved: %#v", p.CalendarColors)
 	}
 }
+
+// TestCalendarHidden: which calendars a person keeps out of view is kept
+// per calendar with their preferences (every device); [] shows all again.
+func TestCalendarHidden(t *testing.T) {
+	r, _ := newTestRouterDB(t, false)
+	owner := loginTok(t, r, "admin", "adminpass")
+	var p struct {
+		CalendarHidden map[string][]string `json:"calendar_hidden"`
+	}
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_hidden":{"":["x"]}}`, owner), http.StatusBadRequest, "no scope")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_hidden":{"all":[""]}}`, owner), http.StatusBadRequest, "empty key")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_hidden":{"all":["list:a","sub:b"],"ws1":["holidays"]}}`, owner), http.StatusOK, "save")
+	expect(t, authdo(r, "PUT", "/api/v1/me/prefs", `{"calendar_hidden":{"ws1":[]}}`, owner), http.StatusOK, "show one calendar's all again")
+	decode(t, authdo(r, "GET", "/api/v1/me/prefs", "", owner), &p)
+	if len(p.CalendarHidden) != 1 || len(p.CalendarHidden["all"]) != 2 || p.CalendarHidden["all"][0] != "list:a" {
+		t.Errorf("saved: %#v", p.CalendarHidden)
+	}
+}

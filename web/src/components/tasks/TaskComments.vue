@@ -65,7 +65,8 @@ function setShow(v: boolean) {
 type Item = { at: string; c?: TaskComment; a?: TaskActivity; f?: Upload }
 const timeline = computed<Item[]>(() => {
   const items: Item[] = comments.value.map((c) => ({ at: c.created_at, c }))
-  items.push(...files.value.map((f) => ({ at: f.created_at, f })))
+  // Files brought from a git comment show in that comment, not again here.
+  items.push(...files.value.filter((f) => !f.from_git).map((f) => ({ at: f.created_at, f })))
   if (showActivity.value) items.push(...activity.value.map((a) => ({ at: a.created_at, a })))
   return items.sort((x, y) => x.at.localeCompare(y.at))
 })
@@ -100,7 +101,8 @@ async function attach(list: FileList | File[] | null) {
   for (const f of [...(list ?? [])]) {
     uploading.value++
     try {
-      await uploadFile('task', props.taskId, f)
+      const u = await uploadFile('task', props.taskId, f)
+      if (u.git_error) toast.error(u.git_error)
     } catch (e: any) {
       toast.error(e?.message ?? String(e))
     } finally {

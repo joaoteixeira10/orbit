@@ -54,8 +54,8 @@ export function toEntry(o: Occurrence, editable: boolean): Entry {
     first,
     last,
     // A course's class is changed in Courses (it opens read-only).
-    editable: isOrbit && editable && !o.course_id,
-    movable: isOrbit && editable && !o.recurring && !o.course_id,
+    editable: isOrbit && editable && !o.course_id && !o.read_only,
+    movable: isOrbit && editable && !o.recurring && !o.course_id && !o.read_only,
   }
 }
 

@@ -36,7 +36,9 @@ type prefsResponse struct {
 	EditorThemes  map[string]string         `json:"editor_themes"` // sheets / diagrams / whiteboards: light | dark
 	// CalendarColors: own colours for calendars (a workspace id, list:<id>, sub:<id>, holidays).
 	CalendarColors map[string]string `json:"calendar_colors"`
-	FocusLengths   []int             `json:"focus_lengths"` // own focus timer lengths, minutes
+	// CalendarHidden: the calendars kept out of view, per calendar ("all" or a workspace id).
+	CalendarHidden map[string][]string `json:"calendar_hidden"`
+	FocusLengths   []int               `json:"focus_lengths"` // own focus timer lengths, minutes
 	// Quiet hours ("" = none): nothing to devices or channels between them.
 	DayFrom        string `json:"day_from"`   // daynight theme: light from (HH:MM)
 	NightFrom      string `json:"night_from"` // and dark from
@@ -75,12 +77,17 @@ func toPrefsResponse(p models.UserPrefs) prefsResponse {
 	if p.CalendarColors != "" {
 		_ = json.Unmarshal([]byte(p.CalendarColors), &calColors)
 	}
+	calHidden := map[string][]string{}
+	if p.CalendarHidden != "" {
+		_ = json.Unmarshal([]byte(p.CalendarHidden), &calHidden)
+	}
 	lengths := []int{}
 	if p.FocusLengths != "" {
 		_ = json.Unmarshal([]byte(p.FocusLengths), &lengths)
 	}
 	return prefsResponse{
 		CalendarColors: calColors,
+		CalendarHidden: calHidden,
 		FocusLengths:   lengths,
 		EditorThemes:   editors,
 		Timezone:       p.Timezone,
@@ -275,6 +282,37 @@ func (h *Handlers) updatePrefs(c *gin.Context) {
 		}
 		b, _ := json.Marshal(colors)
 		updates["calendar_colors"] = string(b)
+	}
+	if req.CalendarHidden != nil {
+		hidden := map[string][]string{}
+		if prefs.CalendarHidden != "" {
+			_ = json.Unmarshal([]byte(prefs.CalendarHidden), &hidden)
+		}
+		for scope, keys := range *req.CalendarHidden {
+			if scope == "" || len(scope) > 64 || len(keys) > 300 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "calendar_hidden: a calendar (all, or a workspace) and at most 300 keys"})
+				return
+			}
+			clean := make([]string, 0, len(keys))
+			for _, k := range keys {
+				if k == "" || len(k) > 80 {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "calendar_hidden: a calendar's key"})
+					return
+				}
+				clean = append(clean, k)
+			}
+			if len(clean) == 0 {
+				delete(hidden, scope)
+			} else {
+				hidden[scope] = clean
+			}
+		}
+		if len(hidden) > 200 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "too many hidden calendars"})
+			return
+		}
+		b, _ := json.Marshal(hidden)
+		updates["calendar_hidden"] = string(b)
 	}
 	for _, q := range []struct {
 		v   *string

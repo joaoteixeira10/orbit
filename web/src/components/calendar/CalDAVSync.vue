@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RefreshCw, AlertCircle, ArrowLeftRight, Check } from 'lucide-vue-next'
+import { RefreshCw, AlertCircle, ArrowLeftRight, Check, Plus, X, Zap } from 'lucide-vue-next'
 import Confirm from '@/components/ui/Confirm.vue'
-import { calendarApi, type CalDAVLink, type CalDAVCalendar } from '@/api/planner'
+import { calendarApi, type AccountCalendar, type CalDAVLink, type CalDAVCalendar } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'
 import { locale } from '@/lib/dates'
 import { Button } from '@/components/shadcn/button'
@@ -19,14 +19,21 @@ const toast = useToastStore()
 const { t } = useI18n()
 
 const link = ref<CalDAVLink | null>(null)
+const links = ref<CalDAVLink[]>([])
 const loaded = ref(false)
 const syncing = ref(false)
+// More calendars of the same account, each its own calendar here.
+const extras = computed(() => links.value.filter((l) => l.extra))
+function take(r: { link: CalDAVLink | null; links?: CalDAVLink[] }) {
+  link.value = r.link
+  links.value = r.links ?? (r.link ? [r.link] : [])
+}
 
 async function load() {
   try {
-    link.value = (await calendarApi.caldav(props.ws)).link
+    take(await calendarApi.caldav(props.ws))
   } catch {
-    link.value = null
+    take({ link: null })
   } finally {
     loaded.value = true
   }
@@ -62,7 +69,7 @@ watch(
 
 // ---- Google Calendar: sign in with Google, then pick a calendar ----
 const googleOn = ref(false)
-const google = ref<{ pending: string; email: string; calendars: { id: string; name: string; color: string }[] } | null>(null)
+const google = ref<{ pending: string; email: string; calendars: { id: string; name: string; color: string; writable?: boolean }[] } | null>(null)
 const googleChosen = ref('')
 async function signInGoogle() {
   try {
@@ -76,7 +83,8 @@ async function loadGoogle(pending: string) {
   try {
     const r = await calendarApi.googleCalendars(props.ws, pending)
     google.value = { pending, ...r }
-    googleChosen.value = r.calendars[0]?.id ?? ''
+    // The workspace's own Events go up to it: one that may be written.
+    googleChosen.value = r.calendars.find((c) => c.writable !== false)?.id ?? ''
   } catch (e: any) {
     toast.error(e.message)
     emit('googleDone')
@@ -89,7 +97,7 @@ async function linkGoogle() {
   linking.value = true
   error.value = ''
   try {
-    link.value = (await calendarApi.googleLink(props.ws, { pending: g.pending, calendar_id: cal.id, calendar_name: cal.name })).link
+    take(await calendarApi.googleLink(props.ws, { pending: g.pending, calendar_id: cal.id, calendar_name: cal.name }))
     google.value = null
     emit('googleDone')
     emit('changed')
@@ -133,9 +141,7 @@ async function connect() {
   linking.value = true
   error.value = ''
   try {
-    link.value = (
-      await calendarApi.setCalDAV(props.ws, { url: server.value.trim(), username: username.value.trim(), password: password.value, calendar_url: cal.url, calendar_name: cal.name })
-    ).link
+    take(await calendarApi.setCalDAV(props.ws, { url: server.value.trim(), username: username.value.trim(), password: password.value, calendar_url: cal.url, calendar_name: cal.name }))
     password.value = ''
     setup.value = false
     emit('changed')
@@ -150,7 +156,7 @@ async function connect() {
 async function syncNow() {
   syncing.value = true
   try {
-    link.value = (await calendarApi.syncCalDAV(props.ws)).link
+    take(await calendarApi.syncCalDAV(props.ws))
     emit('changed')
   } catch (e: any) {
     toast.error(e.message)
@@ -163,7 +169,49 @@ async function stop() {
   stopping.value = false
   try {
     await calendarApi.unlinkCalDAV(props.ws)
-    link.value = null
+    take({ link: null })
+    emit('changed')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
+// ---- More calendars of the account ----
+const more = ref<AccountCalendar[] | null>(null)
+const moreChosen = ref('')
+const adding = ref(false)
+async function openMore() {
+  if (!link.value) return
+  error.value = ''
+  try {
+    more.value = (await calendarApi.accountCalendars(props.ws, link.value.id)).filter((c) => !c.linked)
+    moreChosen.value = more.value[0]?.key ?? ''
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+async function addMore() {
+  if (!link.value || !moreChosen.value || adding.value) return
+  adding.value = true
+  error.value = ''
+  try {
+    take(await calendarApi.addCalendar(props.ws, link.value.id, { key: moreChosen.value }))
+    more.value = null
+    emit('changed')
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    adding.value = false
+  }
+}
+const removing = ref<CalDAVLink | null>(null)
+async function removeExtra() {
+  const l = removing.value
+  removing.value = null
+  if (!l) return
+  try {
+    take(await calendarApi.removeCalendar(props.ws, l.id))
+    emit('changed')
   } catch (e: any) {
     toast.error(e.message)
   }
@@ -199,6 +247,13 @@ function ago(iso: string): string {
           <p v-if="link.last_error" class="mt-1 flex items-start gap-1 text-[12.5px] text-crit-text">
             <AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="wrap-break-word">{{ link.last_error }}</span>
           </p>
+          <!-- Google: changes there come at once while watched; else every 5 minutes, and why -->
+          <p v-if="link.provider === 'google' && link.watch_until && !link.watch_error" class="mt-1 flex items-start gap-1 text-[12.5px] text-text-3" data-testid="dav-instant">
+            <Zap class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /><span>{{ link.pushed_at ? t('cal.dav.instantLast', { when: ago(link.pushed_at) }) : t('cal.dav.instant') }}</span>
+          </p>
+          <p v-else-if="link.provider === 'google' && link.watch_error" class="mt-1 flex items-start gap-1 text-[12.5px] text-text-3" data-testid="dav-instant-off">
+            <Zap class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="wrap-break-word">{{ t('cal.dav.instantOff', { why: link.watch_error }) }}</span>
+          </p>
         </div>
         <div class="-mr-1.5 flex shrink-0 items-center">
           <Button variant="ghost" size="icon" class="text-text-2" :title="t('cal.dav.syncNow')" :aria-label="t('cal.dav.syncNow')" :disabled="syncing" @click="syncNow">
@@ -206,16 +261,67 @@ function ago(iso: string): string {
           </Button>
         </div>
       </div>
-      <button v-if="owner" class="group-row w-full text-left text-[14px] text-danger!" @click="stopping = true">{{ t('cal.dav.stop') }}</button>
+      <!-- More calendars of the account, each its own calendar here -->
+      <div v-for="x in extras" :key="x.id" class="group-row items-start!" data-testid="dav-extra">
+        <span class="mt-1.5 h-3 w-3 shrink-0 rounded-full" :style="{ background: x.color || 'var(--ws)' }" />
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="truncate text-[14.5px] font-medium">{{ x.calendar_name || x.host }}</span>
+            <span v-if="x.read_only" class="pill shrink-0">{{ t('cal.dav.readOnly') }}</span>
+          </div>
+          <div class="flex flex-wrap gap-x-2 text-[12.5px] text-text-3">
+            <span>{{ t('cal.nEvents', x.event_count) }}</span>
+            <span>{{ x.synced_at ? t('cal.dav.synced', { when: ago(x.synced_at) }) : t('cal.dav.never') }}</span>
+          </div>
+          <p v-if="x.last_error" class="mt-1 flex items-start gap-1 text-[12.5px] text-crit-text">
+            <AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" /><span class="wrap-break-word">{{ x.last_error }}</span>
+          </p>
+        </div>
+        <Button v-if="owner" variant="ghost" size="icon" class="-mr-1.5 text-text-2" :title="t('cal.dav.removeOne', { name: x.calendar_name })" :aria-label="t('cal.dav.removeOne', { name: x.calendar_name })" @click="removing = x"><X class="h-4 w-4" /></Button>
+      </div>
+      <template v-if="owner">
+        <div v-if="more" class="group-row block! space-y-2" data-testid="dav-more">
+          <p class="text-[12.5px] leading-relaxed text-text-3">{{ t('cal.dav.moreIntro') }}</p>
+          <div v-if="more.length" role="radiogroup" :aria-label="t('cal.dav.pick')">
+            <button v-for="c in more" :key="c.key" type="button" class="flex w-full items-center gap-2.5 rounded-lg px-1 py-1.5 text-left" role="radio" :aria-checked="moreChosen === c.key" @click="moreChosen = c.key">
+              <span class="h-3 w-3 shrink-0 rounded-full" :style="{ background: c.color || 'var(--ws)' }" />
+              <span class="flex-1 truncate text-[14px]">{{ c.name }}</span>
+              <span v-if="!c.writable" class="pill shrink-0">{{ t('cal.dav.readOnly') }}</span>
+              <Check v-if="moreChosen === c.key" class="h-4 w-4 text-accent" />
+            </button>
+          </div>
+          <p v-else class="footnote">{{ t('cal.dav.noMore') }}</p>
+          <p v-if="error" class="text-[12.5px] text-crit-text">{{ error }}</p>
+          <div class="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" type="button" :disabled="adding" @click="more = null">{{ t('common.cancel') }}</Button>
+            <Button size="sm" type="button" :disabled="!moreChosen || adding" data-testid="dav-more-add" @click="addMore">
+              <RefreshCw v-if="adding" class="h-4 w-4 animate-spin" />{{ adding ? t('cal.dav.linking') : t('cal.dav.add') }}
+            </Button>
+          </div>
+        </div>
+        <button v-else class="group-row w-full text-left text-[14px] text-accent" data-testid="dav-more-open" @click="openMore"><Plus class="h-4 w-4" />{{ t('cal.dav.more') }}</button>
+        <button class="group-row w-full text-left text-[14px] text-danger!" @click="stopping = true">{{ t('cal.dav.stop') }}</button>
+      </template>
     </div>
 
 <!-- Back from Google: one of the account's calendars -->
     <form v-else-if="google" class="card space-y-3 p-4" data-testid="google-pick" @submit.prevent="linkGoogle">
       <p class="text-[13px] leading-relaxed text-text-2">{{ t('cal.dav.googlePick', { email: google.email }) }}</p>
       <div v-if="google.calendars.length" class="group" role="radiogroup" :aria-label="t('cal.dav.pick')">
-        <button v-for="c in google.calendars" :key="c.id" type="button" class="group-row w-full text-left" role="radio" :aria-checked="googleChosen === c.id" @click="googleChosen = c.id">
+        <button
+          v-for="c in google.calendars"
+          :key="c.id"
+          type="button"
+          class="group-row w-full text-left disabled:opacity-50"
+          role="radio"
+          :aria-checked="googleChosen === c.id"
+          :disabled="c.writable === false"
+          :title="c.writable === false ? t('cal.dav.readOnlyFirst') : undefined"
+          @click="googleChosen = c.id"
+        >
           <span class="h-3 w-3 shrink-0 rounded-full" :style="{ background: c.color || 'var(--ws)' }" />
           <span class="flex-1 truncate text-[14px]">{{ c.name }}</span>
+          <span v-if="c.writable === false" class="pill shrink-0">{{ t('cal.dav.readOnly') }}</span>
           <Check v-if="googleChosen === c.id" class="h-4 w-4 text-accent" />
         </button>
       </div>
@@ -289,5 +395,14 @@ function ago(iso: string): string {
     danger
     @confirm="stop"
     @close="stopping = false"
+  />
+  <Confirm
+    :open="!!removing"
+    :title="t('cal.dav.removeTitle', { name: removing?.calendar_name ?? '' })"
+    :message="t('cal.dav.removeBody')"
+    :confirm-label="t('cal.dav.remove')"
+    danger
+    @confirm="removeExtra"
+    @close="removing = null"
   />
 </template>

@@ -18,6 +18,8 @@ export interface Upload {
   size: number
   url: string // /api/v1/uploads/<id>/<name>
   image: boolean // shown in the page (a raster image)
+  from_git?: boolean // a task's, brought from a comment on its git issue (shown in it)
+  git_error?: string // why a task's new file didn't reach its git issue
   created_at: string
   lineage: string // the first version's id: one file's versions share it
   folder_id?: string

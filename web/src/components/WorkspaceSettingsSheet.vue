@@ -23,11 +23,12 @@ import { Button } from '@/components/shadcn/button'
 import { Input } from '@/components/shadcn/input'
 import { NativeSelect } from '@/components/shadcn/native-select'
 import { Textarea } from '@/components/shadcn/textarea'
+import SiteSettings from '@/components/SiteSettings.vue'
 
 // A workspace's settings: what it is (name, look, description), which
 // modules it has and in which order, who is in it, and archiving / deleting.
 // Only owners change anything; others see it read-only and can leave.
-const props = defineProps<{ open: boolean; wsId: string; initialTab?: 'general' | 'modules' | 'members' }>()
+const props = defineProps<{ open: boolean; wsId: string; initialTab?: 'general' | 'modules' | 'members' | 'site' }>()
 const emit = defineEmits<{ close: [] }>()
 const wss = useWorkspacesStore()
 const auth = useAuthStore()
@@ -36,9 +37,11 @@ const assistant = useAssistantStore()
 const router = useRouter()
 const { t } = useI18n()
 
-const tab = ref<'general' | 'modules' | 'members'>('general')
+const tab = ref<'general' | 'modules' | 'members' | 'site'>('general')
 const ws = computed(() => wss.byId(props.wsId))
 const isOwner = computed(() => ws.value?.role === 'owner')
+// Its owners may publish its pages as a website (where it has pages).
+const hasSite = computed(() => isOwner.value && !!ws.value?.modules.includes('pages') && auth.features.public_sites !== false)
 const members = computed(() => wss.members[props.wsId] ?? [])
 
 const name = ref('')
@@ -190,6 +193,7 @@ async function destroy() {
           <button :class="{ on: tab === 'general' }" @click="tab = 'general'">{{ t('ws.general') }}</button>
           <button :class="{ on: tab === 'modules' }" @click="tab = 'modules'">{{ t('ws.modules') }}</button>
           <button :class="{ on: tab === 'members' }" @click="tab = 'members'">{{ t('ws.members') }}</button>
+          <button v-if="hasSite" :class="{ on: tab === 'site' }" data-testid="ws-tab-site" @click="tab = 'site'">{{ t('site.tab') }}</button>
         </div>
       </div>
 
@@ -271,6 +275,9 @@ async function destroy() {
       </div>
 
       <!-- Members -->
+      <!-- Website: some of its pages, published -->
+      <SiteSettings v-else-if="tab === 'site' && hasSite" :ws-id="wsId" :ws-name="ws.name" />
+
       <div v-else class="space-y-4">
         <div v-if="isOwner" class="flex gap-2">
           <Input v-model="invite" class="flex-1" :placeholder="t('ws.invitePlaceholder')" autocomplete="off" @keydown.enter="addMember" />

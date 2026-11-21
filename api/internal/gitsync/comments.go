@@ -28,6 +28,18 @@ type Comment struct {
 	User      User      `json:"user"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	// Assets: Gitea's files attached under the comment (not in its text).
+	Assets []Asset `json:"assets"`
+	// BodyHTML: GitHub's comment as HTML — its pictures at addresses that
+	// open without signing in, for a few minutes (a private repository's).
+	BodyHTML string `json:"body_html"`
+}
+
+// Asset is a file attached to a Gitea comment.
+type Asset struct {
+	Name string `json:"name"`
+	UUID string `json:"uuid"`
+	URL  string `json:"browser_download_url"`
 }
 
 func (c *Client) Comments(ctx context.Context, owner, repo string, number int64) ([]Comment, error) {
@@ -43,7 +55,8 @@ func (c *Client) Comments(ctx context.Context, owner, repo string, number int64)
 	}
 	for page := 1; page <= 20; page++ {
 		var batch []Comment
-		err := c.do(ctx, "GET", path, url.Values{"per_page": {"100"}, "page": {strconv.Itoa(page)}}, nil, &batch)
+		// The text and the HTML (where the pictures open without signing in).
+		err := c.doAs(ctx, "GET", path, url.Values{"per_page": {"100"}, "page": {strconv.Itoa(page)}}, nil, &batch, "application/vnd.github.full+json")
 		if err != nil {
 			return nil, err
 		}
@@ -125,19 +138,31 @@ func (e *Engine) pullComments(ctx context.Context, c *Client, t *models.Task, by
 	for i := range local {
 		have[local[i].GitCommentID] = &local[i]
 	}
+	// The comments Orbit sent files with: those files are the task's already.
+	var withFiles []int64
+	e.db.Model(&models.Upload{}).Where("target = ? AND target_id = ? AND git_comment_id <> 0", "task", t.ID).Pluck("git_comment_id", &withFiles)
+	fileComment := map[int64]bool{}
+	for _, id := range withFiles {
+		fileComment[id] = true
+	}
 	seen := map[int64]bool{}
 	for _, rc := range remote {
 		seen[rc.ID] = true
-		h := hashBody(rc.Body)
+		if fileComment[rc.ID] {
+			continue
+		}
+		h := hashBody(rc.Body + assetsKey(rc.Assets))
+		uid, mapped := byLogin[strings.ToLower(rc.User.Login)]
 		if lc := have[rc.ID]; lc != nil {
-			if lc.GitHash != h {
+			if lc.GitHash != h || stale(lc.Body) {
 				now := time.Now()
-				e.db.Model(lc).Updates(map[string]any{"body": unsigned(rc.Body), "git_hash": h, "edited_at": &now})
+				body := e.localComment(ctx, c, t, rc, unsigned(rc.Body), uid)
+				e.db.Model(lc).Updates(map[string]any{"body": body, "git_hash": h, "edited_at": &now})
 			}
 			continue
 		}
-		cm := models.TaskComment{TaskID: t.ID, WorkspaceID: t.WorkspaceID, Body: unsigned(rc.Body), GitCommentID: rc.ID, GitHash: h}
-		if uid, ok := byLogin[strings.ToLower(rc.User.Login)]; ok {
+		cm := models.TaskComment{TaskID: t.ID, WorkspaceID: t.WorkspaceID, Body: e.localComment(ctx, c, t, rc, unsigned(rc.Body), uid), GitCommentID: rc.ID, GitHash: h}
+		if mapped {
 			cm.AuthorID = uid
 		} else {
 			cm.GitAuthor = rc.User.Login
@@ -166,7 +191,7 @@ func (e *Engine) PushComment(ctx context.Context, actor, actorName string, t *mo
 	if err != nil {
 		return err
 	}
-	body := cm.Body
+	body := e.remoteLinks(cm.Body)
 	if viaBot {
 		body = signed(actorName, body)
 	}
@@ -190,4 +215,17 @@ func (e *Engine) PushComment(ctx context.Context, actor, actorName string, t *mo
 		cm.GitHash = hashBody(rc.Body)
 	}
 	return e.db.Model(cm).Updates(map[string]any{"git_comment_id": cm.GitCommentID, "git_hash": cm.GitHash}).Error
+}
+
+// assetsKey makes a comment's files part of what tells a change (a file
+// attached under a Gitea comment later changes the comment).
+func assetsKey(as []Asset) string {
+	if len(as) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for _, a := range as {
+		b.WriteString("\x00" + a.UUID)
+	}
+	return b.String()
 }

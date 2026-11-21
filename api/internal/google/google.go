@@ -7,6 +7,7 @@
 package google
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -16,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +35,8 @@ var (
 	UserInfoURL     = "https://openidconnect.googleapis.com/v1/userinfo"
 	CalendarListURL = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
 	CalDAVBase      = "https://apidata.googleusercontent.com/caldav/v2/"
+	// CalendarAPI is the Calendar API (watching a calendar for changes).
+	CalendarAPI = "https://www.googleapis.com/calendar/v3"
 	// HTTP is the client for Google (public addresses only).
 	HTTP = func() *http.Client { return safedial.PublicClient(30 * time.Second) }
 )
@@ -141,7 +145,7 @@ func tokenCall(ctx context.Context, form url.Values) (Token, error) {
 	req.Header.Set("Accept", "application/json")
 	res, err := HTTP().Do(req)
 	if err != nil {
-		return Token{}, errors.New("couldn't reach Google")
+		return Token{}, unreachable(err)
 	}
 	defer func() { _ = res.Body.Close() }()
 	var body struct {
@@ -197,11 +201,12 @@ func getJSON(ctx context.Context, access, addr string, into any) error {
 	req.Header.Set("Authorization", "Bearer "+access)
 	res, err := HTTP().Do(req)
 	if err != nil {
-		return errors.New("couldn't reach Google")
+		return unreachable(err)
 	}
 	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("the answer from Google was %s", res.Status)
+		raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+		return refused(res.Status, raw)
 	}
 	return json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(into)
 }
@@ -217,12 +222,14 @@ func Email(ctx context.Context, access string) (string, error) {
 
 // Calendar is one of the account's calendars it may write to.
 type Calendar struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Color string `json:"color"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Color    string `json:"color"`
+	Writable bool   `json:"writable"` // false: it may only be read (birthdays, one shared read-only)
 }
 
-// Calendars lists the calendars the account can change (owner or writer).
+// Calendars lists the account's calendars: the ones it can change first
+// (its primary first of all), then the ones it may only read.
 func Calendars(ctx context.Context, access string) ([]Calendar, error) {
 	var page struct {
 		Items []struct {
@@ -234,26 +241,149 @@ func Calendars(ctx context.Context, access string) ([]Calendar, error) {
 			Primary         bool   `json:"primary"`
 		} `json:"items"`
 	}
-	if err := getJSON(ctx, access, CalendarListURL+"?minAccessRole=writer&maxResults=250", &page); err != nil {
+	if err := getJSON(ctx, access, CalendarListURL+"?minAccessRole=reader&maxResults=250", &page); err != nil {
 		return nil, err
 	}
-	out := []Calendar{}
+	var primary, writable, readOnly []Calendar
 	for _, it := range page.Items {
 		name := it.SummaryOverride
 		if name == "" {
 			name = it.Summary
 		}
-		c := Calendar{ID: it.ID, Name: name, Color: it.BackgroundColor}
-		if it.Primary {
-			out = append([]Calendar{c}, out...)
-		} else {
-			out = append(out, c)
+		c := Calendar{ID: it.ID, Name: name, Color: it.BackgroundColor, Writable: it.AccessRole == "owner" || it.AccessRole == "writer"}
+		switch {
+		case it.Primary:
+			primary = append(primary, c)
+		case c.Writable:
+			writable = append(writable, c)
+		default:
+			readOnly = append(readOnly, c)
 		}
 	}
-	return out, nil
+	return append(append(append([]Calendar{}, primary...), writable...), readOnly...), nil
 }
 
 // CalDAVURL is a calendar's collection on Google's CalDAV server.
 func CalDAVURL(calendarID string) string {
 	return CalDAVBase + url.PathEscape(calendarID) + "/events/"
+}
+
+// CalendarIDOf is the Google calendar a link's CalDAV address points at
+// ("" when it isn't one).
+func CalendarIDOf(caldavURL string) string {
+	rest, ok := strings.CutPrefix(caldavURL, CalDAVBase)
+	if !ok {
+		return ""
+	}
+	rest, ok = strings.CutSuffix(rest, "/events/")
+	if !ok {
+		return ""
+	}
+	id, err := url.PathUnescape(rest)
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
+// Channel is a watch on a calendar: Google calls Address on every change,
+// with the channel's id and token, until Expiry.
+type Channel struct {
+	ID       string
+	Resource string // Google's id of what is watched (to stop it)
+	Expiry   time.Time
+}
+
+// WatchTTL is how long a watch is asked to last (Google may give less).
+const WatchTTL = 7 * 24 * time.Hour
+
+// Watch asks Google to call address on every change of a calendar's events.
+func Watch(ctx context.Context, access, calendarID, channelID, address, token string) (Channel, error) {
+	body := map[string]any{
+		"id": channelID, "type": "web_hook", "address": address, "token": token,
+		"params": map[string]string{"ttl": strconv.Itoa(int(WatchTTL / time.Second))},
+	}
+	var out struct {
+		ID         string `json:"id"`
+		ResourceID string `json:"resourceId"`
+		Expiration string `json:"expiration"` // milliseconds since 1970, as text
+	}
+	if err := postJSON(ctx, access, CalendarAPI+"/calendars/"+url.PathEscape(calendarID)+"/events/watch", body, &out); err != nil {
+		return Channel{}, err
+	}
+	ch := Channel{ID: out.ID, Resource: out.ResourceID, Expiry: time.Now().Add(WatchTTL)}
+	if ms, err := strconv.ParseInt(out.Expiration, 10, 64); err == nil && ms > 0 {
+		ch.Expiry = time.UnixMilli(ms)
+	}
+	return ch, nil
+}
+
+// StopWatch ends a watch (Google stops calling).
+func StopWatch(ctx context.Context, access, channelID, resource string) error {
+	return postJSON(ctx, access, CalendarAPI+"/channels/stop", map[string]string{"id": channelID, "resourceId": resource}, nil)
+}
+
+// postJSON sends a JSON body and reads the answer into into (nil: none). A
+// refusal says Google's own reason.
+func postJSON(ctx context.Context, access, addr string, body, into any) error {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, addr, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+access)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := HTTP().Do(req)
+	if err != nil {
+		return unreachable(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		return refused(res.Status, raw)
+	}
+	if into == nil || len(raw) == 0 {
+		return nil
+	}
+	return json.Unmarshal(raw, into)
+}
+
+// unreachable says why Google couldn't be reached (the network's reason:
+// a name that doesn't resolve, a timeout, a refused or blocked address).
+func unreachable(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		err = ue.Err // without the method and address, said already
+	}
+	return fmt.Errorf("couldn't reach Google: %v", err)
+}
+
+// refused is Google saying no, in its own words when it gave them: an
+// API's {"error":{"message"}} (e.g. "Google Calendar API has not been used
+// in project … or it is disabled", "Request had insufficient authentication
+// scopes"), or the sign-in's {"error","error_description"}.
+func refused(status string, body []byte) error {
+	var api struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(body, &api) == nil && api.Error.Message != "" {
+		return fmt.Errorf("refused by Google (%s): %s", status, api.Error.Message)
+	}
+	var oauth struct {
+		Error       string `json:"error"`
+		Description string `json:"error_description"`
+	}
+	if json.Unmarshal(body, &oauth) == nil && (oauth.Description != "" || oauth.Error != "") {
+		msg := oauth.Description
+		if msg == "" {
+			msg = oauth.Error
+		}
+		return fmt.Errorf("refused by Google (%s): %s", status, msg)
+	}
+	return fmt.Errorf("refused by Google: %s", status)
 }

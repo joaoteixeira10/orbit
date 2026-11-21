@@ -50,6 +50,7 @@ export const useBrandingStore = defineStore('branding', {
     showAppName: true,
     showLogo: true,
     loginMessage: '',
+    hasTerms: false,
     // Where Diagrams load the draw.io editor from.
     drawioUrl: 'https://embed.diagrams.net',
     oidcEnabled: false,
@@ -152,6 +153,7 @@ export const useBrandingStore = defineStore('branding', {
       this.showAppName = b.show_app_name
       this.showLogo = b.show_logo
       this.loginMessage = b.login_message
+      this.hasTerms = !!b.has_terms
       this.oidcEnabled = b.oidc_enabled
       this.ssoProviders = b.sso_providers ?? []
       this.hideLocalLogin = b.hide_local_login

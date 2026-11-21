@@ -583,6 +583,28 @@ its code, links to the shared pages leading to their Markdown — for an
 assistant or a script to read without an account.
 The owner can turn guest links off for the whole Orbit (Owner → Features).
 
+**Publish as a website.** A workspace's owners can publish some of its pages
+as a read-only website anyone can read, without an account: workspace
+settings → **Website**. Tick the top-level pages it shows (each with the
+pages inside it, in the sidebar's order), turn on **Published** and
+**Save**. It lives at `<your Orbit>/site/<address>` (the address starts as the
+workspace's name, and can be changed), with the pages down the side, a
+**search** across them, and the sheets, diagrams, whiteboards, pictures and
+files they show. **Restricted** and **locked** pages never go on it, nor
+what's inside them. Optionally:
+
+- **Title**: the site's name (the workspace's, if empty).
+- **Its own domain**, e.g. `docs.example.org`: point it at your reverse proxy
+  and send it to Orbit like Orbit's own address (see
+  [reverse proxies](reverse-proxies.md#a-websites-own-domain)); there only
+  the website is served — no sign-in, nothing else of Orbit.
+- **Let search engines list it**: off, they're asked not to (as guest links);
+  on, they get a sitemap (`/site/<address>/sitemap.xml`, or `/sitemap.xml`
+  and `/robots.txt` on its own domain).
+
+Turn **Published** off and it stops answering at once (the settings stay). The
+owner can turn websites off for the whole Orbit (Owner → Features).
+
 **Pasted in Slack, Teams or a chat**, an Orbit link shows a small preview: a
 guest link shows its page's title and first words (it's public by your
 choice); any other link shows only your Orbit's name and icon — never what's
@@ -1013,6 +1035,14 @@ Forgejo on your own network posts only to public addresses unless its
 `app.ini` allows yours (`[webhook] ALLOWED_HOST_LIST = private`, or Orbit's
 host).
 
+**Pictures and files.** Pictures in an issue's comments — and on Gitea the
+files attached under a comment — come into the task as its files, and the
+comment shows them. A file added to the task (the 📎 in its activity) goes
+to the issue as a comment with the file: attached under it on Gitea,
+uploaded to the project on GitLab; on GitHub, which doesn't take files from
+apps, the comment only names it. Deleting the file in Orbit removes that
+comment. Pictures from other sites stay links (shown after a click).
+
 **Milestones.** A task of a linked list shows its issue's milestone on its
 row; in its details, **Milestone** picks one of the repository's open
 milestones (or none), and the issue follows.
@@ -1167,7 +1197,11 @@ the calendar):
   and the **calendars**, each with a tick to show or hide it: every
   workspace on the merged calendar; in a workspace, **Events** (its own
   events), **each list** (its tasks with a date) and each subscribed calendar
-  (**+** subscribes to another), and **Holidays**. **A calendar's colour**:
+  (**+** subscribes to another), and **Holidays**. On the merged calendar the
+  arrow beside a workspace opens its parts — **Events**, each list, each
+  subscribed calendar — each with its own tick, so a list (say *Shows*) can
+  stay in its workspace's calendar but out of the merged one; the
+  workspace's tick then shows a dash. **A calendar's colour**:
   point at it and click the palette; pick a colour, or **Its own colour** to
   go back. The colour is yours only — others keep theirs, and the list or
   workspace keeps its own. An event given a colour of its own keeps it.
@@ -1177,7 +1211,8 @@ the calendar):
   day (Month) or onto an hour (Week, Day) to give it that date and time; a
   task already on the calendar drags to another day too.
 
-Each pane remembers whether it's open, and which calendars you hid.
+Each pane remembers whether it's open. Which calendars you hid is kept with
+your account, so every device shows the same.
 
 **Holidays**: in a workspace's calendar, the left pane's **Holidays** picks a
 country (its owners choose): its national public holidays show as grey
@@ -1233,6 +1268,24 @@ calendars becomes this workspace's, and **Sync**. It then works exactly as
 above (Orbit keeps the sign-in sealed and renews it by itself; signing out
 of Orbit or changing your Google password doesn't stop it — **Stop syncing**
 does, or removing Orbit's access in your Google account).
+
+**More calendars of the same account**: once a calendar is synced, the
+sync panel's **Add another calendar of this account** lists the account's
+other calendars; each one added is a calendar of its own in the workspace
+(its name and colour in the left pane, its own tick), synced both ways. A
+new event's **Calendar** picks which one it goes in (**Events** is the
+workspace's own); choosing another for an event moves it there on the other
+side too. A calendar the account may only read (Google's birthdays, one
+shared with you read-only) only comes in: its events open read-only in
+Orbit. **×** beside one stops syncing it: its events leave the workspace
+(they stay on the other side).
+
+**Instant updates from Google**: when Orbit has a public `https` address
+(`PUBLIC_URL`, reachable from the internet), it asks Google to tell it of
+every change to that calendar, and syncs it at once instead of within five
+minutes. The sync panel says so (*Changes made on Google come at once*), or
+why not; Orbit renews the request by itself every few days, and **Sync now**
+tries again at once. Without it, the five-minute sync goes on as before.
 
 **See Orbit in your phone's calendar**: Settings → [Calendar
 feeds](#calendar-feeds).
@@ -2064,6 +2117,15 @@ first). With email, **Alert email recipient** defaults to the owner's email.
 **Application name**, **Accent colour**, **Show logo / application name in
 sidebar**, a **Custom login page message**, and your own **logo** and
 **favicon** (without them Orbit shows its planet icon).
+
+**Privacy and terms**: the instance's **privacy policy** and **terms of
+service**, in Markdown, public at `/privacy` and `/terms` and linked from the
+sign-in page. Left empty, the privacy policy is Orbit's own text (what it
+keeps, the accounts people connect, Google's Limited Use statement), in each
+reader's language — **Start from Orbit's text** puts it in the box to adapt
+(e.g. to add who to contact); empty terms mean no terms page. Google asks
+for the privacy policy's address (and `PUBLIC_URL` as the home page) before
+it lets people sync their Google Calendar (Owner → Google Calendar).
 
 **Developer themes** (off by default): turn on **Enable developer themes** and
 pick one of seven — **Steel Blue**, **Gold Leaf**, **Blood Red**, **Ink**,

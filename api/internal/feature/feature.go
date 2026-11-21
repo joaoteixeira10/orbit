@@ -47,6 +47,10 @@ const (
 	// PublicForms lets editors give a database's form a public link: anyone
 	// with it can add a row. On by default.
 	PublicForms = "public_forms"
+	// PublicSites lets a workspace's owners publish some of its pages as a
+	// read-only website (at /site/<name>, or a domain of its own). On by
+	// default.
+	PublicSites = "public_sites"
 )
 
 const settingKey = "features"
@@ -67,6 +71,7 @@ var Defaults = map[string]bool{
 	CalDAVSync:            true,
 	GuestLinks:            true,
 	PublicForms:           true,
+	PublicSites:           true,
 }
 
 // All returns every known flag with its effective value (stored value, else

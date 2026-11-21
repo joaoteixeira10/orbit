@@ -296,6 +296,8 @@ export interface Occurrence {
   recurring: boolean
   course_id?: string // a class of a course (changed in Courses)
   tz?: string // an Orbit event's own time zone
+  calendar_id?: string // an extra synced calendar it's in ("" the workspace's Events)
+  read_only?: boolean // that calendar may only be read: changed where it comes from
 }
 export interface CalendarData {
   events: Occurrence[]
@@ -315,6 +317,7 @@ export interface CalEvent {
   color: string
   remind_minutes: number | null
   exdates: string[]
+  calendar_id?: string // an extra synced calendar ("" the workspace's Events)
 }
 export interface EventInput {
   title?: string
@@ -327,6 +330,7 @@ export interface EventInput {
   rrule?: string
   color?: string
   remind_minutes?: number // < 0 removes
+  calendar_id?: string // an extra synced calendar ("" the workspace's Events)
 }
 export interface Subscription {
   id: string
@@ -620,6 +624,22 @@ export interface CalDAVLink {
   synced_at?: string | null
   last_error?: string
   event_count: number
+  // An extra calendar of the account (its own events, in its colour), and
+  // whether it may only be read (its events only come in).
+  extra?: boolean
+  color?: string
+  read_only?: boolean
+  // Google: instant updates while watched (until then), or why not.
+  watch_until?: string | null
+  watch_error?: string
+  pushed_at?: string | null // when Google last said it changed
+}
+export interface AccountCalendar {
+  key: string // Google: its id; CalDAV: its address
+  name: string
+  color: string
+  writable: boolean
+  linked: boolean // synced in this workspace already
 }
 export interface CalDAVCalendar {
   url: string
@@ -646,20 +666,25 @@ export const calendarApi = {
   refreshSubscription: (id: string) => api<Subscription>(`/subscriptions/${id}/refresh`, { method: 'POST' }),
   unsubscribe: (id: string) => api<void>(`/subscriptions/${id}`, { method: 'DELETE' }),
   // Two-way sync with a calendar on a CalDAV server (iCloud, Nextcloud…).
-  caldav: (ws: string) => api<{ link: CalDAVLink | null }>(`/workspaces/${ws}/caldav`),
+  caldav: (ws: string) => api<{ link: CalDAVLink | null; links?: CalDAVLink[] }>(`/workspaces/${ws}/caldav`),
+  // More calendars of a synced calendar's account, each its own calendar here.
+  accountCalendars: (ws: string, link: string) => api<AccountCalendar[]>(`/workspaces/${ws}/caldav/${link}/calendars`),
+  addCalendar: (ws: string, link: string, b: { key: string; name?: string; color?: string }) =>
+    api<{ link: CalDAVLink | null; links?: CalDAVLink[] }>(`/workspaces/${ws}/caldav/${link}/calendars`, { method: 'POST', body: j(b) }),
+  removeCalendar: (ws: string, link: string) => api<{ link: CalDAVLink | null; links?: CalDAVLink[] }>(`/workspaces/${ws}/caldav/${link}`, { method: 'DELETE' }),
   caldavCalendars: (ws: string, b: { url: string; username: string; password: string }) =>
     api<CalDAVCalendar[]>(`/workspaces/${ws}/caldav/calendars`, { method: 'POST', body: j(b) }),
   setCalDAV: (ws: string, b: { url: string; username: string; password: string; calendar_url: string; calendar_name: string }) =>
     api<{ link: CalDAVLink }>(`/workspaces/${ws}/caldav`, { method: 'PUT', body: j(b) }),
-  syncCalDAV: (ws: string) => api<{ link: CalDAVLink }>(`/workspaces/${ws}/caldav/sync`, { method: 'POST' }),
+  syncCalDAV: (ws: string) => api<{ link: CalDAVLink | null; links?: CalDAVLink[] }>(`/workspaces/${ws}/caldav/sync`, { method: 'POST' }),
   unlinkCalDAV: (ws: string) => api<void>(`/workspaces/${ws}/caldav`, { method: 'DELETE' }),
   // Google Calendar: signed in with Google, then a calendar picked.
   googleStatus: () => api<{ available: boolean }>('/google/status'),
   googleStart: (ws: string) => api<{ url: string }>(`/workspaces/${ws}/google/start`, { method: 'POST' }),
   googleCalendars: (ws: string, pending: string) =>
-    api<{ email: string; calendars: { id: string; name: string; color: string }[] }>(`/workspaces/${ws}/google/calendars?${qs({ pending })}`),
+    api<{ email: string; calendars: { id: string; name: string; color: string; writable?: boolean }[] }>(`/workspaces/${ws}/google/calendars?${qs({ pending })}`),
   googleLink: (ws: string, b: { pending: string; calendar_id: string; calendar_name: string }) =>
-    api<{ link: CalDAVLink }>(`/workspaces/${ws}/google/link`, { method: 'POST', body: j(b) }),
+    api<{ link: CalDAVLink | null; links?: CalDAVLink[] }>(`/workspaces/${ws}/google/link`, { method: 'POST', body: j(b) }),
   feeds: () => api<Feed[]>('/me/feeds'),
   createFeed: (b: { name?: string; workspace_ids?: string[]; include_tasks?: boolean }) =>
     api<{ feed: Feed; url: string; webcal: string }>('/me/feeds', { method: 'POST', body: j(b) }),

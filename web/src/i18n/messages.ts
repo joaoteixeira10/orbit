@@ -25,6 +25,8 @@ import { lifeEn, lifePt } from './life'
 import { embedsEn, embedsPt } from './embeds'
 import { holidayEn, holidayPt } from './holiday'
 import { lockEn, lockPt } from './lock'
+import { legalEn, legalPt } from './legal'
+import { siteEn, sitePt } from './site'
 import { groupsEn, groupsPt } from './groups'
 import { assistantEn, assistantPt } from './assistant'
 
@@ -57,6 +59,8 @@ const en = {
   ...embedsEn,
   ...holidayEn,
   ...lockEn,
+  ...legalEn,
+  ...siteEn,
   ...groupsEn,
   ...assistantEn,
   common: {
@@ -352,6 +356,8 @@ const pt: typeof en = {
   ...embedsPt,
   ...holidayPt,
   ...lockPt,
+  ...legalPt,
+  ...sitePt,
   ...groupsPt,
   ...assistantPt,
   common: {

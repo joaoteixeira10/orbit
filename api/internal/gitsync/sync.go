@@ -54,6 +54,9 @@ type Engine struct {
 	kickDelay time.Duration
 	// clientFor makes the HTTP client for a base URL (tests replace it).
 	clientFor func(base string) *http.Client
+	// Quota is the instance's space for files (0: none), for the pictures
+	// and files brought from comments.
+	Quota int64
 }
 
 // New builds the engine. allowed are base URLs users may connect even on a

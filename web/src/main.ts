@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
-import { router } from './router'
+import { router, siteHost } from './router'
 import { usePrefsStore } from './stores/prefs'
 import { useAuthStore } from './stores/auth'
 import { useBrandingStore } from './stores/branding'
@@ -29,7 +29,8 @@ async function bootstrap() {
   // Apply cached theme immediately, then load branding + restore the session
   // (which may hydrate fresh prefs) before the router guard evaluates.
   usePrefsStore().applyTheme()
-  await Promise.all([useBrandingStore().load(), useAuthStore().restore()])
+  // A website on its own domain has no one signed in (and no Orbit to sign in to).
+  await Promise.all([useBrandingStore().load(), siteHost ? Promise.resolve() : useAuthStore().restore()])
 
   app.use(router)
   app.mount('#app')

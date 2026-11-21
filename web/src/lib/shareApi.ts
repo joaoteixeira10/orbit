@@ -100,14 +100,58 @@ export const shareApi = {
   answer: (id: string, values: Record<string, unknown>) => api<{ ok: boolean; thanks?: string }>(`/forms/${id}/answers`, { method: 'POST', body: j({ values }) }),
 }
 
+// What a page read without an account loads through: a guest link's secret,
+// or "site/<name>" for a published website (the same paths under it).
+const scope = (token: string) => (token.startsWith('site/') ? token : `shared/${token}`)
+
 // The guest's side.
 export const guestApi = {
   open: (token: string) => pub<GuestShare>(`/shared/${token}`),
   page: (token: string, id: string) => pub<GuestPage>(`/shared/${token}/pages/${id}`),
   save: (token: string, id: string, b: { title?: string; content?: string; version: number }) => pub<GuestPage>(`/shared/${token}/pages/${id}`, { method: 'PUT', body: j(b) }),
-  embed: <T>(token: string, kind: 'sheet' | 'diagram' | 'board', id: string) => pub<T>(`/shared/${token}/embed/${kind}/${id}`),
+  embed: <T>(token: string, kind: 'sheet' | 'diagram' | 'board', id: string) => pub<T>(`/${scope(token)}/embed/${kind}/${id}`),
   // An upload's address through the link (an <img> loads it as it is).
-  uploadUrl: (token: string, src: string) => src.replace(/^\/api\/v1\/uploads\//, `/api/v1/shared/${token}/uploads/`),
+  uploadUrl: (token: string, src: string) => src.replace(/^\/api\/v1\/uploads\//, `/api/v1/${scope(token)}/uploads/`),
   form: (token: string) => pub<FillForm>(`/f/${token}`),
   answer: (token: string, values: Record<string, unknown>) => pub<{ ok: boolean; thanks?: string }>(`/f/${token}`, { method: 'POST', body: j({ values }) }),
+}
+
+// A published website (no account).
+export interface PublicSite {
+  slug: string
+  title: string
+  home: string
+  roots: string[]
+  pages: GuestPage[]
+  indexed: boolean
+}
+export interface SiteHit {
+  id: string
+  title: string
+  icon: string
+  snippet: string
+}
+export const siteApi = {
+  open: (slug: string) => pub<PublicSite>(`/site/${slug}`),
+  page: (slug: string, id: string) => pub<GuestPage>(`/site/${slug}/pages/${id}`),
+  search: (slug: string, q: string) => pub<SiteHit[]>(`/site/${slug}/search?q=${encodeURIComponent(q)}`),
+}
+
+// A workspace's website, for its owners.
+export interface SiteSettings {
+  id: string
+  workspace_id: string
+  slug: string
+  title: string
+  domain: string
+  page_ids: string[]
+  published: boolean
+  indexed: boolean
+  path: string
+}
+export const siteAdminApi = {
+  get: (ws: string) => api<{ site: SiteSettings | null; suggested_slug?: string }>(`/workspaces/${ws}/site`),
+  save: (ws: string, b: Partial<Pick<SiteSettings, 'slug' | 'title' | 'domain' | 'page_ids' | 'published' | 'indexed'>>) =>
+    api<SiteSettings>(`/workspaces/${ws}/site`, { method: 'PUT', body: j(b) }),
+  remove: (ws: string) => api<void>(`/workspaces/${ws}/site`, { method: 'DELETE' }),
 }

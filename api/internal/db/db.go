@@ -76,6 +76,13 @@ func Migrate(gdb *gorm.DB) error {
 	if err := gdb.AutoMigrate(models.AllModels()...); err != nil {
 		return fmt.Errorf("automigrate: %w", err)
 	}
+	// A workspace syncs several calendars now: its links' old one-per-
+	// workspace index goes (a plain one replaces it).
+	if m := gdb.Migrator(); m.HasIndex(&models.CalDAVLink{}, "idx_cal_dav_links_workspace_id") {
+		if err := m.DropIndex(&models.CalDAVLink{}, "idx_cal_dav_links_workspace_id"); err != nil {
+			return fmt.Errorf("calendar links index: %w", err)
+		}
+	}
 	if err := migrateAssignees(gdb); err != nil {
 		return err
 	}

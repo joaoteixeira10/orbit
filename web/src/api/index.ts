@@ -106,6 +106,8 @@ export const auditApi = {
 export const settingsApi = {
   branding: () => api<Branding>('/branding'),
   update: (body: Partial<Branding>) => api<Branding>('/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  // The privacy policy or terms (public); privacy's text "" = the built-in one.
+  legal: (doc: 'privacy' | 'terms') => api<{ app_name: string; text: string }>(`/legal/${doc}`),
 }
 export const aboutApi = {
   get: () => api<About>('/about'),

@@ -34,6 +34,7 @@ import { api as apiCall } from '@/lib/api'
 import { usePrefsStore } from '@/stores/prefs'
 import { DEV_THEME_LIST, resolveCrest, resolveThemeAccent, type DevThemeId } from '@/lib/devThemes'
 import DevThemesCard from '@/components/admin/DevThemesCard.vue'
+import LegalCard from '@/components/admin/LegalCard.vue'
 import HolidayThemesCard from '@/components/admin/HolidayThemesCard.vue'
 import SeasonThemesCard from '@/components/admin/SeasonThemesCard.vue'
 import AssistantCard from '@/components/admin/AssistantCard.vue'
@@ -763,6 +764,7 @@ const featureMeta = computed<{ key: string; label: string; hint: string }[]>(() 
   { key: 'workspace_invites', label: t('adm.owner.feature.invites'), hint: t('adm.owner.feature.invitesHint') },
   { key: 'guest_links', label: t('share.feature'), hint: t('share.featureHint') },
   { key: 'public_forms', label: t('forms.feature'), hint: t('forms.featureHint') },
+  { key: 'public_sites', label: t('site.feature'), hint: t('site.featureHint') },
   { key: 'personal_channels', label: t('adm.owner.feature.ownChannels'), hint: t('adm.owner.feature.ownChannelsHint') },
   { key: 'step_up_auth', label: t('adm.owner.feature.stepUp'), hint: t('adm.owner.feature.stepUpHint') },
 ])
@@ -1101,6 +1103,9 @@ function switchTab(t: Tab) {
 
       <!-- Season themes: off, the season today is in, or one now -->
       <SeasonThemesCard />
+
+      <!-- Privacy policy and terms: public at /privacy and /terms -->
+      <LegalCard />
 
       <!-- Page history: how many versions a page keeps -->
       <div class="card overflow-hidden" data-testid="history-admin">

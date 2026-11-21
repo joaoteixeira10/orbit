@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Check, Plus, Palette } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Check, Minus, Plus, Palette } from 'lucide-vue-next'
 import Popover from '@/components/ui/Popover.vue'
 import { COLORS } from '@/lib/icons'
 import { addMonths, dateStr, monthGrid, monthTitle, startOfDay, weekdayNames } from '@/lib/dates'
@@ -12,13 +12,16 @@ import { NativeSelect } from '@/components/shadcn/native-select'
 // The calendar's left pane, as in Outlook: a small month to move around
 // (click a day to go there, in the view you're in; the days on screen are
 // shaded) and the calendars, each ticked to show or hide it, and each in a
-// colour this person may change (theirs only; others keep their own).
+// colour this person may change (theirs only; others keep their own). On
+// the calendar of all workspaces a workspace opens to its own calendars
+// (its events, each list, each subscribed one), each ticked on its own.
 export interface CalSource {
   id: string
   name: string
   color: string // as shown
   key?: string // where this person's own colour for it is kept
   base?: string // its own colour (what "Default" goes back to)
+  children?: CalSource[] // its parts, each shown or hidden on its own
 }
 const props = defineProps<{
   cursor: Date
@@ -33,7 +36,7 @@ const props = defineProps<{
   // the viewer may change it (owners).
   holidays?: { country: string; countries: { code: string; name: string }[]; editable: boolean }
 }>()
-const emit = defineEmits<{ go: [day: Date]; toggle: [id: string]; add: []; holidays: [code: string]; color: [key: string, color: string] }>()
+const emit = defineEmits<{ go: [day: Date]; toggle: [id: string]; add: []; holidays: [code: string]; color: [key: string, color: string]; expand: [id: string] }>()
 const { t } = useI18n()
 
 const month = ref(new Date(props.cursor.getFullYear(), props.cursor.getMonth(), 1))
@@ -58,6 +61,21 @@ function paint(s: CalSource, e: MouseEvent) {
 function choose(color: string) {
   if (painting.value?.key) emit('color', painting.value.key, color)
   painting.value = null
+}
+// Shown, hidden, or shown with some of its parts hidden.
+function state(s: CalSource): 'true' | 'false' | 'mixed' {
+  if (props.hidden.has(s.id)) return 'false'
+  return s.children?.some((k) => props.hidden.has(k.id)) ? 'mixed' : 'true'
+}
+const opened = ref(new Set<string>())
+function toggleOpen(s: CalSource) {
+  const next = new Set(opened.value)
+  if (next.has(s.id)) next.delete(s.id)
+  else {
+    next.add(s.id)
+    emit('expand', s.id)
+  }
+  opened.value = next
 }
 const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value && dateStr(d) < to.value
 </script>
@@ -93,14 +111,31 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
         <Button variant="ghost" size="icon" v-if="canAdd" class="text-text-2 h-6 w-6" :title="t('cal.addCalendar')" :aria-label="t('cal.addCalendar')" @click="emit('add')"><Plus class="h-4 w-4" /></Button>
       </div>
       <ul class="mt-1">
-        <li v-for="s in sources" :key="s.id" class="cal-src">
-          <button class="src" role="checkbox" :aria-checked="!hidden.has(s.id)" @click="emit('toggle', s.id)">
-            <span class="box" :class="{ on: !hidden.has(s.id) }" :style="{ '--c': s.color || 'var(--accent)' }"><Check v-if="!hidden.has(s.id)" class="h-3 w-3" :stroke-width="3.4" /></span>
-            <span class="truncate">{{ s.name }}</span>
-          </button>
-          <Button variant="ghost" size="icon" v-if="s.key" class="text-text-2 paint h-6 w-6" :class="{ open: painting?.id === s.id }" :title="t('cal.colorOf', { name: s.name })" :aria-label="t('cal.colorOf', { name: s.name })" :data-testid="`cal-color-${s.id}`" @click="paint(s, $event)">
-            <Palette class="h-3.5 w-3.5" />
-          </Button>
+        <li v-for="s in sources" :key="s.id">
+          <div class="cal-src" :class="{ parts: s.children }">
+            <button class="src" role="checkbox" :aria-checked="state(s)" :data-testid="`cal-src-${s.id}`" @click="emit('toggle', s.id)">
+              <span class="box" :class="{ on: state(s) !== 'false' }" :style="{ '--c': s.color || 'var(--accent)' }">
+                <Minus v-if="state(s) === 'mixed'" class="h-3 w-3" :stroke-width="3.4" />
+                <Check v-else-if="state(s) === 'true'" class="h-3 w-3" :stroke-width="3.4" />
+              </span>
+              <span class="truncate">{{ s.name }}</span>
+            </button>
+            <Button variant="ghost" size="icon" v-if="s.key" class="text-text-2 paint h-6 w-6" :class="{ open: painting?.id === s.id }" :title="t('cal.colorOf', { name: s.name })" :aria-label="t('cal.colorOf', { name: s.name })" :data-testid="`cal-color-${s.id}`" @click="paint(s, $event)">
+              <Palette class="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" v-if="s.children" class="text-text-3 more h-6 w-6" :title="t('cal.partsOf', { name: s.name })" :aria-label="t('cal.partsOf', { name: s.name })" :aria-expanded="opened.has(s.id)" :data-testid="`cal-parts-${s.id}`" @click="toggleOpen(s)">
+              <ChevronRight class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': opened.has(s.id) }" />
+            </Button>
+          </div>
+          <ul v-if="s.children && opened.has(s.id)" class="kids" :class="{ dim: hidden.has(s.id) }">
+            <li v-for="k in s.children" :key="k.id" class="cal-src">
+              <button class="src" role="checkbox" :aria-checked="!hidden.has(k.id)" :data-testid="`cal-src-${k.id}`" @click="emit('toggle', k.id)">
+                <span class="box" :class="{ on: !hidden.has(k.id) }" :style="{ '--c': k.color || 'var(--accent)' }"><Check v-if="!hidden.has(k.id)" class="h-3 w-3" :stroke-width="3.4" /></span>
+                <span class="truncate">{{ k.name }}</span>
+              </button>
+            </li>
+            <li v-if="!s.children.length" class="none">{{ t('cal.noParts') }}</li>
+          </ul>
         </li>
       </ul>
       <Popover v-if="painting" :anchor="paintAt" placement="right-start" :width="212" @close="painting = null">
@@ -209,6 +244,34 @@ const inRange = (d: Date) => props.view !== 'month' && dateStr(d) >= from.value 
 }
 .cal-src .src {
   padding-right: 32px;
+}
+.cal-src.parts .src {
+  padding-right: 58px;
+}
+.cal-src.parts .paint {
+  right: 30px;
+}
+.more {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+}
+.kids {
+  margin-left: 18px;
+}
+.kids.dim {
+  opacity: 0.5;
+}
+.kids .src {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 13px;
+}
+.none {
+  padding: 4px 8px;
+  font-size: 12.5px;
+  color: var(--text-3);
 }
 .paint {
   position: absolute;

@@ -20,6 +20,10 @@ const (
 	keyShowAppName    = "show_app_name"
 	keyShowLogo       = "show_logo"
 	keyLoginMessage   = "login_message"
+	// The instance's privacy policy and terms (Markdown; "" = the built-in
+	// privacy text, and no terms), public at /privacy and /terms.
+	keyPrivacyPolicy = "privacy_policy"
+	keyTerms         = "terms_of_service"
 
 	// Developer themes: a closed set of curated themes (accent + UBonito Orbit
 	// crest + "UBonito" wordmark); per asset, the theme's or the org's own.
@@ -84,6 +88,7 @@ type brandingResponse struct {
 	ShowAppName         bool        `json:"show_app_name"`
 	ShowLogo            bool        `json:"show_logo"` // show the sidebar/login logo mark
 	LoginMessage        string      `json:"login_message"`
+	HasTerms            bool        `json:"has_terms"`            // the owner wrote terms of service (/terms)
 	OIDCEnabled         bool        `json:"oidc_enabled"`         // SPA shows the "Sign in with SSO" button
 	SSOProviders        []ssoButton `json:"sso_providers"`        // one "Sign in with …" button each
 	HideLocalLogin      bool        `json:"hide_local_login"`     // hide the password form on /login (when SSO is available)
@@ -118,6 +123,10 @@ type updateSettingsRequest struct {
 	ShowAppName    *bool   `json:"show_app_name"`
 	ShowLogo       *bool   `json:"show_logo"`
 	LoginMessage   *string `json:"login_message"`
+	// PrivacyPolicy / Terms: Markdown shown at /privacy and /terms ("" = the
+	// built-in privacy text; no terms page).
+	PrivacyPolicy *string `json:"privacy_policy" binding:"omitempty,max=50000"`
+	Terms         *string `json:"terms_of_service" binding:"omitempty,max=50000"`
 
 	DeveloperThemesEnabled  *bool   `json:"developer_themes_enabled"`
 	DeveloperTheme          *string `json:"developer_theme"`
@@ -165,6 +174,7 @@ func (h *Handlers) getBranding(c *gin.Context) {
 		ShowAppName:         showAppName,
 		ShowLogo:            showLogo,
 		LoginMessage:        m[keyLoginMessage],
+		HasTerms:            strings.TrimSpace(m[keyTerms]) != "",
 		OIDCEnabled:         h.oidc != nil && h.oidc.Enabled(),
 		SSOProviders:        h.ssoButtons(),
 		HideLocalLogin:      h.hideLocalLogin(),
@@ -270,6 +280,12 @@ func (h *Handlers) updateSettings(c *gin.Context) {
 	if req.LoginMessage != nil {
 		h.setSetting(keyLoginMessage, *req.LoginMessage)
 	}
+	if req.PrivacyPolicy != nil {
+		h.setSetting(keyPrivacyPolicy, strings.TrimSpace(*req.PrivacyPolicy))
+	}
+	if req.Terms != nil {
+		h.setSetting(keyTerms, strings.TrimSpace(*req.Terms))
+	}
 	if req.DeveloperThemesEnabled != nil {
 		v := "false"
 		if *req.DeveloperThemesEnabled {
@@ -350,4 +366,41 @@ func (h *Handlers) ssoButtons() []ssoButton {
 		out = append(out, ssoButton{ID: p.ID, Name: p.Name, Kind: p.Kind})
 	}
 	return out
+}
+
+type legalResponse struct {
+	AppName string `json:"app_name"`
+	// Text is the owner's Markdown; "" for privacy means the built-in text
+	// (the page shows it in the reader's language).
+	Text string `json:"text"`
+}
+
+// getLegal returns the instance's privacy policy or terms of service (no
+// sign-in: linked from the sign-in page, and given to Google for signing in).
+//
+//	@Summary	Get the privacy policy or terms of service
+//	@Tags		settings
+//	@Produce	json
+//	@Param		doc	path		string	true	"privacy or terms"
+//	@Success	200	{object}	legalResponse
+//	@Failure	404	{object}	map[string]string
+//	@Router		/legal/{doc} [get]
+func (h *Handlers) getLegal(c *gin.Context) {
+	m := h.loadSettings()
+	appName := m[keyAppName]
+	if appName == "" {
+		appName = "Orbit"
+	}
+	switch c.Param("doc") {
+	case "privacy":
+		c.JSON(http.StatusOK, legalResponse{AppName: appName, Text: m[keyPrivacyPolicy]})
+	case "terms":
+		if strings.TrimSpace(m[keyTerms]) == "" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "this instance has no terms of service"})
+			return
+		}
+		c.JSON(http.StatusOK, legalResponse{AppName: appName, Text: m[keyTerms]})
+	default:
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+	}
 }

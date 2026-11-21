@@ -40,6 +40,7 @@ interface ServerPrefs {
   sketch_colors?: string[] // their own palette in Quick Draw
   editor_themes?: EditorThemes
   calendar_colors?: Record<string, string>
+  calendar_hidden?: Record<string, string[]> // per calendar ("all" or a workspace id): keys kept out of view
   focus_lengths?: number[] // own focus timer lengths, minutes
   holiday_effects?: boolean // a holiday theme's falling snow, bats, confetti…
   glass?: number // liquid glass: 0 (solid) to 100
@@ -154,6 +155,9 @@ export const usePrefsStore = defineStore('prefs', {
     editorThemes: readEditorThemes(),
     // Own colours for calendars (a workspace id, list:<id>, sub:<id>, holidays).
     calendarColors: {} as Record<string, string>,
+    // Calendars kept out of view, per calendar ("all" = of all workspaces,
+    // else a workspace id): a workspace id, events:<ws>, list:<id>, sub:<id>, holidays.
+    calendarHidden: {} as Record<string, string[]>,
     // Own lengths for the focus timer (minutes), besides 15, 25 and 50.
     focusLengths: [] as number[],
     // A holiday theme's falling snow, bats, confetti… (the theme is the owner's).
@@ -243,6 +247,27 @@ export const usePrefsStore = defineStore('prefs', {
       this.sketchColors = p.sketch_colors ?? []
       this.editorThemes = p.editor_themes ?? {}
       this.calendarColors = p.calendar_colors ?? {}
+      this.calendarHidden = p.calendar_hidden ?? {}
+      // Kept in this browser before (one device only): moved to the account once.
+      try {
+        const local = localStorage.getItem('orbit_cal_hidden')
+        if (local) {
+          if (!Object.keys(this.calendarHidden).length) {
+            const old = JSON.parse(local) as Record<string, unknown>
+            const moved: Record<string, string[]> = {}
+            for (const [scope, keys] of Object.entries(old)) {
+              if (Array.isArray(keys) && keys.length) moved[scope] = keys.filter((k): k is string => typeof k === 'string' && !!k)
+            }
+            if (Object.keys(moved).length) {
+              this.calendarHidden = moved
+              void this.persist({ calendar_hidden: moved })
+            }
+          }
+          localStorage.removeItem('orbit_cal_hidden')
+        }
+      } catch {
+        /* private mode, or not JSON */
+      }
       this.focusLengths = p.focus_lengths ?? []
       this.holidayEffects = p.holiday_effects !== false
       this.glass = Math.min(100, Math.max(0, Math.round(p.glass ?? 0)))
@@ -349,6 +374,14 @@ export const usePrefsStore = defineStore('prefs', {
       else delete next[key]
       this.calendarColors = next
       await this.persist({ calendar_colors: { [key]: color } })
+    },
+    // Which calendars stay out of view in one calendar ("all" or a workspace id).
+    async setCalendarHidden(scope: string, keys: string[]) {
+      const next = { ...this.calendarHidden }
+      if (keys.length) next[scope] = keys
+      else delete next[scope]
+      this.calendarHidden = next
+      await this.persist({ calendar_hidden: { [scope]: keys } })
     },
     // Their own lengths for the focus timer.
     async setHolidayEffects(on: boolean) {

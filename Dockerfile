@@ -9,8 +9,6 @@
 FROM --platform=$BUILDPLATFORM node:24.22.2-alpine3.24 AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
-# A stand-in package the overrides point at (web/stubs/no-sass).
-COPY web/stubs ./stubs
 # npm ci: reproducible install from the lockfile (PKI used npm install).
 RUN npm ci --no-audit --no-fund
 COPY web/ ./

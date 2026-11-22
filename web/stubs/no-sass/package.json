@@ -1,7 +1,0 @@
-{
-  "name": "sass",
-  "version": "0.0.0-orbit-stub",
-  "description": "Stand-in for the sass that @excalidraw/excalidraw lists as a dependency but never loads (its dist has no sass): it brought chokidar and picomatch (GHSA-fc5q-39xc-vjpf, no fix yet) into Orbit's production dependencies. Orbit's own Sass is Vite's (a dev dependency). Remove this once Excalidraw drops sass or picomatch is fixed.",
-  "private": true,
-  "license": "MIT"
-}

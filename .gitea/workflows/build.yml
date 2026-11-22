@@ -64,16 +64,19 @@ jobs:
           echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
           echo "SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_ENV"
 
-      # One build, pushed to all four tags (both registries).
+      # One build, pushed to three tags; Harbor's :latest comes after (next
+      # step). Harbor refuses to hand out an image (412 Precondition Failed)
+      # until its vulnerability scan is done, and pushing a second tag reads
+      # the images just pushed: :latest in the same push lost that race
+      # (v0.8.0's runs 641-643).
       - uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          # No attestation manifests (provenance / SBOM) in the image index:
-          # once BuildKit started adding them (v0.8.0's build), Harbor's
-          # vulnerability policy refused the image with 412 on the push of
-          # :latest. The index is then the two platforms only, as before.
+          # No attestation manifests (provenance / SBOM): Harbor never scans
+          # them, so its policy would refuse them for good. The index is the
+          # two platforms only.
           provenance: false
           sbom: false
           build-args: |
@@ -83,6 +86,22 @@ jobs:
             REPO_URL=${{ github.server_url }}/${{ github.repository }}
           tags: |
             ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}:v${{ inputs.version }}
-            ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}:latest
             ${{ env.GITEA_IMAGE }}:v${{ inputs.version }}
             ${{ env.GITEA_IMAGE }}:latest
+
+      # Harbor's :latest = the version just pushed, once Harbor's scan lets
+      # it be read (tried for up to 10 minutes).
+      - name: Tag :latest on Harbor
+        env:
+          IMAGE: ${{ vars.HARBOR_IMAGE || secrets.HARBOR_IMAGE }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          for i in $(seq 1 40); do
+            if docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:v$VERSION"; then
+              exit 0
+            fi
+            echo "Harbor isn't handing it out yet (scan running?); again in 15 s"
+            sleep 15
+          done
+          echo "::error::$IMAGE:latest not set: Harbor kept refusing $IMAGE:v$VERSION"
+          exit 1

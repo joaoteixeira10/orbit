@@ -70,6 +70,12 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          # No attestation manifests (provenance / SBOM) in the image index:
+          # once BuildKit started adding them (v0.8.0's build), Harbor's
+          # vulnerability policy refused the image with 412 on the push of
+          # :latest. The index is then the two platforms only, as before.
+          provenance: false
+          sbom: false
           build-args: |
             VERSION=${{ inputs.version }}
             COMMIT=${{ env.SHORT_SHA }}

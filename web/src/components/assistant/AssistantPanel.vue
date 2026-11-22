@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, ArrowUp, Check, FileText, History, Loader2, Maximize2, Minimize2, Paperclip, Plus, Sparkles, Square, Trash2, TriangleAlert, X } from 'lucide-vue-next'
+import { ArrowLeft, ArrowUp, Check, FileText, History, Loader2, Maximize2, Minimize2, Paperclip, Plus, Sparkles, Square, Trash2, TriangleAlert, X } from '@lucide/vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import AssistantPlan from './AssistantPlan.vue'

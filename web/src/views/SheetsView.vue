@@ -2,7 +2,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Link, Plus, Upload } from 'lucide-vue-next'
+import { Link, Plus, Upload } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
 import { isGoogleSheet, sheetsApi } from '@/lib/sheetsApi'

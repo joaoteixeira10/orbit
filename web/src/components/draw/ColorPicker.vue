@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pipette, Plus, X } from 'lucide-vue-next'
+import { Pipette, Plus, X } from '@lucide/vue'
 import { hexOf, hexToHsv, hsvToHex, type HSV } from '@/lib/colors'
 import { usePrefsStore } from '@/stores/prefs'
 import { Button } from '@/components/shadcn/button'

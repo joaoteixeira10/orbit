@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Columns3, Download, FileSpreadsheet, FileText, Link, LoaderCircle, MoreHorizontal, Plus, Table2, Trash2, Upload, ClipboardList } from 'lucide-vue-next'
+import { Columns3, Download, FileSpreadsheet, FileText, Link, LoaderCircle, MoreHorizontal, Plus, Table2, Trash2, Upload, ClipboardList } from '@lucide/vue'
 import FormsSheet from '@/components/forms/FormsSheet.vue'
 import Popover from '@/components/ui/Popover.vue'
 import DbCell from './DbCell.vue'

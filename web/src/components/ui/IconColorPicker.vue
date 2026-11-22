@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ICONS, ICON_CHOICES, COLORS } from '@/lib/icons'
-import { Check } from 'lucide-vue-next'
+import { Check } from '@lucide/vue'
 
 // Pick a colour (Apple's system palette) and an icon, as Reminders does for lists.
 const icon = defineModel<string>('icon', { default: '' })

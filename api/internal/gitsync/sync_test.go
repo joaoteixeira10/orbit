@@ -5,12 +5,15 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +25,7 @@ import (
 	"github.com/joaoteixeira10/orbit/api/internal/planner"
 
 	"github.com/glebarez/sqlite"
+	"github.com/joaoteixeira10/orbit/api/internal/uploads"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -48,10 +52,13 @@ type fakeGitea struct {
 	hookDenied bool
 	// Files at /attachments/<uuid> (a signed-in account's only).
 	files map[string][]byte
+	// The repository o/r's branch main: its files, and the commits made.
+	repo    map[string][]byte
+	commits int
 }
 
 func newFake() *fakeGitea {
-	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{}, hooks: map[int64]map[string]any{}, files: map[string][]byte{},
+	return &fakeGitea{clock: time.Now().UTC(), issues: map[int64]*Issue{}, comments: map[int64][]Comment{}, hooks: map[int64]map[string]any{}, files: map[string][]byte{}, repo: map[string][]byte{},
 		milestones: []Milestone{{ID: 501, Number: 1, Title: "v1.0"}, {ID: 502, Number: 2, Title: "v2.0"}},
 		labels:     []Label{{ID: 1, Name: "Doing"}, {ID: 2, Name: "Review"}, {ID: 3, Name: "bug"}}}
 }
@@ -301,6 +308,56 @@ func (f *fakeGitea) handler() http.Handler {
 		c := f.comment(num(r), "ana", in.Body) // the only token is ana's
 		w.WriteHeader(http.StatusCreated)
 		writeJSON(w, c)
+	}))
+	mux.HandleFunc("GET /api/v1/repos/o/r/git/trees/main", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		type entry struct {
+			Path string `json:"path"`
+			Type string `json:"type"`
+			SHA  string `json:"sha"`
+		}
+		tree := []entry{}
+		for p, b := range f.repo {
+			tree = append(tree, entry{p, "blob", blobSHA(b)})
+		}
+		writeJSON(w, map[string]any{"tree": tree})
+	})
+	mux.HandleFunc("POST /api/v1/repos/o/r/contents", write(func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Branch string `json:"branch"`
+			Files  []struct {
+				Operation, Path, Content, SHA string
+			} `json:"files"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		for _, op := range in.Files {
+			cur, exists := f.repo[op.Path]
+			switch op.Operation {
+			case "create":
+				if exists {
+					http.Error(w, `{"message":"file exists"}`, http.StatusUnprocessableEntity)
+					return
+				}
+			case "update", "delete":
+				if !exists || blobSHA(cur) != op.SHA {
+					http.Error(w, `{"message":"sha does not match"}`, http.StatusUnprocessableEntity)
+					return
+				}
+			}
+		}
+		for _, op := range in.Files {
+			if op.Operation == "delete" {
+				delete(f.repo, op.Path)
+				continue
+			}
+			b, _ := base64.StdEncoding.DecodeString(op.Content)
+			f.repo[op.Path] = b
+		}
+		f.commits++
+		writeJSON(w, map[string]any{"commit": map[string]any{"sha": fmt.Sprintf("c%d", f.commits)}})
 	}))
 	mux.HandleFunc("GET /attachments/{uuid}", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -1258,4 +1315,78 @@ func TestFileAddresses(t *testing.T) {
 	if got := ghSigned(html); len(got) != 1 || got[0] != "https://private-user-images.githubusercontent.com/1/a.png?jwt=t&x=1" {
 		t.Errorf("github signed: %v", got)
 	}
+}
+
+// TestCopyPages: a workspace's pages into a folder of a repository, as
+// Markdown files laid out like the page tree — links between them and their
+// pictures made to work there, restricted ones and templates left out, a
+// README of one's own kept; nothing written when nothing changed; a renamed
+// page's file moves.
+func TestCopyPages(t *testing.T) {
+	f := setup(t)
+	var ws models.Workspace
+	f.db.First(&ws, "name = ?", "Dev")
+	page := func(title, content string, parent *string) models.Page {
+		p := models.Page{WorkspaceID: ws.ID, Title: title, Content: content, ParentID: parent}
+		f.db.Create(&p)
+		return p
+	}
+	guide := page("Guide", "", nil)
+	install := page("Install / setup", "Run it.", &guide.ID)
+	shot := models.Upload{WorkspaceID: ws.ID, OwnerID: f.ana, Target: "page", TargetID: guide.ID, Name: "shot.png"}
+	if err := uploads.Create(f.db, &shot, []byte("\x89PNG picture"), 0); err != nil {
+		t.Fatal(err)
+	}
+	f.db.Model(&guide).Update("content", "See [the install](/w/"+ws.ID+"/p/"+install.ID+").\n\n![shot](/api/v1/uploads/"+shot.ID+"/shot.png)")
+	secret := page("Salaries", "private", nil)
+	f.db.Model(&secret).Update("restricted", true)
+	page("Under salaries", "also private", &secret.ID)
+	tpl := page("Meeting template", "x", nil)
+	f.db.Model(&tpl).Update("template", true)
+	f.fake.repo["README.md"] = []byte("mine")
+
+	repo := models.PagesRepo{WorkspaceID: ws.ID, UserID: f.ana, Host: f.srv.URL, Owner: "o", Repo: "r", Branch: "main", Folder: "/docs/"}
+	f.db.Create(&repo)
+	if err := f.e.CopyPages(context.Background(), &repo); err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for p := range f.fake.repo {
+		names = append(names, p)
+	}
+	sort.Strings(names)
+	want := []string{"README.md", "docs/Guide.md", "docs/Guide/Install - setup.md", "docs/_files/" + shot.ID + "-shot.png"}
+	if strings.Join(names, ",") != strings.Join(want, ",") {
+		t.Fatalf("files: %v", names)
+	}
+	g := string(f.fake.repo["docs/Guide.md"])
+	if !strings.Contains(g, "title: \"Guide\"") || !strings.Contains(g, "orbit_id: "+guide.ID) ||
+		!strings.Contains(g, "[the install](Guide/Install%20-%20setup.md)") || !strings.Contains(g, "![shot](_files/"+shot.ID+"-shot.png)") {
+		t.Errorf("Guide.md:\n%s", g)
+	}
+	if string(f.fake.repo["README.md"]) != "mine" || f.fake.commits != 1 || repo.Commit != "c1" {
+		t.Errorf("commits %d, commit %q", f.fake.commits, repo.Commit)
+	}
+
+	// Again, nothing changed: nothing written.
+	if err := f.e.CopyPages(context.Background(), &repo); err != nil || f.fake.commits != 1 {
+		t.Fatalf("unchanged: %v, %d commits", err, f.fake.commits)
+	}
+	// Renamed: its file moves; the README stays.
+	f.db.Model(&install).Updates(map[string]any{"title": "Setup", "updated_at": time.Now().Add(time.Second)})
+	if err := f.e.CopyPages(context.Background(), &repo); err != nil {
+		t.Fatal(err)
+	}
+	if _, old := f.fake.repo["docs/Guide/Install - setup.md"]; old || f.fake.repo["docs/Guide/Setup.md"] == nil || string(f.fake.repo["README.md"]) != "mine" || f.fake.commits != 2 {
+		t.Errorf("after the rename: %v (%d commits)", keys(f.fake.repo), f.fake.commits)
+	}
+}
+
+func keys(m map[string][]byte) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

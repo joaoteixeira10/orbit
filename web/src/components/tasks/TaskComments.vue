@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Paperclip, Pencil, Trash2, X } from 'lucide-vue-next'
+import { Paperclip, Pencil, Trash2, X } from '@lucide/vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'

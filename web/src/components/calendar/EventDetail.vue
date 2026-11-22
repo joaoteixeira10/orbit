@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { MapPin, Repeat, CalendarDays, Lock, GraduationCap, CalendarX } from 'lucide-vue-next'
+import { MapPin, Repeat, CalendarDays, Lock, GraduationCap, CalendarX } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import { calendarApi } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'

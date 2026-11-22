@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Brush, Check, NotebookPen } from 'lucide-vue-next'
+import { Brush, Check, NotebookPen } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import { useWorkspacesStore } from '@/stores/workspaces'

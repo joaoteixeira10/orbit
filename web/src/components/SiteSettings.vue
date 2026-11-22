@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ExternalLink, FileText, Lock } from 'lucide-vue-next'
+import { ExternalLink, FileText, Lock } from '@lucide/vue'
 import { siteAdminApi, type SiteSettings } from '@/lib/shareApi'
 import { usePagesStore } from '@/stores/pages'
 import { useAuthStore } from '@/stores/auth'

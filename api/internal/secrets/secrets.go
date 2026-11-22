@@ -1,6 +1,6 @@
 // Package secrets resolves sensitive configuration values from a pluggable
 // backend selected by SECRETS_BACKEND: env (default), file (Docker/K8s-style
-// *_FILE), or vault (HashiCorp Vault KV v2). Non-secret config stays in the
+// *_FILE), vault (HashiCorp Vault or OpenBao, KV v2), or infisical. Non-secret config stays in the
 // environment; only credentials/keys flow through a Provider.
 package secrets
 
@@ -27,8 +27,10 @@ func New(backend string) (Provider, error) {
 		return fileProvider{}, nil
 	case "vault":
 		return newVaultProvider()
+	case "infisical":
+		return newInfisicalProvider()
 	default:
-		return nil, fmt.Errorf("unsupported SECRETS_BACKEND %q (want env|file|vault)", backend)
+		return nil, fmt.Errorf("unsupported SECRETS_BACKEND %q (want env|file|vault|infisical)", backend)
 	}
 }
 

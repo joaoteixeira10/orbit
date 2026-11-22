@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { GitBranch, Search, Lock, Check, LoaderCircle } from 'lucide-vue-next'
+import { GitBranch, Search, Lock, Check, LoaderCircle } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import { gitApi, type GitAccount, type GitBoards, type GitLink, type GitRepo, type TaskList } from '@/api/planner'
 import { useTasksStore } from '@/stores/tasks'

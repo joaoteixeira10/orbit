@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import { Button } from '@/components/shadcn/button'
 
 // Overlay is Orbit's sheet: a centred panel on wide screens, a bottom sheet

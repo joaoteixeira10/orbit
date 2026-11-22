@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2 } from '@lucide/vue'
 import DrawingEditor from './DrawingEditor.vue'
 import type { Drawing } from './drawing'
 import { Button } from '@/components/shadcn/button'

@@ -4,7 +4,7 @@
 // lights up key by key, the flag waves, the name shimmers, confetti bursts
 // from the card. Escape, a click outside or the close button put it away.
 import { ref, watch, nextTick } from 'vue'
-import { Github, X } from 'lucide-vue-next'
+import { ExternalLink, X } from '@lucide/vue'
 import { Button } from '@/components/shadcn/button'
 import { moving } from '@/lib/motion'
 
@@ -72,7 +72,7 @@ watch(
 
           <div class="mb-5 text-[15px] italic text-accent">“{{ quote }}”</div>
           <Button variant="outline" size="sm" as="a" class="rounded-full" :href="`https://github.com/${github}`" target="_blank" rel="noopener">
-            <Github />
+            <ExternalLink />
             github.com/{{ github }}
           </Button>
           <span class="mt-4 block text-[11px] text-text-3">Esc or click outside to close</span>

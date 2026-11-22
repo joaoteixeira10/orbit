@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, GraduationCap, MapPin, User, Circle, FileText } from 'lucide-vue-next'
+import { Plus, GraduationCap, MapPin, User, Circle, FileText } from '@lucide/vue'
 import CourseSheet from '@/components/school/CourseSheet.vue'
 import { coursesApi, tasksApi, type Course, type CourseSlot, type Task } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'

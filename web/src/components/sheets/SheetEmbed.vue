@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ExternalLink, Sheet } from 'lucide-vue-next'
+import { ExternalLink, Sheet } from '@lucide/vue'
 import { sheetsApi, type SheetDoc } from '@/lib/sheetsApi'
 import { guestApi } from '@/lib/shareApi'
 import { Book, addr, colName, parseAddr, readData, show, type SheetData } from '@/lib/sheet'

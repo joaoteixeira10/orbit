@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Brush, ExternalLink } from 'lucide-vue-next'
+import { Brush, ExternalLink } from '@lucide/vue'
 import { drawingsApi, previewSrc, type Drawing } from '@/components/draw/drawing'
 import { guestApi } from '@/lib/shareApi'
 import { Button } from '@/components/shadcn/button'

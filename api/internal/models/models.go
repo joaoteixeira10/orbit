@@ -431,6 +431,7 @@ func AllModels() []any {
 		&PageVersion{},
 		&ShareLink{},
 		&Site{},
+		&PagesRepo{},
 		&PageChange{},
 		&Form{},
 		&PageFavorite{},

@@ -8,7 +8,7 @@
 // 'none', or a theme id. The view stores it; this only picks.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Ban, Building2 } from 'lucide-vue-next'
+import { Check, Ban, Building2 } from '@lucide/vue'
 import { DEV_THEME_LIST, DEV_THEME_NAMES, resolveCrest, type DevThemeId } from '@/lib/devThemes'
 
 const choice = defineModel<string>({ required: true })

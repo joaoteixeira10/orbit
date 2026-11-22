@@ -141,7 +141,8 @@ async function doRefresh(): Promise<boolean> {
 export function tryRefresh(): Promise<boolean> {
   if (!refreshInFlight) {
     const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined
-    const run = locks ? locks.request('orbit-auth-refresh', doRefresh) : doRefresh()
+    // (request's answer is the callback's, a promise: then() unwraps it)
+    const run: Promise<boolean> = locks ? locks.request('orbit-auth-refresh', doRefresh).then((r) => r) : doRefresh()
     refreshInFlight = run.finally(() => {
       refreshInFlight = null
     })

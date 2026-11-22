@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Upload, FileText, NotebookPen, StickyNote, LoaderCircle } from 'lucide-vue-next'
+import { Upload, FileText, NotebookPen, StickyNote, LoaderCircle } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import type { ImportResult } from '@/lib/importRun'
 import { usePagesStore } from '@/stores/pages'

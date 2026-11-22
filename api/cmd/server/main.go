@@ -204,6 +204,51 @@ func moveFiles(to string, clean bool) int {
 	return 0
 }
 
+// copyDB copies the database Orbit is set up with (DB_DRIVER, DB_URL) into
+// another — `orbit copy-db <sqlite|postgres> <address> [--force]` — with
+// Orbit stopped. Then DB_DRIVER and DB_URL are pointed at the copy.
+func copyDB(driver, to string, force bool) int {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: configuration error:", err)
+		return 1
+	}
+	if driver != "sqlite" && driver != "postgres" {
+		fmt.Fprintln(os.Stderr, "orbit: copy-db: copy into sqlite or postgres")
+		return 1
+	}
+	if driver == cfg.DBDriver && to == cfg.DBURL {
+		fmt.Fprintln(os.Stderr, "orbit: copy-db: that's the database Orbit uses already")
+		return 1
+	}
+	src, err := db.Open(cfg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: copy-db:", err)
+		return 1
+	}
+	if err := db.Migrate(src); err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: copy-db: the database Orbit uses:", err)
+		return 1
+	}
+	dst, err := db.OpenAt(driver, to)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "orbit: copy-db:", err)
+		return 1
+	}
+	fmt.Printf("orbit: copying %s into %s\n", cfg.DBDriver, driver)
+	if err := db.Copy(src, dst, force, os.Stdout); err != nil {
+		if errors.Is(err, db.ErrNotEmpty) {
+			fmt.Fprintln(os.Stderr, "orbit: copy-db: the target already holds an Orbit; add --force to replace what it holds")
+			return 1
+		}
+		fmt.Fprintln(os.Stderr, "orbit: copy-db:", err)
+		return 1
+	}
+	fmt.Printf("orbit: done; set DB_DRIVER=%s and DB_URL to the copy, keep ORBIT_MASTER_KEY as it is, and start Orbit\n", driver)
+	fmt.Println("orbit: the database copied from is left as it was")
+	return 0
+}
+
 func main() {
 	// `orbit healthcheck` is an in-container liveness probe used by the
 	// image HEALTHCHECK. The runtime image is distroless (no shell or curl), so
@@ -216,6 +261,12 @@ func main() {
 	// an encrypted backup to DB_URL, with Orbit stopped, then exits.
 	if len(os.Args) > 2 && os.Args[1] == "restore-backup" {
 		os.Exit(restoreBackup(os.Args[2], len(os.Args) > 3 && os.Args[3] == "--force"))
+	}
+	// `orbit copy-db <sqlite|postgres> <address> [--force]` copies the
+	// configured database into another (SQLite into PostgreSQL, or back),
+	// with Orbit stopped, then exits.
+	if len(os.Args) > 3 && os.Args[1] == "copy-db" {
+		os.Exit(copyDB(os.Args[2], os.Args[3], len(os.Args) > 4 && os.Args[4] == "--force"))
 	}
 	// `orbit move-files <db|dir|s3> [--clean]` moves the files' bytes to
 	// another store, with Orbit stopped, then exits.

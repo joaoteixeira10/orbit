@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Trash2, Send, TriangleAlert } from 'lucide-vue-next'
+import { Plus, Trash2, Send, TriangleAlert } from '@lucide/vue'
 import { myChannelsApi, type PersonalChannel, type PersonalChannelInput } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { Button } from '@/components/shadcn/button'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, MapPin, Plus, Repeat } from 'lucide-vue-next'
+import { Check, MapPin, Plus, Repeat } from '@lucide/vue'
 import { fmtDate, fmtTime, fmtClock, parseDate, relDay } from '@/lib/dates'
 import { onDay, sortEntries, eventColor, type Entry, type TaskItem } from './model'
 import { Button } from '@/components/shadcn/button'

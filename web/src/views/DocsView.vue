@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search } from 'lucide-vue-next'
+import { Search } from '@lucide/vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { guidesApi, type Guide, type GuideSection } from '@/api'
 import { useToastStore } from '@/stores/toast'

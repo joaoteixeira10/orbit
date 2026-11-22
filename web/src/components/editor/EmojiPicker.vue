@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Shuffle, Trash2 } from 'lucide-vue-next'
+import { Shuffle, Trash2 } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { EMOJIS, randomEmoji } from './emojis'
 import { Button } from '@/components/shadcn/button'

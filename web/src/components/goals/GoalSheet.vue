@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Trash2, Trophy, X, Plus } from 'lucide-vue-next'
+import { Check, Trash2, Trophy, X, Plus } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { COLORS } from '@/lib/icons'

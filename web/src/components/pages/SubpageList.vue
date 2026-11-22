@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { FileText } from 'lucide-vue-next'
+import { FileText } from '@lucide/vue'
 import { usePagesStore } from '@/stores/pages'
 
 // ::pagetree — the pages inside this one (and theirs), as they are now.

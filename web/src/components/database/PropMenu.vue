@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { EyeOff, Plus, Trash2, X } from 'lucide-vue-next'
+import { EyeOff, Plus, Trash2, X } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import FormulaAssist from '@/components/ui/FormulaAssist.vue'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight } from '@lucide/vue'
 import { OPTION_COLORS, PROP_TYPES, formulaProblem, newId, type DBProp, type PropType } from '@/lib/database'
 import { Button } from '@/components/shadcn/button'
 import { NativeSelect } from '@/components/shadcn/native-select'

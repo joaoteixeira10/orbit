@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search, VenetianMask } from 'lucide-vue-next'
+import { Search, VenetianMask } from '@lucide/vue'
 import { auditApi } from '@/api'
 import type { AuditEntry } from '@/api/types'
 import { useToastStore } from '@/stores/toast'

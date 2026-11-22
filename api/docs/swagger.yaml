@@ -2950,6 +2950,46 @@ definitions:
       version:
         type: integer
     type: object
+  api.pagesRepoAccount:
+    properties:
+      base_url:
+        type: string
+      kind:
+        type: string
+      login:
+        type: string
+    type: object
+  api.pagesRepoRequest:
+    properties:
+      auto:
+        type: boolean
+      branch:
+        maxLength: 255
+        type: string
+      folder:
+        maxLength: 255
+        type: string
+      host:
+        maxLength: 255
+        type: string
+      repo:
+        description: owner/name
+        maxLength: 255
+        type: string
+    required:
+    - host
+    - repo
+    type: object
+  api.pagesRepoResponse:
+    properties:
+      accounts:
+        description: the caller's, to write with
+        items:
+          $ref: '#/definitions/api.pagesRepoAccount'
+        type: array
+      repo:
+        $ref: '#/definitions/models.PagesRepo'
+    type: object
   api.personalKindsRequest:
     properties:
       kinds:
@@ -4991,6 +5031,37 @@ definitions:
         description: |-
           Via: saved for them by the assistant ("assistant") or an app through
           MCP ("mcp"); "" when they saved it themselves.
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  models.PagesRepo:
+    properties:
+      auto:
+        type: boolean
+      branch:
+        type: string
+      commit:
+        type: string
+      copied_at:
+        type: string
+      created_at:
+        type: string
+      folder:
+        type: string
+      host:
+        type: string
+      id:
+        type: string
+      last_error:
+        type: string
+      owner:
+        type: string
+      repo:
+        type: string
+      updated_at:
+        type: string
+      user_id:
         type: string
       workspace_id:
         type: string
@@ -13252,6 +13323,94 @@ paths:
       summary: Create a page
       tags:
       - pages
+  /workspaces/{ws}/pages-repo:
+    delete:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Stop copying a workspace's pages to git
+      tags:
+      - git
+    get:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pagesRepoResponse'
+      security:
+      - BearerAuth: []
+      summary: Where a workspace's pages are copied (git)
+      tags:
+      - git
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      - description: The repository
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.pagesRepoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pagesRepoResponse'
+      security:
+      - BearerAuth: []
+      summary: Copy a workspace's pages into a git repository
+      tags:
+      - git
+  /workspaces/{ws}/pages-repo/copy:
+    post:
+      parameters:
+      - description: Workspace id
+        in: path
+        name: ws
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.pagesRepoResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Copy a workspace's pages to git now
+      tags:
+      - git
   /workspaces/{ws}/sheets:
     get:
       parameters:

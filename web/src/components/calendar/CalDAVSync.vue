@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RefreshCw, AlertCircle, ArrowLeftRight, Check, Plus, X, Zap } from 'lucide-vue-next'
+import { RefreshCw, AlertCircle, ArrowLeftRight, Check, Plus, X, Zap } from '@lucide/vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { calendarApi, type AccountCalendar, type CalDAVLink, type CalDAVCalendar } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'

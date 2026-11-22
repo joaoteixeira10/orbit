@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CircleDot, CircleCheck, GitPullRequest, GitMerge } from 'lucide-vue-next'
+import { CircleDot, CircleCheck, GitPullRequest, GitMerge } from '@lucide/vue'
 import type { Task } from '@/api/planner'
 
 // A task's issue or pull request, as git shows it: its number in the

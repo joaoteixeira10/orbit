@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Clock, Sun, CalendarDays, Hourglass, X } from 'lucide-vue-next'
+import { Clock, Sun, CalendarDays, Hourglass, X } from '@lucide/vue'
 import { fmtDate, fmtTime, toLocalInput, fromLocalInput } from '@/lib/dates'
 import { Button } from '@/components/shadcn/button'
 import { Input } from '@/components/shadcn/input'

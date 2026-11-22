@@ -10,7 +10,7 @@ import {
   Plane, Repeat, Rocket, ShoppingCart, Sparkles, Star, Stethoscope, Sun, Target, Timer, Trophy, Users, Wallet, Wrench,
   Bell, Baby, Bike, Brush, Sheet, Workflow, Building2, Clapperboard, Languages, Microscope, PiggyBank, Shirt, Sprout, Tent, Ticket,
   StickyNote, ChartGantt, ChartPie, GitBranch, AppWindow,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 export const ICONS: Record<string, Component> = {
   'graduation-cap': GraduationCap, briefcase: Briefcase, heart: Heart, users: Users, sparkles: Sparkles,

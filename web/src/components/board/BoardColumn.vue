@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MoreHorizontal, Plus, X, Pencil, CircleCheck, Circle, ArrowLeft, ArrowRight, Trash2 } from 'lucide-vue-next'
+import { MoreHorizontal, Plus, X, Pencil, CircleCheck, Circle, ArrowLeft, ArrowRight, Trash2 } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import BoardCard from './BoardCard.vue'
 import ColorDots from './ColorDots.vue'

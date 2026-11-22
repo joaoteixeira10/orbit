@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, CircleCheck, Plus } from 'lucide-vue-next'
+import { ChevronDown, CircleCheck, Plus } from '@lucide/vue'
 import BoardCard from './BoardCard.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import { useSortables, type SortMove } from '@/lib/sortable'

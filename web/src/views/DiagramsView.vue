@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, GitFork, Plus, Upload, Workflow } from 'lucide-vue-next'
+import { ChevronDown, GitFork, Plus, Upload, Workflow } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
 import { diagramsApi } from '@/lib/diagramsApi'

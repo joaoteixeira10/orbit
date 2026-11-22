@@ -27,4 +27,5 @@ func (s *Scheduler) syncGit() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	s.git.SyncAll(ctx)
+	s.git.CopyAllPages(ctx) // workspaces' pages copied to their repositories, when changed
 }

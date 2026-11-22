@@ -467,12 +467,12 @@ export function floodFill(
 ): { mask: Uint8Array; box: { x0: number; y0: number; x1: number; y1: number } } | null {
   const n = w * h
   // Walls: the lines, thickened by `gap`.
-  let wall = new Uint8Array(n)
+  let wall: Uint8Array = new Uint8Array(n)
   for (let i = 0; i < n; i++) wall[i] = alpha[i] >= edge ? 1 : 0
   for (let k = 0; k < gap; k++) wall = grow(wall, w)
   const start = sy * w + sx
   if (sx < 0 || sy < 0 || sx >= w || sy >= h || wall[start]) return null
-  let mask = new Uint8Array(n)
+  let mask: Uint8Array = new Uint8Array(n)
   const stack = [start]
   mask[start] = 1
   const open = (j: number) => {

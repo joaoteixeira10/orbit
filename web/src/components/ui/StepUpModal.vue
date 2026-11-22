@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import Overlay from './Overlay.vue'
 import { useAuthStore } from '@/stores/auth'
 import { stepUpState, resolveStepUp } from '@/lib/stepup'
-import { ShieldCheck } from 'lucide-vue-next'
+import { ShieldCheck } from '@lucide/vue'
 import { Button } from '@/components/shadcn/button'
 import { Input } from '@/components/shadcn/input'
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Columns3, FileText, History, Plus, RotateCcw, Search, X } from 'lucide-vue-next'
+import { Columns3, FileText, History, Plus, RotateCcw, Search, X } from '@lucide/vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import Popover from '@/components/ui/Popover.vue'

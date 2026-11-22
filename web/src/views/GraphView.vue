@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, X } from 'lucide-vue-next'
+import { Search, X } from '@lucide/vue'
 import GraphCanvas from '@/components/graph/GraphCanvas.vue'
 import { useFillHeight } from '@/components/calendar/useFillHeight'
 import { KIND_COLOR, NODE_KINDS, loadGraph, neighbourhood, only, routeOf, type Graph, type GraphNode, type NodeKind } from '@/lib/graph'

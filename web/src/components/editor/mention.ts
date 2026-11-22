@@ -4,7 +4,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import Suggestion from '@tiptap/suggestion'
-import { AtSign, CalendarDays, FileText } from 'lucide-vue-next'
+import { AtSign, CalendarDays, FileText } from '@lucide/vue'
 import { MENTION, isDate, type MentionItem } from '@/lib/mentions'
 import type { SlashItem, SlashState } from './slash'
 

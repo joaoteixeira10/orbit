@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2 } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import WsIcon from '@/components/ui/WsIcon.vue'

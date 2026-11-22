@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, LogIn, UserPlus } from 'lucide-vue-next'
+import { ArrowLeft, LogIn, UserPlus } from '@lucide/vue'
 import WsIcon from '@/components/ui/WsIcon.vue'
 import { invitesApi, type InvitePreview } from '@/api/planner'
 import { useAuthStore } from '@/stores/auth'

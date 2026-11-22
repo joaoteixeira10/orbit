@@ -2,7 +2,7 @@
 import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { Link2, Bookmark as BookmarkIcon, BookmarkCheck, MoreHorizontal, Pencil, RefreshCw, Trash2, LoaderCircle, Globe } from 'lucide-vue-next'
+import { Link2, Bookmark as BookmarkIcon, BookmarkCheck, MoreHorizontal, Pencil, RefreshCw, Trash2, LoaderCircle, Globe } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'

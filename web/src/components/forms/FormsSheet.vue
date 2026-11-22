@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ClipboardList, ExternalLink, Plus, Trash2 } from 'lucide-vue-next'
+import { ChevronLeft, ClipboardList, ExternalLink, Plus, Trash2 } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import CopyButton from '@/components/ui/CopyButton.vue'

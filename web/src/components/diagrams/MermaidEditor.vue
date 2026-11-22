@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Cable, LayoutTemplate, Plus, TriangleAlert } from 'lucide-vue-next'
+import { Cable, LayoutTemplate, Plus, TriangleAlert } from '@lucide/vue'
 import CodeArea from '@/components/editor/CodeArea.vue'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'

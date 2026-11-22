@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, Plus, MoreHorizontal, FileText, Lock, LockKeyhole } from 'lucide-vue-next'
+import { ChevronRight, Plus, MoreHorizontal, FileText, Lock, LockKeyhole } from '@lucide/vue'
 import { usePagesStore, type PageNode } from '@/stores/pages'
 import { useSortable, type SortMove } from '@/lib/sortable'
 import { openUp, foldAway } from '@/lib/motion'

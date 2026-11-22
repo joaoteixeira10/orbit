@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Plus, Redo2, Rows3, Undo2 } from 'lucide-vue-next'
+import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Plus, Redo2, Rows3, Undo2 } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import FormulaAssist from '@/components/ui/FormulaAssist.vue'
 import { Book, MAX_COLS, MAX_ROWS, addr, newTab, reshape, series, show, toTSV, fromTSV, type Cell, type NumFmt, type SheetData, type Tab } from '@/lib/sheet'

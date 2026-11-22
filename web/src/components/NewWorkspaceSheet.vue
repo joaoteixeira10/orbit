@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, Check, Upload } from 'lucide-vue-next'
+import { ChevronLeft, Check, Upload } from '@lucide/vue'
 import Overlay from './ui/Overlay.vue'
 import Toggle from './ui/Toggle.vue'
 import WsIcon from './ui/WsIcon.vue'

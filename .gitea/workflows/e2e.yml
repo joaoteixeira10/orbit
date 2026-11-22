@@ -22,24 +22,24 @@ jobs:
     # refused the runner's 26.04). Keep its tag on the version in
     # web/package-lock.json.
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
     # A CalDAV server for the two-way calendar test (any password). Reached
     # by its service name — a private address the guarded dialer allows
     # (localhost it refuses).
     services:
       radicale:
-        image: tomsquest/docker-radicale:latest
+        image: tomsquest/docker-radicale:3.9.0.0
     env:
       GOFLAGS: -buildvcs=false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: "1.26.11"
           cache-dependency-path: api/go.sum
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: "22"
+          node-version: "24.22.2"
           cache: npm
           cache-dependency-path: web/package-lock.json
 

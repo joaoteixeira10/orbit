@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LoaderCircle, TriangleAlert } from 'lucide-vue-next'
+import { LoaderCircle, TriangleAlert } from '@lucide/vue'
 import { editorUrl, originOf } from '@/lib/drawio'
 import { currentLocale } from '@/i18n'
 import { useBrandingStore } from '@/stores/branding'

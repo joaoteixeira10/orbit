@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronRight, Plus } from 'lucide-vue-next'
+import { Check, ChevronRight, Plus } from '@lucide/vue'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TimelineScale from './TimelineScale.vue'
 import TimelineBar from './TimelineBar.vue'

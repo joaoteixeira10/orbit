@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Table2 } from 'lucide-vue-next'
+import { Table2 } from '@lucide/vue'
 import DbCell from './DbCell.vue'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'

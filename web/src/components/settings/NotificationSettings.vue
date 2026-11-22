@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BellRing, Smartphone, X } from 'lucide-vue-next'
+import { BellRing, Smartphone, X } from '@lucide/vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import PersonalChannels from './PersonalChannels.vue'

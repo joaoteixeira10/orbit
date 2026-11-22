@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellRing, LockKeyhole } from 'lucide-vue-next'
+import { Check, Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellRing, LockKeyhole } from '@lucide/vue'
 import { fmtDate, fmtTime } from '@/lib/dates'
 import { previewSrc } from '@/components/draw/drawing'
 import { uploadBlobUrl } from '@/lib/uploads'

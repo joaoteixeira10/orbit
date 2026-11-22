@@ -8,6 +8,19 @@ merge, not at release time.
 
 ### Added
 
+- **Pages in a Git repository.** Workspace settings → Publish copies the
+  workspace's pages into a folder of a GitHub, GitLab or Gitea / Forgejo
+  repository as Markdown files laid out like the page tree — links between
+  them and their pictures made to work there — one commit per copy, only
+  what changed, by hand or a few minutes after the pages change. One way;
+  files it didn't write are left alone; restricted and locked pages stay
+  out.
+- **`orbit copy-db`**: the whole database into the other kind — SQLite into
+  PostgreSQL, or back — every row as it was, the search index built there.
+- **Infisical as a secrets source** (`SECRETS_BACKEND=infisical`): a
+  machine identity's Universal Auth (or an access token), one project's
+  environment and folder, read once at start-up. The docs now say OpenBao
+  works through the Vault source.
 - **Several calendars of one account in a workspace.** Beside the calendar
   that is the workspace's own Events, the sync panel adds the account's
   other calendars (Google's, or iCloud's / Nextcloud's), each a calendar of
@@ -21,7 +34,6 @@ merge, not at release time.
   images). A file added to a linked task goes to its issue as a comment
   with the file (on GitHub, which takes no files from apps, the comment
   names it), and that comment goes when the file does.
-
 - **Choose what the calendar of all workspaces shows.** The arrow beside a
   workspace opens its parts — its events, each list, each subscribed
   calendar — each with its own tick: a list like *Shows* can stay in its
@@ -33,7 +45,7 @@ merge, not at release time.
   calendar and syncs it at once, instead of within five minutes; the sync
   panel says so, or why not. The five-minute sync goes on as a safety net.
 - **Publish a workspace as a website.** Its owners pick which pages go on it
-  (each with the pages inside it) in workspace settings → Website; anyone
+  (each with the pages inside it) in workspace settings → Publish; anyone
   reads it without an account at `/site/<name>`, with the pages down the
   side and a search across them. Restricted and locked pages never go on
   it. Optionally a domain of its own (through the reverse proxy; there only
@@ -44,6 +56,21 @@ merge, not at release time.
   Privacy and terms). Until then the privacy policy is Orbit's own text, in
   the reader's language. Google asks for one before people can sync their
   Google Calendar.
+
+### Changed
+
+- Dependencies brought up to versions at least two weeks old: Node 24 for
+  building, Vite 8 and Vitest 5, Pinia 4, vue-router 5, VueUse 15, Mermaid
+  12, marked 18, SimpleWebAuthn 14, ESLint 10, jsdom 31, TypeScript 5.9,
+  TipTap 3.33, Vue 3.5.45 and the rest within their versions; Go: Gin 1.12,
+  GORM 1.31 (+ its PostgreSQL driver 1.6), go-webauthn 0.18, the Anthropic
+  SDK 2.7, go-oidc 3.21, MinIO 7.4, Prometheus 1.25, zap 1.28, OAuth2 0.38.
+  One icon package (`@lucide/vue`) instead of two; the Konami card's GitHub
+  logo (brand logos left Lucide) is a link icon. CI's actions, Radicale and
+  govulncheck pinned to exact versions; the E2E image follows Playwright
+  1.65. pdfmake stays on 0.3.11 (0.3.12 on starts a worker the page's
+  security policy rightly refuses), vue-tsc on 2 (3 misreads valid
+  templates).
 
 ### Fixed
 

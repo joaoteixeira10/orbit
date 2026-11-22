@@ -585,7 +585,7 @@ The owner can turn guest links off for the whole Orbit (Owner → Features).
 
 **Publish as a website.** A workspace's owners can publish some of its pages
 as a read-only website anyone can read, without an account: workspace
-settings → **Website**. Tick the top-level pages it shows (each with the
+settings → **Publish**. Tick the top-level pages it shows (each with the
 pages inside it, in the sidebar's order), turn on **Published** and
 **Save**. It lives at `<your Orbit>/site/<address>` (the address starts as the
 workspace's name, and can be changed), with the pages down the side, a
@@ -604,6 +604,20 @@ what's inside them. Optionally:
 
 Turn **Published** off and it stops answering at once (the settings stay). The
 owner can turn websites off for the whole Orbit (Owner → Features).
+
+**Pages in a Git repository.** Workspace settings → **Publish** → *Pages in a
+Git repository* copies the workspace's pages into a folder of a repository on
+GitHub, GitLab or a Gitea / Forgejo server, as your own account there
+(connect it first in Settings → Git): pick the server, the repository
+(`owner/name`), the branch and the folder. Each page becomes
+`<title>.md` (its sub-pages in a folder `<title>/` beside it), with its title,
+id, dates and tags at the top; links between pages point at the files, and
+the pictures and files in the pages go into `_files/`. Every copy is one
+commit, writing only what changed. With **Copy by itself** it runs a few
+minutes after the pages change; **Copy now** any time. It goes one way: what
+is changed in the repository is overwritten by the next copy, and files the
+copy didn't write (a README) are left alone. Restricted and locked pages, and
+templates, stay out.
 
 **Pasted in Slack, Teams or a chat**, an Orbit link shows a small preview: a
 guest link shows its page's title and first words (it's public by your

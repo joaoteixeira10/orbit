@@ -2,7 +2,7 @@
 import Attachments from '@/components/ui/Attachments.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush, Maximize2, Minimize2, LockKeyhole, LockKeyholeOpen } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type, MoreHorizontal, Trash2, Copy, FileText, ListChecks, FolderInput, Paperclip, BellPlus, BellRing, X, Brush, Maximize2, Minimize2, LockKeyhole, LockKeyholeOpen } from '@lucide/vue'
 import { seal, unseal, unlocked } from '@/lib/lock'
 import { askUnlock } from '@/lib/lockPrompt'
 import { useAuthStore } from '@/stores/auth'

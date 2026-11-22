@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, StickyNote, X } from 'lucide-vue-next'
+import { Search, StickyNote, X } from '@lucide/vue'
 import NoteCapture from '@/components/notes/NoteCapture.vue'
 import NoteCard from '@/components/notes/NoteCard.vue'
 import NoteEditor from '@/components/notes/NoteEditor.vue'

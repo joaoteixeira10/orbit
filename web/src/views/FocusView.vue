@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { Play, Plus, Square, Timer, Check } from 'lucide-vue-next'
+import { Play, Plus, Square, Timer, Check } from '@lucide/vue'
 import { useFocusStore, clockOf, durationOf } from '@/stores/focus'
 import { useTasksStore } from '@/stores/tasks'
 import { useWorkspacesStore } from '@/stores/workspaces'

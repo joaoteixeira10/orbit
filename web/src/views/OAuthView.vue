@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { Bot } from 'lucide-vue-next'
+import { Bot } from '@lucide/vue'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'

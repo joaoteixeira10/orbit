@@ -1,7 +1,7 @@
 // Instance privilege identifiers (must match the backend rbac package) and
 // their display metadata. What someone may do inside a workspace is their role
 // there (owner / editor / viewer), not one of these.
-import { Users, ShieldCheck, Settings, Bell, ClipboardList, VenetianMask, LayoutGrid, type LucideIcon } from 'lucide-vue-next'
+import { Users, ShieldCheck, Settings, Bell, ClipboardList, VenetianMask, LayoutGrid, type LucideIcon } from '@lucide/vue'
 import { i18n } from '@/i18n'
 
 export const P = {

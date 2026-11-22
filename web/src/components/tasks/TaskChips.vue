@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, Flag, UserRound, Check } from 'lucide-vue-next'
+import { Calendar, Flag, UserRound, Check } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import Avatar from '@/components/ui/Avatar.vue'

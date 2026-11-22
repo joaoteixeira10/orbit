@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Pencil, Trash2, UsersRound } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, UsersRound } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { groupsApi, type Group, type GroupDetail } from '@/api/groups'

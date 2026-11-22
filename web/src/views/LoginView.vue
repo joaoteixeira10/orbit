@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { KeyRound, ArrowLeft, Fingerprint, LogIn } from 'lucide-vue-next'
+import { KeyRound, ArrowLeft, Fingerprint, LogIn } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { DEFAULT_MARK, useBrandingStore } from '@/stores/branding'
 import { webauthnSupported, webauthnAutofillSupported, cancelWebauthnCeremony } from '@/api/webauthn'

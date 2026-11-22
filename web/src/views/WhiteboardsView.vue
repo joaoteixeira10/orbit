@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, MoreHorizontal, Pencil, Trash2, Brush, FolderInput } from 'lucide-vue-next'
+import { Plus, MoreHorizontal, Pencil, Trash2, Brush, FolderInput } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'

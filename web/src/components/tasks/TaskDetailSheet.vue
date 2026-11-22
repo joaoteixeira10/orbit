@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GraduationCap, Calendar, CalendarDays, Clock, Hourglass, Repeat, Flag, Hash, Plus, Check, ChevronDown, X, UserRound, ListTodo, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical, Maximize2, Minimize2, Trash2 } from 'lucide-vue-next'
+import { GraduationCap, Calendar, CalendarDays, Clock, Hourglass, Repeat, Flag, Hash, Plus, Check, ChevronDown, X, UserRound, ListTodo, GitBranch, TriangleAlert, Milestone, Timer, Target, Link2, ArrowRight, GripVertical, Maximize2, Minimize2, Trash2 } from '@lucide/vue'
 import { estimateText } from '@/lib/weekPlan'
 import { durationOf, useFocusStore } from '@/stores/focus'
 import { goalsApi, type Goal } from '@/lib/goals'

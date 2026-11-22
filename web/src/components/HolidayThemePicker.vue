@@ -7,7 +7,7 @@
 // view stores it; this only picks.
 import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Ban, Building2, CalendarClock, Check, Flower2, Leaf, Snowflake, Sun } from 'lucide-vue-next'
+import { Ban, Building2, CalendarClock, Check, Flower2, Leaf, Snowflake, Sun } from '@lucide/vue'
 import { HOLIDAYS } from '@/lib/holidayThemes'
 import { SEASONS } from '@/lib/seasonThemes'
 

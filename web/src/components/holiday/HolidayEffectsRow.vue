@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Flower2, Leaf, Snowflake, Sun } from 'lucide-vue-next'
+import { Flower2, Leaf, Snowflake, Sun } from '@lucide/vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { useHolidayStore } from '@/stores/holiday'
 import { usePrefsStore } from '@/stores/prefs'

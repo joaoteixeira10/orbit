@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ExternalLink } from 'lucide-vue-next'
+import { ExternalLink } from '@lucide/vue'
 import OptionPicker from './OptionPicker.vue'
 import { shownValue, type DBOption, type DBProp, type PropValue } from '@/lib/database'
 import type { Member } from '@/api/planner'

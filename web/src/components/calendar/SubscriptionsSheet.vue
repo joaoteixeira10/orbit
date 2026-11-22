@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, RefreshCw, Pencil, Trash2, Check, Link2, AlertCircle } from 'lucide-vue-next'
+import { Plus, RefreshCw, Pencil, Trash2, Check, Link2, AlertCircle } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import CalDAVSync from './CalDAVSync.vue'

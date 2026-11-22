@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { FileText, Menu, Search, X } from 'lucide-vue-next'
+import { FileText, Menu, Search, X } from '@lucide/vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { siteApi, type GuestPage, type PublicSite, type SiteHit } from '@/lib/shareApi'
 import { ApiError } from '@/lib/api'

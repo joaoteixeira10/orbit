@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { FileText, Pencil, Users } from 'lucide-vue-next'
+import { FileText, Pencil, Users } from '@lucide/vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import CodeArea from '@/components/editor/CodeArea.vue'
 import { guestApi, type GuestPage, type GuestShare } from '@/lib/shareApi'

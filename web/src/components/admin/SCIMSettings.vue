@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Copy, KeyRound } from 'lucide-vue-next'
+import { Copy, KeyRound } from '@lucide/vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { api } from '@/lib/api'
 import { useToastStore } from '@/stores/toast'

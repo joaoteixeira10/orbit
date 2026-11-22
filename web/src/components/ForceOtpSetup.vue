@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ShieldAlert, Fingerprint } from 'lucide-vue-next'
+import { ShieldAlert, Fingerprint } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { passkeysApi, webauthnSupported } from '@/api/webauthn'

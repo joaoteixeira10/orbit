@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Check, Trash2 } from 'lucide-vue-next'
+import { Check, Trash2 } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { GRADIENTS, SOLIDS } from './covers'
 

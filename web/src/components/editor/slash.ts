@@ -5,7 +5,7 @@ import Suggestion from '@tiptap/suggestion'
 import {
   Type, Heading1, Heading2, Heading3, ListTodo, List, ListOrdered, Quote, SquareCode, Minus, Table, MessageSquareQuote, Paperclip,
   Sheet, Workflow, GitFork, Brush, PenLine, FileSymlink, ChevronsDownUp, Columns2, Columns3, ListTree, Tag,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import type { EmbedNew } from '@/lib/embeds'
 
 export interface SlashItem {

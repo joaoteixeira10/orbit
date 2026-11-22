@@ -2,7 +2,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Award, Plus, X, Lock, Check } from 'lucide-vue-next'
+import { Award, Plus, X, Lock, Check } from '@lucide/vue'
 import { coursesApi, type Course, type Grade } from '@/api/planner'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useAuthStore } from '@/stores/auth'

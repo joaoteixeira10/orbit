@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowUpDown, Eye, EyeOff, ListFilter, Plus, X } from 'lucide-vue-next'
+import { ArrowUpDown, Eye, EyeOff, ListFilter, Plus, X } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { NO_VALUE, OPS, typeOf, type Database, type DBFilter, type DBView } from '@/lib/database'
 import type { Member } from '@/api/planner'

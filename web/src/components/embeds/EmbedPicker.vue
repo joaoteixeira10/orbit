@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Brush, FileText, Search, Sheet, Workflow } from 'lucide-vue-next'
+import { Brush, FileText, Search, Sheet, Workflow } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import { filesApi, type FileItem, type FileKind } from '@/lib/filesApi'
 import type { EmbedKind } from '@/lib/embeds'

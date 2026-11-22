@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Plus } from 'lucide-vue-next'
+import { Check, Plus } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { OPTION_COLORS, newId, type DBOption, type DBProp } from '@/lib/database'
 

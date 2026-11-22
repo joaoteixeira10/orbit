@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarClock, CircleOff, Flower2, Leaf, Snowflake, Sun, TreeDeciduous } from 'lucide-vue-next'
+import { CalendarClock, CircleOff, Flower2, Leaf, Snowflake, Sun, TreeDeciduous } from '@lucide/vue'
 import { settingsApi } from '@/api'
 import { useBrandingStore } from '@/stores/branding'
 import { useToastStore } from '@/stores/toast'

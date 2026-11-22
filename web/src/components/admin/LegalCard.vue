@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ExternalLink, ScrollText } from 'lucide-vue-next'
+import { ExternalLink, ScrollText } from '@lucide/vue'
 import { settingsApi } from '@/api'
 import { useBrandingStore } from '@/stores/branding'
 import { useToastStore } from '@/stores/toast'

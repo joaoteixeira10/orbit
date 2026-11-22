@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download, Waypoints, Undo2 } from 'lucide-vue-next'
+import { Plus, Search, FileText, Trash2, LayoutGrid, List, Star, Upload, Download, Waypoints, Undo2 } from '@lucide/vue'
 import RecentChanges from '@/components/pages/RecentChanges.vue'
 import { usePagesStore } from '@/stores/pages'
 import { useWorkspacesStore } from '@/stores/workspaces'

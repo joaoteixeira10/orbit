@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Lock, Users } from 'lucide-vue-next'
+import { Lock, Users } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import { pagesApi, type Page } from '@/api/planner'

@@ -2,7 +2,7 @@
 import { ref, computed, watch, onBeforeUnmount, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { AlarmClock, CalendarClock, ChartPie, CircleCheck, ListTodo, Sheet } from 'lucide-vue-next'
+import { AlarmClock, CalendarClock, ChartPie, CircleCheck, ListTodo, Sheet } from '@lucide/vue'
 import TaskFilter from '@/components/tasks/TaskFilter.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import Donut from '@/components/charts/Donut.vue'

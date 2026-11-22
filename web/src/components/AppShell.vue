@@ -6,7 +6,7 @@ import {
   Search, House, CalendarDays, Star, Plus, ChevronRight, MoreHorizontal, Settings, ShieldEllipsis, Crown,
   ClipboardList, LogOut, Moon, Sun, BookOpen, LifeBuoy, VenetianMask, Menu, Archive, FileText, Trash2, PanelLeft, Bell, BellOff, NotebookPen, Timer, Brush,
   PanelRight, FolderOpen, ArrowUp, ArrowDown, Sparkles,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useSortable } from '@/lib/sortable'
 import SideRail from '@/components/SideRail.vue'
 import { rail, railFocus, setRailOpen } from '@/lib/rail'

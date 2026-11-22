@@ -1,6 +1,25 @@
 // A workspace published as a website: the site itself (no account) and its
 // settings (workspace settings → Website). Portuguese is European Portuguese.
 export const siteEn = {
+  pagesRepo: {
+    title: 'Pages in a Git repository',
+    intro: 'Copy this workspace’s pages into a folder of a git repository, as Markdown files laid out like the page tree, with their pictures — one way: what’s changed there is overwritten by the next copy. Restricted and locked pages, and templates, stay out.',
+    noAccount: 'Connect your account on GitHub, GitLab or a Gitea / Forgejo server first (Settings → Git).',
+    server: 'Server',
+    repo: 'Repository',
+    branch: 'Branch',
+    folder: 'Folder',
+    auto: 'Copy by itself',
+    autoHint: 'A few minutes after the pages change. Off: only with Copy now.',
+    copyNow: 'Copy now',
+    copiedAt: 'Last copied {when}',
+    never: 'Not copied yet',
+    saved: 'Saved',
+    copied: 'Pages copied',
+    stop: 'Stop copying',
+    stopTitle: 'Stop copying the pages?',
+    stopBody: 'What was copied stays in the repository.',
+  },
   site: {
     pages: 'Pages',
     search: 'Search',
@@ -9,7 +28,7 @@ export const siteEn = {
     empty: 'No pages yet.',
     missing: 'This page isn’t on the website.',
     updated: 'Updated {date}',
-    tab: 'Website',
+    tab: 'Publish',
     feature: 'Websites',
     featureHint: 'A workspace’s owners can publish some of its pages as a read-only website, open to anyone (at /site/<name>, or a domain of its own). Off: every website stops answering (they come back if turned on again).',
     admin: {
@@ -36,6 +55,25 @@ export const siteEn = {
 }
 
 export const sitePt = {
+  pagesRepo: {
+    title: 'Páginas num repositório Git',
+    intro: 'Copiar as páginas deste espaço para uma pasta de um repositório git, como ficheiros Markdown organizados como a árvore de páginas, com as suas imagens — num só sentido: o que for alterado lá é substituído na cópia seguinte. Páginas restritas e bloqueadas, e modelos, ficam de fora.',
+    noAccount: 'Ligue primeiro a sua conta no GitHub, GitLab ou num servidor Gitea / Forgejo (Definições → Git).',
+    server: 'Servidor',
+    repo: 'Repositório',
+    branch: 'Ramo',
+    folder: 'Pasta',
+    auto: 'Copiar sozinho',
+    autoHint: 'Alguns minutos depois de as páginas mudarem. Desligado: só com Copiar agora.',
+    copyNow: 'Copiar agora',
+    copiedAt: 'Copiadas pela última vez {when}',
+    never: 'Ainda não copiadas',
+    saved: 'Guardado',
+    copied: 'Páginas copiadas',
+    stop: 'Parar de copiar',
+    stopTitle: 'Parar de copiar as páginas?',
+    stopBody: 'O que foi copiado fica no repositório.',
+  },
   site: {
     pages: 'Páginas',
     search: 'Pesquisar',
@@ -44,7 +82,7 @@ export const sitePt = {
     empty: 'Ainda não há páginas.',
     missing: 'Esta página não está no site.',
     updated: 'Atualizada a {date}',
-    tab: 'Site',
+    tab: 'Publicar',
     feature: 'Sites',
     featureHint: 'Os proprietários de um espaço podem publicar algumas das suas páginas como um site só de leitura, aberto a qualquer pessoa (em /site/<nome>, ou num domínio próprio). Desligado: todos os sites deixam de responder (voltam se for ligado de novo).',
     admin: {

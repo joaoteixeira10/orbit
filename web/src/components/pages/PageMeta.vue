@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Calendar, CheckSquare, Hash, Link as LinkIcon, Plus, Type, X } from 'lucide-vue-next'
+import { Calendar, CheckSquare, Hash, Link as LinkIcon, Plus, Type, X } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { pagesApi } from '@/api/planner'
 import type { PageField } from '@/lib/markdown'

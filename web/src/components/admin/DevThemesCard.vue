@@ -9,7 +9,7 @@
 // so every project shows the same card without keys in its message files.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Code2, Image as ImageIcon, ShieldCheck, SlidersHorizontal, Sparkles, Type } from 'lucide-vue-next'
+import { Check, Code2, Image as ImageIcon, ShieldCheck, SlidersHorizontal, Sparkles, Type } from '@lucide/vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { DEV_THEME_LIST, DEV_THEME_NAMES, type DevThemeId } from '@/lib/devThemes'
 

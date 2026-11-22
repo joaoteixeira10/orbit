@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Download, Image, Sheet } from 'lucide-vue-next'
+import { Download, Image, Sheet } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { chartPng, chartRows, csvOf, saveBlob, type ChartSpec } from '@/lib/chartExport'
 import { fileName } from '@/lib/markdown'

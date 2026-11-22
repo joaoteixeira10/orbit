@@ -2,7 +2,7 @@
 // CopyButton copies `value` to the clipboard and briefly shows a check. Use it
 // inline next to serials, fingerprints, PEM blobs, generated passwords/tokens.
 import { ref, computed } from 'vue'
-import { Copy, Check } from 'lucide-vue-next'
+import { Copy, Check } from '@lucide/vue'
 import { i18n } from '@/i18n'
 
 const props = withDefaults(

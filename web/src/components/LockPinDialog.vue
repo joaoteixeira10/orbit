@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LockKeyhole } from 'lucide-vue-next'
+import { LockKeyhole } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import { changePin, lockApi, lockPossible, setUp, unlock, WrongPin, type LockKeyInfo } from '@/lib/lock'
 import { answerPin, pinPrompt, type PinMode } from '@/lib/lockPrompt'

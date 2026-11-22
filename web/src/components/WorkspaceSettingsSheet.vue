@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, UserPlus, Archive, ArchiveRestore, Trash2, LogOut, Download } from 'lucide-vue-next'
+import { GripVertical, UserPlus, Archive, ArchiveRestore, Trash2, LogOut, Download } from '@lucide/vue'
 import Overlay from './ui/Overlay.vue'
 import Toggle from './ui/Toggle.vue'
 import Confirm from './ui/Confirm.vue'
@@ -24,6 +24,7 @@ import { Input } from '@/components/shadcn/input'
 import { NativeSelect } from '@/components/shadcn/native-select'
 import { Textarea } from '@/components/shadcn/textarea'
 import SiteSettings from '@/components/SiteSettings.vue'
+import PagesRepoSettings from '@/components/PagesRepoSettings.vue'
 
 // A workspace's settings: what it is (name, look, description), which
 // modules it has and in which order, who is in it, and archiving / deleting.
@@ -41,7 +42,10 @@ const tab = ref<'general' | 'modules' | 'members' | 'site'>('general')
 const ws = computed(() => wss.byId(props.wsId))
 const isOwner = computed(() => ws.value?.role === 'owner')
 // Its owners may publish its pages as a website (where it has pages).
-const hasSite = computed(() => isOwner.value && !!ws.value?.modules.includes('pages') && auth.features.public_sites !== false)
+// Its owners may publish its pages: as a website, and into a git repository.
+const siteOn = computed(() => auth.features.public_sites !== false)
+const repoOn = computed(() => auth.features.git_integration !== false)
+const hasSite = computed(() => isOwner.value && !!ws.value?.modules.includes('pages') && (siteOn.value || repoOn.value))
 const members = computed(() => wss.members[props.wsId] ?? [])
 
 const name = ref('')
@@ -276,7 +280,11 @@ async function destroy() {
 
       <!-- Members -->
       <!-- Website: some of its pages, published -->
-      <SiteSettings v-else-if="tab === 'site' && hasSite" :ws-id="wsId" :ws-name="ws.name" />
+      <div v-else-if="tab === 'site' && hasSite" class="space-y-6">
+        <SiteSettings v-if="siteOn" :ws-id="wsId" :ws-name="ws.name" />
+        <div v-if="siteOn && repoOn" class="border-t border-border" />
+        <PagesRepoSettings v-if="repoOn" :ws-id="wsId" />
+      </div>
 
       <div v-else class="space-y-4">
         <div v-if="isOwner" class="flex gap-2">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Archive, Download, Play } from 'lucide-vue-next'
+import { Archive, Download, Play } from '@lucide/vue'
 import { api, downloadAuthedPost } from '@/lib/api'
 import { useToastStore } from '@/stores/toast'
 import Toggle from '@/components/ui/Toggle.vue'

@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ExternalLink, Workflow } from 'lucide-vue-next'
+import { ExternalLink, Workflow } from '@lucide/vue'
 import { diagramsApi, type DiagramDoc } from '@/lib/diagramsApi'
 import { svgUrl } from '@/lib/drawio'
 import { guestApi } from '@/lib/shareApi'

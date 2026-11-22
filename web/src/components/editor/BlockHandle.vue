@@ -6,7 +6,7 @@ import { NodeSelection, TextSelection } from '@tiptap/pm/state'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import {
   ArrowDown, ArrowUp, Copy, GripVertical, Heading1, Heading2, Heading3, List, ListOrdered, ListTodo, MessageSquareQuote, Plus, Quote, SquareCode, Trash2, Type,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { ALERTS, alertOf, type AlertType } from './alerts'
 

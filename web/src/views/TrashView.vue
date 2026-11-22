@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Trash2, RotateCcw, FileText } from 'lucide-vue-next'
+import { Trash2, RotateCcw, FileText } from '@lucide/vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { pagesApi, type PageSummary } from '@/api/planner'
 import { usePagesStore } from '@/stores/pages'

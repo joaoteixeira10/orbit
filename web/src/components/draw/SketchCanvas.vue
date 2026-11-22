@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import {
   Brush, Copy, Eraser, Eye, EyeOff, FileImage, Hand, Highlighter, Lasso, Layers, Maximize2, Minimize2, NotebookText, PaintBucket, Pen, PenLine, Pencil,
   Pipette, Plus, Redo2, Trash2, Undo2, ChevronUp, ChevronDown, ZoomIn, ZoomOut,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import ColorPicker from './ColorPicker.vue'
 import {

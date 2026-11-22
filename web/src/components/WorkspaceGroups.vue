@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Trash2, UsersRound } from 'lucide-vue-next'
+import { Trash2, UsersRound } from '@lucide/vue'
 import { groupsApi, type WorkspaceGroup } from '@/api/groups'
 import { useWorkspacesStore } from '@/stores/workspaces'
 import { useToastStore } from '@/stores/toast'

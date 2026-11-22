@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush, Bookmark, Sheet, Workflow, Waypoints, Paperclip } from 'lucide-vue-next'
+import { Search, FileText, CheckCircle2, Circle, CalendarDays, Plus, Settings, Moon, Sun, House, CornerDownLeft, StickyNote, NotebookPen, Brush, Bookmark, Sheet, Workflow, Waypoints, Paperclip } from '@lucide/vue'
 import { openFile } from '@/lib/fileView'
 import WsIcon from './ui/WsIcon.vue'
 import { plannerApi, pagesApi, type SearchHit } from '@/api/planner'

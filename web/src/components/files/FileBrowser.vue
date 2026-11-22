@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   Brush, Check, ChevronRight, Copy, Download, ExternalLink, File as FileIcon, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, Folder as FolderIcon, FolderInput, FolderOpen, FolderPlus,
   History, Inbox, Info, LayoutGrid, Link, List, ListChecks, MoreHorizontal, Pencil, Plus, RotateCcw, Sheet, SquareKanban, Trash2, Workflow, X,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { tasksApi, type TaskList } from '@/api/planner'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
 import Popover from '@/components/ui/Popover.vue'

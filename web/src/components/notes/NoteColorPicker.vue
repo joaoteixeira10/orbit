@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Check } from 'lucide-vue-next'
+import { Check } from '@lucide/vue'
 import type { NoteColor } from '@/api/planner'
 import { NOTE_COLORS, noteTint } from './noteColors'
 

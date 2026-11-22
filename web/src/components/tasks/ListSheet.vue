@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap, FolderOpen, Archive, ArchiveRestore } from 'lucide-vue-next'
+import { GripVertical, Plus, X, Check, Trash2, GitBranch, RefreshCw, TriangleAlert, Zap, FolderOpen, Archive, ArchiveRestore } from '@lucide/vue'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'

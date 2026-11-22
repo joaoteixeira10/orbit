@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Check, Minus, Plus, Palette } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Check, Minus, Plus, Palette } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { COLORS } from '@/lib/icons'
 import { addMonths, dateStr, monthGrid, monthTitle, startOfDay, weekdayNames } from '@/lib/dates'

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, FileType, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA, LockKeyhole, LockKeyholeOpen } from 'lucide-vue-next'
+import { Star, StarOff, Copy, Link, FolderInput, Trash2, ChevronLeft, FileText, CornerDownRight, Download, FileCode, LayoutTemplate, Printer, FileType, Table2, Folder as FolderIcon, FolderX, Check, History, Share2, Lock, BookA, LockKeyhole, LockKeyholeOpen } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { filesApi, tree, type Folder } from '@/lib/filesApi'
 import Popover from './ui/Popover.vue'

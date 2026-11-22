@@ -6,7 +6,7 @@
 # ---------- Stage 1: build the Vue SPA ----------
 # Pinned to the build platform: the SPA is arch-independent JS, so build it once
 # natively (never under emulation) regardless of the target image arch.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:24.22.2-alpine3.24 AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 # A stand-in package the overrides point at (web/stubs/no-sass).

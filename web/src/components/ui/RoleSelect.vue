@@ -3,7 +3,7 @@ import { roleDescription } from '@/lib/privileges'
 import { ref, computed, reactive, watch, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Role } from '@/api/types'
-import { ShieldCheck, Wrench, Eye, KeyRound, Search, Check, X, ChevronDown } from 'lucide-vue-next'
+import { ShieldCheck, Wrench, Eye, KeyRound, Search, Check, X, ChevronDown } from '@lucide/vue'
 
 // Chip-based multi-select with a searchable dropdown. The dropdown is teleported
 // to <body> and fixed-positioned under the control, so it floats above the modal

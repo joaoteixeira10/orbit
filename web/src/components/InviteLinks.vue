@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Link2, Trash2 } from 'lucide-vue-next'
+import { Link2, Trash2 } from '@lucide/vue'
 import CopyButton from './ui/CopyButton.vue'
 import { invitesApi, type Invite } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'

@@ -155,3 +155,31 @@ export const siteAdminApi = {
     api<SiteSettings>(`/workspaces/${ws}/site`, { method: 'PUT', body: j(b) }),
   remove: (ws: string) => api<void>(`/workspaces/${ws}/site`, { method: 'DELETE' }),
 }
+
+// A workspace's pages copied into a git repository (Markdown, one way).
+export interface PagesRepo {
+  id: string
+  workspace_id: string
+  host: string
+  owner: string
+  repo: string
+  branch: string
+  folder: string
+  auto: boolean
+  copied_at?: string | null
+  commit?: string
+  last_error?: string
+}
+export interface PagesRepoAccount {
+  base_url: string
+  kind: string
+  login: string
+}
+type PagesRepoAnswer = { repo: PagesRepo | null; accounts: PagesRepoAccount[] }
+export const pagesRepoApi = {
+  get: (ws: string) => api<PagesRepoAnswer>(`/workspaces/${ws}/pages-repo`),
+  save: (ws: string, b: { host: string; repo: string; branch: string; folder: string; auto: boolean }) =>
+    api<PagesRepoAnswer>(`/workspaces/${ws}/pages-repo`, { method: 'PUT', body: j(b) }),
+  copy: (ws: string) => api<PagesRepoAnswer>(`/workspaces/${ws}/pages-repo/copy`, { method: 'POST' }),
+  remove: (ws: string) => api<void>(`/workspaces/${ws}/pages-repo`, { method: 'DELETE' }),
+}

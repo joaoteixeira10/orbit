@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Check, Ban } from 'lucide-vue-next'
+import { Check, Ban } from '@lucide/vue'
 import { COLORS } from '@/lib/icons'
 
 // A compact row of Apple system colours plus "none", for a board column's

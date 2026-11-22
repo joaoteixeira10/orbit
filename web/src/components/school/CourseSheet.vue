@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Trash2, Check, Plus, X } from 'lucide-vue-next'
+import { Trash2, Check, Plus, X } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { coursesApi, type Course, type SlotInput } from '@/api/planner'

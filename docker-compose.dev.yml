@@ -43,7 +43,7 @@ services:
       - orbit-dev-data:/data
 
   web:
-    image: node:22-alpine
+    image: node:24.22.2-alpine3.24
     working_dir: /src/web
     command: sh -c "npm ci --no-audit --no-fund && npm run dev"
     ports:

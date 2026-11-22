@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n, I18nT } from 'vue-i18n'
-import { GitBranch, Trash2, ExternalLink, TriangleAlert, LogIn } from 'lucide-vue-next'
+import { GitBranch, Trash2, ExternalLink, TriangleAlert, LogIn } from '@lucide/vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { gitApi, type GitAccount } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'

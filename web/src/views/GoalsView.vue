@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { Plus, Target, ChevronDown } from 'lucide-vue-next'
+import { Plus, Target, ChevronDown } from '@lucide/vue'
 import GoalSheet from '@/components/goals/GoalSheet.vue'
 import { goalsApi, pct, status, daysLeft, type Goal } from '@/lib/goals'
 import { fmtDate, parseDate } from '@/lib/dates'

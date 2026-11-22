@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { SquareCheck, Type, Maximize2, Minimize2 } from 'lucide-vue-next'
+import { SquareCheck, Type, Maximize2, Minimize2 } from '@lucide/vue'
 import { noteWide } from './noteWide'
 import Overlay from '@/components/ui/Overlay.vue'
 import NoteFields from './NoteFields.vue'

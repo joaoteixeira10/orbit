@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Pencil, Trash2, LogIn, Copy } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, LogIn, Copy } from '@lucide/vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import Confirm from '@/components/ui/Confirm.vue'
 import { oidcApi } from '@/api'

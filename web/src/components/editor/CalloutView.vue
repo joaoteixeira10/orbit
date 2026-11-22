@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NodeViewWrapper, NodeViewContent, nodeViewProps } from '@tiptap/vue-3'
-import { Check } from 'lucide-vue-next'
+import { Check } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { ALERTS, alertOf, type AlertType } from './alerts'
 

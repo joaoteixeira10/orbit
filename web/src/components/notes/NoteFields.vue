@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronDown, Plus, X, ChevronRight } from 'lucide-vue-next'
+import { Check, ChevronDown, Plus, X, ChevronRight } from '@lucide/vue'
 import { newItem, MAX_BODY, MAX_ITEMS, MAX_ITEM_TEXT, MAX_TITLE, type Draft, type DraftItem } from './noteModel'
 import { evaluate } from '@/lib/mathnotes'
 import CodeArea from '@/components/editor/CodeArea.vue'

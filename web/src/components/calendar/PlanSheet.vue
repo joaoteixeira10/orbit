@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarClock, TriangleAlert } from 'lucide-vue-next'
+import { CalendarClock, TriangleAlert } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import { blocksApi, type Occurrence, type Task, type TimeBlock } from '@/api/planner'

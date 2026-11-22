@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, MapPin, GripVertical } from 'lucide-vue-next'
+import { Check, MapPin, GripVertical } from '@lucide/vue'
 import { calendarApi, tasksApi, type Occurrence, type Task } from '@/api/planner'
 import { toEntry, eventColor, type Entry, type TaskItem } from './model'
 import { addDays, dateStr, dueLabel, fmtDate, fmtTime, isOverdue, relDay, startOfDay, todayStr } from '@/lib/dates'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Trash2, Check } from 'lucide-vue-next'
+import { Trash2, Check } from '@lucide/vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import Confirm from '@/components/ui/Confirm.vue'

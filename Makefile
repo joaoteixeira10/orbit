@@ -3,11 +3,11 @@
 # this one doesn't). Tool versions are pinned here on purpose.
 
 GO_IMAGE      ?= golang:1.26.11
-NODE_IMAGE    ?= node:22-alpine
+NODE_IMAGE    ?= node:24.22.2-alpine3.24
 AIR_VERSION   ?= v1.67.1
 SWAG_VERSION  ?= v1.16.6
 LINT_VERSION  ?= v2.12.2
-VULN_VERSION  ?= v1.1.4
+VULN_VERSION  ?= v1.9.0
 
 DOCKER_GO = docker run --rm \
 	-v "$(CURDIR)":/src \

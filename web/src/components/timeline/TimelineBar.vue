@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Check } from 'lucide-vue-next'
+import { Check } from '@lucide/vue'
 import type { DragMode } from '@/lib/timeline'
 
 // One task's bar on the timeline, in its list's colour like Calendar's

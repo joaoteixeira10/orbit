@@ -141,6 +141,28 @@ type ShareLink struct {
 	CreatedBy   string     `gorm:"size:36" json:"created_by"`
 }
 
+// PagesRepo copies a workspace's pages, as Markdown files, into a folder of
+// a git repository — one way: what changes there is overwritten by the next
+// copy. It writes as UserID's account on Host (the owner who set it up).
+// Files is what the last copy wrote (JSON {path: sha256 of its bytes}): only
+// those are ever deleted there, and unchanged ones aren't written again.
+// Auto: copied by itself a few minutes after the pages change.
+type PagesRepo struct {
+	Base
+	WorkspaceID string     `gorm:"size:36;not null;uniqueIndex" json:"workspace_id"`
+	UserID      string     `gorm:"size:36;not null" json:"user_id"`
+	Host        string     `gorm:"size:255;not null" json:"host"`
+	Owner       string     `gorm:"size:255;not null" json:"owner"`
+	Repo        string     `gorm:"size:255;not null" json:"repo"`
+	Branch      string     `gorm:"size:255;not null" json:"branch"`
+	Folder      string     `gorm:"size:255;not null;default:''" json:"folder"`
+	Auto        bool       `gorm:"not null;default:false" json:"auto"`
+	Files       string     `gorm:"type:text" json:"-"`
+	CopiedAt    *time.Time `json:"copied_at,omitempty"`
+	Commit      string     `gorm:"size:64" json:"commit,omitempty"`
+	LastError   string     `gorm:"size:500" json:"last_error,omitempty"`
+}
+
 // Site publishes some of a workspace's pages as a read-only website, open to
 // anyone: the pages its owners picked (PageIDs, JSON []string, in order) and
 // what's under them — never a trashed, locked or restricted page, nor what's

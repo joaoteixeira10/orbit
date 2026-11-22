@@ -28,7 +28,7 @@ import {
   Crown, LockOpen, TriangleAlert, Terminal, UserX, UserCheck,
   Info, Workflow, CalendarDays, AppWindow,
   History, UsersRound,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { api as apiCall } from '@/lib/api'
 import { usePrefsStore } from '@/stores/prefs'

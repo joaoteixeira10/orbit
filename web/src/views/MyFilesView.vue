@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Brush, Upload } from 'lucide-vue-next'
+import { Brush, Upload } from '@lucide/vue'
 import FileBrowser from '@/components/files/FileBrowser.vue'
 import { drawingsApi } from '@/components/draw/drawing'
 import { useAuthStore } from '@/stores/auth'

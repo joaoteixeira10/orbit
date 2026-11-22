@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Download, ExternalLink, File as FileIcon, LoaderCircle, X } from 'lucide-vue-next'
+import { Download, ExternalLink, File as FileIcon, LoaderCircle, X } from '@lucide/vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { fetchAuthedBlob } from '@/lib/api'

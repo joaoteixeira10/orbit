@@ -6,7 +6,7 @@ import { BubbleMenu } from '@tiptap/vue-3/menus'
 import type { Editor as CoreEditor } from '@tiptap/core'
 import { NodeSelection, type EditorState } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
-import { Bold, Italic, Underline, Strikethrough, Code, Highlighter, Link2, ChevronDown, Check, Unlink, ExternalLink } from 'lucide-vue-next'
+import { Bold, Italic, Underline, Strikethrough, Code, Highlighter, Link2, ChevronDown, Check, Unlink, ExternalLink } from '@lucide/vue'
 
 // The formatting toolbar over a text selection: turn into (text / headings),
 // marks, and a link field.

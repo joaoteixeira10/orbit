@@ -2,7 +2,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Eye, EyeOff, CalendarRange, ListFilter } from 'lucide-vue-next'
+import { Eye, EyeOff, CalendarRange, ListFilter } from '@lucide/vue'
 import TimelineChart from '@/components/timeline/TimelineChart.vue'
 import TaskFilter from '@/components/tasks/TaskFilter.vue'
 import TaskDetailSheet from '@/components/tasks/TaskDetailSheet.vue'

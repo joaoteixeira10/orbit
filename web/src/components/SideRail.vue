@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ChevronDown, ListTree, X } from 'lucide-vue-next'
+import { ChevronDown, ListTree, X } from '@lucide/vue'
 import LocalGraph from '@/components/graph/LocalGraph.vue'
 import { outlineOf } from '@/lib/outline'
 import { ALERTS } from '@/components/editor/alerts'

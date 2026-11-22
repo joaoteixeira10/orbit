@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Maximize2 } from 'lucide-vue-next'
+import { Maximize2 } from '@lucide/vue'
 import SheetEmbed from '@/components/sheets/SheetEmbed.vue'
 import DiagramEmbed from '@/components/diagrams/DiagramEmbed.vue'
 import WhiteboardEmbed from './WhiteboardEmbed.vue'

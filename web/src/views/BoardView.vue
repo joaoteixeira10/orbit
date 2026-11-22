@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Plus, SlidersHorizontal, Columns3, X, Eye, Rows3 } from 'lucide-vue-next'
+import { Plus, SlidersHorizontal, Columns3, X, Eye, Rows3 } from '@lucide/vue'
 import BoardColumn from '@/components/board/BoardColumn.vue'
 import BoardLanes, { type Lane } from '@/components/board/BoardLanes.vue'
 import ListSheet from '@/components/tasks/ListSheet.vue'

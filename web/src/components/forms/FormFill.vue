@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CheckCircle2 } from 'lucide-vue-next'
+import { CheckCircle2 } from '@lucide/vue'
 import type { FillForm } from '@/lib/shareApi'
 import { ApiError } from '@/lib/api'
 import { Button } from '@/components/shadcn/button'

@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Maximize2, Waypoints } from 'lucide-vue-next'
+import { Maximize2, Waypoints } from '@lucide/vue'
 import GraphCanvas from './GraphCanvas.vue'
 import { loadGraph, neighbourhood, routeOf, type Graph, type GraphNode } from '@/lib/graph'
 import { onLiveEvent } from '@/lib/live'

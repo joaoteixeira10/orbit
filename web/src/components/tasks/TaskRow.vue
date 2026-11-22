@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronRight, Hourglass, Repeat, Flag, MessageSquare, Milestone } from 'lucide-vue-next'
+import { Check, ChevronRight, Hourglass, Repeat, Flag, MessageSquare, Milestone } from '@lucide/vue'
 import AvatarStack from '@/components/ui/AvatarStack.vue'
 import TaskChips from './TaskChips.vue'
 import GitBadge from './GitBadge.vue'

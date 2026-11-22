@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2 } from '@lucide/vue'
 import CopyButton from '@/components/ui/CopyButton.vue'
 import { gitApi } from '@/api/planner'
 import { useToastStore } from '@/stores/toast'

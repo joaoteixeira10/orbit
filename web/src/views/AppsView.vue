@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { AppWindow, ArrowLeft, ArrowRight, ExternalLink, LoaderCircle, MoreHorizontal, Pencil, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-vue-next'
+import { AppWindow, ArrowLeft, ArrowRight, ExternalLink, LoaderCircle, MoreHorizontal, Pencil, Plus, RotateCw, ShieldOff, Trash2 } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import Overlay from '@/components/ui/Overlay.vue'
 import Confirm from '@/components/ui/Confirm.vue'

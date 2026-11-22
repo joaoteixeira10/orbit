@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Paperclip, X, FileText, LoaderCircle } from 'lucide-vue-next'
+import { Paperclip, X, FileText, LoaderCircle } from '@lucide/vue'
 import { fileSize, uploadBlobUrl, uploadFile, uploadsApi, type Upload, type UploadTarget } from '@/lib/uploads'
 import { openFile } from '@/lib/fileView'
 import { useToastStore } from '@/stores/toast'

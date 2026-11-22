@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sparkles } from 'lucide-vue-next'
+import { Sparkles } from '@lucide/vue'
 import Toggle from '@/components/ui/Toggle.vue'
 import { assistantApi, type AssistantConfig, type AssistantProvider } from '@/api/assistant'
 import { useAssistantStore } from '@/stores/assistant'

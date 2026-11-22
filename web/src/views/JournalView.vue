@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, ChevronRight, Check, LoaderCircle, Pencil } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Check, LoaderCircle, Pencil } from '@lucide/vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import MarkdownView from '@/components/editor/MarkdownView.vue'
 import { journalApi, MOODS, moodFace, type JournalDay } from '@/lib/journal'

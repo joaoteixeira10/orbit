@@ -35,12 +35,12 @@ const b64 = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uin
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0))
 const rand = (n: number) => crypto.getRandomValues(new Uint8Array(n))
 
-async function pinKey(pin: string, salt: Uint8Array, iterations: number): Promise<CryptoKey> {
+async function pinKey(pin: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])
 }
 
-async function wrap(raw: Uint8Array, pin: string) {
+async function wrap(raw: Uint8Array<ArrayBuffer>, pin: string) {
   const salt = rand(16)
   const iv = rand(12)
   const k = await pinKey(pin, salt, LOCK_ITERATIONS)
@@ -62,7 +62,7 @@ export function lockNow() {
   key = null
   unlocked.value = false
 }
-async function open(raw: Uint8Array) {
+async function open(raw: Uint8Array<ArrayBuffer>) {
   key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt'])
   raw.fill(0)
   unlocked.value = true
@@ -79,7 +79,7 @@ export async function setUp(pin: string): Promise<LockKeyInfo> {
 
 export class WrongPin extends Error {}
 
-async function unwrap(info: LockKeyInfo, pin: string): Promise<Uint8Array> {
+async function unwrap(info: LockKeyInfo, pin: string): Promise<Uint8Array<ArrayBuffer>> {
   if (!info.set || !info.salt || !info.iv || !info.wrapped || !info.iterations) throw new Error('no lock PIN set')
   const k = await pinKey(pin, unb64(info.salt), info.iterations)
   try {

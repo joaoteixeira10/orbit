@@ -545,6 +545,7 @@ func purgeWorkspace(tx *gorm.DB, wsID string) error {
 		func() error { return tx.Where("link_id IN ?", append(davLinks, "")).Delete(&models.CalDAVItem{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.CalDAVLink{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Site{}).Error },
+		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.PagesRepo{}).Error },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.Event{}).Error },
 		func() error { return uploads.Delete(tx, "workspace_id = ?", wsID) },
 		func() error { return tx.Where("workspace_id = ?", wsID).Delete(&models.TaskComment{}).Error },

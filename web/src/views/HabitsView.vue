@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { Plus, Check, Flame, Repeat, ChevronDown, Pencil } from 'lucide-vue-next'
+import { Plus, Check, Flame, Repeat, ChevronDown, Pencil } from '@lucide/vue'
 import HabitSheet from '@/components/habits/HabitSheet.vue'
 import YearGrid from '@/components/habits/YearGrid.vue'
 import { habitsApi, streak, best, rate, counts, dueToday, type Habit } from '@/lib/habits'

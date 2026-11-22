@@ -12680,6 +12680,149 @@ const docTemplate = `{
                 }
             }
         },
+        "/workspaces/{ws}/pages-repo": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Where a workspace's pages are copied (git)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pagesRepoResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Copy a workspace's pages into a git repository",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The repository",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.pagesRepoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pagesRepoResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Stop copying a workspace's pages to git",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/workspaces/{ws}/pages-repo/copy": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "git"
+                ],
+                "summary": "Copy a workspace's pages to git now",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace id",
+                        "name": "ws",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.pagesRepoResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/workspaces/{ws}/sheets": {
             "get": {
                 "security": [
@@ -17402,6 +17545,64 @@ const docTemplate = `{
                 }
             }
         },
+        "api.pagesRepoAccount": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "login": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.pagesRepoRequest": {
+            "type": "object",
+            "required": [
+                "host",
+                "repo"
+            ],
+            "properties": {
+                "auto": {
+                    "type": "boolean"
+                },
+                "branch": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "folder": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "host": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "repo": {
+                    "description": "owner/name",
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "api.pagesRepoResponse": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "description": "the caller's, to write with",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.pagesRepoAccount"
+                    }
+                },
+                "repo": {
+                    "$ref": "#/definitions/models.PagesRepo"
+                }
+            }
+        },
         "api.personalKindsRequest": {
             "type": "object",
             "properties": {
@@ -20213,6 +20414,53 @@ const docTemplate = `{
                 },
                 "via": {
                     "description": "Via: saved for them by the assistant (\"assistant\") or an app through\nMCP (\"mcp\"); \"\" when they saved it themselves.",
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PagesRepo": {
+            "type": "object",
+            "properties": {
+                "auto": {
+                    "type": "boolean"
+                },
+                "branch": {
+                    "type": "string"
+                },
+                "commit": {
+                    "type": "string"
+                },
+                "copied_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "folder": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "repo": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 },
                 "workspace_id": {

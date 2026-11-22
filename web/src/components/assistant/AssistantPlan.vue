@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Loader2, Minus, X } from 'lucide-vue-next'
+import { Check, Loader2, Minus, X } from '@lucide/vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import type { AssistantAction } from '@/api/assistant'
 import { Button } from '@/components/shadcn/button'

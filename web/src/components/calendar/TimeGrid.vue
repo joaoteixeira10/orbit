@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Repeat, MapPin } from 'lucide-vue-next'
+import { Check, Repeat, MapPin } from '@lucide/vue'
 import { addDays, dateStr, sameDay, fmtDate, fmtTime, fmtClock } from '@/lib/dates'
 import { layoutBars, layoutDay, tasksByDay, eventColor, type Entry, type TaskItem } from './model'
 import { startTaskDrag, isTaskDrag, readTaskDrag, type DraggedTask } from '@/lib/taskDrag'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, Palette, SquareCheck, Type } from 'lucide-vue-next'
+import { Pin, Palette, SquareCheck, Type } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import NoteFields from './NoteFields.vue'
 import NoteColorPicker from './NoteColorPicker.vue'

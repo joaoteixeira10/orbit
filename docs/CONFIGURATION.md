@@ -54,7 +54,7 @@ plain environment variable.
 
 | Variable | Req | Default | Notes |
 |---|---|---|---|
-| `SECRETS_BACKEND` | – | `env` | Where the four secrets come from: `env`, `file` or `vault`. Any other value stops start-up. |
+| `SECRETS_BACKEND` | – | `env` | Where the four secrets come from: `env`, `file`, `vault` (also OpenBao) or `infisical`. Any other value stops start-up. |
 | `JWT_SECRET` | **release** | dev fallback | HMAC key that signs the access tokens (HS256). At least 32 characters in release. Make one with `openssl rand -hex 32`. Changing it signs everyone out, nothing else. |
 | `ORBIT_MASTER_KEY` | **release** | dev fallback | Key that **seals secrets at rest**: TOTP secrets, the SSO client secret, notification secrets and the addresses of subscribed calendars. At least 32 characters in release. Make one with `openssl rand -hex 32`. |
 
@@ -104,8 +104,23 @@ tries) — except the in-app **backups**, which are of SQLite: back PostgreSQL
 up with its own tools (`pg_dump`, or your provider's snapshots), and keep
 `ORBIT_MASTER_KEY` safely apart (the secrets in the database are sealed with
 it). Orbit creates its tables on start; give its user a database of its own.
-There is no tool to move an SQLite Orbit into PostgreSQL yet — start empty,
-or move workspaces across with workspace export / import.
+**Moving between them**: `orbit copy-db` copies the whole database Orbit is
+set up with into the other kind — SQLite into PostgreSQL, or back — with
+Orbit stopped: every row as it was (people, workspaces, files kept in the
+database, sealed secrets), then the search index built there. Keep
+`ORBIT_MASTER_KEY` as it is (the sealed secrets open with it). With
+compose, into PostgreSQL:
+
+1. Create the empty `orbit` database on the PostgreSQL server.
+2. `docker compose stop api`
+3. `docker compose run --rm api copy-db postgres "postgres://orbit:secret@db:5432/orbit?sslmode=disable"`
+4. In `.env`: `DB_DRIVER=postgres`, `DB_URL=` that address; `docker compose up -d`.
+
+Back into SQLite the same way: `copy-db sqlite /data/orbit.db` (a new file),
+then `DB_DRIVER=sqlite`, `DB_URL=/data/orbit.db`. A target that already holds
+an Orbit is refused unless `--force`, which replaces what it holds. The
+database copied from is left as it was (go back by pointing `DB_DRIVER` /
+`DB_URL` at it again).
 
 The database holds everything: users, roles, workspaces and their content,
 the audit log and the runtime settings below. Back up the file and
@@ -139,7 +154,7 @@ the audit log and the runtime settings below. Back up the file and
 | `UPLOAD_DIR` | for `dir` | `files` next to the SQLite database (`/data/files`) | The directory (mount a volume). |
 | `UPLOAD_S3_BUCKET`, `UPLOAD_S3_PREFIX` | for `s3` | – | The bucket, and a prefix inside it. |
 | `UPLOAD_S3_ENDPOINT`, `UPLOAD_S3_REGION` | – | AWS | `host[:port]` of another S3 (MinIO, Wasabi…), and its region. |
-| `UPLOAD_S3_ACCESS_KEY`, `UPLOAD_S3_SECRET_KEY` | for `s3` | – | Its keys, read through `SECRETS_BACKEND` (env, file or Vault). |
+| `UPLOAD_S3_ACCESS_KEY`, `UPLOAD_S3_SECRET_KEY` | for `s3` | – | Its keys, read through `SECRETS_BACKEND` (env, file, Vault or Infisical). |
 | `UPLOAD_S3_INSECURE` | – | `false` | Plain HTTP to the endpoint (a MinIO in a lab only). |
 
 **How files are kept.** Each file's bytes are kept once, by their SHA-256:
@@ -260,7 +275,34 @@ the environment variable of the same name.
 | `VAULT_ROLE_ID` | one of these | | AppRole role id, used when `VAULT_TOKEN` is empty. |
 | `VAULT_SECRET_ID` | with `VAULT_ROLE_ID` | | AppRole secret id. |
 
-> **Using file or vault with compose.** `docker-compose.yml` insists on
+**OpenBao** (the open-source fork of Vault) works through the same source:
+`SECRETS_BACKEND=vault`, `VAULT_ADDR` its address, a KV v2 engine, token or
+AppRole as above (tested with OpenBao 2.7.2).
+
+**`SECRETS_BACKEND=infisical`**: [Infisical](https://infisical.com), its
+cloud or one of your own. Orbit signs in as a *machine identity* with
+Universal Auth (its client ID and secret) — or with an access token of one
+— reads one project's environment, at one folder, once at start-up, and
+stops if Infisical fails (saying why). The keys are the same names as
+above; secrets imported into that folder count too (the folder's own win).
+A key missing there falls back to the environment variable of the same
+name. Give the identity read access (*Viewer*) to the project only.
+
+| Variable | Req | Default | Notes |
+|---|---|---|---|
+| `INFISICAL_URL` | – | `https://app.infisical.com` | Your Infisical's address if you run your own (`https://eu.infisical.com` for its EU cloud). |
+| `INFISICAL_PROJECT_ID` | **if infisical** | | The project's id (Project settings → Project ID). |
+| `INFISICAL_ENVIRONMENT` | – | `prod` | The environment's slug (`dev`, `staging`, `prod`…). |
+| `INFISICAL_SECRET_PATH` | – | `/` | The folder, e.g. `/orbit`. |
+| `INFISICAL_CLIENT_ID` | one of these | | The machine identity's Universal Auth client ID. |
+| `INFISICAL_CLIENT_SECRET` | with the ID | | Its client secret. |
+| `INFISICAL_TOKEN` | one of these | | An access token of a machine identity, used instead when set. |
+
+Each of the last three may come from a file instead: `INFISICAL_CLIENT_ID_FILE`,
+`INFISICAL_CLIENT_SECRET_FILE`, `INFISICAL_TOKEN_FILE` (a Docker or Kubernetes
+secret) — whatever `SECRETS_BACKEND` is.
+
+> **Using file, vault or infisical with compose.** `docker-compose.yml` insists on
 > `JWT_SECRET` and `ORBIT_MASTER_KEY` in `.env` (`${VAR:?}`). To keep them out of
 > `.env`, remove those two lines from the `environment:` block of your copy.
 
@@ -292,6 +334,7 @@ For backups to a directory, mount a volume where the page says (e.g.
 | `orbit` | Starts the server. |
 | `orbit healthcheck` | Calls `http://127.0.0.1:<port of HTTP_ADDR>/api/v1/healthz` (`https://` when `TLS_CERT_FILE` and `TLS_KEY_FILE` are set; the loopback certificate isn't checked) and exits `0` on `200`, else `1`. The image's `HEALTHCHECK` uses it (distroless has no shell or curl). |
 | `orbit restore-backup <archive> [--force]` | Writes the database inside an encrypted backup to `DB_URL`, **with Orbit stopped**, then exits. A master-key archive opens with `ORBIT_MASTER_KEY`; a passphrase archive with `BACKUP_PASSPHRASE` (or `BACKUP_PASSPHRASE_FILE`). An existing database is refused unless `--force`, and is then kept as `<DB_URL>.before-restore-<time>`. With compose: `docker compose stop api`, `docker compose run --rm -v ./backup.json:/restore.json:ro api restore-backup /restore.json --force`, `docker compose start api`. |
+| `orbit copy-db <sqlite\|postgres> <address> [--force]` | Copies the database Orbit is set up with (`DB_DRIVER`, `DB_URL`) into another — SQLite into PostgreSQL or back — **with Orbit stopped**, then exits; then point `DB_DRIVER` / `DB_URL` at the copy. A target holding an Orbit is refused unless `--force`. See [Database](#database). |
 | `orbit move-files <db\|dir\|s3> [--clean]` | Copies every file's bytes from where they're kept now (as recorded) to another store, **with Orbit stopped**, checking each against its SHA-256, and records the new one; then set `UPLOAD_STORE` to it. `--clean` removes the old copies. See [Uploads](#uploads). |
 
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ListFilter, Search, X } from 'lucide-vue-next'
+import { ListFilter, Search, X } from '@lucide/vue'
 import Popover from '@/components/ui/Popover.vue'
 import { useTaskFilterStore, activeCount, DUE_BUCKETS, PROGRESS, type TaskFilter } from '@/lib/taskFilter'
 import { useTasksStore } from '@/stores/tasks'

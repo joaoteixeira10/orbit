@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ShieldAlert } from 'lucide-vue-next'
+import { ShieldAlert } from '@lucide/vue'
 import { api, setAccessToken } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'

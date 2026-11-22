@@ -6,12 +6,13 @@ import { strToU8, zipSync } from 'fflate'
 
 // Runs against a fresh instance (see the e2e workflow): the bootstrap admin
 // signs in with ADMIN_PASSWORD and must choose a new password first. The tests
-// run in order and share that new password.
+// run in order (one worker, not in parallel) and share that new password and
+// what's on the server, nothing else. Not "serial" mode: there a failure skips
+// the rest, and CI's retry starts over at the first sign-in, which can't pass
+// twice; here only the failed test is tried again and the others go on.
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'admin'
 const FIRST_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin123'
 const NEW_PASSWORD = 'e2e-harbor-lamp-42'
-
-test.describe.configure({ mode: 'serial' })
 
 async function signIn(page: Page, password: string) {
   await page.goto('/')
@@ -2400,6 +2401,10 @@ test('diagrams: draw.io in a frame saves the file, a picture and its words; a fi
   await page.goto(`/w/${ws.id}/diagrams`)
   await page.getByTestId('new-diagram').click()
   await page.getByTestId('new-drawio').click()
+  // The frame first (it comes once the diagram has loaded): before that the
+  // overlay isn't there either, and a title typed then is replaced by the
+  // loaded one.
+  await expect(page.getByTestId('drawio-frame')).toBeVisible()
   await expect(page.locator('.drawio-wait')).toBeHidden()
   await page.getByTestId('diagram-title').fill('Checkout')
   await page.getByTestId('diagram-title').press('Enter')

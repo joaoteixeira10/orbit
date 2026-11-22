@@ -764,7 +764,16 @@ test('calendar: a repeating event changed from one occurrence on, and one occurr
   await page.setViewportSize({ width: 1500, height: 900 })
   await page.goto(`/w/${ws.id}/calendar?date=2026-12-16`)
   await page.getByRole('tab', { name: 'Week' }).click()
-  await page.locator('.tg-ev', { hasText: 'Weekly sync' }).click()
+  // Clicked again until its sheet opens: the week may still be redrawing
+  // when it first shows (a slow CI runner clicked a block being replaced).
+  const open = async (title: string) => {
+    const del = page.getByRole('button', { name: 'Delete', exact: true })
+    await expect(async () => {
+      if (!(await del.isVisible())) await page.locator('.tg-ev', { hasText: title }).click({ timeout: 3000 })
+      await expect(del).toBeVisible({ timeout: 3000 })
+    }).toPass({ timeout: 20000 })
+  }
+  await open('Weekly sync')
   // The sheet shows the occurrence opened, not the series' first.
   await expect(page.locator('input[type="datetime-local"]').first()).toHaveValue('2026-12-16T10:00')
   await page.getByPlaceholder('Title').fill('Planning')
@@ -775,7 +784,7 @@ test('calendar: a repeating event changed from one occurrence on, and one occurr
   // One of the new ones deleted alone.
   await page.goto(`/w/${ws.id}/calendar?date=2026-12-23`)
   await page.getByRole('tab', { name: 'Week' }).click()
-  await page.locator('.tg-ev', { hasText: 'Planning' }).click()
+  await open('Planning')
   await page.getByRole('button', { name: 'Delete', exact: true }).click()
   await page.getByTestId('delete-this').click()
   await expect.poll(titles).toEqual(['2 Weekly sync', '9 Weekly sync', '16 Planning', '30 Planning', '6 Planning'])
